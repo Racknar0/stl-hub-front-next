@@ -3,7 +3,7 @@
 .app-btn {
   height: 40px;
   width: 110px; /* ancho fijo por defecto */
-  padding: 0;
+  padding: 0 .9rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11,6 +11,7 @@
   border-radius: 999px;
   border: 1px solid transparent;
   text-decoration: none;
+  font-weight: 800;
 }
 
 /* Variante de ancho */
@@ -26,15 +27,27 @@
   box-shadow: 0 6px 18px rgba(0,209,255,.35);
   border-color: rgba(0,209,255,.3);
 }
+.app-btn--cyan:hover { filter: brightness(1.05); }
+
 .app-btn--purple {
   background: #7c6bff;
   color:#fff;
   box-shadow: 0 6px 18px rgba(124,107,255,.35);
   border-color: rgba(124,107,255,.3);
 }
+
 .app-btn--dangerOutline {
   background: transparent;
   color:#ff6b6b;
   border-color: rgba(255,107,107,.55);
 }
 .app-btn--dangerOutline:hover { background: rgba(255,107,107,.08); }
+
+/* NUEVA variante roja sólida */
+.app-btn--danger {
+  background: #ff5b5b;
+  color: #1a0f0f;
+  box-shadow: 0 6px 18px rgba(255, 91, 91, .35);
+  border-color: rgba(255, 91, 91, .45);
+}
+.app-btn--danger:hover { filter: brightness(1.06); }

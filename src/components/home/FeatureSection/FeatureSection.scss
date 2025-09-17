@@ -75,6 +75,8 @@
   font-size: .72rem;
   padding: .15rem .45rem;
 }
+.finfo .chips .chip { text-decoration:none; }
+.finfo .chips .chip--link:hover { background: rgba(111,107,255,.2); border-color: rgba(124,107,255,.4); color:#fff; }
 .ftitle {
     font-weight: 800;
 }

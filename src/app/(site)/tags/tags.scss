@@ -1,0 +1,11 @@
+.tags-page { padding: 1rem 0 2rem; }
+.tags-header { display:flex; align-items:center; gap: .8rem; margin-bottom: 1rem; }
+.tags-title { font-weight: 900; font-family: 'Poppins', sans-serif; letter-spacing:.3px; margin: 0; }
+.tags-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; }
+.tcard { background: #0f1420; border-radius: 14px; overflow:hidden; border:1px solid rgba(255,255,255,.08); cursor:pointer; }
+.tcard .thumb { aspect-ratio: 1/1; background-size: cover; background-position:center; }
+.tcard .info { padding:.75rem; }
+.tcard .title { font-weight:800; margin-bottom:.35rem; }
+.tcard .chips { display:flex; gap:.35rem; flex-wrap:wrap; }
+.tcard .chip { text-decoration:none; }
+.tcard .chip--link:hover { background: rgba(111,107,255,.2); border-color: rgba(124,107,255,.4); color:#fff; }

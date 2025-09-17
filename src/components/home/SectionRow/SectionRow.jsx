@@ -8,7 +8,7 @@ import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
-const SectionRow = ({ title, linkLabel = 'Ver todo', items = [] }) => {
+const SectionRow = ({ title, linkLabel = 'Ver todo', items = [], onItemClick }) => {
   return (
     <section className="section-row">
       <div className="container-narrow">
@@ -30,7 +30,7 @@ const SectionRow = ({ title, linkLabel = 'Ver todo', items = [] }) => {
         >
           {items.map((it) => (
             <SwiperSlide key={it.id}>
-              <article className="card-item">
+              <article className="card-item" onClick={() => onItemClick?.(it)}>
                 <div
                   className="thumb"
                   style={{ backgroundImage: `url(${it.thumb})` }}
@@ -39,7 +39,7 @@ const SectionRow = ({ title, linkLabel = 'Ver todo', items = [] }) => {
                   <div className="title">{it.title}</div>
                   <div className="chips">
                     {it.chips?.map((c, idx) => (
-                      <span className="chip" key={idx}>{c}</span>
+                      <a className="chip chip--link" key={idx} href={`/tags/${encodeURIComponent(c)}`}>#{c}</a>
                     ))}
                   </div>
                 </div>

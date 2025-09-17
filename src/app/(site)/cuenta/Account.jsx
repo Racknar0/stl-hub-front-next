@@ -1,6 +1,7 @@
 "use client";
 import React from 'react'
 import './Account.scss'
+import Button from '../../../components/layout/Buttons/Button';
 
 const Account = () => {
   const mockUser = { email: 'demo@stlhub.io', plan: '6 meses', status: 'active', renew: '12/12/2025' }
@@ -8,6 +9,11 @@ const Account = () => {
 
   return (
     <section className="account container-narrow">
+      <div className="account-breadcrumb">
+        <Button as="a" href="/" variant="purple" styles={{width:'auto', padding:'0 .9rem'}}>Inicio</Button>
+        <span className="path">/account</span>
+      </div>
+
       <div className="card">
         <h4>Mi suscripción</h4>
         <p><strong>Usuario:</strong> {mockUser.email}</p>

@@ -14,6 +14,7 @@ const FeatureSection = ({
     subtitle = 'Diseña tu realidad',
     ctaLabel = 'Ver más',
     items = [],
+    onItemClick,
 }) => {
     const list = items; // mostrar todos los elementos recibidos
     return (
@@ -47,7 +48,7 @@ const FeatureSection = ({
                         >
                             {list.map((it) => (
                                 <SwiperSlide key={it.id}>
-                                    <article className="fcard">
+                                    <article className="fcard" onClick={() => onItemClick?.(it)}>
                                         <div
                                             className="thumb"
                                             style={{
@@ -58,7 +59,7 @@ const FeatureSection = ({
                                             <div className="ftitle">{it.title}</div>
                                             <div className="chips">
                                                 {it.chips?.map((c, idx) => (
-                                                    <span className="chip" key={idx}>{c}</span>
+                                                    <a className="chip chip--link" key={idx} href={`/tags/${encodeURIComponent(c)}`}>#{c}</a>
                                                 ))}
                                             </div>
                                         </div>

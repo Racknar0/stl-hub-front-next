@@ -16,8 +16,12 @@
 @use '../components/home/SubscribeSection/SubscribeSection.scss' as *;
 @use '../components/home/PricingInline/PricingInline.scss' as *;
 
+/* Common */
+@use '../components/common/AssetModal/AssetModal.scss' as *;
+
 /* Pages (App Router) */
 @use '../app/(site)/suscripcion/Suscripcion.scss' as *;
 @use '../app/(site)/cuenta/Account.scss' as *;
 @use '../app/(site)/asset/Asset.scss' as *;
 @use '../app/(site)/home/Home.scss' as *;
+@use '../app/(site)/tags/tags.scss' as *;
