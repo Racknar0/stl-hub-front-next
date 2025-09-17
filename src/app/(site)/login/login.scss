@@ -28,6 +28,11 @@
 }
 .login-submit:hover { filter: brightness(1.05); }
 
+/* Mensaje de ayuda */
+.login-help { margin: .9rem 0 0; text-align:center; color: rgba(233,239,255,.75); font-size: .92rem; }
+.login-help__link { color:#00e7ff; font-weight:800; text-decoration:none; }
+.login-help__link:hover { text-decoration: underline; }
+
 @media (min-width: 992px) {
   .login-page { padding-top: 2.8rem; }
 }

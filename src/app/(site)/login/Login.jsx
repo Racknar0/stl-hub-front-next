@@ -4,6 +4,7 @@ import HttpService from '../../../services/HttpService';
 import { timerAlert } from '../../../helpers/alerts';
 import useStore from '../../../store/useStore';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const Login = () => {
     const login = useStore((state) => state.login);
@@ -90,6 +91,12 @@ const Login = () => {
                     {loading ? 'Accediendo…' : 'Acceder'}
                   </button>
                 </form>
+
+                {/* Mensaje de ayuda bajo el inicio de sesión */}
+                <p className="login-help">
+                  ¿No tienes cuenta?{' '}
+                  <Link href="/suscripcion" className="login-help__link">Suscríbete</Link>
+                </p>
               </div>
             </div>
           </div>
