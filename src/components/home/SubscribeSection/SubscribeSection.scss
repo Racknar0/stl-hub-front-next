@@ -1,0 +1,18 @@
+@use '../../../styles/base/variables' as *;
+
+.subscribe-section { padding: 1.5rem 0 2.5rem; }
+.box {
+  background: rgba(15,20,32,.9);
+  border: 1px solid rgba(124,107,255,.35);
+  backdrop-filter: blur(8px) saturate(140%);
+  border-radius: 16px;
+  padding: .9rem 1rem;
+  color:#e9efff;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+}
+.msg { font-weight:800; }
+
+@media (max-width: 576px) {
+  .box { flex-direction:column; align-items:stretch; }
+  .box .app-btn { width:100%; height:46px; }
+}

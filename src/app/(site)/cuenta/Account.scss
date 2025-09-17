@@ -1,0 +1,10 @@
+@use '../../../styles/base/variables' as *;
+
+.account { padding:2rem 0; display:grid; grid-template-columns: 1fr 2fr; gap:1.25rem; }
+.card { background:#fff; border:1px solid #eee; border-radius:14px; padding:1rem; }
+.kpis { display:grid; grid-template-columns: repeat(3,1fr); gap:.8rem; }
+.kpi { background:#fafafe; border:1px dashed #e5e5f3; border-radius:12px; padding:.8rem; text-align:center; }
+
+@media (max-width: 992px) {
+  .account { grid-template-columns: 1fr; }
+}

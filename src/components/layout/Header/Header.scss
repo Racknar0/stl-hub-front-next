@@ -1,0 +1,184 @@
+@use '../../../styles/base/variables' as *;
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #171d2a;
+    backdrop-filter: saturate(150%) blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+}
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    .brand-logo {
+        height: 35px;
+        width: auto;
+        display: block;
+    }
+    .logo {
+        display: none;
+    }
+}
+.header-cta {
+    display: flex;
+    gap: 0.6rem;
+}
+.btn-pill {
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    &.outline {
+        background: rgba(255, 255, 255, 0.06);
+        color: #e0e6ff;
+        border-color: rgba($primary, 0.25);
+    }
+    &.fill {
+        background: $primary;
+        color: white;
+        box-shadow: 0 6px 18px rgba($primary, 0.35);
+    }
+}
+
+/* Tamaño fijo de CTAs del header */
+.app-header .header-cta .btn-pill {
+    height: 40px;
+    width: 110px;
+    padding: 0; /* centrado vertical/horizontal exacto */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    gap: 0.4rem; /* espacio para icono */
+}
+
+/* Icono dentro del botón */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Variantes de color personalizadas */
+.btn-cyan {
+    background: #00d1ff;
+    color: #072a33;
+    box-shadow: 0 6px 18px rgba(0, 209, 255, 0.35);
+    border: 1px solid rgba(0, 209, 255, 0.3);
+}
+.btn-purple {
+    background: #7c6bff;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(124, 107, 255, 0.35);
+    border: 1px solid rgba(124, 107, 255, 0.3);
+}
+.btn-danger-outline {
+    background: transparent;
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.55);
+}
+.btn-danger-outline:hover {
+    background: rgba(255, 107, 107, 0.08);
+}
+
+/* Búsqueda compartida (inline + móvil) */
+.search-form {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f1420;
+    border-radius: 999px;
+    padding: 0.35rem 0.35rem 0.35rem 0.6rem; /* sin icono izquierdo */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    border: 2px solid transparent;
+    background-image: linear-gradient(#0f1420, #0f1420),
+        linear-gradient(90deg, #00e7ff, #6a5cff);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+
+    input {
+        flex: 1;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        padding: 0.5rem 0.2rem 0.5rem 0.2rem;
+        border-radius: 999px;
+        font-size: 0.95rem;
+        color: #e9efff;
+        &::placeholder {
+            color: rgba(233, 239, 255, 0.6);
+        }
+    }
+
+    .search-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #7c6bff; /* morado consistente con CTA */
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(124, 107, 255, 0.35);
+        cursor: pointer;
+    }
+
+    &:focus-within {
+        box-shadow: 0 0 0 3px rgba(106, 92, 255, 0.25);
+    }
+}
+
+.search-panel {
+    padding: 0.8rem 0 1rem;
+}
+
+/* Inline dentro del navbar en desktop */
+.search-inline {
+    min-width: 340px;
+}
+@media (min-width: 992px) {
+    .search-inline {
+        max-width: 720px;
+    }
+}
+
+/* Botón flotante Explorar + Mega menú */
+.explore-wrap { position: relative; }
+.explore-btn {
+  display: inline-flex; align-items: center; gap:.5rem;
+  height: 40px; padding: 0 .9rem; border-radius: 999px;
+  background: #0f1420; color:#e9efff; border:2px solid transparent;
+  background-image: linear-gradient(#0f1420, #0f1420), linear-gradient(90deg,#00e7ff,#6a5cff);
+  background-origin: border-box; background-clip: padding-box, border-box;
+}
+.explore-btn .icon { display:inline-flex; }
+
+.mega-menu { position:absolute; left:0; top:calc(100% + 12px); width: 920px; background:#2a2f3b; color:#e9efff; border-radius:12px; padding: 18px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.35); display:none; }
+.explore-wrap:hover .mega-menu { display:block; }
+.mega-container { display:grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.col-title { font-weight:800; font-size:.85rem; opacity:.9; margin-bottom:.5rem; text-transform: uppercase; letter-spacing:.3px; }
+.mega-menu ul { margin:0; padding:0; list-style:none; }
+.mega-menu li { padding:.25rem 0; opacity:.9; cursor:pointer; }
+.mega-menu li:hover { color:#b59cff; }
+
+/* Responsive mega-menu */
+@media (max-width: 1200px) {
+  .mega-menu { width: 760px; }
+}
+@media (max-width: 992px) {
+  .explore-wrap { display:none; }
+}

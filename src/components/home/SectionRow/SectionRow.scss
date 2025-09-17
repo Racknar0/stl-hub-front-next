@@ -1,0 +1,55 @@
+@use '../../../styles/base/variables' as *;
+
+.section-row {
+    padding: 1.5rem 0;
+}
+.section-row .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+/* Slider en lugar de grilla */
+.row-slider { overflow: hidden; }
+.row-slider .swiper-slide { width: auto; }
+
+.card-item {
+    background: #0f1420;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.08);
+    min-width: 220px;
+    max-width: 220px;
+}
+.card-item:hover { border-color: rgba(255,255,255,.15); }
+
+.thumb { height: 180px; background-size: cover; background-position: center; }
+.info { padding: 0.8rem; }
+.title { font-weight: 800; margin-bottom: .35rem; }
+.chips { display:flex; gap: .35rem; flex-wrap: wrap; }
+.chip {
+    background: rgba(255,255,255,.06);
+    color: #cfd6ff;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    font-size: .72rem;
+    padding: .15rem .45rem;
+}
+
+/* Flechas del slider */
+.row-slider .swiper-button-prev,
+.row-slider .swiper-button-next {
+  color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  backdrop-filter: blur(4px);
+}
+.row-slider .swiper-button-prev:hover,
+.row-slider .swiper-button-next:hover { background: rgba(255,255,255,.2); }
+
+.row-slider .swiper-button-prev:after,
+.row-slider .swiper-button-next:after { font-size: 14px; font-weight: 800; }

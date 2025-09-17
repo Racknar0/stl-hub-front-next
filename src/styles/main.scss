@@ -1,0 +1,12 @@
+@use './base/variables' as *;
+@use './base/reset' as *;
+
+// Espacio para utilidades globales minimas
+.container-narrow {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.app-layout { display:flex; min-height:100vh; flex-direction:column; }
+.app-main { flex:1; }

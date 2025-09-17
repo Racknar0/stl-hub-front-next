@@ -1,0 +1,120 @@
+@use '../../../styles/base/variables' as *;
+
+.feature-section {
+    padding: 1.2rem 0 1.6rem;
+}
+.panel {
+    background: #0f1420; /* fondo para contrastar las cards */
+    border-radius: 20px;
+    padding: 1.2rem;
+    color: #e9efff;
+}
+.panel-inner {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.intro {
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.6rem;
+}
+.intro-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    line-height: 1.05;
+}
+.intro-subtitle {
+    opacity: 0.8;
+    margin-bottom: 0.4rem;
+}
+
+/* Swiper de cards */
+.cards { 
+    display: block; /* asegurar comportamiento de contenedor Swiper */
+    overflow: hidden; /* ocultar scroll nativo */
+    flex: 1 1 auto; /* ocupar espacio disponible junto a .intro */
+    min-width: 0;    /* permitir que el flex item se reduzca correctamente */
+    width: 100%;
+}
+.cards .swiper-wrapper { align-items: stretch; }
+.cards .swiper-slide { width: auto; }
+
+.fcard {
+    background: #171d2a;
+    border-radius: 16px;
+    min-width: 220px;
+    max-width: 220px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    position: relative;
+    display:flex;
+    flex-direction: column;
+    /* revertir flex que colapsaba altura */
+}
+.fcard .thumb {
+    flex: 0 0 140px;
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+.finfo {
+    padding: 0.7rem;
+}
+.finfo .chips { display:flex; gap: .35rem; flex-wrap: wrap; margin-top: .35rem; }
+.finfo .chip {
+  background: rgba(255,255,255,.06);
+  color: #cfd6ff;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  font-size: .72rem;
+  padding: .15rem .45rem;
+}
+.ftitle {
+    font-weight: 800;
+}
+.fmeta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+.badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #00d1ff;
+    color: #072a33;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    height: 20px;
+    width: 20px;
+    line-height: 15px;
+}
+
+/* Flechas del slider dentro del panel */
+.cards .swiper-button-prev,
+.cards .swiper-button-next {
+    color: #fff;
+    width: 34px; height: 34px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.15);
+    backdrop-filter: blur(4px);
+}
+.cards .swiper-button-prev:hover,
+.cards .swiper-button-next:hover { background: rgba(255,255,255,.25); }
+
+.cards .swiper-button-prev:after,
+.cards .swiper-button-next:after { font-size: 14px; font-weight: 800; }
+
+@media (max-width: 992px) {
+    .panel-inner {
+        flex-direction: column;
+    }
+    .intro {
+        flex: 0 0 auto;
+    }
+}

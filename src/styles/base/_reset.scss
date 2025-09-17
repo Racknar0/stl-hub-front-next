@@ -1,0 +1,33 @@
+@use './variables' as *;
+
+* {
+    box-sizing: border-box;
+    font-family: 'Montserrat'
+}
+html,
+body,
+#root {
+    
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+    color: $text;
+    background-color: $dark;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Poppins', 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto,
+        Helvetica, Arial;
+}
+
+p {
+    font-family: "Montserrat";
+}

@@ -1,0 +1,22 @@
+@use '../../../styles/base/variables' as *;
+
+.pricing { padding:2rem 0; }
+.pricing-header { text-align:center; margin-bottom:1rem; 
+  h1 { font-size:2rem; font-weight:900; color:$dark; }
+  p { color:#666; }
+}
+.plan-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; }
+.plan-card { position:relative; background:#fff; border:1px solid #eee; border-radius:16px; padding:1rem; box-shadow: 0 8px 24px rgba(0,0,0,.04); }
+.plan-card.highlight { border-color: rgba($primary,.4); box-shadow: 0 12px 28px rgba($primary,.18); }
+.plan-badge { position:absolute; top:.8rem; right:.8rem; background:$primary; color:#fff; font-weight:800; font-size:.75rem; padding:.25rem .5rem; border-radius:999px; }
+.plan-name { font-weight:900; margin-bottom:.4rem; }
+.price-row { margin:.4rem 0 .8rem; }
+.price { display:flex; align-items:baseline; gap:.25rem; }
+.amount { font-size:1.8rem; font-weight:900; color:$dark; }
+.per { color:#818199; }
+.bill-note { color:#666; font-size:.9rem; }
+.save { color: #0f8138; font-weight:800; margin-top:.25rem; }
+.features { list-style: none; padding:0; margin: .6rem 0 1rem; color:#4a4a5c; 
+  li { padding:.25rem 0; }
+}
+.fine-print { margin-top:1rem; color:#818199; font-size:.85rem; text-align:center; }

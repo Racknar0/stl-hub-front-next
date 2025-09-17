@@ -1,0 +1,23 @@
+@use './base/variables' as *;
+@use './main' as *;
+
+/* Componentes de layout */
+@use '../components/layout/Header/Header.scss' as *;
+@use '../components/layout/Buttons/Button.scss' as *;
+@use '../components/layout/Footer/Footer.scss' as *;
+@use '../components/layout/BottomBar/SubscribeBar.scss' as *;
+@use '../components/layout/Layout/Layout.scss' as *;
+
+/* Home components */
+@use '../components/home/Hero/Hero.scss' as *;
+@use '../components/home/FeatureSection/FeatureSection.scss' as *;
+@use '../components/home/SectionRow/SectionRow.scss' as *;
+@use '../components/home/Testimonials/Testimonials.scss' as *;
+@use '../components/home/SubscribeSection/SubscribeSection.scss' as *;
+@use '../components/home/PricingInline/PricingInline.scss' as *;
+
+/* Pages (App Router) */
+@use '../app/(site)/suscripcion/Suscripcion.scss' as *;
+@use '../app/(site)/cuenta/Account.scss' as *;
+@use '../app/(site)/asset/Asset.scss' as *;
+@use '../app/(site)/home/Home.scss' as *;

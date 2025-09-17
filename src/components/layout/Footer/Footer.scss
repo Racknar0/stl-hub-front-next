@@ -1,0 +1,5 @@
+@use '../../../styles/base/variables' as *;
+
+.app-footer { border-top:1px solid rgba(255,255,255,.08); background:#171d2a; color:#cfd6ff; }
+.footer-inner { padding:2rem 0; display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; }
+.legal { font-size:.85rem; max-width:760px; opacity:.8; }

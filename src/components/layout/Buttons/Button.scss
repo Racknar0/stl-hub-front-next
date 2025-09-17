@@ -1,0 +1,40 @@
+@use '../../../styles/base/variables' as *;
+
+.app-btn {
+  height: 40px;
+  width: 110px; /* ancho fijo por defecto */
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem; /* espacio para icono */
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+/* Variante de ancho */
+.app-btn--w-lg { width: 140px; }
+
+/* Icono dentro del botón */
+.app-btn__icon { display:inline-flex; align-items:center; }
+
+/* Variantes de color reutilizables */
+.app-btn--cyan {
+  background: #0099de;
+  color:#072a33;
+  box-shadow: 0 6px 18px rgba(0,209,255,.35);
+  border-color: rgba(0,209,255,.3);
+}
+.app-btn--purple {
+  background: #7c6bff;
+  color:#fff;
+  box-shadow: 0 6px 18px rgba(124,107,255,.35);
+  border-color: rgba(124,107,255,.3);
+}
+.app-btn--dangerOutline {
+  background: transparent;
+  color:#ff6b6b;
+  border-color: rgba(255,107,107,.55);
+}
+.app-btn--dangerOutline:hover { background: rgba(255,107,107,.08); }

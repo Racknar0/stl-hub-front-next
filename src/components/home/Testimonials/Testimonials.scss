@@ -1,0 +1,14 @@
+@use '../../../styles/base/variables' as *;
+
+.testimonials { padding: 2rem 0 2.5rem; }
+.t-header { text-align:center; margin-bottom: 1rem; }
+.t-header h3 { font-family:'Poppins',sans-serif; font-weight:900; font-size: clamp(1.4rem, 2.6vw, 2rem); }
+.t-header p { opacity:.8; }
+
+.t-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:16px; }
+.t-card { background:#0f1420; border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:1rem; color:#e9efff; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.t-quote { font-size:1rem; line-height:1.4; margin-bottom:.8rem; }
+.t-user { display:flex; align-items:center; gap:.6rem; }
+.t-avatar { width:42px; height:42px; border-radius:50%; border:2px solid rgba(255,255,255,.15); }
+.t-name { font-weight:800; }
+.t-role { font-size:.85rem; opacity:.7; }
