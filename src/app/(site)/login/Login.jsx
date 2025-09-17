@@ -50,26 +50,50 @@ const Login = () => {
     };
 
     return (
-        <div className="container mt-5">
-            <div className="row justify-content-center">
-                <div className="col-md-4">
-                    <h2 className="text-center mb-4">Login</h2>
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                            <label htmlFor="username" className="form-label">Email</label>
-                            <input type="text" className="form-control" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="password" className="form-label">Password</label>
-                            <input type="password" className="form-control" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                        </div>
-                        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                            {loading ? 'Accediendo...' : 'Acceder'}
-                        </button>
-                    </form>
-                </div>
+        <section className="login-page">
+          <div className="container-narrow">
+            <div className="login-wrap">
+              {/* Icono/branding arriba */}
+              <div className="login-brand">
+                <img src="/logo_horizontal_final.png" alt="STL HUB" />
+              </div>
+
+              {/* Tarjeta glass con el formulario */}
+              <div className="login-card">
+                <h2 className="login-title">Inicia sesión</h2>
+                <form onSubmit={handleSubmit} className="login-form" aria-label="Formulario de inicio de sesión">
+                  <label className="login-field">
+                    <span className="label">Email</span>
+                    <input
+                      type="email"
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      placeholder="tucorreo@ejemplo.com"
+                    />
+                  </label>
+
+                  <label className="login-field">
+                    <span className="label">Password</span>
+                    <input
+                      type="password"
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="••••••••"
+                    />
+                  </label>
+
+                  <button type="submit" className="login-submit" disabled={loading}>
+                    {loading ? 'Accediendo…' : 'Acceder'}
+                  </button>
+                </form>
+              </div>
             </div>
-        </div>
+          </div>
+        </section>
     );
 };
 

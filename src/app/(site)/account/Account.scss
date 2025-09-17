@@ -1,0 +1,21 @@
+@use '../../../styles/base/variables' as *;
+
+.account { padding: 1rem 0 2.5rem; color:#e9efff; }
+.account-breadcrumb { display:flex; align-items:center; gap:.6rem; margin-bottom: 1rem; }
+.account-breadcrumb a { text-decoration:none; }
+.account-breadcrumb .crumb { background: #7c6bff; color:#fff; border-radius: 999px; padding:.45rem .9rem; font-weight:800; box-shadow:0 8px 18px rgba(124,107,255,.35); }
+.account-breadcrumb .path { color:#cfd6ff; font-weight:800; }
+
+.account-grid { display:grid; grid-template-columns: 1fr 1.8fr; gap: 1.25rem; }
+
+.account .card { background:#0f1420; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:1rem; color:#e9efff; }
+.account h4, .account h5 { color:#ffffff; margin: 0 0 .5rem; }
+.account p { margin:.25rem 0; }
+.account strong { color:#ffffff; }
+.account .muted { color:#cfd6ff; opacity:.9; }
+
+.account .kpis { display:grid; grid-template-columns: repeat(3,1fr); gap: .6rem; margin-top:.5rem; }
+.account .kpi { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:.6rem; color:#e9efff; }
+.account .kpi > div:last-child { color:#cfd6ff; opacity:.9; }
+
+@media (max-width: 992px) { .account-grid { grid-template-columns: 1fr; } }

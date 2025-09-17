@@ -200,7 +200,7 @@
 
     /* Backdrop con transición suave */
     + .modal-backdrop.fade { opacity: 0; transition: opacity 240ms ease; }
-    + .modal-backdrop.show { opacity: 1; }
+    + .modal-backdrop.show { opacity: 0.6; }
 
     @media (max-width: 992px) {
         /* cuadrado toma el ancho del viewport en móvil */
