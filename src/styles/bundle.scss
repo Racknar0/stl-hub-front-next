@@ -26,3 +26,6 @@
 @use '../app/(site)/home/Home.scss' as *;
 @use '../app/(site)/tags/tags.scss' as *;
 @use '../app/(site)/login/login.scss' as *;
+
+/* Dashboard */
+@use '../components/dashboard/Sidebar/Sidebar.scss' as *;

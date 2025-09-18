@@ -4,12 +4,24 @@ import React from 'react'
 import Link from 'next/link'
 import './Header.scss'
 import Button from '../Buttons/Button'
+import useStore from '../../../store/useStore'
+import { useRouter } from 'next/navigation'
+import { confirmAlert } from '../../../helpers/alerts'
 
 const Header = () => {
-  const handleLogout = () => {
-    // TODO: Implementar acción real de logout cuando haya backend/estado
-    console.log('logout')
+  const token = useStore((s) => s.token)
+  const roleId = useStore((s) => s.roleId)
+  const logout = useStore((s) => s.logout)
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const ok = await confirmAlert('Cerrar sesión', '¿Deseas cerrar sesión?', 'Cerrar sesión', 'Cancelar', 'warning')
+    if (!ok) return
+    await logout()
+    router.push('/')
   }
+
+  const isAdmin = roleId === 2
 
   return (
     <header className="app-header">
@@ -124,55 +136,71 @@ const Header = () => {
           </div>
 
           <div className="header-cta d-flex gap-2">
-            {/* Botón visible de Login */}
-            <Button
-              as={Link}
-              href="/login"
-              variant="purple"
-              width="lg"
-              aria-label="Login"
-              icon={(
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              )}
-            >
-              Login
-            </Button>
+            {token ? (
+              <>
+                {isAdmin ? (
+                  <Button
+                    as={Link}
+                    href="/dashboard"
+                    variant="cyan"
+                    width="lg"
+                    aria-label="Dashboard"
+                    icon={(
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  >
+                  </Button>
+                ) : (
+                  <Button
+                    as={Link}
+                    href="/account"
+                    variant="cyan"
+                    width="lg"
+                    aria-label="Cuenta"
+                    icon={(
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                  >
+                  </Button>
+                )}
 
-            {/* Mantener (ocultos) los botones de Cuenta y Logout */}
-            <div className="d-none">
+                <Button
+                  type="button"
+                  onClick={handleLogout}
+                  variant="dangerOutline"
+                  width="lg"
+                  aria-label="Cerrar sesión"
+                  icon={(
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  )}
+                ></Button>
+              </>
+            ) : (
               <Button
                 as={Link}
-                href="/account"
-                variant="cyan"
+                href="/login"
+                variant="purple"
                 width="lg"
-                aria-label="Cuenta"
+                aria-label="Login"
                 icon={(
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 )}
               >
+                Login
               </Button>
-
-              <Button
-                type="button"
-                onClick={handleLogout}
-                variant="dangerOutline"
-                width="lg"
-                aria-label="Cerrar sesión"
-                icon={(
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                )}
-              ></Button>
-            </div>
+            )}
           </div>
         </nav>
 
@@ -190,7 +218,6 @@ const Header = () => {
               </svg>
             </button>
           </form>
-          <div className="search-hint">Sugerencias: figuras, props, miniaturas, cosplay…</div>
         </div>
       </div>
     </header>

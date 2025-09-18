@@ -1,24 +1,53 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware'; // Importa el middleware
 
+// Helper para decodificar JWT en cliente (sin validar firma)
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+    return JSON.parse(jsonPayload)
+  } catch (e) {
+    return null
+  }
+}
+
 // Crear un store con Zustand y subscribeWithSelector
 const useStore = create(
     subscribeWithSelector((set, get) => ({
         // Estado inicial
         loading: false, // Indica si la aplicación está cargando algo
         userId: null, // ID del usuario
-        token: localStorage.getItem('token') || null, // Token de autenticación
+        token: null, // Token de autenticación (hidratado en cliente)
+        roleId: null, // Rol del usuario (1=user, 2=admin)
         
 
         // Funciones para manejar el estado de loading
         setLoading: (value) => set({ loading: value }),
 
+        // Hidratar token desde localStorage en cliente
+        hydrateToken: () => {
+            if (typeof window !== 'undefined') {
+                const t = window.localStorage.getItem('token');
+                if (t) {
+                  const payload = decodeJwt(t)
+                  set({ token: t, roleId: payload?.roleId ?? null, userId: payload?.id ?? null })
+                }
+            }
+        },
+
         // Función para iniciar sesión
         login: async ( token) => {
             set({ loading: true });
             try {
-                localStorage.setItem('token', token);
-                set({ token });
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('token', token);
+                }
+                const payload = decodeJwt(token)
+                set({ token, roleId: payload?.roleId ?? null, userId: payload?.id ?? null });
             } catch (error) {
                 console.error('Error al iniciar sesión:', error);
             } finally {
@@ -29,10 +58,12 @@ const useStore = create(
         // Función para cerrar sesión
         logout: async () => {
             set({ loading: true });
-            set({ token: null });
+            set({ token: null, roleId: null, userId: null });
             try {
-                localStorage.removeItem('token');
-                set({ token: null });
+                if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem('token');
+                }
+                set({ token: null, roleId: null, userId: null });
             } catch (error) {
                 console.error('Error al cerrar sesión:', error);
             } finally {
@@ -40,24 +71,6 @@ const useStore = create(
                 console.log('Sesión cerrada');
             }
         },
-
-        // Función para cargar el usuario desde AsyncStorage al inicio
-        // loadUser: async () => {
-        //     set({ loading: true });
-        //     try {
-        //         const userId = await AsyncStorage.getItem('userId');
-        //         const token = await AsyncStorage.getItem('token');
-        //         if (userId && token) {
-        //             set({ userId: JSON.parse(userId), token });
-        //         }
-        //         console.log('Usuario cargado:', userId, token);
-        //     } catch (error) {
-        //         console.error('Error al cargar los datos del usuario:', error);
-        //     } finally {
-        //         set({ loading: false });
-        //     }
-        // },
-
 
     }))
 );

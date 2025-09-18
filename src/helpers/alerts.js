@@ -37,3 +37,23 @@ export const timerAlert = async (title = 'Success!', message = 'La operación se
     showConfirmButton: false
   })
 }
+
+export const confirmAlert = async (
+  title = '¿Estás seguro?',
+  message = 'Confirma para continuar',
+  confirmText = 'Sí',
+  cancelText = 'Cancelar',
+  icon = 'question'
+) => {
+  const result = await Swal.fire({
+    title,
+    text: message,
+    icon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    focusCancel: true,
+  })
+  return result.isConfirmed
+}

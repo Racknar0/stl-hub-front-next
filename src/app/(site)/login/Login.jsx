@@ -12,13 +12,14 @@ const Login = () => {
     const router = useRouter();
     const token = useStore((state) => state.token);
 
-    const [username, setUsername] = useState('racknarow@gmail.com');
-    const [password, setPassword] = useState('123456');
+    const [username, setUsername] = useState('racknarow1@gmail.com');
+    const [password, setPassword] = useState('camilo2676');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (token) {
-            router.push('/dashboard');
+            router.push('/');
         }
     }, [token, router]);
 
@@ -38,7 +39,7 @@ const Login = () => {
                 const token = response.data.token;
                 login(token);
                 await timerAlert('Success!', 'Login successful', 2000).then(() => {
-                    router.push('/dashboard');
+                    router.push('/');
                 });
             } else {
                 console.error('Error:', response);
@@ -75,16 +76,39 @@ const Login = () => {
                     />
                   </label>
 
-                  <label className="login-field">
+                  <label className="login-field password-field">
                     <span className="label">Password</span>
-                    <input
-                      type="password"
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      placeholder="••••••••"
-                    />
+                    <div className="input-wrap">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        className="pass-toggle"
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        onClick={() => setShowPassword((v) => !v)}
+                      >
+                        {showPassword ? (
+                          // eye-off
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M10.58 6.14A9.73 9.73 0 0 1 12 6c5.5 0 9.5 6 9.5 6s-.71 1.12-1.98 2.5M6.48 6.5C4.25 8.2 2.5 12 2.5 12s2.2 3.93 5.69 5.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M15.5 15.5A4 4 0 0 1 8.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        ) : (
+                          // eye
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </label>
 
                   <button type="submit" className="login-submit" disabled={loading}>
