@@ -35,8 +35,9 @@
 @media (min-width: 1200px){
   .dashboard-page{
     display: grid;
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 240px minmax(0, 1fr);
     min-height: 100vh;
+    width: 100%;
   }
   .dash-sidebar{
     position: sticky; /* ocupa espacio en el flujo */
@@ -45,7 +46,11 @@
     transform: none !important; /* siempre visible */
   }
   .dash-toggle{ display: none; }
-  .dashboard-content{ margin-left: 0; } /* el grid ya separa */
+  .dashboard-content{ 
+    margin-left: 0; /* el grid ya separa */
+    min-width: 0;   /* clave para que la columna pueda encoger y no empuje el grid */
+    overflow: hidden; /* evita scroll horizontal del main; los hijos manejan su overflow */
+  }
 }
 
 .dash-sidebar .brand{ display: flex; align-items: center; justify-content: center; }

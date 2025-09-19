@@ -5,7 +5,8 @@ export const successAlert = async (title = 'Success!', message = 'La operación 
     title: title,
     text: message,
     icon: 'success',
-    confirmButtonText: 'Ok'
+    confirmButtonText: 'Ok',
+    zIndex: 2000,
   })
 }
 
@@ -14,7 +15,8 @@ export const errorAlert = async (title = 'Error!', message = 'Un error ha ocurri
     title: title,
     text: message,
     icon: 'error',
-    confirmButtonText: 'Ok'
+    confirmButtonText: 'Ok',
+    zIndex: 2000,
   })
 }
 
@@ -23,7 +25,8 @@ export const warningAlert = async (title = 'Warning!', message = 'Advertencia') 
         title: title,
         text: message,
         icon: 'warning',
-        confirmButtonText: 'Ok'
+        confirmButtonText: 'Ok',
+        zIndex: 2000,
     })
     }
 
@@ -34,7 +37,8 @@ export const timerAlert = async (title = 'Success!', message = 'La operación se
     icon: 'success',
     timer: timer,
     timerProgressBar: true,
-    showConfirmButton: false
+    showConfirmButton: false,
+    zIndex: 2000,
   })
 }
 
@@ -54,6 +58,7 @@ export const confirmAlert = async (
     cancelButtonText: cancelText,
     reverseButtons: true,
     focusCancel: true,
+    zIndex: 2000,
   })
   return result.isConfirmed
 }

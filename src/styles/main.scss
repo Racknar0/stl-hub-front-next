@@ -1,6 +1,9 @@
 @use './base/variables' as *;
 @use './base/reset' as *;
 
+// Elevar SweetAlert sobre modales MUI
+.swal2-container { z-index: 2000 !important; }
+
 // Espacio para utilidades globales minimas
 .container-narrow {
   max-width: 1200px;

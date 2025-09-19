@@ -24,9 +24,11 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    InputAdornment,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/EditOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 
 export default function UsersPage() {
     const http = new HttpService();
@@ -36,8 +38,8 @@ export default function UsersPage() {
     const [rowCount, setRowCount] = useState(0);
     // Un solo estado para paginación (requerido por MRT)
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
-    const [globalFilter, setGlobalFilter] = useState('');
-    const [debouncedFilter, setDebouncedFilter] = useState('');
+    const [q, setQ] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -49,15 +51,6 @@ export default function UsersPage() {
         password: '',
         type_subscription: 'three_months',
     });
-
-    // Debounce 2s para buscador
-    useEffect(() => {
-        const t = setTimeout(() => {
-            setPagination((p) => ({ ...p, pageIndex: 0 }));
-            setDebouncedFilter(globalFilter);
-        }, 2000);
-        return () => clearTimeout(t);
-    }, [globalFilter]);
 
     const generateStrongPassword = (length = 12) => {
         const lowers = 'abcdefghijklmnopqrstuvwxyz';
@@ -79,9 +72,9 @@ export default function UsersPage() {
         try {
             setLoading(true);
             const page = Number(pagination.pageIndex) ?? 0;
-            const size = Math.max(Number(pagination.pageSize) ?? 50, 50);
+            const size = Number(pagination.pageSize) || 50;
             const res = await http.getData(
-                `/users?page=${page + 1}&pageSize=${size}&q=${encodeURIComponent(debouncedFilter)}`
+                `/users?page=${page + 1}&pageSize=${size}&q=${encodeURIComponent(searchTerm)}`
             );
             const payload = res.data;
             setData(
@@ -117,7 +110,7 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
-    }, [pagination, debouncedFilter]);
+    }, [pagination, searchTerm]);
 
     useEffect(() => {
         fetchUsers();
@@ -234,24 +227,35 @@ export default function UsersPage() {
         state: {
             isLoading: loading,
             pagination,
-            globalFilter,
         },
         manualPagination: true,
-        manualFiltering: true,
         onPaginationChange: setPagination,
-        onGlobalFilterChange: setGlobalFilter,
         initialState: { density: 'compact' },
         muiToolbarAlertBannerProps: error
             ? { color: 'error', children: error }
             : undefined,
         renderTopToolbarCustomActions: () => (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
                 <TextField
                     size="small"
                     placeholder="Buscar email..."
-                    value={globalFilter}
-                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e)=>{ if(e.key==='Enter'){ setPagination(p=>({...p, pageIndex:0})); setSearchTerm(q); } }}
+                    InputProps={{ startAdornment: (
+                        <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                        </InputAdornment>
+                    ) }}
+                    sx={{ minWidth: 260 }}
                 />
+                <MUIButton
+                    variant="outlined"
+                    onClick={() => { setPagination(p=>({...p, pageIndex:0})); setSearchTerm(q); }}
+                >
+                    Buscar
+                </MUIButton>
+                <Box sx={{ flex: 1 }} />
                 <MUIButton
                     variant="contained"
                     color="success"
@@ -287,9 +291,12 @@ export default function UsersPage() {
                 )}
             </Box>
         ),
-        muiTableContainerProps: { sx: { maxHeight: 600 } },
+        muiTableContainerProps: { sx: { maxHeight: 600, overflowX: 'auto' } },
         enableStickyHeader: true,
         enableStickyFooter: true,
+        muiPaginationProps: {
+            rowsPerPageOptions: [10, 25, 50, 100, 200, 300, 400, 500, 1000],
+        },
     });
 
     return (
