@@ -11,6 +11,10 @@ export default class HttpService {
     });
   }
 
+  async getById(url, id) {
+    return axiosInstance.get(`${url}/${id}`).then((response) => response);
+  }
+
   async postData(url, data) {
     // console.log('Data createData ------------------------:');
     // console.log(JSON.stringify(data, null, 2));
@@ -22,9 +26,10 @@ export default class HttpService {
     });
   }
 
-  async postFormData(url, data) {
+  async postFormData(url, data, config = {}) {
     return axiosInstance.post(url, data, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      ...config,
     }).then((response) => {
       // console.log('Response createFormData ------------------------:');
       // console.log(JSON.stringify(response, null, 2));
@@ -40,14 +45,19 @@ export default class HttpService {
     });
   }
 
-  async putFormData(url, id, data) {
+  async putFormData(url, id, data, config = {}) {
     return axiosInstance.put(`${url}/${id}`, data, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      ...config,
     }).then((response) => {
       // console.log('Response updateFormData ------------------------:');
       // console.log(JSON.stringify(response, null, 2));
       return response;
     });
+  }
+
+  async patchData(url, id, data) {
+    return axiosInstance.patch(`${url}/${id}`, data).then((response) => response);
   }
 
   async deleteData(url, id) {

@@ -43,7 +43,7 @@ const Sidebar = () => {
                     <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </span>
-                Users
+                Usuarios
               </Link>
             </li>
             <li>
@@ -53,7 +53,7 @@ const Sidebar = () => {
                     <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </span>
-                Assets
+                Stl's
               </Link>
             </li>
             <li>
@@ -63,7 +63,7 @@ const Sidebar = () => {
                     <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </span>
-                Upload Asset
+                Subir Stl
               </Link>
             </li>
             <li>
@@ -74,7 +74,27 @@ const Sidebar = () => {
                     <path d="M4 10h16" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </span>
-                Accounts overview
+                Cuentas MEGA
+              </Link>
+            </li>
+            <li>
+              <Link href="/dashboard/categories" className="item" onClick={() => setOpen(false)}>
+                <span className="icon" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </span>
+                Categorías
+              </Link>
+            </li>
+            <li>
+              <Link href="/dashboard/tags" className="item" onClick={() => setOpen(false)}>
+                <span className="icon" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </span>
+                Tags
               </Link>
             </li>
           </ul>

@@ -23,14 +23,55 @@ import {
   Divider,
   Link as MUILink,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from '@mui/material'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import LinkIcon from '@mui/icons-material/Link'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import CloseIcon from '@mui/icons-material/Close'
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
+import HttpService from '@/services/HttpService'
+import HeaderBar from './HeaderBar'
+import ImagesSection from './ImagesSection'
+import AssetFileSection from './AssetFileSection'
+import MetadataSection from './MetadataSection'
+import StatusSection from './StatusSection'
+import AppButton from '@/components/layout/Buttons/Button'
+import NotInterestedIcon from '@mui/icons-material/NotInterested'
+
+const http = new HttpService()
+const API_BASE = '/accounts'
+const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
+
+const StatusChip = ({ status }) => {
+  const map = {
+    CONNECTED: { label: 'OK', color: 'success' },
+    EXPIRED: { label: 'Expirada', color: 'warning' },
+    ERROR: { label: 'ERROR', color: 'error' },
+    SUSPENDED: { label: 'Suspendida', color: 'default' },
+  }
+  const { label, color } = map[status] || { label: status, color: 'default' }
+  return <Chip label={label} color={color} size="small" />
+}
 
 const MegaStatus = ({ status, reason }) => {
+  if (!status || status === 'idle') return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Typography variant="body2" color="text.secondary">Sin cuenta</Typography>
+    </Stack>
+  )
+  if (status === 'disconnected') return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Typography variant="body2" color="text.secondary">Sin conexión</Typography>
+    </Stack>
+  )
   if (status === 'connecting') return (
     <Stack direction="row" spacing={1} alignItems="center">
       <AutorenewIcon color="info" fontSize="small" className="spin" />
@@ -53,49 +94,23 @@ const MegaStatus = ({ status, reason }) => {
   )
 }
 
+function mapBackendToUiStatus(s) {
+  if (s === 'CONNECTED') return 'connected'
+  if (s === 'ERROR' || s === 'SUSPENDED') return 'failed'
+  return 'failed'
+}
+
 export default function UploadAssetPage() {
-  // Data quemada
-  const accounts = useMemo(() => ([
-    { id: 1, alias: 'MEGA-01 (EU)', status: 'connected' },
-    { id: 2, alias: 'MEGA-02 (US)', status: 'failed', reason: 'Credenciales inválidas' },
-    { id: 3, alias: 'MEGA-03 (LATAM)', status: 'connecting' },
-  ]), [])
-
-  const [selectedAcc, setSelectedAcc] = useState(accounts[0])
-  const [accStatus, setAccStatus] = useState(selectedAcc.status)
-  const [accReason, setAccReason] = useState(selectedAcc.reason)
-
-  // Simular test ligero al cambiar de cuenta
-  useEffect(() => {
-    setAccStatus('connecting')
-    setAccReason(undefined)
-    const t = setTimeout(() => {
-      if (selectedAcc.id === 2) {
-        setAccStatus('failed')
-        setAccReason('Credenciales inválidas')
-      } else {
-        setAccStatus('connected')
-      }
-    }, 1000)
-    return () => clearTimeout(t)
-  }, [selectedAcc])
-
-  const canUpload = accStatus === 'connected'
-
-  // Mock imágenes y progreso
-  const images = useMemo(() => ([
-    { id: 1, url: 'https://picsum.photos/seed/a1/600/400', name: 'img_01.jpg', progress: 100 },
-    { id: 2, url: 'https://picsum.photos/seed/a2/600/400', name: 'img_02.jpg', progress: 100 },
-    { id: 3, url: 'https://picsum.photos/seed/a3/600/400', name: 'img_03.jpg', progress: 42 },
-  ]), [])
-
-  const zipFile = { name: 'my-model-pack.zip', size: '1.2 GB', md5: 'c4ca4238a0b923820dcc509a6f75849b', sha1: '356a192b7913b04c54574d18c28d46e6395428ab', progress: 68, speed: '12 MB/s', eta: '01:23' }
-  const remotePath = '/STLHUB/assets/slug-demo/'
+  const [accounts, setAccounts] = useState([])
+  const [selectedAcc, setSelectedAcc] = useState(null)
+  const [accStatus, setAccStatus] = useState('idle')
+  const [accReason, setAccReason] = useState(undefined)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Form metadata (mock)
-  const [title, setTitle] = useState('StormTrooper Helmet')
-  const [category, setCategory] = useState('Props')
-  const [tags, setTags] = useState(['helmet', 'star-wars'])
+  const [title, setTitle] = useState('')
+  const [category, setCategory] = useState('')
+  const [tags, setTags] = useState([])
   const [isPremium, setIsPremium] = useState(true)
   const [description, setDescription] = useState('Modelo detallado de casco con soportes opcionales.')
   const [pieces, setPieces] = useState('12')
@@ -104,12 +119,123 @@ export default function UploadAssetPage() {
   const [dimensions, setDimensions] = useState('220x180x250 mm')
   const [status, setStatus] = useState('processing') // draft | processing | published | failed
 
-  const quickStat = {
-    used: '48 GB',
-    total: '200 GB',
-    bandwidth: '3.2 GB / día',
-    uploadFails24h: 1,
+  const [imageFiles, setImageFiles] = useState([]) // {id, url, file, name}
+  const [previewIndex, setPreviewIndex] = useState(-1)
+  const statusRef = React.useRef(null)
+  const [archiveFile, setArchiveFile] = useState(null)
+  const [uploadFinished, setUploadFinished] = useState(false)
+  const [statusKey, setStatusKey] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const [expandedAccId, setExpandedAccId] = useState(null)
+  // Eliminado: estados de listado de assets en este modal
+
+  const remotePath = '/STLHUB/assets/slug-demo/'
+
+  // Eliminado: formatMB y fetchAccountAssets aquí
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await http.getData(API_BASE)
+      const list = res.data || []
+      setAccounts(list)
+      if (selectedAcc) {
+        const updated = list.find(a => a.id === selectedAcc.id)
+        if (updated) {
+          setSelectedAcc(updated)
+          // Importante: NO actualizar accStatus automáticamente aquí para no simular conexión
+          // Mantener el estado actual (idle/disconnected/connecting/connected) controlado por acciones del usuario
+        }
+      }
+    } catch (e) {
+      console.error('fetchAccounts error', e)
+    }
   }
+
+  useEffect(() => { fetchAccounts() }, [])
+
+  const testSelectedAccount = async () => {
+    if (!selectedAcc) return
+    try {
+      setAccStatus('connecting')
+      setAccReason(undefined)
+      await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
+      await fetchAccounts()
+      const acc = accounts.find(a => a.id === selectedAcc.id) || selectedAcc
+      setSelectedAcc(acc)
+      setAccStatus(mapBackendToUiStatus(acc.status))
+      setAccReason(acc.statusMessage || undefined)
+    } catch (e) {
+      console.error(e)
+      await fetchAccounts()
+      const acc = accounts.find(a => a.id === selectedAcc.id) || selectedAcc
+      setSelectedAcc(acc)
+      setAccStatus('failed')
+      setAccReason('Falló la verificación')
+    }
+  }
+
+  const handleFiles = (filesLike) => {
+    const files = Array.from(filesLike || [])
+    const imgs = files.filter(f => f.type?.startsWith('image/'))
+    if (!imgs.length) return
+    const mapped = imgs.map((f, i) => ({ id: `${Date.now()}_${i}`, file: f, name: f.name, url: URL.createObjectURL(f) }))
+    setImageFiles(prev => {
+      const arr = [...prev, ...mapped]
+      if (arr.length && previewIndex < 0) setPreviewIndex(0)
+      return arr
+    })
+  }
+  const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); handleFiles(e.dataTransfer.files) }
+  const onDragOver = (e) => { e.preventDefault(); e.stopPropagation() }
+  const fileInputRef = React.useRef(null)
+  const openFilePicker = () => fileInputRef.current?.click()
+  const onSelectFiles = (e) => handleFiles(e.target.files)
+
+  const removeImage = (id) => {
+    setImageFiles(prev => {
+      const idx = prev.findIndex(it => it.id === id)
+      if (idx >= 0) { try { URL.revokeObjectURL(prev[idx].url) } catch {}
+      }
+      const arr = prev.filter(it => it.id !== id)
+      if (!arr.length) setPreviewIndex(-1)
+      else if (previewIndex >= arr.length) setPreviewIndex(arr.length - 1)
+      else if (idx >= 0 && idx < previewIndex) setPreviewIndex(previewIndex - 1)
+      return arr
+    })
+  }
+  const prevSlide = () => setPreviewIndex(p => (imageFiles.length ? (p - 1 + imageFiles.length) % imageFiles.length : -1))
+  const nextSlide = () => setPreviewIndex(p => (imageFiles.length ? (p + 1) % imageFiles.length : -1))
+
+  const canUpload = (
+    accStatus === 'connected' &&
+    !!selectedAcc &&
+    !!archiveFile &&
+    imageFiles.length >= 1 &&
+    !!(title && String(title).trim().length > 0) &&
+    !!(category && String(category).trim().length > 0) &&
+    Array.isArray(tags) && tags.filter(t => String(t).trim().length > 0).length >= 2 &&
+    !isUploading
+  )
+
+  const resetForm = () => {
+    // Liberar URLs previas
+    setImageFiles(prev => {
+      prev.forEach(it => { try { URL.revokeObjectURL(it.url) } catch {} })
+      return []
+    })
+    setPreviewIndex(-1)
+    setArchiveFile(null)
+    setTitle('')
+    setCategory('')
+    setTags([])
+    setIsPremium(true)
+    setUploadFinished(false)
+    setStatusKey(k => k + 1) // fuerza remount de StatusSection para limpiar progresos
+  }
+
+  const usedMB = selectedAcc ? Math.max(0, selectedAcc.storageUsedMB || 0) : 0
+  const totalMB = selectedAcc ? (selectedAcc.storageTotalMB > 0 ? selectedAcc.storageTotalMB : FREE_QUOTA_MB) : FREE_QUOTA_MB
+  const usedPct = Math.min(100, totalMB ? (usedMB / totalMB) * 100 : 0)
 
   return (
     <div className="dashboard-content p-3">
@@ -122,208 +248,198 @@ export default function UploadAssetPage() {
       `}</style>
 
       {/* 1) Cabecera */}
-      <Card className="glass mb-3">
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="mega-acc">Cuenta MEGA</InputLabel>
-                <Select
-                  labelId="mega-acc"
-                  label="Cuenta MEGA"
-                  value={selectedAcc.id}
-                  onChange={(e) => {
-                    const acc = accounts.find(a => a.id === e.target.value)
-                    setSelectedAcc(acc)
-                  }}
-                >
-                  {accounts.map((a) => (
-                    <MenuItem key={a.id} value={a.id}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body2">{a.alias}</Typography>
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <MegaStatus status={accStatus} reason={accReason} />
-            </Grid>
-            <Grid item xs={12} md={5}>
-              <Stack direction="row" spacing={2} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
-                <Box sx={{ minWidth: 180 }}>
-                  <Typography variant="caption">Espacio usado / disponible</Typography>
-                  <LinearProgress variant="determinate" value={24} sx={{ mt: 0.5 }} />
-                  <Typography variant="caption">{quickStat.used} / {quickStat.total}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption">Límite diario</Typography>
-                  <Typography variant="body2">{quickStat.bandwidth}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption">Fails 24h</Typography>
-                  <Typography variant="body2" color={quickStat.uploadFails24h ? 'error' : 'inherit'}>{quickStat.uploadFails24h}</Typography>
-                </Box>
-                <Button variant="contained" startIcon={<CloudUploadIcon />} disabled={!canUpload}>Subir</Button>
-                {!canUpload && (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button size="small" variant="outlined">Reintentar</Button>
-                    <Typography variant="caption" color="text.secondary">o cambia de cuenta</Typography>
-                  </Stack>
-                )}
-              </Stack>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+      <HeaderBar
+        selectedAcc={selectedAcc}
+        megaStatusNode={<MegaStatus status={accStatus} reason={accReason} />}
+        accStatus={accStatus}
+        usedPct={usedPct}
+        usedMB={usedMB}
+        totalMB={totalMB}
+        onOpenModal={() => setModalOpen(true)}
+        onTest={testSelectedAccount}
+      />
 
       {/* 2) Layout de carga */}
-      <Grid container spacing={2}>
-        {/* Izquierda */}
-        <Grid item xs={12} md={7}>
-          <Stack spacing={2}>
-            <Card className="glass">
-              <CardHeader title="Imágenes" subheader="Previews para tu front (S3/R2 recomendado)" />
-              <CardContent>
-                <Box className="scroll-x" sx={{ mb: 2 }}>
-                  {images.map(img => (
-                    <div key={img.id} className="img-thumb">
-                      <img src={img.url} alt={img.name} />
-                    </div>
-                  ))}
-                </Box>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
-                  <Button variant="outlined">Agregar imágenes</Button>
-                  <Button variant="outlined">Seleccionar archivos</Button>
-                </Stack>
-                <Box sx={{ p: 2, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 2, mb: 2 }}>
-                  <Typography variant="body2">Arrastra y suelta aquí (jpg/png/webp). Máx 10MB c/u. Máximo 10 archivos.</Typography>
-                </Box>
-                <Typography variant="subtitle2" gutterBottom>Progreso</Typography>
-                <Stack spacing={1}>
-                  {images.map(img => (
-                    <Box key={img.id}>
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2">{img.name}</Typography>
-                        <Typography variant="body2">{img.progress}%</Typography>
-                      </Stack>
-                      <LinearProgress variant="determinate" value={img.progress} />
-                    </Box>
-                  ))}
-                </Stack>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Retries automáticos con backoff exponencial en fallos intermitentes (demo).
-                </Typography>
-              </CardContent>
-            </Card>
+      <Box sx={{ maxWidth: 1600, ms: 'auto' }}>
+        <Grid  spacing={2} >
+          {/* Izquierda */}
+          <Grid item >
+            <Stack spacing={2}>
+              <ImagesSection
+                imageFiles={imageFiles}
+                previewIndex={previewIndex}
+                onPrev={prevSlide}
+                onNext={nextSlide}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
+                onOpenFilePicker={openFilePicker}
+                fileInputRef={fileInputRef}
+                onSelectFiles={onSelectFiles}
+                onRemove={removeImage}
+                onSelectPreview={(idx)=>setPreviewIndex(idx)}
+                disabled={isUploading}
+              />
 
-            <Card className="glass">
-              <CardHeader title="Archivo del asset (ZIP/RAR/7z)" />
-              <CardContent>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
-                  <Button variant="outlined">Seleccionar archivo</Button>
-                  <Box sx={{ flex: 1 }} />
-                </Stack>
-                <Typography variant="body2" gutterBottom>
-                  Seleccionado: <strong>{zipFile.name}</strong> · {zipFile.size}
-                </Typography>
-                <Typography variant="caption" display="block">MD5: {zipFile.md5}</Typography>
-                <Typography variant="caption" display="block" gutterBottom>SHA1: {zipFile.sha1}</Typography>
-                <Typography variant="body2" gutterBottom>Destino: <code>{remotePath}</code></Typography>
+              <AssetFileSection setTitle={setTitle} onFileSelected={setArchiveFile} disabled={isUploading} />
+            </Stack>
+          </Grid>
 
-                <Box sx={{ mt: 1 }}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2">Subida</Typography>
-                    <Typography variant="body2">{zipFile.progress}% · {zipFile.speed} · ETA {zipFile.eta}</Typography>
-                  </Stack>
-                  <LinearProgress variant="determinate" value={zipFile.progress} />
-                </Box>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" disabled>Cancelar</Button>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Stack>
-        </Grid>
+          {/* Derecha */}
+          <Grid item xs={12} md={5}>
+            <Stack spacing={2}>
+              <MetadataSection
+                title={title} setTitle={setTitle}
+                category={category} setCategory={setCategory}
+                tags={tags} setTags={setTags}
+                isPremium={isPremium} setIsPremium={setIsPremium}
+                disabled={isUploading}
+              />
 
-        {/* Derecha */}
-        <Grid item xs={12} md={5}>
-          <Stack spacing={2}>
-            <Card className="glass">
-              <CardHeader title="Metadatos" />
-              <CardContent>
-                <Stack spacing={2}>
-                  <TextField label="Nombre del asset" value={title} onChange={(e)=>setTitle(e.target.value)} fullWidth />
-                  <FormControl fullWidth>
-                    <InputLabel id="cat">Categoría</InputLabel>
-                    <Select labelId="cat" label="Categoría" value={category} onChange={(e)=>setCategory(e.target.value)}>
-                      <MenuItem value="Props">Props</MenuItem>
-                      <MenuItem value="Figuras">Figuras</MenuItem>
-                      <MenuItem value="Escenografía">Escenografía</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  <Autocomplete
-                    multiple
-                    freeSolo
-                    options={['helmet', 'armor', 'cosplay', 'star-wars']}
-                    value={tags}
-                    onChange={(_, v) => setTags(v)}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option+index} />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <TextField {...params} label="Tags" placeholder="Añadir tag" />
-                    )}
+              <Card className="glass">
+                <CardHeader title="Estado" />
+                <CardContent>
+                  <StatusSection
+                    key={statusKey}
+                    ref={statusRef}
+                    getFormData={() => ({
+                      archiveFile,
+                      title,
+                      category,
+                      tags,
+                      isPremium,
+                      accountId: selectedAcc?.id,
+                      images: imageFiles.map(f => f.file)
+                    })}
+                    onUploadingChange={setIsUploading}
+                    onDone={async () => {
+                      setUploadFinished(true)
+                      try {
+                        if (selectedAcc?.id) {
+                          await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
+                          await fetchAccounts()
+                        }
+                      } catch (e) {
+                        console.error('refresh account after upload failed', e)
+                      }
+                    }}
                   />
-
-                  <FormControlLabel control={<Switch checked={isPremium} onChange={(e)=>setIsPremium(e.target.checked)} />} label={isPremium ? 'Premium' : 'Free'} />
-
-                  <TextField label="Descripción" multiline minRows={3} value={description} onChange={(e)=>setDescription(e.target.value)} />
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}><TextField label="Piezas" value={pieces} onChange={(e)=>setPieces(e.target.value)} fullWidth /></Grid>
-                    <Grid item xs={12} sm={6}><TextField label="Soportes incluidos" value={supportsIncluded} onChange={(e)=>setSupportsIncluded(e.target.value)} fullWidth /></Grid>
-                    <Grid item xs={12} sm={6}><TextField label="Impresora recomendada" value={recommendedPrinter} onChange={(e)=>setRecommendedPrinter(e.target.value)} fullWidth /></Grid>
-                    <Grid item xs={12} sm={6}><TextField label="Dimensiones" value={dimensions} onChange={(e)=>setDimensions(e.target.value)} fullWidth /></Grid>
-                  </Grid>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card className="glass">
-              <CardHeader title="Estado" />
-              <CardContent>
-                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                  <Chip label="Draft" color={status==='draft'?'default':'default'} variant={status==='draft'?'filled':'outlined'} />
-                  <Chip label="Processing" color={status==='processing'?'info':'default'} variant={status==='processing'?'filled':'outlined'} />
-                  <Chip label="Published" color={status==='published'?'success':'default'} variant={status==='published'?'filled':'outlined'} />
-                  <Chip label="Failed" color={status==='failed'?'error':'default'} variant={status==='failed'?'filled':'outlined'} />
-                </Stack>
-
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="subtitle2" gutterBottom>Resumen de subida</Typography>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2">Cuenta MEGA objetivo: <strong>{selectedAcc.alias}</strong></Typography>
-                  <Typography variant="body2">Ruta remota: <code>{remotePath}</code></Typography>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <LinkIcon fontSize="small" />
-                    <MUILink href="#" underline="hover" color="inherit" sx={{ pointerEvents: 'none', opacity: 0.6 }}>Link MEGA (pendiente)</MUILink>
-                  </Stack>
-                </Stack>
-
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                  <Button variant="outlined">Guardar borrador</Button>
-                  <Button variant="contained" color="success">Guardar y publicar</Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Stack>
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start' }}>
+                    {uploadFinished ? (
+                      <AppButton
+                        type="button"
+                        onClick={resetForm}
+                        variant="purple"
+                        width="300px"
+                        styles={{ color: '#fff' }}
+                        aria-label="Subir otro STL"
+                      >
+                        Subir otro STL
+                      </AppButton>
+                    ) : (
+                      <AppButton
+                        type="button"
+                        onClick={() => statusRef.current?.startUpload()
+                        }
+                        variant={canUpload ? 'purple' : 'dangerOutline'}
+                        width="300px"
+                        styles={canUpload ? { color: '#fff' } : undefined}
+                        aria-label={canUpload ? 'Subir' : 'No permitido'}
+                        disabled={!canUpload || isUploading}
+                      >
+                        {canUpload ? 'Subir' : <NotInterestedIcon fontSize="small" />}
+                      </AppButton>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Stack>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
+
+      {/* Modal de selección de cuenta */}
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle>Seleccionar cuenta MEGA</DialogTitle>
+        <DialogContent dividers sx={{ p: 2 }}>
+          <Box sx={{ maxHeight: '70vh', overflow: 'auto' }}>
+            <Grid container spacing={2}>
+              {accounts.map((acc) => (
+                <Grid item xs={12} md={4} key={acc.id}>
+                  <Card
+                    className="glass"
+                    sx={{
+                      cursor: 'pointer',
+                      border: '2px solid rgba(255,255,255,0.28)',
+                      borderRadius: 2,
+                      position: 'relative',
+                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease',
+                      '&:hover': {
+                        borderColor: '#7C4DFF',
+                        boxShadow: '0 0 0 3px rgba(124,77,255,0.25)'
+                      },
+                      '&:active': { transform: 'scale(0.997)' }
+                    }}
+                  >
+                    {/* Barra verde si se verificó hoy */}
+                    {(() => { const dt = acc.lastCheckAt && new Date(acc.lastCheckAt); const now = new Date(); return dt && !isNaN(dt) && dt.getFullYear()===now.getFullYear() && dt.getMonth()===now.getMonth() && dt.getDate()===now.getDate(); })() && (
+                      <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, bgcolor: 'success.main', borderBottomLeftRadius: 8, borderBottomRightRadius: 8, zIndex: 1 }} />
+                    )}
+                    <CardContent>
+                      <Stack spacing={1}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Typography variant="h6">{acc.alias}</Typography>
+                          <StatusChip status={acc.status} />
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">{acc.email}</Typography>
+                        <Box>
+                          <Typography variant="caption">Uso de almacenamiento</Typography>
+                          <LinearProgress
+                            variant="determinate"
+                            value={(() => {
+                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB
+                              const used = Math.max(0, acc.storageUsedMB || 0)
+                              return Math.min(100, (used / total) * 100)
+                            })()}
+                            sx={{ my: 0.5 }}
+                          />
+                          <Typography variant="caption">{acc.storageUsedMB} MB / {acc.storageTotalMB > 0 ? `${acc.storageTotalMB} MB` : `${FREE_QUOTA_MB} MB`}</Typography>
+                        </Box>
+                        <Grid container spacing={1}>
+                          <Grid item xs={6}>
+                            <Typography variant="caption">Archivos</Typography>
+                            <Typography variant="body2">{acc.fileCount ?? 0}</Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="caption">Carpetas</Typography>
+                            <Typography variant="body2">{acc.folderCount ?? 0}</Typography>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Typography variant="caption">Última verificación</Typography>
+                            <Typography variant="body2">{acc.lastCheckAt ? new Date(acc.lastCheckAt).toLocaleString() : '-'}</Typography>
+                          </Grid>
+                        </Grid>
+                        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              setSelectedAcc(acc)
+                              setAccStatus('disconnected')
+                              setAccReason(undefined)
+                              setModalOpen(false)
+                            }}
+                          >
+                            Seleccionar
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
