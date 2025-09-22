@@ -30,7 +30,7 @@ const Sidebar = () => {
       <aside className={`dash-sidebar ${open ? 'open' : ''}`} aria-label="Dashboard menu">
         <div className="brand">
           <Link href="/">
-            <img src="/logo_horizontal_final.png" alt="STL HUB" />
+            <img src="/nuevo_horizontal.png" alt="STL HUB" />
           </Link>
         </div>
         <nav className="menu mt-5">

@@ -51,3 +51,9 @@
   border-color: rgba(255, 91, 91, .45);
 }
 .app-btn--danger:hover { filter: brightness(1.06); }
+
+.app-btn[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}

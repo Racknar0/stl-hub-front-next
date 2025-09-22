@@ -57,7 +57,7 @@ const Login = () => {
             <div className="login-wrap">
               {/* Icono/branding arriba */}
               <div className="login-brand">
-                <img src="/logo_horizontal_final.png" alt="STL HUB" />
+                <img src="/nuevo_horizontal.png" alt="STL HUB" />
               </div>
 
               {/* Tarjeta glass con el formulario */}

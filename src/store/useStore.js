@@ -23,7 +23,19 @@ const useStore = create(
         userId: null, // ID del usuario
         token: null, // Token de autenticación (hidratado en cliente)
         roleId: null, // Rol del usuario (1=user, 2=admin)
+        hydrated: false, // indica si ya se leyó localStorage
         
+        // Idioma UI
+        language: 'es',
+        setLanguage: (lang) => {
+          const val = (String(lang || 'es').toLowerCase() === 'en') ? 'en' : 'es'
+          set({ language: val })
+          try { if (typeof window !== 'undefined') localStorage.setItem('lang', val) } catch {}
+        },
+        
+        // Loader global (overlay)
+        globalLoading: false,
+        setGlobalLoading: (value) => set({ globalLoading: Boolean(value) }),
 
         // Funciones para manejar el estado de loading
         setLoading: (value) => set({ loading: value }),
@@ -35,7 +47,15 @@ const useStore = create(
                 if (t) {
                   const payload = decodeJwt(t)
                   set({ token: t, roleId: payload?.roleId ?? null, userId: payload?.id ?? null })
+                } else {
+                  // asegurar estado explícito cuando no hay token
+                  set({ token: null, roleId: null, userId: null })
                 }
+                // marcar hidratación completada
+                set({ hydrated: true })
+            } else {
+                // entorno no browser, marcar hidratado para evitar bloqueos
+                set({ hydrated: true })
             }
         },
 
@@ -47,7 +67,7 @@ const useStore = create(
                     window.localStorage.setItem('token', token);
                 }
                 const payload = decodeJwt(token)
-                set({ token, roleId: payload?.roleId ?? null, userId: payload?.id ?? null });
+                set({ token, roleId: payload?.roleId ?? null, userId: payload?.id ?? null, hydrated: true });
             } catch (error) {
                 console.error('Error al iniciar sesión:', error);
             } finally {
@@ -63,7 +83,7 @@ const useStore = create(
                 if (typeof window !== 'undefined') {
                     window.localStorage.removeItem('token');
                 }
-                set({ token: null, roleId: null, userId: null });
+                set({ token: null, roleId: null, userId: null, hydrated: true });
             } catch (error) {
                 console.error('Error al cerrar sesión:', error);
             } finally {

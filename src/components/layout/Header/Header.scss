@@ -8,6 +8,39 @@
     backdrop-filter: saturate(150%) blur(8px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* Language dropdown (in header-cta) */
+.language-dropdown { position: relative; margin-left: .25rem; }
+.language-dropdown .lang-flag {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #e9efff; font-weight: 900; letter-spacing: .5px;
+  background: #0f1420; /* fondo neutro */
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
+.language-dropdown .lang-flag .flag-img { width: 26px; height: 26px; border-radius: 50%; display: block; }
+/* Sin degradados por idioma, usar fondo neutro para ambos */
+.language-dropdown .lang-flag.lang-en,
+.language-dropdown .lang-flag.lang-es { background: #0f1420; color: #e9efff; }
+
+.language-dropdown .lang-list {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  background: #2a2f3b; color:#e9efff; border-radius: 12px;
+  min-width: 160px; padding: 6px; list-style: none; margin: 0;
+  box-shadow: 0 14px 28px rgba(0,0,0,.22), 0 10px 10px rgba(0,0,0,.2);
+  display: none;
+}
+.language-dropdown.open .lang-list { display: block; }
+.language-dropdown .lang-list .lang {
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; font-weight: 800;
+  display: flex; align-items: center; gap: 10px;
+}
+.language-dropdown .lang-list .lang.selected { background: rgba(255,255,255,.08); }
+.language-dropdown .lang-list .lang:hover { background: rgba(124,107,255,.2); }
+.language-dropdown .lang-list .flag-img { width: 20px; height: 20px; border-radius: 50%; display: block; }
+.language-dropdown .lang-list .code { font-size: 0.85rem; letter-spacing: .3px; }
+
 .navbar {
     display: flex;
     align-items: center;
@@ -167,7 +200,7 @@
 }
 .explore-btn .icon { display:inline-flex; }
 
-.mega-menu { position:absolute; left:0; top:calc(100% + 12px); width: 920px; background:#2a2f3b; color:#e9efff; border-radius:12px; padding: 18px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.35); display:none; }
+.mega-menu { position:absolute; left:0; top:100%; width: 920px; background:#2a2f3b; color:#e9efff; border-radius:12px; padding: 30px 20px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); display:none; z-index: 2000; }
 .explore-wrap:hover .mega-menu { display:block; }
 .mega-container { display:grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
 .col-title { font-weight:800; font-size:.85rem; opacity:.9; margin-bottom:.5rem; text-transform: uppercase; letter-spacing:.3px; }

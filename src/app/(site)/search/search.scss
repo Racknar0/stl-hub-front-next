@@ -1,0 +1,108 @@
+@use '../../../styles/base/variables' as *;
+
+.search-page {
+  padding: 1rem 0 2rem;
+}
+
+.search-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem .75rem;
+  margin-bottom: 1rem;
+}
+.search-breadcrumb .title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.search-breadcrumb .sep { opacity: .5; }
+.search-breadcrumb .filters {
+  display: inline-flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+  margin-left: .5rem;
+}
+
+.subs-toggle { display:inline-flex; align-items:center; gap:.5rem; }
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Reutiliza estilos de FeatureSection (fcard) */
+.fcard {
+  background: #171d2a;
+  border-radius: 16px;
+  height: 350px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.fcard .thumb {
+  position: relative;
+  height: 250px;
+  background-size: cover;
+  background-position: center;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: hidden;
+}
+.fcard .thumb .thumb-img { object-fit: cover; }
+.finfo {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0.7rem;
+  min-height: 0;
+}
+.ftitle {
+  font-weight: 800;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.6em;
+  line-height: 1.3;
+}
+.finfo .chips {
+  margin-top: auto;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.finfo .chip {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfd6ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  text-decoration: none;
+}
+.finfo .chip--link:hover {
+  background: rgba(111, 107, 255, 0.2);
+  border-color: rgba(124, 107, 255, 0.4);
+  color: #fff;
+}
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #00d1ff;
+  color: #072a33;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  height: 20px;
+  width: 20px;
+  line-height: 15px;
+}
+
+@media (max-width: 992px) {
+  .fcard { height: 300px; }
+  .fcard .thumb { height: 140px; }
+}

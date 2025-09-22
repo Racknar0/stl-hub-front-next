@@ -39,7 +39,14 @@ const SectionRow = ({ title, linkLabel = 'Ver todo', items = [], onItemClick }) 
                   <div className="title">{it.title}</div>
                   <div className="chips">
                     {it.chips?.map((c, idx) => (
-                      <a className="chip chip--link" key={idx} href={`/tags/${encodeURIComponent(c)}`}>#{c}</a>
+                      <a
+                        className="chip chip--link"
+                        key={idx}
+                        href={`/search?tags=${encodeURIComponent(c)}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        #{c}
+                      </a>
                     ))}
                   </div>
                 </div>

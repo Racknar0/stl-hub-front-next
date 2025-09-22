@@ -221,7 +221,7 @@ export default function AssetsAdminPage() {
         <IconButton aria-label="Editar" onClick={() => openEdit(row.original)}>
           <EditIcon fontSize="small" />
         </IconButton>
-        <IconButton aria-label="Borrar" color="error" onClick={() => { /* pending delete */ }}>
+        <IconButton aria-label="Borrar" color="error" onClick={() => handleDelete(row.original)}>
           <DeleteIcon fontSize="small" />
         </IconButton>
       </Box>
@@ -310,6 +310,28 @@ export default function AssetsAdminPage() {
     }
   }
 
+  const handleDelete = async (asset) => {
+    const ok = await confirmAlert('Eliminar STL', `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y se intentará borrar de MEGA.`, 'Sí, eliminar', 'Cancelar', 'warning')
+    if (!ok) return
+    try {
+      setLoading(true)
+      const res = await http.deleteData('/assets', asset.id)
+      const { dbDeleted, megaDeleted } = res.data || {}
+      if (dbDeleted && megaDeleted) {
+        await successAlert('Eliminado', 'Archivos borrados exitosamente de MEGA y de la base de datos')
+      } else if (dbDeleted && !megaDeleted) {
+        await successAlert('Parcial', 'Archivos borrados solamente de la base de datos')
+      } else {
+        await errorAlert('Error', 'No se pudo eliminar el STL')
+      }
+      setRefreshTick(n=>n+1)
+    } catch (e) {
+      await errorAlert('Error', e?.response?.data?.message || 'Fallo al eliminar')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="p-3">
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -382,7 +404,9 @@ export default function AssetsAdminPage() {
             <Stack direction="row" spacing={1} alignItems="stretch">
               <FormControl fullWidth size="small">
                 <InputLabel id="cat-edit">Categoría</InputLabel>
-                <Select labelId="cat-edit" label="Categoría" value={editForm.category} onChange={(e)=>setEditForm(f=>({...f, category: e.target.value}))}>
+                <Select labelId="cat-edit" label="Categoría" value={editForm.category} onChange={(e)=>setEditForm(f=>({...f, category: e.target.value}))}
+                  MenuProps={{ PaperProps: { sx: { zIndex: 2000 } } }}
+                >
                   {categories.map(c => (
                     <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>
                   ))}
@@ -396,6 +420,7 @@ export default function AssetsAdminPage() {
               options={allTags}
               value={editForm.tags}
               onChange={(_, v) => setEditForm(f=>({...f, tags: v}))}
+              slotProps={{ popper: { sx: { zIndex: 2000 } }, paper: { sx: { zIndex: 2000 } } }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option+index} />

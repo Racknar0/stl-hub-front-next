@@ -71,7 +71,9 @@ export default function MetadataSection({ title, setTitle, category, setCategory
           <Stack direction="row" spacing={1} alignItems="stretch">
             <FormControl fullWidth size="small" disabled={disabled}>
               <InputLabel id="cat">Categoría</InputLabel>
-              <Select labelId="cat" label="Categoría" value={category} onChange={(e)=>setCategory(e.target.value)}>
+              <Select labelId="cat" label="Categoría" value={category} onChange={(e)=>setCategory(e.target.value)}
+                MenuProps={{ PaperProps: { sx: { zIndex: 2000 } } }}
+              >
                 {categories.map(c => (
                   <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>
                 ))}
@@ -97,6 +99,7 @@ export default function MetadataSection({ title, setTitle, category, setCategory
                 options={allTags}
                 value={tags}
                 onChange={(_, v) => setTags(v)}
+                slotProps={{ popper: { sx: { zIndex: 2000 } }, paper: { sx: { zIndex: 2000 } } }}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option+index} />

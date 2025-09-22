@@ -7,10 +7,13 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import Button from '../../layout/Buttons/Button';
+import HttpService from '../../../services/HttpService';
+import useStore from '../../../store/useStore';
 
 export default function AssetModal({ open, onClose, asset, subscribed = false }) {
-  const [isSubscribed, setIsSubscribed] = React.useState(subscribed);
-  React.useEffect(() => setIsSubscribed(subscribed), [subscribed]);
+  const http = new HttpService();
+  const token = useStore((s)=>s.token);
+  const [downloading, setDownloading] = React.useState(false);
 
   useEffect(() => {
     const onEsc = (e) => { if (e.key === 'Escape') onClose?.(); };
@@ -30,6 +33,29 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
     // cerrar cuando se hace click fuera del diálogo
     if (e.target === e.currentTarget) onClose?.();
   };
+
+  const handleDownload = async () => {
+    try {
+      if (!asset) return;
+      // Si es premium y no hay token, mandar a suscripción/login
+      if (asset.isPremium && !token) {
+        window.location.href = '/suscripcion';
+        return;
+      }
+      setDownloading(true);
+      const res = await http.postData(`/assets/${asset.id}/request-download`, {});
+      const link = res.data?.link;
+      if (link) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        window.location.href = '/suscripcion';
+      }
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <>
@@ -62,7 +88,7 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
 
               <div className="meta">
                 <div className="meta-content">
-                  <img className="brand-logo" src="/logo_horizontal_final.png" alt="STL Hub" />
+                  <img className="brand-logo" src="/nuevo_horizontal.png" alt="STL Hub" />
 
                   <div className="meta-details">
                     <h3 id="asset-modal-title" className="title">{asset.title}</h3>
@@ -74,7 +100,7 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
                           <a
                             key={i}
                             className="chip chip--link"
-                            href={`/tags/${encodeURIComponent(c)}`}
+                            href={`/search?tags=${encodeURIComponent(c)}`}
                           >
                             #{c}
                           </a>
@@ -84,15 +110,10 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
                   </div>
 
                   <div className="actions center">
-                    {isSubscribed ? (
-                      <Button as="a" href={asset.downloadUrl || '#'} target="_blank" rel="noreferrer" variant="cyan" className="btn-big">
-                        Descargar ahora
-                      </Button>
-                    ) : (
-                      <Button as="a" href="/suscripcion" variant="danger" className="btn-big">
-                        Suscríbete para descargar
-                      </Button>
-                    )}
+                    <Button onClick={handleDownload} disabled={downloading} variant={asset.isPremium ? 'purple' : 'cyan'} className="btn-big">
+                      {downloading && <span className="btn-spinner" aria-hidden />}
+                      {downloading ? ' Procesando…' : (asset.isPremium ? 'Descargar (Premium)' : 'Descargar ahora')}
+                    </Button>
                   </div>
 
                 </div>

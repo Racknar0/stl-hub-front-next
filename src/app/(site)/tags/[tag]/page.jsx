@@ -1,8 +1,7 @@
-import React from 'react';
-import TagClient from './TagClient';
+import { redirect } from 'next/navigation';
 
 export default async function TagPage({ params }) {
   const { tag } = await params; // Next 15: params es async
-  const tagValue = decodeURIComponent(tag || 'tag');
-  return <TagClient tag={tagValue} />;
+  const tagValue = decodeURIComponent(tag || '');
+  redirect(`/search?tags=${encodeURIComponent(tagValue)}`);
 }
