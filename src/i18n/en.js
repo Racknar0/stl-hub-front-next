@@ -45,12 +45,57 @@ const en = {
 
     
   },
+  sliders: {
+    feature: {
+      title: 'EXCLUSIVE RELEASES',
+      subtitle: 'Design your reality',
+      cta: 'See more'
+    },
+    row: {
+      more: 'See all'
+    }
+  },
+  hero: {
+    slides: [
+      { id: 1, title: 'THE BEST 3D MODELS', subtitle: 'DESIGN YOUR REALITY', cta: 'Explore', image: '/hero/hero1.jpg' },
+      { id: 2, title: 'PRINT IT!', subtitle: 'LOOK NO FURTHER', cta: 'See collection', image: '/hero/hero2.jpg' },
+      { id: 3, title: 'PREMIUM MODELS', subtitle: 'INTEGRATED PREVIEW', cta: 'Explore', image: '/hero/hero3.jpg' },
+    ]
+  },
+  home: {
+    latest: {
+      title: 'Latest updates & releases',
+      subtitle: 'Discover the latest links',
+      cta: 'See more'
+    },
+    top: {
+      title: 'Most downloaded',
+      more: 'See more'
+    }
+  },
   alerts: {
     logout: {
       title: 'Logout',
       text: 'Do you want to logout?',
       confirm: 'Logout',
       cancel: 'Cancel'
+    }
+  },
+  search: {
+    title: 'Search',
+    mostDownloaded: 'Most downloaded',
+    chips: {
+      mostDownloaded: '#most_downloaded'
+    },
+    loading: 'Loading...',
+    empty: 'No results.'
+  },
+  asset: {
+    modal: {
+      category: 'Category:',
+      downloadNow: 'Download now',
+      downloadPremium: 'Download (Premium)',
+      processing: 'Processing…'
     }
   }
 }

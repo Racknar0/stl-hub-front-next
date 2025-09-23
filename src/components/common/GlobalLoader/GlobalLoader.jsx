@@ -4,27 +4,28 @@ import { createPortal } from 'react-dom';
 import useStore from '../../../store/useStore';
 import './GlobalLoader.scss';
 
-export default function GlobalLoader() {
+export default function GlobalLoader({ active: activeProp }) {
   const globalLoading = useStore((s) => s.globalLoading);
+  const active = typeof activeProp === 'boolean' ? activeProp : globalLoading;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Bloquear scroll cuando esté activo
+  // Bloquear scroll cuando esté activo (sólo tras montar)
   useEffect(() => {
     if (!mounted) return;
     const html = document.documentElement;
     const body = document.body;
-    if (globalLoading) {
+    if (active) {
       const prevHtml = html.style.overflow;
       const prevBody = body.style.overflow;
       html.style.overflow = 'hidden';
       body.style.overflow = 'hidden';
       return () => { html.style.overflow = prevHtml; body.style.overflow = prevBody; };
     }
-  }, [globalLoading, mounted]);
+  }, [active, mounted]);
 
-  if (!mounted || !globalLoading) return null;
+  if (!active) return null;
 
   const overlay = (
     <div className="global-loader-overlay" role="alert" aria-busy="true" aria-live="polite">
@@ -45,5 +46,9 @@ export default function GlobalLoader() {
     </div>
   );
 
+  // Antes de montar, devolver overlay inline (sin portal) para cubrir el primer paint
+  if (!mounted) return overlay;
+
+  // Tras montar, usar portal al body
   return createPortal(overlay, document.body);
 }

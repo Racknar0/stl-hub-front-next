@@ -4,45 +4,74 @@ import Image from 'next/image';
 import axios from '../../../services/AxiosInterceptor';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
+import { useI18n } from '../../../i18n';
+import useStore from '../../../store/useStore';
 import './search.scss';
 
-function normalizeItem(a) {
-  const chips = Array.isArray(a.tags) ? a.tags : [];
+function toDisplayItem(a, lang) {
+  const isEn = String(lang || 'es').toLowerCase() === 'en';
+  const tagsEs = Array.isArray(a.tagsEs) ? a.tagsEs : (Array.isArray(a.tags) ? a.tags : []);
+  const tagsEn = Array.isArray(a.tagsEn) ? a.tagsEn : tagsEs;
+  const chips = isEn ? tagsEn : tagsEs;
   const images = Array.isArray(a.images) ? a.images : [];
   const first = images[0] || '/vite.svg';
   const base = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
-  const makeUrl = (rel) => (rel?.startsWith('http') ? rel : `${base}/${rel}`);
+  const makeUrl = (rel) => (rel?.startsWith('http') ? rel : `${base}/${String(rel).replace(/\\/g,'/').replace(/^\/+/, '')}`);
+  const title = isEn ? (a.titleEn || a.title) : (a.title || a.titleEn);
+
+  // categoria puede venir plural y con name/nameEn
+  let category = '';
+  if (Array.isArray(a.categories) && a.categories.length) {
+    category = a.categories.map(c => isEn ? (c?.nameEn || c?.name || c?.slug) : (c?.name || c?.nameEn || c?.slug)).filter(Boolean).join(', ');
+  } else {
+    const raw = isEn ? (a.categoryEn || a.categoryNameEn || a.category) : (a.category || a.categoryName || a.categoryEn);
+    const v = String(raw || '').trim().toLowerCase();
+    category = !v || ['uncategorized','unclassified','general','none','null','undefined'].includes(v) ? '' : raw;
+  }
+
   return {
     id: a.id,
-    title: a.title,
+    title,
     chips,
     thumb: makeUrl(first),
     images: images.map(makeUrl),
     downloadUrl: a.megaLink || '#',
-    category: a.category || 'general',
+    category,
     isPremium: !!a.isPremium,
+    // campos extra para modal
+    titleEn: a.titleEn,
+    titleEs: a.title,
+    chipsEs: tagsEs,
+    chipsEn: tagsEn,
+    tagSlugs: tagsEs,
+    categoryEn: a.categoryEn,
+    categories: Array.isArray(a.categories) ? a.categories : [],
   };
 }
 
 export default function SearchClient({ initialParams }) {
+  const { t } = useI18n();
+  const language = useStore((s)=>s.language);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState(initialParams?.q || '');
   const [categories, setCategories] = useState(initialParams?.categories || '');
   const [tags, setTags] = useState(initialParams?.tags || '');
+  const [order, setOrder] = useState(initialParams?.order || '');
 
   // sincronizar con cambios de la URL
   useEffect(() => {
     setQ(initialParams?.q || '');
     setCategories(initialParams?.categories || '');
     setTags(initialParams?.tags || '');
-  }, [initialParams?.q, initialParams?.categories, initialParams?.tags]);
+    setOrder(initialParams?.order || '');
+  }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
   const [subscribed, setSubscribed] = useState(false);
 
-  const params = useMemo(() => ({ q, categories, tags }), [q, categories, tags]);
+  const params = useMemo(() => ({ q, categories, tags, order }), [q, categories, tags, order]);
   const catList = useMemo(() => String(categories || '').split(',').map(s=>s.trim()).filter(Boolean), [categories]);
   const tagList = useMemo(() => String(tags || '').split(',').map(s=>s.trim()).filter(Boolean), [tags]);
 
@@ -52,7 +81,7 @@ export default function SearchClient({ initialParams }) {
       setLoading(true);
       try {
         const res = await axios.get('/assets/search', { params, signal: controller.signal });
-        const items = (res.data?.items || []).map(normalizeItem);
+        const items = (res.data?.items || []).map(a => toDisplayItem(a, language));
         setItems(items);
       } catch (e) {
         if (e.name !== 'CanceledError') console.error(e);
@@ -63,7 +92,13 @@ export default function SearchClient({ initialParams }) {
     };
     run();
     return () => controller.abort();
-  }, [params.q, params.categories, params.tags]);
+  }, [params.q, params.categories, params.tags, params.order, language]);
+
+  const catHref = (c) => {
+    if (!c) return '#'
+    const s = typeof c === 'string' ? c : (language === 'en' ? c.slugEn || c.slug : c.slug || c.slugEn)
+    return `/search?categories=${encodeURIComponent(s || '')}`
+  }
 
   return (
     <section className="search-page">
@@ -72,21 +107,27 @@ export default function SearchClient({ initialParams }) {
         <div className="search-breadcrumb">
           <Button as="a" href="/" variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>Inicio</Button>
           <span className="sep">/</span>
-          <h1 className="title">Búsqueda</h1>
+          <h1 className="title">{t('search.title')}</h1>
           <div className="filters">
             {q ? (<span className="chip">#{q}</span>) : null}
             {catList.map((c,i)=> (<span key={`c-${i}`} className="chip">#{c}</span>))}
             {tagList.map((t,i)=> (<span key={`t-${i}`} className="chip">#{t}</span>))}
+            {order === 'downloads' ? (<span className="chip">{t('search.chips.mostDownloaded')}</span>) : null}
           </div>
           <div style={{flex:1}} />
+          <div className="order-actions">
+            <Button as="a" href="/search?order=downloads" variant="cyan" styles={{ width: 'auto', padding: '0 .7rem', color:'#fff' }}>
+              {t('search.mostDownloaded')}
+            </Button>
+          </div>
           <label className="subs-toggle">
             <input type="checkbox" checked={subscribed} onChange={e=>setSubscribed(e.target.checked)} />
             <span>Simular usuario suscrito</span>
           </label>
         </div>
 
-        {loading ? <p>Cargando...</p> : null}
-        {!loading && items.length === 0 ? <p>Sin resultados.</p> : null}
+        {loading ? <p>{t('search.loading')}</p> : null}
+        {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
 
         <div className="results-grid">
           {items.map((it) => (
@@ -105,7 +146,7 @@ export default function SearchClient({ initialParams }) {
                 <div className="ftitle">{it.title}</div>
                 <div className="chips">
                   {it.chips.map((c,i)=> (
-                    <a key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent(c)}`}>#{c}</a>
+                    <a key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}>#{c}</a>
                   ))}
                 </div>
               </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Box,
   Grid,
@@ -109,7 +109,9 @@ export default function UploadAssetPage() {
 
   // Form metadata (mock)
   const [title, setTitle] = useState('')
+  const [titleEn, setTitleEn] = useState('')
   const [category, setCategory] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState([])
   const [tags, setTags] = useState([])
   const [isPremium, setIsPremium] = useState(true)
   const [description, setDescription] = useState('Modelo detallado de casco con soportes opcionales.')
@@ -203,8 +205,59 @@ export default function UploadAssetPage() {
       return arr
     })
   }
-  const prevSlide = () => setPreviewIndex(p => (imageFiles.length ? (p - 1 + imageFiles.length) % imageFiles.length : -1))
-  const nextSlide = () => setPreviewIndex(p => (imageFiles.length ? (p + 1) % imageFiles.length : -1))
+
+  const onReorderImages = (from, to) => {
+    setImageFiles(prev => {
+      const arr = [...prev]
+      const [moved] = arr.splice(from, 1)
+      arr.splice(to, 0, moved)
+      return arr
+    })
+    setPreviewIndex((i) => {
+      if (i === from) return to
+      if (from < i && to >= i) return i - 1
+      if (from > i && to <= i) return i + 1
+      return i
+    })
+  }
+
+  // Navegación de previews (circular)
+  const prevSlide = useCallback(() => {
+    setPreviewIndex((i) => {
+      const len = imageFiles.length
+      if (!len) return -1
+      return i <= 0 ? (len - 1) : (i - 1)
+    })
+  }, [imageFiles.length])
+
+  const nextSlide = useCallback(() => {
+    setPreviewIndex((i) => {
+      const len = imageFiles.length
+      if (!len) return -1
+      return i >= len - 1 ? 0 : i + 1
+    })
+  }, [imageFiles.length])
+
+  // Validaciones y errores para pintar inputs y mostrar mensajes
+  const tagsCleanCount = useMemo(() => (Array.isArray(tags) ? tags.filter(t => String(t).trim().length > 0).length : 0), [tags])
+  const fieldErrors = useMemo(() => ({
+    title: !(title && String(title).trim().length > 0),
+    titleEn: !(titleEn && String(titleEn).trim().length > 0),
+    categories: !(Array.isArray(selectedCategories) && selectedCategories.length >= 1),
+    tags: !(tagsCleanCount >= 2),
+  }), [title, titleEn, selectedCategories, tagsCleanCount])
+
+  const missingReasons = useMemo(() => {
+    const list = []
+    if (accStatus !== 'connected' || !selectedAcc) list.push('Conecta una cuenta MEGA')
+    if (!archiveFile) list.push('Selecciona el archivo principal (.zip/.rar)')
+    if (imageFiles.length < 1) list.push('Añade al menos 1 imagen')
+    if (fieldErrors.title) list.push('Nombre (ES) requerido')
+    if (fieldErrors.titleEn) list.push('Nombre (EN) requerido')
+    if (fieldErrors.categories) list.push('Selecciona al menos 1 categoría')
+    if (fieldErrors.tags) list.push('Agrega al menos 2 tags')
+    return list
+  }, [accStatus, selectedAcc, archiveFile, imageFiles.length, fieldErrors])
 
   const canUpload = (
     accStatus === 'connected' &&
@@ -212,8 +265,9 @@ export default function UploadAssetPage() {
     !!archiveFile &&
     imageFiles.length >= 1 &&
     !!(title && String(title).trim().length > 0) &&
-    !!(category && String(category).trim().length > 0) &&
-    Array.isArray(tags) && tags.filter(t => String(t).trim().length > 0).length >= 2 &&
+    !!(titleEn && String(titleEn).trim().length > 0) &&
+    Array.isArray(selectedCategories) && selectedCategories.length >= 1 &&
+    tagsCleanCount >= 2 &&
     !isUploading
   )
 
@@ -226,7 +280,9 @@ export default function UploadAssetPage() {
     setPreviewIndex(-1)
     setArchiveFile(null)
     setTitle('')
+    setTitleEn('')
     setCategory('')
+    setSelectedCategories([])
     setTags([])
     setIsPremium(true)
     setUploadFinished(false)
@@ -277,10 +333,11 @@ export default function UploadAssetPage() {
                 onSelectFiles={onSelectFiles}
                 onRemove={removeImage}
                 onSelectPreview={(idx)=>setPreviewIndex(idx)}
+                onReorder={onReorderImages}
                 disabled={isUploading}
               />
 
-              <AssetFileSection setTitle={setTitle} onFileSelected={setArchiveFile} disabled={isUploading} />
+              <AssetFileSection setTitle={setTitle} setTitleEn={setTitleEn} onFileSelected={setArchiveFile} disabled={isUploading} />
             </Stack>
           </Grid>
 
@@ -289,10 +346,12 @@ export default function UploadAssetPage() {
             <Stack spacing={2}>
               <MetadataSection
                 title={title} setTitle={setTitle}
-                category={category} setCategory={setCategory}
+                titleEn={titleEn} setTitleEn={setTitleEn}
+                selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
                 tags={tags} setTags={setTags}
                 isPremium={isPremium} setIsPremium={setIsPremium}
                 disabled={isUploading}
+                errors={fieldErrors}
               />
 
               <Card className="glass">
@@ -304,7 +363,11 @@ export default function UploadAssetPage() {
                     getFormData={() => ({
                       archiveFile,
                       title,
-                      category,
+                      titleEn,
+                      // enviar categorías seleccionadas para el FormData
+                      categories: selectedCategories,
+                      // mantener category legacy en blanco
+                      category: '',
                       tags,
                       isPremium,
                       accountId: selectedAcc?.id,
@@ -323,7 +386,7 @@ export default function UploadAssetPage() {
                       }
                     }}
                   />
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start' }}>
+                  <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {uploadFinished ? (
                       <AppButton
                         type="button"
@@ -336,18 +399,28 @@ export default function UploadAssetPage() {
                         Subir otro STL
                       </AppButton>
                     ) : (
-                      <AppButton
-                        type="button"
-                        onClick={() => statusRef.current?.startUpload()
-                        }
-                        variant={canUpload ? 'purple' : 'dangerOutline'}
-                        width="300px"
-                        styles={canUpload ? { color: '#fff' } : undefined}
-                        aria-label={canUpload ? 'Subir' : 'No permitido'}
-                        disabled={!canUpload || isUploading}
-                      >
-                        {canUpload ? 'Subir' : <NotInterestedIcon fontSize="small" />}
-                      </AppButton>
+                      <>
+                        <AppButton
+                          type="button"
+                          onClick={() => statusRef.current?.startUpload()}
+                          variant={canUpload ? 'purple' : 'dangerOutline'}
+                          width="300px"
+                          styles={canUpload ? { color: '#fff' } : undefined}
+                          aria-label={canUpload ? 'Subir' : 'No permitido'}
+                          disabled={!canUpload || isUploading}
+                        >
+                          {canUpload ? 'Subir' : 'Completa los campos'}
+                        </AppButton>
+                        {!canUpload && (
+                          <Box sx={{ mt: 1 }}>
+                            {missingReasons.map((m, idx) => (
+                              <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
+                                • {m}
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
+                      </>
                     )}
                   </Box>
                 </CardContent>

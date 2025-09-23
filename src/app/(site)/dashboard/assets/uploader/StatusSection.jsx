@@ -29,7 +29,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       setServerDone(false)
       setMegaDone(false)
 
-      const { archiveFile, title, category, tags, isPremium, accountId, images } = getFormData?.() || {}
+      const { archiveFile, title, titleEn, categories, tags, isPremium, accountId, images } = getFormData?.() || {}
       if (!archiveFile) throw new Error('Selecciona el archivo del asset')
       if (!accountId) throw new Error('Selecciona una cuenta')
 
@@ -38,8 +38,13 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       fd.append('archive', archiveFile)
       ;(images || []).forEach((f) => fd.append('images', f))
       fd.append('title', title || '')
-      fd.append('category', category || '')
-      fd.append('tags', JSON.stringify(tags || []))
+      if (titleEn) fd.append('titleEn', titleEn)
+      // Enviar categorías como slugs
+      if (Array.isArray(categories) && categories.length) {
+        const slugs = categories.map(c => String(c.slug || c).toLowerCase())
+        fd.append('categories', JSON.stringify(slugs))
+      }
+      fd.append('tags', JSON.stringify((tags || []).map(t => String(t).trim().toLowerCase())))
       fd.append('isPremium', String(Boolean(isPremium)))
       fd.append('accountId', String(accountId))
 

@@ -165,6 +165,33 @@
         padding: 0.2rem 0.5rem;
     }
 
+    /* Interacciones para chips clicables */
+    .chip--link {
+        cursor: pointer;
+        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    }
+    a.chip--link { text-decoration: none; color: inherit; }
+    .chip--link:hover,
+    .chip--link:focus-visible {
+        background: rgba(181, 156, 255, 0.15);
+        border-color: rgba(181, 156, 255, 0.85);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(181, 156, 255, 0.25);
+        outline: none;
+    }
+    .chip--link:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 10px rgba(181, 156, 255, 0.2);
+    }
+
+    /* Chips deshabilitados */
+    .chip--disabled {
+        opacity: 0.6;
+        cursor: default;
+        border-style: dashed;
+    }
+
     .actions {
         display: flex;
         gap: 0.75rem;

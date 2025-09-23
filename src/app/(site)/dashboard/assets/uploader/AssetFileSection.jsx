@@ -9,7 +9,7 @@ import {
     Typography,
 } from '@mui/material';
 
-export default function AssetFileSection({ setTitle, onFileSelected, disabled = false }) {
+export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false }) {
     const [selectedFile, setSelectedFile] = React.useState(null);
     const fileInputRef = React.useRef(null);
 
@@ -24,14 +24,28 @@ export default function AssetFileSection({ setTitle, onFileSelected, disabled = 
         return `${(bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
     };
 
+    // Normaliza el nombre: sin extensión, reemplaza -, _, . por espacio, colapsa espacios y pasa a minúsculas
+    const normalizeName = (name = '') =>
+        getNameWithoutExt(name)
+            .replace(/[-_.]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+
     const handlePick = (file) => {
         if (!file) return;
         setSelectedFile(file);
         if (onFileSelected) onFileSelected(file);
-        if (setTitle) setTitle(getNameWithoutExt(file.name));
+        // Autorrellenar títulos ES/EN con el nombre normalizado del archivo
+        const norm = normalizeName(file.name || '');
+        try { setTitle && setTitle(norm); } catch {}
+        try { setTitleEn && setTitleEn(norm); } catch {}
     };
 
-    const onInputChange = (e) => handlePick(e.target.files?.[0]);
+    const onInputChange = (e) => {
+        const f = e.target.files?.[0];
+        handlePick(f);
+    };
 
     const onDrop = (e) => {
         e.preventDefault();

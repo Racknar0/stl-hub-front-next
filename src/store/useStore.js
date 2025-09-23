@@ -15,6 +15,9 @@ const decodeJwt = (token) => {
   }
 }
 
+// Idioma inicial constante para SSR para evitar mismatch
+const initialLanguage = 'es'
+
 // Crear un store con Zustand y subscribeWithSelector
 const useStore = create(
     subscribeWithSelector((set, get) => ({
@@ -26,15 +29,24 @@ const useStore = create(
         hydrated: false, // indica si ya se leyó localStorage
         
         // Idioma UI
-        language: 'es',
+        language: initialLanguage,
         setLanguage: (lang) => {
           const val = (String(lang || 'es').toLowerCase() === 'en') ? 'en' : 'es'
           set({ language: val })
           try { if (typeof window !== 'undefined') localStorage.setItem('lang', val) } catch {}
         },
+        // Hidratar idioma desde localStorage tras montar (cliente)
+        hydrateLanguage: () => {
+          if (typeof window === 'undefined') return
+          try {
+            const val = window.localStorage.getItem('lang')
+            const lang = (String(val || 'es').toLowerCase() === 'en') ? 'en' : 'es'
+            set({ language: lang })
+          } catch {}
+        },
         
         // Loader global (overlay)
-        globalLoading: false,
+        globalLoading: false, // por defecto apagado; se activa sólo en Home
         setGlobalLoading: (value) => set({ globalLoading: Boolean(value) }),
 
         // Funciones para manejar el estado de loading

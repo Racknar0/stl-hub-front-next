@@ -11,7 +11,14 @@
 }
 
 /* Slider en lugar de grilla */
-.row-slider { overflow: hidden; }
+.row-slider { 
+  overflow: hidden; 
+  position: relative; /* para botones */ 
+  /* variables navegación (Swiper 12) */
+  --swiper-navigation-size: 10px; /* tamaño del ícono */
+  --swiper-navigation-color: #fff; /* color del ícono */
+  --swiper-navigation-sides-offset: 6px; /* separación lateral */
+}
 .row-slider .swiper-slide { width: auto; }
 
 .card-item {
@@ -41,17 +48,35 @@
 }
 .chip--link:hover { background: rgba(111,107,255,.2); border-color: rgba(124,107,255,.4); color:#fff; }
 
-/* Flechas del slider */
+/* Flechas del slider - tono morado del botón */
 .row-slider .swiper-button-prev,
 .row-slider .swiper-button-next {
-  color: #fff;
+  color: var(--swiper-navigation-color);
   width: 34px; height: 34px;
   border-radius: 999px;
-  background: rgba(255,255,255,.12);
-  backdrop-filter: blur(4px);
+  background: #7c6bff; /* mismo tono que btn-purple */
+  box-shadow: 0 6px 18px rgba(124, 107, 255, 0.35);
+  z-index: 20; /* más alto */
+  pointer-events: all;
+  top: 50%; transform: translateY(-50%);
+
+  .swiper-navigation-icon{
+        width: 16px;
+        height: 16px;
+        
+    }
 }
 .row-slider .swiper-button-prev:hover,
-.row-slider .swiper-button-next:hover { background: rgba(255,255,255,.2); }
+.row-slider .swiper-button-next:hover { background: #6a5cff; }
 
 .row-slider .swiper-button-prev:after,
-.row-slider .swiper-button-next:after { font-size: 14px; font-weight: 800; }
+.row-slider .swiper-button-next:after { 
+  font-size: var(--swiper-navigation-size);
+  font-weight: 800; 
+}
+
+/* eliminamos fallback de contenido para mantener el svg nativo */
+
+/* ubicación segura dentro del contenedor */
+.row-slider .swiper-button-prev { left: var(--swiper-navigation-sides-offset); }
+.row-slider .swiper-button-next { right: var(--swiper-navigation-sides-offset); }

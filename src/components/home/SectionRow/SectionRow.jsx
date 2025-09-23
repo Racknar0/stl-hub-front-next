@@ -7,16 +7,22 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import { useI18n } from '../../../i18n';
 
-const SectionRow = ({ title, linkLabel = 'Ver todo', items = [], onItemClick }) => {
+const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => {
+  const { t } = useI18n();
+  const finalLinkLabel = linkLabel || t('sliders.row.more');
   return (
     <section className="section-row">
       <div className="container-narrow">
         <div className="header">
           <h3>{title}</h3>
-          <Button variant="cyan" as="a" href="#" styles={{ width: '110px', color: '#fff' }}>
-            {linkLabel}
-          </Button>
+          {/* Botón Ver más opcional */}
+          {linkHref ? (
+            <Button variant="cyan" as="a" href={linkHref} styles={{ width: '140px', color: '#fff' }}>
+              {finalLinkLabel}
+            </Button>
+          ) : null}
         </div>
 
         <Swiper
@@ -36,13 +42,14 @@ const SectionRow = ({ title, linkLabel = 'Ver todo', items = [], onItemClick }) 
                   style={{ backgroundImage: `url(${it.thumb})` }}
                 />
                 <div className="info">
-                  <div className="title">{it.title}</div>
+                  {/* it.title ya viene en el idioma derivado por Home */}
+                  <div className="title">{it.title || '-'}</div>
                   <div className="chips">
                     {it.chips?.map((c, idx) => (
                       <a
                         className="chip chip--link"
                         key={idx}
-                        href={`/search?tags=${encodeURIComponent(c)}`}
+                        href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         #{c}

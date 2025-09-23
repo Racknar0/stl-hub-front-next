@@ -5,10 +5,10 @@ import Link from 'next/link'
 import './Header.scss'
 import Button from '../Buttons/Button'
 import useStore from '../../../store/useStore'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { confirmAlert } from '../../../helpers/alerts'
 import HttpService from '../../../services/HttpService'
-import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
+// import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
 import { useI18n } from '../../../i18n'
 
 const Header = () => {
@@ -18,20 +18,18 @@ const Header = () => {
   const language = useStore((s) => s.language)
   const setLanguage = useStore((s) => s.setLanguage)
   const router = useRouter()
+  const pathname = usePathname()
   const http = new HttpService()
   const { t } = useI18n()
 
   const [categories, setCategories] = useState([])
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
-
-  // Hidratar idioma desde localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem('lang')
-      if (saved) setLanguage(saved)
-    }
-  }, [setLanguage])
+  // Nuevo: estado para abrir/cerrar Explorar (soporta mobile por click)
+  const [exploreOpen, setExploreOpen] = useState(false)
+  const exploreRef = useRef(null)
+  // Loading local para buscador (no bloquea toda la pantalla)
+  const [searchLoading, setSearchLoading] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -48,6 +46,9 @@ const Header = () => {
     return () => { mounted = false }
   }, [])
 
+  // Resetear spinner local al cambiar de ruta
+  useEffect(() => { setSearchLoading(false) }, [pathname])
+
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
@@ -57,6 +58,23 @@ const Header = () => {
     if (langOpen) document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [langOpen])
+
+  // Cerrar Explorar al hacer click fuera o presionar Escape
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!exploreRef.current) return
+      if (!exploreRef.current.contains(e.target)) setExploreOpen(false)
+    }
+    const onKey = (e) => { if (e.key === 'Escape') setExploreOpen(false) }
+    if (exploreOpen) {
+      document.addEventListener('mousedown', onDocClick)
+      document.addEventListener('keydown', onKey)
+    }
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [exploreOpen])
 
   const handleLogout = async () => {
     const ok = await confirmAlert(t('alerts.logout.title'), t('alerts.logout.text'), t('alerts.logout.confirm'), t('alerts.logout.cancel'), 'warning')
@@ -71,6 +89,7 @@ const Header = () => {
     e.preventDefault()
     const input = e.currentTarget.querySelector('input[type="text"]')
     const val = input?.value?.trim() || ''
+    setSearchLoading(true)
     router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
   }
 
@@ -80,19 +99,41 @@ const Header = () => {
   const FLAG_ES_32 = '/spain-flag-button-round-icon-32.png'
   const FLAG_EN_32 = '/united-states-of-america-flag-button-round-icon-32.png'
 
+  const SpinnerMini = () => (
+    <div className="sk-circle" style={{ width: 16, height: 16 }}>
+      <div className="sk-circle1 sk-child"></div>
+      <div className="sk-circle2 sk-child"></div>
+      <div className="sk-circle3 sk-child"></div>
+      <div className="sk-circle4 sk-child"></div>
+      <div className="sk-circle5 sk-child"></div>
+      <div className="sk-circle6 sk-child"></div>
+      <div className="sk-circle7 sk-child"></div>
+      <div className="sk-circle8 sk-child"></div>
+      <div className="sk-circle9 sk-child"></div>
+      <div className="sk-circle10 sk-child"></div>
+      <div className="sk-circle11 sk-child"></div>
+      <div className="sk-circle12 sk-child"></div>
+    </div>
+  )
+
   return (
     <header className="app-header">
-      {/* Loader global disponible en toda la app */}
-      <GlobalLoader />
+      {/* Eliminado loader global del layout */}
       <div className="container-narrow">
         <nav className="navbar d-flex align-items-center justify-content-between">
           <Link href="/" className="brand d-flex align-items-center" aria-label={t('header.homeAria')}>
             <img src="/nuevo_horizontal.png" alt="STL HUB" className="brand-logo" />
           </Link>
 
-          {/* Botón flotante Explorar (desktop) */}
-          <div className="explore-wrap d-none d-lg-block">
-            <button type="button" className="explore-btn" aria-haspopup="true" aria-expanded="false">
+          {/* Botón Explorar (desktop + mobile) */}
+          <div ref={exploreRef} className={`explore-wrap ${exploreOpen ? 'open' : ''}`}>
+            <button
+              type="button"
+              className="explore-btn"
+              aria-haspopup="true"
+              aria-expanded={exploreOpen}
+              onClick={() => setExploreOpen((v) => !v)}
+            >
               <span className="icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -103,13 +144,13 @@ const Header = () => {
 
             <div className="mega-menu" role="menu" aria-label={t('header.explore')}>
               <div className="mega-container">
-                <div className="col">
+                <div className="col col-categories">
                   <div className="col-title">{t('header.categories')}</div>
                   <ul>
                     {categories.length > 0 ? (
                       categories.map((c) => (
                         <li key={c.id}>
-                          <a href={`/search?categories=${encodeURIComponent(c.name)}`}>#{c.name}</a>
+                          <a href={`/search?categories=${encodeURIComponent(c.name)}`} onClick={() => setExploreOpen(false)}>#{c.name}</a>
                         </li>
                       ))
                     ) : (
@@ -165,10 +206,14 @@ const Header = () => {
                 placeholder={t('header.searchPlaceholder')}
                 aria-label={t('header.searchAria')}
               />
-              <button type="submit" className="search-btn" aria-label={t('header.searchAria')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              <button type="submit" className="search-btn" aria-label={t('header.searchAria')} disabled={searchLoading}>
+                {searchLoading ? (
+                  <SpinnerMini />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
               </button>
             </form>
           </div>
@@ -292,10 +337,14 @@ const Header = () => {
               placeholder={t('header.searchPlaceholder')}
               aria-label={t('header.searchAria')}
             />
-            <button type="submit" className="search-btn" aria-label={t('header.searchAria')}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+            <button type="submit" className="search-btn" aria-label={t('header.searchAria')} disabled={searchLoading}>
+              {searchLoading ? (
+                <SpinnerMini />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
             </button>
           </form>
         </div>

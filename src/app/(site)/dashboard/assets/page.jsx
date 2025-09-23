@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, FormControl, InputLabel, Select, MenuItem, Autocomplete, FormControlLabel, Switch } from '@mui/material'
+import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch } from '@mui/material'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import LinkIcon from '@mui/icons-material/Link'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutline'
+import ShuffleIcon from '@mui/icons-material/Shuffle'
 import ImagesSection from './uploader/ImagesSection'
 import HttpService from '@/services/HttpService'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -16,6 +17,7 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts'
 
+// Mapea estado a color de chip
 const statusColor = (s) => ({
   DRAFT: 'default',
   PROCESSING: 'info',
@@ -23,45 +25,77 @@ const statusColor = (s) => ({
   FAILED: 'error',
 }[s] || 'default')
 
+// Helper para normalizar a slug
+const slugify = (s) => String(s || '')
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9-\s_]+/g, '')
+  .replace(/\s+/g, '-')
+  .replace(/-+/g, '-')
+  .slice(0, 80)
+
 export default function AssetsAdminPage() {
+  // Servicios
   const http = new HttpService()
+
+  // Estado: tabla y filtros
   const [assets, setAssets] = useState([])
   const [loading, setLoading] = useState(false)
   const [q, setQ] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [selected, setSelected] = useState(null)
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(50)
   const [rowCount, setRowCount] = useState(0)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [editForm, setEditForm] = useState({ title: '', category: '', tags: [], isPremium: false })
+  // Nuevo: filtro solo Free
+  const [showFreeOnly, setShowFreeOnly] = useState(false)
+
+  // Estado: modales
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+
+  // Estado: selección actual y formularios
+  const [selected, setSelected] = useState(null)
+  // Edit form sin categoría legacy
+  const [editForm, setEditForm] = useState({ title: '', titleEn: '', categories: [], tags: [], isPremium: false })
+  // Detalle bilingüe
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+
+  // Catálogo meta
   const [categories, setCategories] = useState([])
   const [allTags, setAllTags] = useState([])
+
+  // Estado: imágenes del editor
   const [editImageFiles, setEditImageFiles] = useState([])
   const [editPreviewIndex, setEditPreviewIndex] = useState(0)
   const fileInputRef = useRef(null)
 
+  // Estado: cantidad para randomizar freebies
+  const [freeCount, setFreeCount] = useState(0)
+
+  // Cargar catálogos (categorías y tags)
   const loadMeta = async () => {
     try {
       const [cats, tgs] = await Promise.all([
         http.getData('/categories'),
         http.getData('/tags')
       ])
-      setCategories((cats.data?.items || []).map(c => ({ id: c.id, name: c.name })))
-      setAllTags((tgs.data?.items || []).map(t => t.name))
+      setCategories((cats.data?.items || []).map(c => ({ id: c.id, name: c.name, slug: c.slug })))
+      // Tags como objetos, se mostrará name y almacenaremos slugs en el form
+      setAllTags((tgs.data?.items || []).map(t => ({ name: t.name, slug: t.slug })))
     } catch (e) {
       console.error('meta load error', e)
     }
   }
 
+  // Utilidades
   const resetObjectUrls = () => {
     try { editImageFiles.forEach(it => { if (it.url && it.revoke) URL.revokeObjectURL(it.url) }) } catch {}
   }
   const resetEdit = () => {
     resetObjectUrls()
-    setEditForm({ title: '', category: '', tags: [], isPremium: false })
+    setEditForm({ title: '', titleEn: '', categories: [], tags: [], isPremium: false })
     setEditImageFiles([])
     setEditPreviewIndex(0)
     setSelected(null)
@@ -73,19 +107,24 @@ export default function AssetsAdminPage() {
     const clean = String(rel).replace(/^\\+|^\/+/, '')
     return `${UPLOAD_BASE}/${clean}`
   }
-
   const formatMBfromB = (bytes) => {
     const n = Number(bytes)
     if (!n || n <= 0) return '0 MB'
     return `${(n / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  // Cargar datos desde el backend con paginación
+  // Cargar datos de la tabla (paginación servidor)
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true)
-        const res = await http.getData(`/assets?q=${encodeURIComponent(searchTerm)}&pageIndex=${pageIndex}&pageSize=${pageSize}`)
+        const params = new URLSearchParams({
+          q: String(searchTerm || ''),
+          pageIndex: String(pageIndex),
+          pageSize: String(pageSize),
+        })
+        if (showFreeOnly) params.set('plan', 'free')
+        const res = await http.getData(`/assets?${params.toString()}`)
         const payload = res.data
         if (payload && Array.isArray(payload.items)) {
           setAssets(payload.items)
@@ -106,11 +145,25 @@ export default function AssetsAdminPage() {
       }
     }
     load()
-  }, [searchTerm, pageIndex, pageSize, refreshTick])
+  }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly])
 
-  // Quitar filtrado local; el backend ya filtra por q
+  // Tabla: datos filtrados (sin filtrado local extra)
   const filtered = assets
 
+  // Detalle: cargar bilingüe al abrir modal de vista
+  useEffect(() => {
+    if (previewOpen && selected?.id) {
+      setLoadingDetail(true)
+      http.getData(`/assets/${selected.id}`)
+        .then((res) => setDetail(res.data))
+        .catch((e) => { console.error('load detail error', e); setDetail(selected) })
+        .finally(() => setLoadingDetail(false))
+    } else {
+      setDetail(null)
+    }
+  }, [previewOpen, selected?.id])
+
+  // Tabla: definición de columnas (ES)
   const columns = useMemo(() => ([
       {
         header: ' ', accessorKey: 'thumbnail', size: 70, enableSorting: false,
@@ -126,19 +179,38 @@ export default function AssetsAdminPage() {
       },
       { header: 'Nombre', accessorKey: 'title',
         Cell: ({ cell }) => (
-          <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.getValue()}</Typography>
+          <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.getValue()}</Typography>
         )
       },
-      { header: 'Categoría', accessorKey: 'category', size: 140 },
+      {
+        id: 'categoriesEs',
+        header: 'Categorías',
+        accessorFn: (row) => {
+          const cats = Array.isArray(row.categories) ? row.categories : []
+          const names = cats.map(c => c?.name).filter(Boolean)
+          return names.length ? names.join(', ') : ''
+        },
+        Cell: ({ row }) => {
+          const cats = Array.isArray(row.original.categories) ? row.original.categories : []
+          const names = cats.map(c => c?.name).filter(Boolean)
+          const toShow = names
+          return (
+            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              {toShow.length ? toShow.map((n, i) => <Chip key={`${n}-${i}`} size="small" label={n} variant="outlined" />) : <Typography variant="body2" color="text.secondary">-</Typography>}
+            </Stack>
+          )
+        },
+        size: 200,
+      },
       {
         id: 'tags',
         header: 'Tags',
-        accessorFn: (row) => Array.isArray(row.tags) ? row.tags.join(',') : '',
+        accessorFn: (row) => Array.isArray(row.tags) ? row.tags.map(t=>t?.name||t?.slug).join(',') : '',
         Cell: ({ row }) => {
           const tags = Array.isArray(row.original.tags) ? row.original.tags : []
           return (
-            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-              {tags.map((t, i) => <Chip key={`${t}-${i}`} size="small" label={t} variant="outlined" />)}
+            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              {tags.map((t, i) => <Chip key={`${t?.slug||t}-${i}`} size="small" label={t?.name || t?.slug || t} variant="outlined" />)}
             </Stack>
           )
         },
@@ -176,6 +248,7 @@ export default function AssetsAdminPage() {
       },
     ]), [])
 
+  // Instancia de la tabla
   const table = useMaterialReactTable({
     columns,
     data: filtered,
@@ -208,13 +281,16 @@ export default function AssetsAdminPage() {
     positionActionsColumn: 'last',
     renderTopToolbarCustomActions: ({ table }) => (
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
-        <TextField size="small" placeholder="Buscar por nombre" value={q} onChange={(e)=>setQ(e.target.value)} sx={{ minWidth: 260 }} onKeyDown={(e)=>{ if(e.key==='Enter'){ setSearchTerm(q); setPageIndex(0) } }} />
-        <Button variant="outlined" onClick={()=>{ setSearchTerm(q); setPageIndex(0); }}>Buscar</Button>
+        {/* Barra de búsqueda */}
+        <TextField size="small" placeholder="Buscar por nombre" value={q} onChange={(e)=>setQ(e.target.value)} sx={{ minWidth: 260 }} onKeyDown={(e)=>{ if(e.key==='Enter'){ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false) } }} />
+        <Button variant="outlined" onClick={()=>{ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false); }}>Buscar</Button>
+        <Button variant={showFreeOnly ? 'contained' : 'outlined'} color={showFreeOnly ? 'success' : 'primary'} onClick={()=>{ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(true); }}>Buscar Free</Button>
         <Box sx={{ flex: 1 }} />
       </Box>
     ),
     renderRowActions: ({ row }) => (
       <Box sx={{ display: 'flex', gap: 1 }}>
+        {/* Acciones: Ver / Editar / Borrar */}
         <IconButton aria-label="Ver" onClick={() => { setSelected(row.original); setPreviewOpen(true); }}>
           <VisibilityIcon fontSize="small" />
         </IconButton>
@@ -228,12 +304,16 @@ export default function AssetsAdminPage() {
     ),
   })
 
+  // Abrir editor con datos del asset (sin categoría legacy)
   const openEdit = async (asset) => {
     setSelected(asset)
     setEditForm({
       title: asset.title || '',
-      category: asset.category || '',
-      tags: Array.isArray(asset.tags) ? asset.tags : [],
+      titleEn: asset.titleEn || '',
+      // relación categorías
+      categories: Array.isArray(asset.categories) ? asset.categories.map(c=>({ ...c })) : [],
+      // relación tags -> en el form trabajamos con slugs simples
+      tags: Array.isArray(asset.tags) ? asset.tags.map(t=>String(t.slug||t.name||'').toLowerCase()).filter(Boolean) : [],
       isPremium: !!asset.isPremium,
     })
     setEditImageFiles([])
@@ -242,6 +322,7 @@ export default function AssetsAdminPage() {
     await loadMeta()
   }
 
+  // Helpers de imágenes para editor
   const buildItemsFromFiles = (files) => {
     const list = []
     Array.from(files || []).forEach((f, idx) => {
@@ -250,7 +331,6 @@ export default function AssetsAdminPage() {
     })
     return list
   }
-
   const onSelectFiles = (e) => {
     const files = e.target.files
     const items = buildItemsFromFiles(files)
@@ -281,6 +361,7 @@ export default function AssetsAdminPage() {
   }
   const onSelectPreview = (idx) => setEditPreviewIndex(idx)
 
+  // Guardar edición (sin categoría legacy)
   const handleSaveEdit = async () => {
     if (!selected) return
     const ok = await confirmAlert('Confirmar cambios', '¿Deseas aplicar las modificaciones a este STL?', 'Sí, guardar', 'Cancelar', 'question')
@@ -289,8 +370,11 @@ export default function AssetsAdminPage() {
       setLoading(true)
       await http.putData('/assets', selected.id, {
         title: editForm.title,
-        category: editForm.category,
-        tags: editForm.tags,
+        titleEn: editForm.titleEn,
+        // enviar categorías por slug (solo relación múltiple)
+        categories: editForm.categories?.length ? editForm.categories.map(c => String(c.slug).toLowerCase()) : [],
+        // tags: array de slugs (o ids si cambias el form)
+        tags: (editForm.tags || []).map(t=>String(t).trim().toLowerCase()),
         isPremium: editForm.isPremium,
       })
       if (editImageFiles && editImageFiles.length > 0) {
@@ -310,6 +394,7 @@ export default function AssetsAdminPage() {
     }
   }
 
+  // Eliminar asset
   const handleDelete = async (asset) => {
     const ok = await confirmAlert('Eliminar STL', `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y se intentará borrar de MEGA.`, 'Sí, eliminar', 'Cancelar', 'warning')
     if (!ok) return
@@ -332,25 +417,33 @@ export default function AssetsAdminPage() {
     }
   }
 
+
+
   return (
     <div className="p-3">
+      {/* Barra de carga superior */}
       {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+
+      {/* Tabla */}
       <Box sx={{ width: '100%', overflowX: 'auto' }}>
         <MaterialReactTable table={table} />
       </Box>
 
+      {/* Modal: Detalle ES/EN */}
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {selected?.title || 'Detalle del asset'}
+          {detail?.title || selected?.title || 'Detalle del asset'}
           <IconButton onClick={() => setPreviewOpen(false)} aria-label="Cerrar"><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          {selected ? (
+          {(detail || selected) ? (
             <Stack spacing={2}>
+              {/* Carrusel de imágenes */}
               <Box>
-                {Array.isArray(selected.images) && selected.images.length > 0 ? (
+                {Array.isArray((detail?.images ?? selected?.images)) && (detail?.images ?? selected?.images).length > 0 ? (
                   <Swiper modules={[Navigation]} navigation spaceBetween={10} slidesPerView={1} style={{ width: '100%', height: 320 }}>
-                    {selected.images.map((rel, idx) => (
+                    {(detail?.images ?? selected.images).map((rel, idx) => (
                       <SwiperSlide key={idx}>
                         <img src={imgUrl(rel)} alt={`img-${idx}`} style={{ width: '100%', height: 320, objectFit: 'contain', borderRadius: 8 }} />
                       </SwiperSlide>
@@ -361,35 +454,79 @@ export default function AssetsAdminPage() {
                 )}
               </Box>
 
+              {/* Estado y plan */}
               <Stack direction="row" spacing={2}>
-                <Chip size="small" label={selected.category || 'Sin categoría'} />
-                {selected.isPremium && <Chip size="small" color="warning" label="Premium" />}
-                <Chip size="small" label={selected.status} color={statusColor(selected.status)} />
+                <Chip size="small" label={(detail?.category ?? selected?.category) || 'Sin categoría'} />
+                {(detail?.isPremium ?? selected?.isPremium) && <Chip size="small" color="warning" label="Premium" />}
+                <Chip size="small" label={(detail?.status ?? selected?.status)} color={statusColor(detail?.status ?? selected?.status)} />
               </Stack>
 
-              {Array.isArray(selected.tags) && selected.tags.length > 0 && (
-                <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-                  {selected.tags.map((t, i) => <Chip key={`${t}-${i}`} size="small" label={t} variant="outlined" />)}
-                </Stack>
-              )}
+              {/* Títulos ES/EN */}
+              <Box>
+                <Typography variant="subtitle2">Título (ES)</Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>{detail?.title || selected?.title || '-'}</Typography>
+                <Typography variant="subtitle2">Title (EN)</Typography>
+                <Typography variant="body2">{detail?.titleEn || selected?.titleEn || '-'}</Typography>
+              </Box>
 
-              <Typography variant="body2">Cuenta: {selected.accountId}</Typography>
-              <Typography variant="body2">Tamaño: {formatMBfromB(selected.fileSizeB ?? selected.archiveSizeB)}</Typography>
-              <Typography variant="body2">Creado: {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '-'}</Typography>
-              {selected.megaLink && (
+              {/* Categorías ES/EN */}
+              {(() => {
+                const cats = Array.isArray(detail?.categories) ? detail.categories : []
+                const catsEs = cats.length ? cats.map(c => c?.name).filter(Boolean) : ((detail?.category ?? selected?.category) ? [detail?.category ?? selected?.category] : [])
+                const catsEn = cats.length ? cats.map(c => c?.nameEn || c?.name).filter(Boolean) : catsEs
+                return (
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Categorías (ES)</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                      {catsEs.length ? catsEs.map((n, i) => (<Chip key={`ces-${i}`} size="small" label={n} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
+                    </Stack>
+                    <Typography variant="subtitle2">Categories (EN)</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                      {catsEn.length ? catsEn.map((n, i) => (<Chip key={`cen-${i}`} size="small" label={n} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
+                    </Stack>
+                  </Stack>
+                )
+              })()}
+
+              {/* Tags ES/EN */}
+              {(() => {
+                const tagsEs = Array.isArray(detail?.tagsEs) ? detail.tagsEs : (Array.isArray(selected?.tags) ? selected.tags.map(t=>t?.slug||t) : [])
+                const tagsEn = Array.isArray(detail?.tagsEn) ? detail.tagsEn : (Array.isArray(selected?.tags) ? selected.tags.map(t=>t?.nameEn||t?.name||t?.slug||t) : tagsEs)
+                return (
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Tags (ES)</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                      {tagsEs.length ? tagsEs.map((t, i) => (<Chip key={`tes-${i}`} size="small" label={t} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
+                    </Stack>
+                    <Typography variant="subtitle2">Tags (EN)</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                      {tagsEn.length ? tagsEn.map((t, i) => (<Chip key={`ten-${i}`} size="small" label={t} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
+                    </Stack>
+                  </Stack>
+                )
+              })()}
+
+              {/* Otros metadatos */}
+              <Typography variant="body2">Cuenta: {detail?.account?.alias || detail?.accountId || selected?.account?.alias || selected?.accountId}</Typography>
+              <Typography variant="body2">Tamaño: {formatMBfromB((detail?.fileSizeB ?? detail?.archiveSizeB) ?? (selected?.fileSizeB ?? selected?.archiveSizeB))}</Typography>
+              <Typography variant="body2">Creado: {(detail?.createdAt ?? selected?.createdAt) ? new Date(detail?.createdAt ?? selected?.createdAt).toLocaleString() : '-'}</Typography>
+              {(detail?.megaLink ?? selected?.megaLink) && (
                 <Typography variant="body2">
                   <LinkIcon fontSize="small" style={{ verticalAlign: 'middle' }} />{' '}
-                  <MUILink href={selected.megaLink} target="_blank" rel="noreferrer" underline="hover">Enlace MEGA</MUILink>
+                  <MUILink href={detail?.megaLink ?? selected?.megaLink} target="_blank" rel="noreferrer" underline="hover">Enlace MEGA</MUILink>
                 </Typography>
               )}
-              {selected.description && (
-                <Typography variant="body2" color="text.secondary">{selected.description}</Typography>
+              {(detail?.description ?? selected?.description) && (
+                <Typography variant="body2" color="text.secondary">{detail?.description ?? selected?.description}</Typography>
               )}
+
+              {loadingDetail && <Typography variant="caption" color="text.secondary">Cargando detalle…</Typography>}
             </Stack>
           ) : null}
         </DialogContent>
       </Dialog>
 
+      {/* Modal: Edición (sin categoría legacy) */}
       <Dialog open={editOpen} onClose={() => { setEditOpen(false); resetEdit() }} maxWidth="md" fullWidth
         slotProps={{
           backdrop: { sx: { zIndex: 1500 } },
@@ -399,30 +536,46 @@ export default function AssetsAdminPage() {
         <DialogTitle>Editar STL</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
-            <TextField label="Nombre" value={editForm.title} onChange={(e)=>setEditForm(f=>({...f, title: e.target.value}))} fullWidth size="small" />
+            {/* Campos básicos */}
+            <TextField label="Nombre (ES)" value={editForm.title} onChange={(e)=>setEditForm(f=>({...f, title: e.target.value}))} fullWidth size="small" />
+            <TextField label="Nombre (EN)" value={editForm.titleEn} onChange={(e)=>setEditForm(f=>({...f, titleEn: e.target.value}))} fullWidth size="small" />
 
-            <Stack direction="row" spacing={1} alignItems="stretch">
-              <FormControl fullWidth size="small">
-                <InputLabel id="cat-edit">Categoría</InputLabel>
-                <Select labelId="cat-edit" label="Categoría" value={editForm.category} onChange={(e)=>setEditForm(f=>({...f, category: e.target.value}))}
-                  MenuProps={{ PaperProps: { sx: { zIndex: 2000 } } }}
-                >
-                  {categories.map(c => (
-                    <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
+            {/* Categorías múltiples (ES) */}
+            <Autocomplete
+              multiple
+              disableCloseOnSelect
+              options={categories}
+              getOptionLabel={(o)=>o?.name || ''}
+              isOptionEqualToValue={(o,v)=>o.id===v.id}
+              value={editForm.categories || []}
+              onChange={(_, v) => setEditForm(f=>({...f, categories: v }))}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip variant="outlined" label={option.name} {...getTagProps({ index })} key={`${option.slug}-${index}`} />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Categorías" placeholder="Selecciona categorías" />
+              )}
+            />
 
+            {/* Tags */}
             <Autocomplete
               multiple
               freeSolo
               options={allTags}
+              getOptionLabel={(o)=> (typeof o === 'string' ? o : (o?.name || o?.slug || ''))}
               value={editForm.tags}
-              onChange={(_, v) => setEditForm(f=>({...f, tags: v}))}
+              onChange={(_, v) => {
+                const normalized = Array.from(new Set((v||[]).map(item => {
+                  if (typeof item === 'string') return slugify(item)
+                  return slugify(item.slug || item.name)
+                }).filter(Boolean)))
+                setEditForm(f=>({...f, tags: normalized}))
+              }}
               slotProps={{ popper: { sx: { zIndex: 2000 } }, paper: { sx: { zIndex: 2000 } } }}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
+                (value||[]).map((option, index) => (
                   <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option+index} />
                 ))
               }
@@ -431,8 +584,10 @@ export default function AssetsAdminPage() {
               )}
             />
 
+            {/* Plan */}
             <FormControlLabel control={<Switch checked={editForm.isPremium} onChange={(e)=>setEditForm(f=>({...f, isPremium: e.target.checked}))} />} label={editForm.isPremium ? 'Premium' : 'Free'} />
 
+            {/* Imágenes (drag & drop) */}
             {editImageFiles.length > 0 ? (
               <ImagesSection
                 imageFiles={editImageFiles}

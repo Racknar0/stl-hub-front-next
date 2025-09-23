@@ -17,7 +17,16 @@ export function useI18n() {
     if (typeof cur === 'string') return cur
     return fallback || path
   }
-  return { t, lang }
+  const get = (path, fallback) => {
+    const parts = String(path).split('.')
+    let cur = dict
+    for (const p of parts) {
+      if (cur && typeof cur === 'object' && p in cur) cur = cur[p]
+      else { cur = undefined; break }
+    }
+    return cur !== undefined ? cur : fallback
+  }
+  return { t, get, lang }
 }
 
 const i18n = { useI18n }

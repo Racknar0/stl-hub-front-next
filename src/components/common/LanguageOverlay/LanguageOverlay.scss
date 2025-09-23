@@ -1,0 +1,11 @@
+.lang-overlay{position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;background:rgba(8,10,16,.85);backdrop-filter:saturate(140%) blur(6px)}
+.lang-card{width:min(92vw,560px);background:linear-gradient(180deg,#101423,#0b0e17);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.55);padding:28px 24px;text-align:center;color:#e7e6ff}
+.lang-card .brand{width:auto;height:56px;object-fit:contain;margin:6px auto 16px auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
+.lang-card h2{font-size:22px;margin:4px 0 4px 0;font-weight:700}
+.lang-card .hint{margin:0 0 18px 0;color:#b3b0d6;font-size:13px}
+.options{display:flex;gap:14px;justify-content:center;margin-top:6px}
+.opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 10px;background:#161a2a;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#fff;cursor:pointer;transition:transform .12s ease, border-color .12s ease, background .12s ease}
+.opt:hover{transform:translateY(-2px);border-color:#b59cff;background:#1a1f33}
+.opt img{width:64px;height:64px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.opt span{font-size:15px;font-weight:600}
+@media (max-width:480px){.opt img{width:48px;height:48px}.lang-card{padding:22px 18px}.lang-card h2{font-size:20px}.opt span{font-size:14px}}

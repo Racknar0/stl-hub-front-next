@@ -189,7 +189,7 @@
     }
 }
 
-/* Botón flotante Explorar + Mega menú */
+/* Botón Explorar + Mega menú */
 .explore-wrap { position: relative; }
 .explore-btn {
   display: inline-flex; align-items: center; gap:.5rem;
@@ -200,18 +200,39 @@
 }
 .explore-btn .icon { display:inline-flex; }
 
+/* Mostrar menú por clase .open (sin hover) para que cierre con el botón */
 .mega-menu { position:absolute; left:0; top:100%; width: 920px; background:#2a2f3b; color:#e9efff; border-radius:12px; padding: 30px 20px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); display:none; z-index: 2000; }
+/* Añadido nuevamente: abrir también por hover en desktop */
 .explore-wrap:hover .mega-menu { display:block; }
+.explore-wrap.open .mega-menu { display:block; }
+
 .mega-container { display:grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
 .col-title { font-weight:800; font-size:.85rem; opacity:.9; margin-bottom:.5rem; text-transform: uppercase; letter-spacing:.3px; }
 .mega-menu ul { margin:0; padding:0; list-style:none; }
 .mega-menu li { padding:.25rem 0; opacity:.9; cursor:pointer; }
 .mega-menu li:hover { color:#b59cff; }
 
+/* Nueva: alto fijo y scroll hermoso para columna de categorías */
+.col-categories ul { max-height: 280px; overflow: auto; padding-right: 4px; }
+/* Estilo scrollbar (WebKit/Chromium) */
+.col-categories ul::-webkit-scrollbar { width: 8px; }
+.col-categories ul::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 8px; }
+.col-categories ul::-webkit-scrollbar-thumb { background: rgba(124,107,255,0.6); border-radius: 8px; }
+.col-categories ul::-webkit-scrollbar-thumb:hover { background: rgba(124,107,255,0.8); }
+/* Firefox */
+.col-categories ul { scrollbar-width: thin; scrollbar-color: rgba(124,107,255,0.7) rgba(255,255,255,0.06); }
+
 /* Responsive mega-menu */
 @media (max-width: 1200px) {
   .mega-menu { width: 760px; }
 }
+
+/* Mobile: hacer el mega menú de ancho completo y con overlay */
 @media (max-width: 992px) {
-  .explore-wrap { display:none; }
+  .explore-wrap { display:block; }
+  .mega-menu {
+    position: fixed; left: 12px; right: 12px; top: 70px; bottom: -80px;
+    width: auto; padding: 18px 14px; overflow: auto;
+  }
+  .mega-container { grid-template-columns: 1fr; gap: 12px; }
 }

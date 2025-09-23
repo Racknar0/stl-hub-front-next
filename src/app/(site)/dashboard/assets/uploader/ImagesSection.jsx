@@ -25,8 +25,30 @@ export default function ImagesSection({
     onSelectFiles,
     onRemove,
     onSelectPreview,
+    onReorder, // nuevo: (fromIndex, toIndex) => void
     disabled = false,
 }) {
+    const dragFromRef = React.useRef(null)
+
+    const handleThumbDragStart = (idx) => (e) => {
+        if (disabled) return
+        dragFromRef.current = idx
+        try { e.dataTransfer.effectAllowed = 'move' } catch {}
+    }
+    const handleThumbDragOver = (e) => {
+        if (disabled) return
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move' } catch {}
+    }
+    const handleThumbDrop = (toIndex) => (e) => {
+        if (disabled) return
+        e.preventDefault();
+        const fromIndex = dragFromRef.current
+        dragFromRef.current = null
+        if (typeof fromIndex !== 'number' || fromIndex === toIndex) return
+        onReorder && onReorder(fromIndex, toIndex)
+    }
+
     return (
         <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
             <CardHeader title="Imágenes" />
@@ -146,11 +168,15 @@ export default function ImagesSection({
                     </Stack>
                 </Box>
 
-                {/* Miniaturas anexadas */}
+                {/* Miniaturas anexadas con orden arrastrable */}
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                     {imageFiles.map((img, idx) => (
                         <Box
                             key={img.id}
+                            draggable={!disabled}
+                            onDragStart={handleThumbDragStart(idx)}
+                            onDragOver={handleThumbDragOver}
+                            onDrop={handleThumbDrop(idx)}
                             sx={{
                                 width: 120,
                                 height: 84,
@@ -161,9 +187,10 @@ export default function ImagesSection({
                                     previewIndex === idx
                                         ? '2px solid #7C4DFF'
                                         : '1px solid rgba(255,255,255,0.18)',
-                                cursor: 'pointer',
+                                cursor: 'move',
                             }}
                             onClick={() => onSelectPreview(idx)}
+                            title="Arrastra para reordenar"
                         >
                             <img
                                 src={img.url}
@@ -172,6 +199,7 @@ export default function ImagesSection({
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover',
+                                    pointerEvents: 'none',
                                 }}
                             />
                             <IconButton

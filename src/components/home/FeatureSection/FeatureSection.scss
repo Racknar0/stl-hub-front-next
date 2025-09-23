@@ -41,6 +41,9 @@
     min-width: 0; /* permitir que el flex item se reduzca correctamente */
     width: 100%;
     position: relative;
+    /* variables para navegación */
+    --swiper-navigation-size: 10px; /* tamaño del ícono (width/height) */
+    --swiper-navigation-color: #fff; /* color del ícono */
 }
 .cards .swiper-wrapper {
     align-items: stretch;
@@ -132,27 +135,35 @@
     line-height: 15px;
 }
 
-/* Flechas del slider dentro del panel */
+/* Flechas del slider - tono morado del botón */
 .cards .swiper-button-prev,
 .cards .swiper-button-next {
     color: #fff;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(4px);
-    z-index: 5; /* sobre las cards */
+    background: #7c6bff; /* mismo tono que btn-purple */
+    box-shadow: 0 6px 18px rgba(124, 107, 255, 0.35);
+    z-index: 20; /* más alto para recibir clics */
+    pointer-events: all;
+    top: 50%;
+    transform: translateY(-50%);
+
+    .swiper-navigation-icon{
+        width: 16px;
+        height: 16px;
+        
+    }
 }
 .cards .swiper-button-prev:hover,
-.cards .swiper-button-next:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
+.cards .swiper-button-next:hover { background: #6a5cff; }
 
-.cards .swiper-button-prev:after,
-.cards .swiper-button-next:after {
-    font-size: 14px;
-    font-weight: 800;
-}
+/* eliminar overrides del ::after para mantener el svg nativo de Swiper */
+/* (regresamos al contenido por defecto de Swiper) */
+
+/* asegurar que no queden fuera del contenedor */
+.cards .swiper-button-prev { left: 8px; }
+.cards .swiper-button-next { right: 8px; }
 
 @media (max-width: 992px) {
     .panel-inner {
