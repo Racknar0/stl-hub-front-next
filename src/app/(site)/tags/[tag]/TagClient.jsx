@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import AssetModal from '../../../../components/common/AssetModal/AssetModal';
 import Button from '../../../../components/layout/Buttons/Button';
+import Link from 'next/link';
 
 // util mock para generar items por tag
 const makeItems = (tag, n = 20) =>
@@ -24,7 +25,6 @@ export default function TagClient({ tag }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
-  const [subscribed, setSubscribed] = useState(false);
 
   const onItemClick = (it) => { setModalAsset(it); setModalOpen(true); };
   const onClose = () => { setModalOpen(false); setModalAsset(null); };
@@ -33,7 +33,7 @@ export default function TagClient({ tag }) {
     <section className="tags-page">
       <div className="container-narrow">
         <div className="tags-header">
-          <Button as="a" href="/" variant="purple" styles={{width:'auto', padding:'0 .9rem'}}>Inicio</Button>
+          <Button href="/" variant="purple" styles={{width:'auto', padding:'0 .9rem'}}>Inicio</Button>
           <h1 className="tags-title">#{tag}</h1>
           <div style={{flex:1}} />
         </div>
@@ -45,22 +45,15 @@ export default function TagClient({ tag }) {
               <div className="info">
                 <div className="title">{it.title}</div>
                 <div className="chips">
-                  {it.chips.map((c,i)=> (<a key={i} className="chip chip--link" href={`/tags/${encodeURIComponent(c)}`}>#{c}</a>))}
+                  {it.chips.map((c,i)=> (<Link key={i} className="chip chip--link" href={`/tags/${encodeURIComponent(c)}`}>#{c}</Link>))}
                 </div>
               </div>
             </article>
           ))}
         </div>
-
-        <div className="tags-toolbar">
-          <label style={{display:'inline-flex', alignItems:'center', gap:'.5rem'}}>
-            <input type="checkbox" checked={subscribed} onChange={e=>setSubscribed(e.target.checked)} />
-            Simular usuario suscrito
-          </label>
-        </div>
       </div>
 
-      <AssetModal open={modalOpen} onClose={onClose} asset={modalAsset} subscribed={subscribed} />
+      <AssetModal open={modalOpen} onClose={onClose} asset={modalAsset} />
     </section>
   );
 }

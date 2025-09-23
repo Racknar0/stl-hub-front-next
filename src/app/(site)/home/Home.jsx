@@ -5,7 +5,7 @@ import Hero from '../../../components/home/Hero/Hero';
 import SectionRow from '../../../components/home/SectionRow/SectionRow';
 import FeatureSection from '../../../components/home/FeatureSection/FeatureSection';
 import Testimonials from '../../../components/home/Testimonials/Testimonials';
-import PricingInline from '../../../components/home/PricingInline/PricingInline';
+import PricingSection from '../../../components/home/PricingSection/PricingSection';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
@@ -56,7 +56,6 @@ const Home = () => {
   const globalLoading = useStore((s)=>s.globalLoading);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
-  const [subscribed, setSubscribed] = useState(false); // toggle para ver estados
   // Guardar respuesta cruda
   const [latestRaw, setLatestRaw] = useState([]);
   const [topRaw, setTopRaw] = useState([]);
@@ -113,7 +112,7 @@ const Home = () => {
       chips: (chips || []).slice(0,3),
       thumb,
       images: images.slice(0,3).map(imgUrl),
-      downloadUrl: a.megaLink || '#',
+      // downloadUrl eliminado en vistas públicas
       category: a.category,
       isPremium: !!a.isPremium,
       // campos para modal
@@ -295,21 +294,15 @@ const Home = () => {
         </div>
       )}
 
+            {/* Sección de planes como en /suscripcion */}
+      <PricingSection showHeader={true} showFinePrint={false} />
+
       <Testimonials />
 
-      {/* Sección de planes como en /suscripcion */}
-      <PricingInline />
 
-      {/* Toggle rápido para ver estilos suscriptor/no suscriptor */}
-      <div className="container-narrow" style={{margin:'1rem 0'}}>
-        <label style={{display:'inline-flex', alignItems:'center', gap:'.5rem'}}>
-          <input type="checkbox" checked={subscribed} onChange={(e)=>setSubscribed(e.target.checked)} />
-          Simular usuario suscrito
-        </label>
-      </div>
 
       {/* Modal */}
-      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} subscribed={subscribed} />
+      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} />
     </div>
   );
 }

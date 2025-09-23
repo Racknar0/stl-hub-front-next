@@ -291,7 +291,7 @@ export default function UsersPage() {
                 )}
             </Box>
         ),
-        muiTableContainerProps: { sx: { maxHeight: 600, overflowX: 'auto' } },
+        muiTableContainerProps: { sx: { height: { xs: 'calc(100vh - 260px)', md: 'calc(100vh - 260px)' }, overflowX: 'auto' } },
         enableStickyHeader: true,
         enableStickyFooter: true,
         muiPaginationProps: {

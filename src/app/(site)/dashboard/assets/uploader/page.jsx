@@ -32,6 +32,20 @@ const http = new HttpService()
 const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
 
+// Mapea estado del backend (CONNECTED/ERROR/SUSPENDED/EXPIRED) a estados de UI (connected/failed)
+const mapBackendToUiStatus = (s) => {
+  switch (s) {
+    case 'CONNECTED':
+      return 'connected'
+    case 'ERROR':
+    case 'SUSPENDED':
+    case 'EXPIRED':
+      return 'failed'
+    default:
+      return 'failed'
+  }
+}
+
 export default function UploadAssetPage() {
   const [accounts, setAccounts] = useState([])
   const [selectedAcc, setSelectedAcc] = useState(null)
@@ -95,6 +109,7 @@ export default function UploadAssetPage() {
       await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
       await fetchAccounts()
       const acc = accounts.find(a => a.id === selectedAcc.id) || selectedAcc
+      console.log('testSelectedAccount acc:', acc)
       setSelectedAcc(acc)
       setAccStatus(mapBackendToUiStatus(acc.status))
       setAccReason(acc.statusMessage || undefined)

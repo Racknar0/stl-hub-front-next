@@ -275,7 +275,7 @@ export default function AssetsAdminPage() {
     muiPaginationProps: {
       rowsPerPageOptions: [10, 25, 50, 100, 200, 300, 400, 500, 1000],
     },
-    muiTableContainerProps: { sx: { maxHeight: 620, overflowX: 'auto' } },
+    muiTableContainerProps: { sx: { height: { xs: 'calc(100vh - 220px)', md: 'calc(100vh - 240px)' }, overflowX: 'auto' } },
     muiTopToolbarProps: { sx: { position: 'sticky', top: 0, zIndex: 2, bgcolor: 'background.default' } },
     muiBottomToolbarProps: { sx: { position: 'sticky', bottom: 0, zIndex: 2, bgcolor: 'background.default' } },
     muiTablePaperProps: { sx: { width: '100%' } },

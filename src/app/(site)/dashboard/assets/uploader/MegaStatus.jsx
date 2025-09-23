@@ -5,6 +5,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 export default function MegaStatus({ status, reason }) {
+
   if (!status || status === 'idle') return (
     <Stack direction="row" spacing={1} alignItems="center">
       <Typography variant="body2" color="text.secondary">Sin cuenta</Typography>

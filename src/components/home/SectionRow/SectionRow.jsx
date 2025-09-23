@@ -8,6 +8,7 @@ import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
+import Link from 'next/link';
 
 const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => {
   const { t } = useI18n();
@@ -19,7 +20,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => 
           <h3>{title}</h3>
           {/* Botón Ver más opcional */}
           {linkHref ? (
-            <Button variant="cyan" as="a" href={linkHref} styles={{ width: '140px', color: '#fff' }}>
+            <Button variant="cyan" href={linkHref} styles={{ width: '140px', color: '#fff' }}>
               {finalLinkLabel}
             </Button>
           ) : null}
@@ -46,14 +47,14 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => 
                   <div className="title">{it.title || '-'}</div>
                   <div className="chips">
                     {it.chips?.map((c, idx) => (
-                      <a
+                      <Link
                         className="chip chip--link"
                         key={idx}
                         href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         #{c}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>

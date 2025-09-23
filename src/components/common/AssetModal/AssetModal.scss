@@ -3,14 +3,14 @@
 /* Scope para el modal de assets */
 .asset-modal {
     /* Tamaño del cuadrado de la galería (escala con viewport) */
-    --sq: clamp(300px, 55vh, 560px);
+    --sq: clamp(280px, 48vh, 500px);
 
     /* tamaño y centrado del diálogo */
     .modal-dialog {
         max-width: calc(
-            var(--sq) + 420px + 3rem
+            var(--sq) + 360px + 2.5rem
         ); /* cuadrado + lateral + gap/padding */
-        width: calc(100% - 2rem);
+        width: calc(100% - 3rem);
         margin-inline: auto;
     }
 
@@ -24,7 +24,7 @@
         border-radius: 18px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
-        max-height: 90vh; /* un poco más para acomodar topbar */
+        max-height: 86vh; /* un poco más para acomodar topbar */
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -42,30 +42,79 @@
             rgba(255, 255, 255, 0.06),
             rgba(255, 255, 255, 0)
         );
+
+        .report-btn {
+            margin-left: auto; /* empuja el botón a la derecha */
+            color: #dc3545;
+            background: transparent;
+            border: 0;
+            padding: 0 6px;
+            font-size: 13px;
+            line-height: 1.1;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+
+            &:hover {
+                text-decoration: underline;
+            }
+            &:disabled {
+                opacity: .6;
+                pointer-events: none;
+            }
+        }
+
+        .btn-close {
+            /* asegurar X blanca */
+            filter: invert(1) grayscale(100%) brightness(200%);
+            opacity: .9;
+            margin-left: 4px;
+            transition: filter 120ms ease, opacity 120ms ease;
+            width: 32px;
+            height: 32px;
+
+            /* mejorar visibilidad en hover/focus */
+            &:hover {
+                opacity: 1;
+            }
+            &:focus {
+                box-shadow: none;
+                opacity: 1;
+            }
+        }
     }
     .brand {
         font-weight: 800;
         letter-spacing: 0.3px;
         opacity: 0.95;
     }
-    .close-btn {
-        position: static;
-        margin-left: 0.5rem;
-    }
 
     .dialog-body {
         display: grid;
-        grid-template-columns: var(--sq) minmax(280px, 420px);
+        grid-template-columns: var(--sq) minmax(260px, 360px);
         align-items: stretch; /* forzar que la columna derecha iguale la altura */
         gap: 1rem;
         padding: 1rem;
         overflow: auto;
+
+        @media (max-width: 991.98px) {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 96px);
+        }
     }
 
     .meta {
         display: flex;
         align-items: stretch;
         justify-content: center;
+
+        @media (max-width: 991.98px) {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
     }
     .meta .meta-content {
         /* Grid para espaciar: logo (arriba), detalles (centro), botón (abajo) */
@@ -74,7 +123,7 @@
         align-items: center;
         justify-items: center;
         text-align: center;
-        max-width: 420px;
+        max-width: 360px;
         margin-inline: auto;
         height: 100%;
         min-height: 0;
@@ -131,6 +180,17 @@
         overflow: hidden;
         display: flex;
         justify-content: center;
+
+        @media (max-width: 991.98px) {
+            aspect-ratio: 1 / 1;
+            width: 100%;
+
+            .swiper,
+            .swiper-wrapper,
+            .swiper-slide {
+                height: 100%;
+            }
+        }
     }
     .gallery .swiper {
         width: var(--sq);
@@ -227,13 +287,13 @@
 
     /* Backdrop con transición suave */
     + .modal-backdrop.fade { opacity: 0; transition: opacity 240ms ease; }
-    + .modal-backdrop.show { opacity: 0.6; }
+    + .modal-backdrop.show { opacity: 0.8; }
 
     @media (max-width: 992px) {
         /* cuadrado toma el ancho del viewport en móvil */
-        --sq: min(88vw, 520px);
+        --sq: min(82vw, 480px);
         .modal-dialog {
-            max-width: 94vw;
+            max-width: 92vw;
         }
         .dialog-body {
             grid-template-columns: 1fr;

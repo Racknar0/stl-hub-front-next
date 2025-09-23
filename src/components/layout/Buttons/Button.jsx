@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import './Button.scss';
 
 /*
@@ -17,6 +18,7 @@ const Button = ({
     icon,
     as: Tag = 'button',
     styles,
+    href,
     ...props
 }) => {
     const classes = ['app-btn', variant ? `app-btn--${variant}` : '', className]
@@ -28,6 +30,35 @@ const Button = ({
         ...styles,
     };
 
+    // Navegación interna con Next Link para evitar full reload
+    if (href) {
+        const isInternal = /^\/(?!\/)/.test(href) || href.startsWith('#');
+        if (isInternal) {
+            return (
+                <Link href={href} className={classes} style={styles_} {...props}>
+                    {icon && (
+                        <span className="app-btn__icon" aria-hidden>
+                            {icon}
+                        </span>
+                    )}
+                    {children}
+                </Link>
+            );
+        }
+        // Enlaces externos conservan <a>
+        return (
+            <a href={href} className={classes} {...props} style={styles_}>
+                {icon && (
+                    <span className="app-btn__icon" aria-hidden>
+                        {icon}
+                    </span>
+                )}
+                {children}
+            </a>
+        );
+    }
+
+    // Sin href: renderiza el Tag proporcionado (button por defecto)
     return (
         <Tag className={classes} {...props} style={styles_}>
             {icon && (

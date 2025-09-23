@@ -10,6 +10,7 @@ import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
+import Link from 'next/link';
 
 const FeatureSection = ({
     title,
@@ -35,7 +36,7 @@ const FeatureSection = ({
                                 width: '200px',
                                 height: '50px'
                             }}
-                            as="a" href="/search"
+                            href="/search"
                             >
                                 {finalCta}
                             </Button>
@@ -74,14 +75,14 @@ const FeatureSection = ({
                                                   <div className="ftitle">{it.title || '-'}</div>
                                                   <div className="chips">
                                                       {it.chips?.map((c, idx) => (
-                                                          <a
+                                                          <Link
                                                             className="chip chip--link"
                                                             key={idx}
                                                             href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
                                                             onClick={(e) => e.stopPropagation()}
                                                           >
                                                             #{c}
-                                                          </a>
+                                                          </Link>
                                                       ))}
                                                   </div>
                                               </div>

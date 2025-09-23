@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import axios from '../../../services/AxiosInterceptor';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
@@ -35,7 +36,7 @@ function toDisplayItem(a, lang) {
     chips,
     thumb: makeUrl(first),
     images: images.map(makeUrl),
-    downloadUrl: a.megaLink || '#',
+    // downloadUrl eliminado en vistas públicas
     category,
     isPremium: !!a.isPremium,
     // campos extra para modal
@@ -72,7 +73,6 @@ export default function SearchClient({ initialParams }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
-  const [subscribed, setSubscribed] = useState(false);
 
   const params = useMemo(() => ({ q, categories, tags, order, plan }), [q, categories, tags, order, plan]);
   const catList = useMemo(() => String(categories || '').split(',').map(s=>s.trim()).filter(Boolean), [categories]);
@@ -108,7 +108,7 @@ export default function SearchClient({ initialParams }) {
       <div className="container-narrow">
         {/* Breadcrumb + filtros activos */}
         <div className="search-breadcrumb">
-          <Button as="a" href="/" variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>Inicio</Button>
+          <Button href="/" variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>Inicio</Button>
           <span className="sep">/</span>
           <h1 className="title">{t('search.title')}</h1>
           <div className="filters">
@@ -120,14 +120,11 @@ export default function SearchClient({ initialParams }) {
           </div>
           <div style={{flex:1}} />
           <div className="order-actions">
-            <Button as="a" href="/search?order=downloads" variant="cyan" styles={{ width: 'auto', padding: '0 .7rem', color:'#fff' }}>
+            <Button href="/search?order=downloads" variant="cyan" styles={{ width: 'auto', padding: '0 .7rem', color:'#fff' }}>
               {t('search.mostDownloaded')}
             </Button>
           </div>
-          <label className="subs-toggle">
-            <input type="checkbox" checked={subscribed} onChange={e=>setSubscribed(e.target.checked)} />
-            <span>Simular usuario suscrito</span>
-          </label>
+          {/* Eliminado toggle de simulación de suscripción */}
         </div>
 
         {loading ? <p>{t('search.loading')}</p> : null}
@@ -150,7 +147,7 @@ export default function SearchClient({ initialParams }) {
                 <div className="ftitle">{it.title}</div>
                 <div className="chips">
                   {it.chips.map((c,i)=> (
-                    <a key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}>#{c}</a>
+                    <Link key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}>#{c}</Link>
                   ))}
                 </div>
               </div>
@@ -160,7 +157,7 @@ export default function SearchClient({ initialParams }) {
         </div>
       </div>
 
-      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} subscribed={subscribed} />
+      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
     </section>
   );
 }

@@ -10,13 +10,20 @@ import Button from '../../layout/Buttons/Button';
 import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
+import Link from 'next/link';
+import SimplyModal from '../SimplyModal/SimplyModal';
+import ReportBrokenModal from '../ReportBrokenModal/ReportBrokenModal';
 
-export default function AssetModal({ open, onClose, asset, subscribed = false }) {
+export default function AssetModal({ open, onClose, asset }) {
   const http = new HttpService();
   const token = useStore((s)=>s.token);
   const language = useStore((s)=>s.language);
   const { t } = useI18n();
   const [downloading, setDownloading] = React.useState(false);
+  const [showRenew, setShowRenew] = React.useState(false);
+  const [expiredAt, setExpiredAt] = React.useState(null);
+  const [reporting, setReporting] = React.useState(false);
+  const [showReport, setShowReport] = React.useState(false);
 
   // Estado local para enriquecer datos (categorías, etc.)
   const [data, setData] = useState(asset);
@@ -79,8 +86,20 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
       const link = res.data?.link;
       if (link) window.open(link, '_blank', 'noopener,noreferrer');
     } catch (e) {
-      if (e?.response?.status === 401 || e?.response?.status === 403) {
+      const status = e?.response?.status;
+      const payload = e?.response?.data || {};
+      if (status === 401) {
         window.location.href = '/suscripcion';
+        return;
+      }
+      if (status === 403 && payload?.code === 'EXPIRED') {
+        setExpiredAt(payload?.expiredAt || null);
+        setShowRenew(true);
+        return;
+      }
+      if (status === 403) {
+        window.location.href = '/suscripcion';
+        return;
       }
     } finally {
       setDownloading(false);
@@ -133,6 +152,10 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
   const chips = isEn ? chipsEn : chipsEs;
   const tagSlugs = Array.isArray(data.tagSlugs) ? data.tagSlugs : chipsEs;
 
+  // Estado y handler para "Reportar link caído"
+  const showReportButton = (!data?.isPremium) || !!token;
+  const handleReportBroken = () => setShowReport(true);
+
   return (
     <>
       <div
@@ -148,7 +171,20 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
           <div className="modal-content asset-modal__content">
             <div className="topbar">
               <span className="brand">STL Hub</span>
-              <button type="button" className="btn-close btn-close-white close-btn" aria-label="Cerrar" onClick={onClose} />
+              {showReportButton && (
+                <button
+                  type="button"
+                  className="report-btn"
+                  onClick={handleReportBroken}
+                  disabled={reporting}
+                  aria-label={isEn ? 'Report broken link' : 'Reportar link caído'}
+                  title={isEn ? 'Report broken link' : 'Reportar link caído'}
+                >
+                  <span aria-hidden>🚩</span>
+                  <span>{isEn ? 'Report broken link' : 'Reportar link caído'}</span>
+                </button>
+              )}
+              <button type="button" className="btn-close " aria-label="Cerrar" onClick={onClose} />
             </div>
 
             <div className="modal-body dialog-body">
@@ -163,7 +199,7 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
               </div>
 
               <div className="meta">
-                <div className="meta-content">
+                <div className="meta-content" style={{ position: 'relative' }}>
                   <img className="brand-logo" src="/nuevo_horizontal.png" alt="STL Hub" />
 
                   <div className="meta-details">
@@ -175,13 +211,13 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
                       {displayCategories.length ? (
                         <div className="chips center">
                           {displayCategories.map((c) => (
-                            <a
+                            <Link
                               key={c.id || c.slug || c.label}
                               className="chip chip--link"
                               href={catHref(c)}
                             >
                               #{c.label}
-                            </a>
+                            </Link>
                           ))}
                         </div>
                       ) : (
@@ -197,13 +233,13 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
                       {chips?.length ? (
                         <div className="chips center">
                           {chips.map((c, i) => (
-                            <a
+                            <Link
                               key={i}
                               className="chip chip--link"
                               href={`/search?tags=${encodeURIComponent(tagSlugs[i] ?? c)}`}
                             >
                               #{c}
-                            </a>
+                            </Link>
                           ))}
                         </div>
                       ) : (
@@ -230,6 +266,47 @@ export default function AssetModal({ open, onClose, asset, subscribed = false })
         </div>
       </div>
       {open && <div className="modal-backdrop fade show" />}
+
+      {/* Modal de renovación */}
+      {showRenew && (
+        <SimplyModal
+          open={showRenew}
+          onClose={() => setShowRenew(false)}
+          // quitamos title para controlar el layout dentro
+        >
+          <div aria-hidden className="lead-emoji" style={{ fontSize: '2.25rem', marginBottom: '.5rem' }}>😞</div>
+          <h3 className="title" style={{ marginBottom: '.5rem' }}>
+            {isEn ? 'Your subscription expired' : 'Tu suscripción venció'}
+          </h3>
+          <p style={{ marginBottom: '1rem' }}>
+            {expiredAt
+              ? (isEn ? `Expired on ${new Date(expiredAt).toLocaleDateString()}` : `Se venció el ${new Date(expiredAt).toLocaleDateString()}`)
+              : (isEn ? 'Please renew to continue downloading.' : 'Por favor renueva para seguir descargando.')}
+          </p>
+          <div className="actions center" style={{ justifyContent: 'center' }}>
+            <Button
+              onClick={() => { window.location.href = '/suscripcion'; }}
+              variant="purple"
+              className="btn-big"
+            >
+              {isEn ? 'Renew now' : 'Renovar ahora'}
+            </Button>
+          </div>
+        </SimplyModal>
+      )}
+
+      {/* Modal de reporte de link caído */}
+      <ReportBrokenModal
+        open={showReport}
+        assetId={data?.id}
+        assetTitle={displayTitle}
+        onClose={() => setShowReport(false)}
+        onSubmitted={() => {
+          setShowReport(false);
+          window.alert(isEn ? 'Thanks for your report!' : '¡Gracias por tu reporte!');
+        }}
+      />
     </>
   );
 }
+  
