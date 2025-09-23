@@ -8,35 +8,16 @@ import {
   CardHeader,
   CardContent,
   Typography,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
   Tooltip,
   Button,
   TextField,
   LinearProgress,
   Stack,
-  Switch,
-  FormControlLabel,
-  Divider,
-  Link as MUILink,
-  Autocomplete,
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton,
 } from '@mui/material'
-import AutorenewIcon from '@mui/icons-material/Autorenew'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import LinkIcon from '@mui/icons-material/Link'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import CloseIcon from '@mui/icons-material/Close'
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
 import ImagesSection from './ImagesSection'
@@ -44,61 +25,12 @@ import AssetFileSection from './AssetFileSection'
 import MetadataSection from './MetadataSection'
 import StatusSection from './StatusSection'
 import AppButton from '@/components/layout/Buttons/Button'
-import NotInterestedIcon from '@mui/icons-material/NotInterested'
+import MegaStatus from './MegaStatus'
+import StatusChip from './StatusChip'
 
 const http = new HttpService()
 const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
-
-const StatusChip = ({ status }) => {
-  const map = {
-    CONNECTED: { label: 'OK', color: 'success' },
-    EXPIRED: { label: 'Expirada', color: 'warning' },
-    ERROR: { label: 'ERROR', color: 'error' },
-    SUSPENDED: { label: 'Suspendida', color: 'default' },
-  }
-  const { label, color } = map[status] || { label: status, color: 'default' }
-  return <Chip label={label} color={color} size="small" />
-}
-
-const MegaStatus = ({ status, reason }) => {
-  if (!status || status === 'idle') return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Typography variant="body2" color="text.secondary">Sin cuenta</Typography>
-    </Stack>
-  )
-  if (status === 'disconnected') return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Typography variant="body2" color="text.secondary">Sin conexión</Typography>
-    </Stack>
-  )
-  if (status === 'connecting') return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <AutorenewIcon color="info" fontSize="small" className="spin" />
-      <Typography variant="body2">Conectando…</Typography>
-    </Stack>
-  )
-  if (status === 'connected') return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <CheckCircleIcon color="success" fontSize="small" />
-      <Typography variant="body2">Conectado</Typography>
-    </Stack>
-  )
-  return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Tooltip title={reason || 'Fallo'}>
-        <ErrorOutlineIcon color="error" fontSize="small" />
-      </Tooltip>
-      <Typography variant="body2">Fallo</Typography>
-    </Stack>
-  )
-}
-
-function mapBackendToUiStatus(s) {
-  if (s === 'CONNECTED') return 'connected'
-  if (s === 'ERROR' || s === 'SUSPENDED') return 'failed'
-  return 'failed'
-}
 
 export default function UploadAssetPage() {
   const [accounts, setAccounts] = useState([])
