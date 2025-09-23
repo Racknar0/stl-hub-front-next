@@ -37,46 +37,45 @@ const getFeatures = (t, isEn) => {
 const plans = [
     {
         id: '1m',
-        name: '1 mes',
+        name: '1',
         monthly: 5.00,
         total: 5.00,
         save: null,
     },
     {
         id: '3m',
-        name: '3 meses',
+        name: '3',
         monthly: 3.33,
         total: 10.00,
-        save: 'Ahorra $5',
+        save: { amount: '$5' },
     },
     {
         id: '6m',
-        name: '6 meses',
+        name: '6',
         monthly: 2.83,
         total: 17.00,
-        save: 'Ahorra $13',
-        tag: 'Recomendado',
+        save: { amount: '$13' },
+        tag: 'recommended',
         highlight: true,
     },
     {
         id: '12m',
-        name: '12 meses',
+        name: '12',
         monthly: 2.08,
         total: 25.00,
-        save: 'Ahorra $35',
-        tag: 'Mejor valor',
+        save: { amount: '$35' },
+        tag: 'bestValue',
     },
 ];
 
-const currency = (n) =>
-    n
-        .toLocaleString('es-CO', { style: 'currency', currency: 'USD' })
-        .replace(',', '.');
+const currency = (n, locale) =>
+    n.toLocaleString(locale || 'es-CO', { style: 'currency', currency: 'USD' }).replace(',', '.');
 
 const PricingSection = ({ showHeader = true, showFinePrint = true, containerClass = 'container-narrow' }) => {
     const { t } = useI18n?.() || { t: () => undefined };
     const language = useStore((s) => s.language);
     const isEn = String(language || 'es').toLowerCase() === 'en';
+    const locale = isEn ? 'en-US' : 'es-CO';
     const features = getFeatures(t, isEn);
     
     const title = (typeof t === 'function' && t('pricing.title')) || 
@@ -85,6 +84,13 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
         (isEn ? '1, 3, 6 and 12 month plans with full access. Cancel anytime.' : 'Planes de 1, 3, 6 y 12 meses con acceso completo. Cancela cuando quieras.');
     const finePrint = (typeof t === 'function' && t('pricing.finePrint')) || 
         (isEn ? '* Full access to over 10,000 premium 3D models. Cancel anytime, no commitments. Prices in USD.' : '* Acceso completo a más de 10,000 modelos 3D premium. Cancela cuando quieras, sin compromisos. Precios en USD.');
+    const perMonth = (typeof t === 'function' && t('pricing.perMonth')) || (isEn ? '/month' : '/mes');
+    const monthsSing = (typeof t === 'function' && t('pricing.months.singular')) || (isEn ? 'month' : 'mes');
+    const monthsPlur = (typeof t === 'function' && t('pricing.months.plural')) || (isEn ? 'months' : 'meses');
+    const billedTpl = (typeof t === 'function' && t('pricing.billed')) || (isEn ? 'Billed {total} every {period}' : 'Facturado {total} cada {period}');
+    const oneTimeTpl = (typeof t === 'function' && t('pricing.oneTime')) || (isEn ? 'One-time payment {total}' : 'Pago único {total}');
+    const saveTpl = (typeof t === 'function' && t('pricing.save')) || (isEn ? 'Save {amount}' : 'Ahorra {amount}');
+    const chooseTpl = (typeof t === 'function' && t('pricing.buttons.choose')) || (isEn ? 'Choose {name}' : 'Elegir {name}');
 
     return (
         <section className={`pricing ${containerClass} px-4 p-xl-0`}>
@@ -103,23 +109,33 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
                             p.highlight ? 'highlight' : ''
                         }`}
                     >
-                        {p.tag && <span className="plan-badge">{p.tag}</span>}
-                        <h3 className="plan-name">{p.name}</h3>
+                        {p.tag && (
+                            <span className="plan-badge">
+                                {typeof t === 'function' ? t(`pricing.tags.${p.tag}`) : (p.tag === 'recommended' ? (isEn ? 'Recommended' : 'Recomendado') : (isEn ? 'Best value' : 'Mejor precio'))}
+                            </span>
+                        )}
+                        <h3 className="plan-name">{p.name} {p.name === '1' ? monthsSing : monthsPlur}</h3>
 
                         <div className="price-row">
                             <div className="price">
                                 <span className="amount">
-                                    {currency(p.monthly)}
+                                    {currency(p.monthly, locale)}
                                 </span>
-                                <span className="per">/mes</span>
+                                <span className="per">{perMonth}</span>
                             </div>
                             <div className="bill-note">
-                                {p.id === '1m' 
-                                    ? `Pago único ${currency(p.total)}`
-                                    : `Facturado ${currency(p.total)} cada ${p.name}`
+                                {p.id === '1m'
+                                    ? oneTimeTpl.replace('{total}', currency(p.total, locale))
+                                    : billedTpl
+                                        .replace('{total}', currency(p.total, locale))
+                                        .replace('{period}', `${p.name} ${p.name === '1' ? monthsSing : monthsPlur}`)
                                 }
                             </div>
-                            {p.save && <div className="save">{p.save}</div>}
+                            {p.save && (
+                                <div className="save">
+                                    {saveTpl.replace('{amount}', p.save.amount)}
+                                </div>
+                            )}
                         </div>
 
                         <ul className="features">
@@ -128,14 +144,15 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
                             ))}
                         </ul>
 
-                        <button
+                        <a
                             className={`btn-pill ${
                                 p.highlight ? 'fill' : 'outline'
                             }`}
-                            onClick={() => alert(`Mock checkout: ${p.name}`)}
+                            href="/suscripcion"
+                            onClick={(e) => { /* allow normal navigation */ }}
                         >
-                            Elegir {p.name}
-                        </button>
+                            {chooseTpl.replace('{name}', `${p.name} ${p.name === '1' ? monthsSing : monthsPlur}`)}
+                        </a>
                     </article>
                 ))}
             </div>
