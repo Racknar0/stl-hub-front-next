@@ -19,6 +19,14 @@ export default function AssetModal({ open, onClose, asset }) {
   const token = useStore((s)=>s.token);
   const language = useStore((s)=>s.language);
   const { t } = useI18n();
+  const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
+  const imgUrl = (rel) => {
+    if (!rel) return '';
+    const s = String(rel).trim();
+    if (/^https?:\/\//i.test(s)) return s;
+    const clean = s.replace(/\\/g, '/').replace(/^\/+/, '');
+    return `${UPLOAD_BASE}/${clean}`;
+  };
   const [downloading, setDownloading] = React.useState(false);
   const [showRenew, setShowRenew] = React.useState(false);
   const [expiredAt, setExpiredAt] = React.useState(null);
@@ -192,7 +200,7 @@ export default function AssetModal({ open, onClose, asset }) {
                 <Swiper modules={[Navigation, Pagination]} navigation pagination loop>
                   {(data.images || []).slice(0,3).map((src, idx) => (
                     <SwiperSlide key={idx}>
-                      <img src={src} alt={`${displayTitle} ${idx+1}`} />
+                      <img src={imgUrl(src)} alt={`${displayTitle} ${idx+1}`} />
                     </SwiperSlide>
                   ))}
                 </Swiper>

@@ -6,6 +6,7 @@ import {
     errorAlert,
     confirmAlert,
 } from '../../../../helpers/alerts';
+import Swal from 'sweetalert2';
 import {
     MaterialReactTable,
     useMaterialReactTable,
@@ -49,7 +50,7 @@ export default function UsersPage() {
     const [form, setForm] = useState({
         email: '',
         password: '',
-        type_subscription: 'three_months',
+        daysToAdd: 90,
     });
 
     const generateStrongPassword = (length = 12) => {
@@ -86,18 +87,8 @@ export default function UsersPage() {
                     const daysRemaining = end
                         ? Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)))
                         : null;
-                    let period;
-                    if (started && end) {
-                        const months =
-                            (end.getFullYear() - started.getFullYear()) * 12 +
-                            (end.getMonth() - started.getMonth());
-                        period = `${months} meses`;
-                    } else {
-                        period = '—';
-                    }
                     return {
                         ...u,
-                        subPeriod: period,
                         subEnds: end ? end.toLocaleDateString() : '—',
                         subDaysLeft: daysRemaining,
                     };
@@ -144,17 +135,30 @@ export default function UsersPage() {
 
     const onUpdate = async (row) => {
         const u = row.original;
-        // Pedir meses a extender
-        const monthsStr = prompt(
-            '¿Cuántos meses deseas extender? (3, 6, 12)',
-            '3'
-        );
-        const months = Number(monthsStr);
-        if (![3, 6, 12].includes(months)) return;
+        const result = await Swal.fire({
+            title: 'Extender suscripción',
+            text: `Ingresa los días a agregar para ${u.email}`,
+            input: 'number',
+            inputAttributes: { min: 1, max: 3650, step: 1 },
+            inputValue: 30,
+            showCancelButton: true,
+            confirmButtonText: 'Extender',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            zIndex: 2000,
+            inputValidator: (value) => {
+                const n = Number(value);
+                if (!Number.isFinite(n) || n <= 0) return 'Ingresa un número válido (> 0)';
+                if (n > 3650) return 'Máximo permitido: 3650 días';
+                return undefined;
+            },
+        });
+        if (!result.isConfirmed) return;
+        const daysToAdd = Number(result.value);
         try {
             await http.postData(
                 `/users/${u.id}/subscription/extend`,
-                { months }
+                { daysToAdd }
             );
             await successAlert(
                 'Suscripción actualizada',
@@ -194,7 +198,7 @@ export default function UsersPage() {
             setForm({
                 email: '',
                 password: '',
-                type_subscription: 'three_months',
+                daysToAdd: 90,
             });
             // ir a primera página para verlo
             setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -211,11 +215,11 @@ export default function UsersPage() {
 
     const columns = useMemo(
         () => [
-            { accessorKey: 'id', header: 'ID', size: 80 },
-            { accessorKey: 'email', header: 'Email', size: 320 },
-            { accessorKey: 'subPeriod', header: 'Periodo', size: 120 },
-            { accessorKey: 'subEnds', header: 'Termina', size: 140 },
-            { accessorKey: 'subDaysLeft', header: 'Días restantes', size: 140 },
+            { accessorKey: 'id', header: 'ID', size: 70 },
+            { accessorKey: 'email', header: 'Email', size: 300 },
+            { accessorKey: 'downloadCount', header: 'Descargas', size: 110 },
+            { accessorKey: 'subEnds', header: 'Termina', size: 130 },
+            { accessorKey: 'subDaysLeft', header: 'Días restantes', size: 130 },
         ],
         []
     );
@@ -313,14 +317,16 @@ export default function UsersPage() {
                             <TextField label="Password" type="text" fullWidth required value={form.password} onChange={(e)=>setForm(f=>({...f, password: e.target.value}))} />
                             <MUIButton type="button" variant="outlined" onClick={() => setForm(f=>({...f, password: generateStrongPassword(12)}))} disabled={creating}>Generar</MUIButton>
                         </Box>
-                        <FormControl fullWidth margin="dense">
-                            <InputLabel id="sub-label">Suscripción</InputLabel>
-                            <Select labelId="sub-label" label="Suscripción" value={form.type_subscription} onChange={(e)=>setForm(f=>({...f, type_subscription: e.target.value}))}>
-                                <MenuItem value="three_months">3 meses</MenuItem>
-                                <MenuItem value="six_months">6 meses</MenuItem>
-                                <MenuItem value="one_year">1 año</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <TextField
+                            label="Días de suscripción a añadir"
+                            type="number"
+                            fullWidth
+                            required
+                            margin="dense"
+                            inputProps={{ min: 1, max: 3650 }}
+                            value={form.daysToAdd}
+                            onChange={(e)=> setForm(f=> ({...f, daysToAdd: Number(e.target.value) }))}
+                        />
                     </DialogContent>
                     <DialogActions>
                         <MUIButton onClick={() => setShowForm(false)} disabled={creating}>Cancelar</MUIButton>

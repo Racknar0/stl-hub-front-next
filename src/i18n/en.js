@@ -127,7 +127,7 @@ const en = {
   },
   pricing: {
     title: 'Choose your plan',
-    subtitle: '1, 3, 6 and 12 month plans with full access. Cancel anytime.',
+  subtitle: '30, 90, 180 and 365 day plans with full access. Cancel anytime.',
     finePrint: '* Full access to over 10,000 premium 3D models. Cancel anytime, no commitments. Prices in USD.',
     perMonth: '/month',
     billed: 'Billed {total} every {period}',
@@ -138,6 +138,10 @@ const en = {
     months: {
       singular: 'month',
       plural: 'months'
+    },
+    days: {
+      singular: 'day',
+      plural: 'days'
     },
     tags: {
       recommended: 'Recommended',

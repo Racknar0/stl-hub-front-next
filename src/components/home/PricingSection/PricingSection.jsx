@@ -37,21 +37,21 @@ const getFeatures = (t, isEn) => {
 const plans = [
     {
         id: '1m',
-        name: '1',
+        name: '30',
         monthly: 5.00,
         total: 5.00,
         save: null,
     },
     {
         id: '3m',
-        name: '3',
+        name: '90',
         monthly: 3.33,
         total: 10.00,
         save: { amount: '$5' },
     },
     {
         id: '6m',
-        name: '6',
+        name: '180',
         monthly: 2.83,
         total: 17.00,
         save: { amount: '$13' },
@@ -60,7 +60,7 @@ const plans = [
     },
     {
         id: '12m',
-        name: '12',
+        name: '365',
         monthly: 2.08,
         total: 25.00,
         save: { amount: '$35' },
@@ -85,8 +85,12 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
     const finePrint = (typeof t === 'function' && t('pricing.finePrint')) || 
         (isEn ? '* Full access to over 10,000 premium 3D models. Cancel anytime, no commitments. Prices in USD.' : '* Acceso completo a más de 10,000 modelos 3D premium. Cancela cuando quieras, sin compromisos. Precios en USD.');
     const perMonth = (typeof t === 'function' && t('pricing.perMonth')) || (isEn ? '/month' : '/mes');
-    const monthsSing = (typeof t === 'function' && t('pricing.months.singular')) || (isEn ? 'month' : 'mes');
-    const monthsPlur = (typeof t === 'function' && t('pricing.months.plural')) || (isEn ? 'months' : 'meses');
+        const dayWord = (num) => {
+            const n = Number(num || 0);
+            const ds = (typeof t === 'function' && t('pricing.days.singular')) || (isEn ? 'day' : 'día');
+            const dp = (typeof t === 'function' && t('pricing.days.plural')) || (isEn ? 'days' : 'días');
+            return `${n} ${n === 1 ? ds : dp}`;
+        };
     const billedTpl = (typeof t === 'function' && t('pricing.billed')) || (isEn ? 'Billed {total} every {period}' : 'Facturado {total} cada {period}');
     const oneTimeTpl = (typeof t === 'function' && t('pricing.oneTime')) || (isEn ? 'One-time payment {total}' : 'Pago único {total}');
     const saveTpl = (typeof t === 'function' && t('pricing.save')) || (isEn ? 'Save {amount}' : 'Ahorra {amount}');
@@ -114,7 +118,7 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
                                 {typeof t === 'function' ? t(`pricing.tags.${p.tag}`) : (p.tag === 'recommended' ? (isEn ? 'Recommended' : 'Recomendado') : (isEn ? 'Best value' : 'Mejor precio'))}
                             </span>
                         )}
-                        <h3 className="plan-name">{p.name} {p.name === '1' ? monthsSing : monthsPlur}</h3>
+                        <h3 className="plan-name">{dayWord(p.name)}</h3>
 
                         <div className="price-row">
                             <div className="price">
@@ -128,7 +132,7 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
                                     ? oneTimeTpl.replace('{total}', currency(p.total, locale))
                                     : billedTpl
                                         .replace('{total}', currency(p.total, locale))
-                                        .replace('{period}', `${p.name} ${p.name === '1' ? monthsSing : monthsPlur}`)
+                                        .replace('{period}', dayWord(p.name))
                                 }
                             </div>
                             {p.save && (
@@ -151,7 +155,7 @@ const PricingSection = ({ showHeader = true, showFinePrint = true, containerClas
                             href="/suscripcion"
                             onClick={(e) => { /* allow normal navigation */ }}
                         >
-                            {chooseTpl.replace('{name}', `${p.name} ${p.name === '1' ? monthsSing : monthsPlur}`)}
+                            {chooseTpl.replace('{name}', dayWord(p.name))}
                         </a>
                     </article>
                 ))}

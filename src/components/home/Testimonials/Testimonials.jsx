@@ -92,8 +92,8 @@ const Testimonials = ({ items = defaultItems }) => {
 			
 			<div className="container-narrow">
 				<header className="p-header mb-4">
-				<h3>{title}</h3>
-				<p>{subtitle}</p>
+				<h3 className='text-center'>{title}</h3>
+				<p className='text-center'>{subtitle}</p>
 			</header>
 				<Swiper
 					modules={[Autoplay]}

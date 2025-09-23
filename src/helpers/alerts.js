@@ -62,3 +62,30 @@ export const confirmAlert = async (
   })
   return result.isConfirmed
 }
+
+// Selector simple con SweetAlert (por ejemplo: 3, 6, 12 meses)
+export const selectAlert = async (
+  title = 'Selecciona una opción',
+  message = '',
+  options = {}, // { value: label }
+  confirmText = 'Aceptar',
+  cancelText = 'Cancelar'
+) => {
+  const result = await Swal.fire({
+    title,
+    text: message,
+    input: 'select',
+    inputOptions: options,
+    inputPlaceholder: 'Selecciona…',
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    zIndex: 2000,
+    inputValidator: (value) => {
+      if (!value) return 'Selecciona una opción';
+      return undefined;
+    },
+  })
+  return result.isConfirmed ? result.value : null;
+}
