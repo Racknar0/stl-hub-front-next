@@ -17,6 +17,11 @@ import 'swiper/css'
 import 'swiper/css/navigation'
 import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts'
 
+// Nuevos componentes
+import ToolbarBusqueda from './componentes/ToolbarBusqueda'
+import ModalDetalle from './componentes/ModalDetalle'
+import ModalEditar from './componentes/ModalEditar'
+
 // Mapea estado a color de chip
 const statusColor = (s) => ({
   DRAFT: 'default',
@@ -82,7 +87,6 @@ export default function AssetsAdminPage() {
         http.getData('/tags')
       ])
       setCategories((cats.data?.items || []).map(c => ({ id: c.id, name: c.name, slug: c.slug })))
-      // Tags como objetos, se mostrará name y almacenaremos slugs en el form
       setAllTags((tgs.data?.items || []).map(t => ({ name: t.name, slug: t.slug })))
     } catch (e) {
       console.error('meta load error', e)
@@ -280,17 +284,18 @@ export default function AssetsAdminPage() {
     enableRowActions: true,
     positionActionsColumn: 'last',
     renderTopToolbarCustomActions: ({ table }) => (
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
-        {/* Barra de búsqueda */}
-        <TextField size="small" placeholder="Buscar por nombre" value={q} onChange={(e)=>setQ(e.target.value)} sx={{ minWidth: 260 }} onKeyDown={(e)=>{ if(e.key==='Enter'){ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false) } }} />
-        <Button variant="outlined" onClick={()=>{ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false); }}>Buscar</Button>
-        <Button variant={showFreeOnly ? 'contained' : 'outlined'} color={showFreeOnly ? 'success' : 'primary'} onClick={()=>{ setSearchTerm(q); setPageIndex(0); setShowFreeOnly(true); }}>Buscar Free</Button>
-        <Box sx={{ flex: 1 }} />
-      </Box>
+      <ToolbarBusqueda
+        q={q}
+        setQ={setQ}
+        onBuscar={() => { setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false) }}
+        onBuscarFree={() => { setSearchTerm(q); setPageIndex(0); setShowFreeOnly(true) }}
+        freeCount={freeCount}
+        setFreeCount={setFreeCount}
+        onRandomize={onRandomize}
+      />
     ),
     renderRowActions: ({ row }) => (
       <Box sx={{ display: 'flex', gap: 1 }}>
-        {/* Acciones: Ver / Editar / Borrar */}
         <IconButton aria-label="Ver" onClick={() => { setSelected(row.original); setPreviewOpen(true); }}>
           <VisibilityIcon fontSize="small" />
         </IconButton>
@@ -310,9 +315,7 @@ export default function AssetsAdminPage() {
     setEditForm({
       title: asset.title || '',
       titleEn: asset.titleEn || '',
-      // relación categorías
       categories: Array.isArray(asset.categories) ? asset.categories.map(c=>({ ...c })) : [],
-      // relación tags -> en el form trabajamos con slugs simples
       tags: Array.isArray(asset.tags) ? asset.tags.map(t=>String(t.slug||t.name||'').toLowerCase()).filter(Boolean) : [],
       isPremium: !!asset.isPremium,
     })
@@ -371,9 +374,7 @@ export default function AssetsAdminPage() {
       await http.putData('/assets', selected.id, {
         title: editForm.title,
         titleEn: editForm.titleEn,
-        // enviar categorías por slug (solo relación múltiple)
         categories: editForm.categories?.length ? editForm.categories.map(c => String(c.slug).toLowerCase()) : [],
-        // tags: array de slugs (o ids si cambias el form)
         tags: (editForm.tags || []).map(t=>String(t).trim().toLowerCase()),
         isPremium: editForm.isPremium,
       })
@@ -417,13 +418,28 @@ export default function AssetsAdminPage() {
     }
   }
 
-
+  // Randomizar freebies
+  const onRandomize = async () => {
+    const ok = await confirmAlert('Randomizar Freebies', `Se seleccionarán ${freeCount} assets como Free y el resto quedarán Premium. ¿Continuar?`, 'Sí, randomizar', 'Cancelar', 'warning')
+    if (!ok) return
+    try {
+      setLoading(true)
+      const res = await http.postData('/assets/randomize-free', { count: Number(freeCount)||0 })
+      const { total, selected } = res.data || {}
+      await successAlert('Hecho', `Total: ${total ?? '-'} | Seleccionados Free: ${selected ?? '-'}`)
+      setRefreshTick(n=>n+1)
+    } catch (e) {
+      console.error('randomize error', e)
+      await errorAlert('Error', e?.response?.data?.message || 'No se pudo randomizar')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="p-3">
       {/* Barra de carga superior */}
       {loading && <LinearProgress sx={{ mb: 2 }} />}
-
 
       {/* Tabla */}
       <Box sx={{ width: '100%', overflowX: 'auto' }}>
@@ -431,206 +447,42 @@ export default function AssetsAdminPage() {
       </Box>
 
       {/* Modal: Detalle ES/EN */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {detail?.title || selected?.title || 'Detalle del asset'}
-          <IconButton onClick={() => setPreviewOpen(false)} aria-label="Cerrar"><CloseIcon /></IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {(detail || selected) ? (
-            <Stack spacing={2}>
-              {/* Carrusel de imágenes */}
-              <Box>
-                {Array.isArray((detail?.images ?? selected?.images)) && (detail?.images ?? selected?.images).length > 0 ? (
-                  <Swiper modules={[Navigation]} navigation spaceBetween={10} slidesPerView={1} style={{ width: '100%', height: 320 }}>
-                    {(detail?.images ?? selected.images).map((rel, idx) => (
-                      <SwiperSlide key={idx}>
-                        <img src={imgUrl(rel)} alt={`img-${idx}`} style={{ width: '100%', height: 320, objectFit: 'contain', borderRadius: 8 }} />
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
-                ) : (
-                  <Box sx={{ width: '100%', height: 320, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.06)' }} />
-                )}
-              </Box>
-
-              {/* Estado y plan */}
-              <Stack direction="row" spacing={2}>
-                <Chip size="small" label={(detail?.category ?? selected?.category) || 'Sin categoría'} />
-                {(detail?.isPremium ?? selected?.isPremium) && <Chip size="small" color="warning" label="Premium" />}
-                <Chip size="small" label={(detail?.status ?? selected?.status)} color={statusColor(detail?.status ?? selected?.status)} />
-              </Stack>
-
-              {/* Títulos ES/EN */}
-              <Box>
-                <Typography variant="subtitle2">Título (ES)</Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>{detail?.title || selected?.title || '-'}</Typography>
-                <Typography variant="subtitle2">Title (EN)</Typography>
-                <Typography variant="body2">{detail?.titleEn || selected?.titleEn || '-'}</Typography>
-              </Box>
-
-              {/* Categorías ES/EN */}
-              {(() => {
-                const cats = Array.isArray(detail?.categories) ? detail.categories : []
-                const catsEs = cats.length ? cats.map(c => c?.name).filter(Boolean) : ((detail?.category ?? selected?.category) ? [detail?.category ?? selected?.category] : [])
-                const catsEn = cats.length ? cats.map(c => c?.nameEn || c?.name).filter(Boolean) : catsEs
-                return (
-                  <Stack spacing={1}>
-                    <Typography variant="subtitle2">Categorías (ES)</Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-                      {catsEs.length ? catsEs.map((n, i) => (<Chip key={`ces-${i}`} size="small" label={n} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
-                    </Stack>
-                    <Typography variant="subtitle2">Categories (EN)</Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-                      {catsEn.length ? catsEn.map((n, i) => (<Chip key={`cen-${i}`} size="small" label={n} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
-                    </Stack>
-                  </Stack>
-                )
-              })()}
-
-              {/* Tags ES/EN */}
-              {(() => {
-                const tagsEs = Array.isArray(detail?.tagsEs) ? detail.tagsEs : (Array.isArray(selected?.tags) ? selected.tags.map(t=>t?.slug||t) : [])
-                const tagsEn = Array.isArray(detail?.tagsEn) ? detail.tagsEn : (Array.isArray(selected?.tags) ? selected.tags.map(t=>t?.nameEn||t?.name||t?.slug||t) : tagsEs)
-                return (
-                  <Stack spacing={1}>
-                    <Typography variant="subtitle2">Tags (ES)</Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-                      {tagsEs.length ? tagsEs.map((t, i) => (<Chip key={`tes-${i}`} size="small" label={t} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
-                    </Stack>
-                    <Typography variant="subtitle2">Tags (EN)</Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-                      {tagsEn.length ? tagsEn.map((t, i) => (<Chip key={`ten-${i}`} size="small" label={t} variant="outlined" />)) : (<Typography variant="body2" color="text.secondary">-</Typography>)}
-                    </Stack>
-                  </Stack>
-                )
-              })()}
-
-              {/* Otros metadatos */}
-              <Typography variant="body2">Cuenta: {detail?.account?.alias || detail?.accountId || selected?.account?.alias || selected?.accountId}</Typography>
-              <Typography variant="body2">Tamaño: {formatMBfromB((detail?.fileSizeB ?? detail?.archiveSizeB) ?? (selected?.fileSizeB ?? selected?.archiveSizeB))}</Typography>
-              <Typography variant="body2">Creado: {(detail?.createdAt ?? selected?.createdAt) ? new Date(detail?.createdAt ?? selected?.createdAt).toLocaleString() : '-'}</Typography>
-              {(detail?.megaLink ?? selected?.megaLink) && (
-                <Typography variant="body2">
-                  <LinkIcon fontSize="small" style={{ verticalAlign: 'middle' }} />{' '}
-                  <MUILink href={detail?.megaLink ?? selected?.megaLink} target="_blank" rel="noreferrer" underline="hover">Enlace MEGA</MUILink>
-                </Typography>
-              )}
-              {(detail?.description ?? selected?.description) && (
-                <Typography variant="body2" color="text.secondary">{detail?.description ?? selected?.description}</Typography>
-              )}
-
-              {loadingDetail && <Typography variant="caption" color="text.secondary">Cargando detalle…</Typography>}
-            </Stack>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ModalDetalle
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        detail={detail}
+        selected={selected}
+        imgUrl={imgUrl}
+        formatMBfromB={formatMBfromB}
+        loadingDetail={loadingDetail}
+      />
 
       {/* Modal: Edición (sin categoría legacy) */}
-      <Dialog open={editOpen} onClose={() => { setEditOpen(false); resetEdit() }} maxWidth="md" fullWidth
-        slotProps={{
-          backdrop: { sx: { zIndex: 1500 } },
-          paper: { sx: { zIndex: 1600 } },
-        }}
-      >
-        <DialogTitle>Editar STL</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2}>
-            {/* Campos básicos */}
-            <TextField label="Nombre (ES)" value={editForm.title} onChange={(e)=>setEditForm(f=>({...f, title: e.target.value}))} fullWidth size="small" />
-            <TextField label="Nombre (EN)" value={editForm.titleEn} onChange={(e)=>setEditForm(f=>({...f, titleEn: e.target.value}))} fullWidth size="small" />
-
-            {/* Categorías múltiples (ES) */}
-            <Autocomplete
-              multiple
-              disableCloseOnSelect
-              options={categories}
-              getOptionLabel={(o)=>o?.name || ''}
-              isOptionEqualToValue={(o,v)=>o.id===v.id}
-              value={editForm.categories || []}
-              onChange={(_, v) => setEditForm(f=>({...f, categories: v }))}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip variant="outlined" label={option.name} {...getTagProps({ index })} key={`${option.slug}-${index}`} />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField {...params} size="small" label="Categorías" placeholder="Selecciona categorías" />
-              )}
-            />
-
-            {/* Tags */}
-            <Autocomplete
-              multiple
-              freeSolo
-              options={allTags}
-              getOptionLabel={(o)=> (typeof o === 'string' ? o : (o?.name || o?.slug || ''))}
-              value={editForm.tags}
-              onChange={(_, v) => {
-                const normalized = Array.from(new Set((v||[]).map(item => {
-                  if (typeof item === 'string') return slugify(item)
-                  return slugify(item.slug || item.name)
-                }).filter(Boolean)))
-                setEditForm(f=>({...f, tags: normalized}))
-              }}
-              slotProps={{ popper: { sx: { zIndex: 2000 } }, paper: { sx: { zIndex: 2000 } } }}
-              renderTags={(value, getTagProps) =>
-                (value||[]).map((option, index) => (
-                  <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option+index} />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField {...params} size="small" label="Tags" placeholder="Añadir tag" />
-              )}
-            />
-
-            {/* Plan */}
-            <FormControlLabel control={<Switch checked={editForm.isPremium} onChange={(e)=>setEditForm(f=>({...f, isPremium: e.target.checked}))} />} label={editForm.isPremium ? 'Premium' : 'Free'} />
-
-            {/* Imágenes (drag & drop) */}
-            {editImageFiles.length > 0 ? (
-              <ImagesSection
-                imageFiles={editImageFiles}
-                previewIndex={editPreviewIndex}
-                onPrev={onPrev}
-                onNext={onNext}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onOpenFilePicker={onOpenFilePicker}
-                fileInputRef={fileInputRef}
-                onSelectFiles={onSelectFiles}
-                onRemove={onRemove}
-                onSelectPreview={onSelectPreview}
-              />
-            ) : (
-              <>
-                {Array.isArray(selected?.images) && selected.images.length > 0 ? (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>Imágenes actuales</Typography>
-                    <Swiper modules={[Navigation]} navigation spaceBetween={10} slidesPerView={1} style={{ width: '100%', height: 320 }}>
-                      {selected.images.map((rel, idx) => (
-                        <SwiperSlide key={idx}>
-                          <img src={imgUrl(rel)} alt={`img-${idx}`} style={{ width: '100%', height: 320, objectFit: 'contain', borderRadius: 8 }} />
-                        </SwiperSlide>
-                      ))}
-                    </Swiper>
-                  </Box>
-                ) : (
-                  <Box sx={{ width: '100%', height: 320, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.06)' }} />
-                )}
-                <Box sx={{ mt: 1 }}>
-                  <Button variant="outlined" onClick={onOpenFilePicker}>Reemplazar imágenes</Button>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onSelectFiles} />
-                </Box>
-              </>
-            )}
-          </Stack>
-        </DialogContent>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 2 }}>
-          <Button onClick={() => { setEditOpen(false); resetEdit() }}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSaveEdit} disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
-        </Box>
-      </Dialog>
+      <ModalEditar
+        open={editOpen}
+        onClose={() => { setEditOpen(false); resetEdit() }}
+        selected={selected}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        categories={categories}
+        allTags={allTags}
+        editImageFiles={editImageFiles}
+        setEditImageFiles={setEditImageFiles}
+        editPreviewIndex={editPreviewIndex}
+        setEditPreviewIndex={setEditPreviewIndex}
+        fileInputRef={fileInputRef}
+        onSelectFiles={onSelectFiles}
+        onOpenFilePicker={onOpenFilePicker}
+        onPrev={onPrev}
+        onNext={onNext}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onRemove={onRemove}
+        onSelectPreview={onSelectPreview}
+        loading={loading}
+        onSave={handleSaveEdit}
+        imgUrl={imgUrl}
+      />
     </div>
   )
 }
