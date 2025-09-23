@@ -71,6 +71,16 @@ const en = {
     top: {
       title: 'Most downloaded',
       more: 'See more'
+    },
+    // New: Free
+    free: {
+      title: 'Free (updated daily)',
+      more: 'See more'
+    },
+    // New: categories
+    categories: {
+      loadMore: 'Load more categories',
+      loading: 'Loading...'
     }
   },
   alerts: {
@@ -85,7 +95,8 @@ const en = {
     title: 'Search',
     mostDownloaded: 'Most downloaded',
     chips: {
-      mostDownloaded: '#most_downloaded'
+      mostDownloaded: '#most_downloaded',
+      free: '#free'
     },
     loading: 'Loading...',
     empty: 'No results.'

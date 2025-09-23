@@ -10,6 +10,7 @@ import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
+import Button from '../../../components/layout/Buttons/Button';
 
 // Categorías fijas
 const CATEGORIES = [
@@ -59,9 +60,20 @@ const Home = () => {
   // Guardar respuesta cruda
   const [latestRaw, setLatestRaw] = useState([]);
   const [topRaw, setTopRaw] = useState([]);
+  // Nuevo: lista Free
+  const [freeRaw, setFreeRaw] = useState([]);
   // Listas listas para mostrar (posible enriquecimiento en EN)
   const [latestData, setLatestData] = useState([]);
   const [topData, setTopData] = useState([]);
+  const [freeData, setFreeData] = useState([]);
+  // Categorías y sliders
+  const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
+  const [catPage, setCatPage] = useState(0);
+  const BATCH_SIZE = 6;
+  const [catMap, setCatMap] = useState({}); // slug -> raw items
+  const [catOrder, setCatOrder] = useState([]); // slugs con resultados en orden de carga
+  const [loadingMoreCats, setLoadingMoreCats] = useState(false);
+  const [catsLoadedAll, setCatsLoadedAll] = useState(false);
   const { t } = useI18n();
 
   // Activar loader antes del primer pintado para evitar flash del fondo
@@ -125,9 +137,21 @@ const Home = () => {
         const resTop = await http.getData('/assets/top?limit=19');
         const topArr = Array.isArray(resTop.data) ? resTop.data : [];
         setTopRaw(topArr);
+
+        // Nuevo: FREE actuales (público vía /assets/search)
+        const resFree = await http.getData('/assets/search?plan=free&order=downloads');
+        const freeArr = Array.isArray(resFree.data?.items) ? resFree.data.items : [];
+        setFreeRaw(freeArr);
+
+        // Cargar categorías disponibles
+        const resCats = await http.getData('/categories');
+        const catItems = (resCats.data?.items || []).map(c => ({ id: c.id, name: c.name, nameEn: c.nameEn || c.name, slug: c.slug, slugEn: c.slugEn || c.slug }));
+        setCats(catItems);
       } catch (e) {
         setLatestRaw([]);
         setTopRaw([]);
+        setFreeRaw([]);
+        setCats([]);
       } finally {
         setGlobalLoading(false);
       }
@@ -135,27 +159,82 @@ const Home = () => {
     load();
   }, []);
 
+  // Cargar primer lote de categorías cuando ya tengamos listado
+  useEffect(() => {
+    if (cats.length && catPage === 0 && catOrder.length === 0 && !loadingMoreCats) {
+      // cargar lote inicial
+      loadCategoryBatch(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cats.length]);
+
+  const loadCategoryBatch = async (pageToLoad) => {
+    if (!cats.length) return;
+    const start = pageToLoad * BATCH_SIZE;
+    if (start >= cats.length) { setCatsLoadedAll(true); return; }
+    const slice = cats.slice(start, start + BATCH_SIZE);
+    setLoadingMoreCats(true);
+    try {
+      // peticiones en paralelo por categoría
+      const results = await Promise.allSettled(slice.map(cat => http.getData(`/assets/search?categories=${encodeURIComponent(cat.slug)}&order=downloads`)));
+      const nextMap = { ...catMap };
+      const nextOrder = [...catOrder];
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled') {
+          const items = Array.isArray(res.value?.data?.items) ? res.value.data.items : [];
+          if (items.length > 0) {
+            const slug = slice[idx].slug;
+            nextMap[slug] = items;
+            nextOrder.push(slug);
+          }
+        }
+      });
+      setCatMap(nextMap);
+      setCatOrder(nextOrder);
+      setCatPage(pageToLoad + 1);
+      if ((pageToLoad + 1) * BATCH_SIZE >= cats.length) setCatsLoadedAll(true);
+    } catch (e) {
+      // noop
+    } finally {
+      setLoadingMoreCats(false);
+    }
+  };
+
   // Enriquecer cuando el idioma es EN y falten campos EN
   useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
       if (String(language).toLowerCase() === 'en') {
-        // Ya vienen tagsEs/tagsEn desde el backend; no hace falta pedir detalle por tarjeta
         setLatestData(latestRaw);
         setTopData(topRaw);
+        setFreeData(freeRaw);
       } else {
         setLatestData(latestRaw);
         setTopData(topRaw);
+        setFreeData(freeRaw);
       }
     };
     run();
     return () => { cancelled = true };
-  }, [language, latestRaw, topRaw]);
+  }, [language, latestRaw, topRaw, freeRaw]);
 
   // Derivar listas según idioma
   const latest = useMemo(() => latestData.map(a => toCardItem(a, language)), [latestData, language]);
   const top = useMemo(() => topData.map(a => toCardItem(a, language)), [topData, language]);
+  const free = useMemo(() => freeData.map(a => toCardItem(a, language)), [freeData, language]);
+
+  const catSliders = useMemo(() => (
+    catOrder.map(slug => {
+      const cat = cats.find(c => c.slug === slug);
+      const items = (catMap[slug] || []).map(a => toCardItem(a, language));
+      return {
+        slug,
+        title: language === 'en' ? (cat?.nameEn || cat?.name || slug) : (cat?.name || cat?.nameEn || slug),
+        items,
+      };
+    })
+  ), [catOrder, catMap, cats, language]);
 
   const handleOpen = (asset) => { setModalAsset(asset); setModalOpen(true); };
   const handleClose = () => { setModalOpen(false); setModalAsset(null); };
@@ -173,6 +252,15 @@ const Home = () => {
         onItemClick={handleOpen}
       />
 
+      {/* Nuevo slider: Gratis (se actualiza diario) */}
+      <SectionRow
+        title={t('home.free.title')}
+        items={free}
+        onItemClick={handleOpen}
+        linkHref="/search?plan=free"
+        linkLabel={t('home.free.more')}
+      />
+
       <SectionRow
         title={t('home.top.title')}
         items={top}
@@ -180,17 +268,32 @@ const Home = () => {
         linkHref="/search?order=downloads"
         linkLabel={t('home.top.more')}
       />
-      <SectionRow title="Figuras" items={mockRow('figuras', 12)} onItemClick={handleOpen} />
-      <SectionRow
-        title="Mugs"
-        items={mockRow('cosplay', 12)}
-        onItemClick={handleOpen}
-      />
-      <SectionRow
-        title="Religion"
-        items={mockRow('terrain', 12)}
-        onItemClick={handleOpen}
-      />
+
+      {/* Sliders por categoría (6 por lote) */}
+      {catSliders.map(cs => (
+        <SectionRow
+          key={cs.slug}
+          title={cs.title}
+          items={cs.items}
+          onItemClick={handleOpen}
+          linkHref={`/search?categories=${encodeURIComponent(cs.slug)}`}
+          linkLabel={t('sliders.row.more')}
+        />
+      ))}
+
+      {/* Botón Ver más categorías */}
+      {cats.length > 0 && !catsLoadedAll && (
+        <div className="container-narrow" style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0 2rem', marginLeft: 'auto', marginRight: 'auto' }}>
+          <Button
+            variant="purple"
+            styles={{ width: 'auto', padding: '0 .9rem' }}
+            onClick={() => loadCategoryBatch(catPage)}
+            disabled={loadingMoreCats}
+          >
+            {loadingMoreCats ? t('home.categories.loading') : t('home.categories.loadMore')}
+          </Button>
+        </div>
+      )}
 
       <Testimonials />
 

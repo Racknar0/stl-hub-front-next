@@ -58,6 +58,8 @@ export default function SearchClient({ initialParams }) {
   const [categories, setCategories] = useState(initialParams?.categories || '');
   const [tags, setTags] = useState(initialParams?.tags || '');
   const [order, setOrder] = useState(initialParams?.order || '');
+  // Nuevo: plan (free|premium)
+  const [plan, setPlan] = useState(initialParams?.plan || '');
 
   // sincronizar con cambios de la URL
   useEffect(() => {
@@ -65,13 +67,14 @@ export default function SearchClient({ initialParams }) {
     setCategories(initialParams?.categories || '');
     setTags(initialParams?.tags || '');
     setOrder(initialParams?.order || '');
-  }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order]);
+    setPlan(initialParams?.plan || '');
+  }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order, initialParams?.plan]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
   const [subscribed, setSubscribed] = useState(false);
 
-  const params = useMemo(() => ({ q, categories, tags, order }), [q, categories, tags, order]);
+  const params = useMemo(() => ({ q, categories, tags, order, plan }), [q, categories, tags, order, plan]);
   const catList = useMemo(() => String(categories || '').split(',').map(s=>s.trim()).filter(Boolean), [categories]);
   const tagList = useMemo(() => String(tags || '').split(',').map(s=>s.trim()).filter(Boolean), [tags]);
 
@@ -92,7 +95,7 @@ export default function SearchClient({ initialParams }) {
     };
     run();
     return () => controller.abort();
-  }, [params.q, params.categories, params.tags, params.order, language]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, language]);
 
   const catHref = (c) => {
     if (!c) return '#'
@@ -111,8 +114,9 @@ export default function SearchClient({ initialParams }) {
           <div className="filters">
             {q ? (<span className="chip">#{q}</span>) : null}
             {catList.map((c,i)=> (<span key={`c-${i}`} className="chip">#{c}</span>))}
-            {tagList.map((t,i)=> (<span key={`t-${i}`} className="chip">#{t}</span>))}
+            {tagList.map((t_,i)=> (<span key={`t-${i}`} className="chip">#{t_}</span>))}
             {order === 'downloads' ? (<span className="chip">{t('search.chips.mostDownloaded')}</span>) : null}
+            {plan === 'free' ? (<span className="chip">{t('search.chips.free')}</span>) : null}
           </div>
           <div style={{flex:1}} />
           <div className="order-actions">

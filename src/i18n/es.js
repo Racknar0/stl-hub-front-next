@@ -71,6 +71,16 @@ const es = {
     top: {
       title: 'Lo más descargado',
       more: 'Ver más'
+    },
+    // Nuevo: Free
+    free: {
+      title: 'Gratis (se actualiza diario)',
+      more: 'Ver más'
+    },
+    // Nuevo: categorías
+    categories: {
+      loadMore: 'Ver más categorías',
+      loading: 'Cargando...'
     }
   },
   alerts: {
@@ -85,7 +95,8 @@ const es = {
     title: 'Búsqueda',
     mostDownloaded: 'Más descargados',
     chips: {
-      mostDownloaded: '#más_descargados'
+      mostDownloaded: '#más_descargados',
+      free: '#gratis'
     },
     loading: 'Cargando...',
     empty: 'Sin resultados.'
