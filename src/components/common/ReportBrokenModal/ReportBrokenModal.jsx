@@ -13,12 +13,14 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
   const [note, setNote] = React.useState('');
   const [captchaOk, setCaptchaOk] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [status, setStatus] = React.useState('idle'); // idle | success | error
 
   React.useEffect(() => {
     if (!open) {
       setNote('');
       setCaptchaOk(false);
       setSubmitting(false);
+      setStatus('idle');
     }
   }, [open]);
 
@@ -30,9 +32,11 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
         note: String(note || '').slice(0, 1000),
         // captchaToken: '', // TODO: integrar reCAPTCHA/turnstile aquí
       });
-      onSubmitted?.();
+      setStatus('success');
+      // notificar al padre si lo requiere (sin cerrar ni alert)
+      try { onSubmitted?.('success'); } catch {}
     } catch {
-      window.alert(isEn ? 'Could not send the report. Try later.' : 'No se pudo enviar el reporte. Intenta más tarde.');
+      setStatus('error');
     } finally {
       setSubmitting(false);
     }
@@ -48,45 +52,80 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
         {isEn ? 'Tell us what went wrong so we can fix it.' : `Cuéntanos qué falló para poder revisarlo. (${assetTitle || 'Asset'})`}
       </p>
 
-      <div style={{ width: '100%', maxWidth: 520, margin: '0 auto .75rem' }}>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={isEn ? 'Optional comments...' : 'Comentarios opcionales...'}
-          rows={4}
-          style={{
-            width: '100%',
-            background: 'rgba(255,255,255,.06)',
-            color: '#e9efff',
-            border: '1px solid rgba(255,255,255,.12)',
-            borderRadius: 12,
-            padding: '10px 12px',
-            resize: 'vertical',
-            outline: 'none'
-          }}
-        />
-      </div>
+      {status !== 'success' && (
+        <div style={{ width: '100%', maxWidth: 520, margin: '0 auto .75rem' }}>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={isEn ? 'Optional comments...' : 'Comentarios opcionales...'}
+            rows={4}
+            disabled={submitting}
+            style={{
+              width: '100%',
+              background: 'rgba(255,255,255,.06)',
+              color: '#e9efff',
+              border: '1px solid rgba(255,255,255,.12)',
+              borderRadius: 12,
+              padding: '10px 12px',
+              resize: 'vertical',
+              outline: 'none',
+              opacity: submitting ? .7 : 1
+            }}
+          />
+        </div>
+      )}
 
-      {/* Captcha placeholder */}
-      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: '.9rem', userSelect: 'none' }}>
-        <input
-          type="checkbox"
-          checked={captchaOk}
-          onChange={(e) => setCaptchaOk(e.target.checked)}
-        />
-        <span>{isEn ? "I'm not a robot (placeholder)" : 'No soy un robot (placeholder)'}</span>
-      </label>
+      {status !== 'success' && (
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: '.9rem', userSelect: 'none' }}>
+          <input
+            type="checkbox"
+            checked={captchaOk}
+            onChange={(e) => setCaptchaOk(e.target.checked)}
+            disabled={submitting}
+          />
+          <span>{isEn ? "I'm not a robot (placeholder)" : 'No soy un robot (placeholder)'}</span>
+        </label>
+      )}
 
-      <div className="actions center" style={{ justifyContent: 'center' }}>
-        <Button
-          onClick={handleSubmit}
-          disabled={!captchaOk || submitting || !assetId}
-          variant="purple"
-          className="btn-big"
-        >
-          {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Send' : 'Enviar')}
-        </Button>
-      </div>
+      {status === 'idle' && (
+        <div className="actions center" style={{ justifyContent: 'center' }}>
+          <Button
+            onClick={handleSubmit}
+            disabled={!captchaOk || submitting || !assetId}
+            variant="purple"
+            className="btn-big"
+          >
+            {submitting && <span className="btn-spinner" aria-hidden />}
+            {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Send' : 'Enviar')}
+          </Button>
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ color: '#ff8a8a', marginBottom: '.75rem' }}>
+            {isEn ? 'Could not send the report. Try later.' : 'No se pudo enviar el reporte. Intenta más tarde.'}
+          </div>
+          <div className="actions center" style={{ justifyContent: 'center' }}>
+            <Button onClick={handleSubmit} disabled={!captchaOk || submitting || !assetId} variant="purple" className="btn-big">
+              {submitting && <span className="btn-spinner" aria-hidden />}
+              {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Retry' : 'Reintentar')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {status === 'success' && (
+        <div style={{ textAlign: 'center' }}>
+          <div aria-hidden style={{ fontSize: '2rem', marginBottom: '.25rem' }}>✅</div>
+          <p style={{ marginBottom: '1rem' }}>{isEn ? 'Thanks for your report!' : '¡Gracias por tu reporte!'}</p>
+          <div className="actions center" style={{ justifyContent: 'center' }}>
+            <Button onClick={onClose} variant="purple" className="btn-big">
+              {isEn ? 'Close' : 'Cerrar'}
+            </Button>
+          </div>
+        </div>
+      )}
     </SimplyModal>
   );
 }

@@ -1,6 +1,8 @@
 'use client';
 import React from 'react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001/api';
+
 export default function ReportsPage() {
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -8,7 +10,7 @@ export default function ReportsPage() {
   const load = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/reports/broken', { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/admin/reports/broken`, { cache: 'no-store', credentials: 'include' });
       const json = await res.json();
       if (json?.ok) setItems(json.data || []);
     } finally {

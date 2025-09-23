@@ -301,10 +301,7 @@ export default function AssetModal({ open, onClose, asset }) {
         assetId={data?.id}
         assetTitle={displayTitle}
         onClose={() => setShowReport(false)}
-        onSubmitted={() => {
-          setShowReport(false);
-          window.alert(isEn ? 'Thanks for your report!' : '¡Gracias por tu reporte!');
-        }}
+        onSubmitted={() => {/* opcional: refrescar algo si quieres */}}
       />
     </>
   );
