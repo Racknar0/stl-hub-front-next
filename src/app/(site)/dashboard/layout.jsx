@@ -2,6 +2,10 @@
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '../../../components/dashboard/Sidebar/Sidebar'
+import dynamic from 'next/dynamic'
+
+// Carga dinámica para evitar problemas SSR y sólo en cliente
+const ConsoleBar = dynamic(() => import('../../../components/dashboard/ConsoleBar/ConsoleBar'), { ssr: false })
 import useStore from '../../../store/useStore'
 
 export default function DashboardLayout({ children }) {
@@ -30,6 +34,7 @@ export default function DashboardLayout({ children }) {
       <main className="dashboard-content p-3">
         {children}
       </main>
+      <ConsoleBar />
     </div>
   )
 }
