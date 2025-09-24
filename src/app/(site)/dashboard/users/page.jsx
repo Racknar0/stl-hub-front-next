@@ -270,24 +270,29 @@ export default function UsersPage() {
             </Box>
         ),
         displayColumnDefOptions: {
-            'mrt-row-actions': { header: 'Acciones', size: 130 },
+            'mrt-row-actions': {
+                header: 'Acciones',
+                size: 90,
+                muiTableHeadCellProps: { align: 'center' },
+                muiTableBodyCellProps: { align: 'center', sx: { py: 0.3 } },
+            },
         },
         enableRowActions: true,
-        positionActionsColumn: 'last',
+        positionActionsColumn: 'first',
         renderRowActions: ({ row }) => (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center' }}>
                 <Tooltip title="Extender suscripción">
-                    <IconButton onClick={() => onUpdate(row)} size="small">
+                    <IconButton onClick={() => onUpdate(row)} size="small" sx={{ p: 0.5 }}>
                         <EditIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                {/* Ocultar eliminar si admin */}
                 {row.original.roleId !== 2 && (
                     <Tooltip title="Eliminar">
                         <IconButton
                             color="error"
                             onClick={() => onDelete(row)}
                             size="small"
+                            sx={{ p: 0.5 }}
                         >
                             <DeleteIcon fontSize="small" />
                         </IconButton>

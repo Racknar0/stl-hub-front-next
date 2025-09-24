@@ -281,8 +281,9 @@ export default function AssetsAdminPage() {
     muiTablePaperProps: { sx: { width: '100%' } },
     enableColumnFilters: false,
     enableGlobalFilter: false,
-    enableRowActions: true,
-    positionActionsColumn: 'last',
+  enableRowActions: true,
+  positionActionsColumn: 'first',
+  displayColumnDefOptions: { 'mrt-row-actions': { size: 80 } },
     renderTopToolbarCustomActions: ({ table }) => (
       <ToolbarBusqueda
         q={q}
@@ -295,14 +296,14 @@ export default function AssetsAdminPage() {
       />
     ),
     renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <IconButton aria-label="Ver" onClick={() => { setSelected(row.original); setPreviewOpen(true); }}>
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <IconButton aria-label="Ver" size="small" onClick={() => { setSelected(row.original); setPreviewOpen(true); }} sx={{ p: 0.4 }}>
           <VisibilityIcon fontSize="small" />
         </IconButton>
-        <IconButton aria-label="Editar" onClick={() => openEdit(row.original)}>
+        <IconButton aria-label="Editar" size="small" onClick={() => openEdit(row.original)} sx={{ p: 0.4 }}>
           <EditIcon fontSize="small" />
         </IconButton>
-        <IconButton aria-label="Borrar" color="error" onClick={() => handleDelete(row.original)}>
+        <IconButton aria-label="Borrar" size="small" color="error" onClick={() => handleDelete(row.original)} sx={{ p: 0.4 }}>
           <DeleteIcon fontSize="small" />
         </IconButton>
       </Box>
