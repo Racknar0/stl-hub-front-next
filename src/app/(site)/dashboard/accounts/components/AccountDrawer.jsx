@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Drawer,
     Box,
@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import StatusChip from './StatusChip';
 import AppButton from '@/components/layout/Buttons/Button';
+import accountService from '@/services/AccountService';
 
 function formatMB(bytes) {
     const n = Number(bytes);
@@ -33,6 +34,24 @@ export default function AccountDrawer({
     addingBackup,
     removeBackup,
 }) {
+    const [syncLoading, setSyncLoading] = useState(false);
+    const [syncResult, setSyncResult] = useState(null);
+
+    async function handleSyncMainBackups() {
+        if (!selected) return;
+        setSyncLoading(true);
+        setSyncResult(null);
+        console.log('[FRONT][SYNC] Click main->backups account', selected.id);
+        try {
+            const data = await accountService.syncMainToBackups(selected.id);
+            setSyncResult(data);
+        } catch (e) {
+            // error ya mostrado por handler
+        } finally {
+            setSyncLoading(false);
+        }
+    }
+
     return (
         <Drawer
             anchor="right"
@@ -235,20 +254,43 @@ export default function AccountDrawer({
                                     variant="cyan"
                                     width="140px"
                                     styles={{ height: 34, fontWeight: 600, fontSize: '.72rem' }}
-                                    onClick={() => { /* TODO: implementar acción backups -> main */ }}
+                                    disabled
                                 >
                                     backups -&gt; main
                                 </AppButton>
                                 <AppButton
                                     variant="purple"
-                                    width="140px"
-                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem' }}
-                                    onClick={() => { /* TODO: implementar acción main -> backups */ }}
+                                    width="160px"
+                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem', position: 'relative' }}
+                                    onClick={handleSyncMainBackups}
+                                    disabled={syncLoading || selected.type !== 'main'}
                                 >
-                                    main -&gt; backups
+                                    {syncLoading ? 'Sincronizando…' : 'main -> backups'}
+                                    {syncLoading && (
+                                        <CircularProgress size={16} color="inherit" sx={{ position: 'absolute', right: 8 }} />
+                                    )}
                                 </AppButton>
                             </Stack>
                         </Stack>
+                        {syncResult && (
+                            <Box sx={{ mb: 1, mt: -1 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    {`Subidas realizadas: ${(syncResult.performed ?? (syncResult.actions?.length || 0))} / Necesarias: ${(syncResult.totalUploads ?? 'n/d')}`}
+                                </Typography>
+                                {Array.isArray(syncResult.actions) && syncResult.actions.length > 0 && (
+                                    <Box sx={{ mt: 0.5, maxHeight: 120, overflow: 'auto', border: '1px solid rgba(255,255,255,0.12)', p: 0.5, borderRadius: 1 }}>
+                                        {syncResult.actions.slice(0,50).map((a, idx) => (
+                                            <Typography key={idx} variant="caption" sx={{ display: 'block' }}>
+                                                {`backup ${a.backupId} <- asset ${a.assetId} (${a.status})`}
+                                            </Typography>
+                                        ))}
+                                        {syncResult.actions.length > 50 && (
+                                            <Typography variant="caption" color="text.secondary">… {syncResult.actions.length - 50} más</Typography>
+                                        )}
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
                         <Divider sx={{ my: 2 }} />
                         <Stack
                             direction="row"
