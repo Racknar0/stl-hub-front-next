@@ -1,0 +1,41 @@
+.unread-card {
+  background: #929191;
+  border: none;
+  border-bottom: 3px solid #8b5cf6; /* Borde inferior morado */
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(60, 60, 60, 0.08);
+  padding: 18px 20px 16px 56px;
+  margin-bottom: 18px;
+  position: relative;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.unread-card:hover {
+  box-shadow: 0 6px 16px rgba(60, 60, 60, 0.13);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.unread-card .icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #8b5cf6 60%, #c4b5fd 100%); /* Morado degradado */
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(60, 60, 60, 0.10);
+}
+
+.unread-card .content {
+  color: #222;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.tab-selected {
+  color: #8b5cf6 !important;
+  border-bottom: 2px solid #8b5cf6 !important;
+  background: #f3f0ff !important;
+}

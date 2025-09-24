@@ -14,6 +14,19 @@ export class AccountService extends HttpService {
       throw err;
     }
   }
+
+  async syncBackupsToMain(mainId) {
+    try {
+  console.log('[FRONT][RESTORE] iniciando restore backups->main mainId=', mainId);
+  const resp = await this.postData(`/accounts/${mainId}/restore-from-backups`, {});
+  console.log('[FRONT][RESTORE] respuesta restore:', resp.data);
+      return resp.data;
+    } catch (err) {
+      showApiError(err, 'Error restaurando desde backups');
+      console.error('[FRONT][RESTORE] error:', err);
+      throw err;
+    }
+  }
 }
 
 const accountService = new AccountService();

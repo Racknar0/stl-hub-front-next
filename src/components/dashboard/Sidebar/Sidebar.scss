@@ -1,6 +1,6 @@
 .dash-toggle{
   position: fixed;
-  bottom: 16px;
+  bottom: 56px;
   left: 16px;
   transform: none;
   z-index: 1100;
@@ -38,6 +38,7 @@
     grid-template-columns: 240px minmax(0, 1fr);
     min-height: 100vh;
     width: 100%;
+    padding-bottom: 40px;
   }
   .dash-sidebar{
     position: sticky; /* ocupa espacio en el flujo */
@@ -61,5 +62,13 @@
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: 10px;
   color: #e8e8f0; text-decoration: none;
+}
+.dash-sidebar .menu .item .notif-dot {
+  width: 10px;
+  height: 10px;
+  background: #3fa7ff;
+  border-radius: 50%;
+  margin-left: auto;
+  box-shadow: 0 0 0 2px #3fa7ff44;
 }
 .dash-sidebar .menu .item:hover{ background: rgba(255,255,255,0.06); }

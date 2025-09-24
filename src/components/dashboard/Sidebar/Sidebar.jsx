@@ -1,11 +1,27 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false)
+  const [hasUnread, setHasUnread] = useState(false)
+
+  useEffect(()=>{
+    let abort=false
+    const http = new HttpService()
+    async function fetchUnread(){
+      try {
+        const res = await http.getData('/admin/notifications?status=UNREAD&take=1')
+        if(!abort) setHasUnread((res.data?.notifications||[]).length>0)
+      } catch{}
+    }
+    fetchUnread()
+    const id = setInterval(fetchUnread, 15000)
+    return ()=>{ abort=true; clearInterval(id) }
+  },[])
 
   return (
     <>
@@ -43,6 +59,17 @@ const Sidebar = () => {
                   </svg>
                 </span>
                 Dashboard
+              </Link>
+            </li>
+            <li>
+              <Link href="/dashboard/notifications" className="item" onClick={() => setOpen(false)}>
+                <span className="icon" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Zm6-6V11a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                Notificaciones
+                {hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
               </Link>
             </li>
             <li>

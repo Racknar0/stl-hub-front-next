@@ -1,0 +1,52 @@
+.unread-card {
+  background: #f6f0ff;
+  border: 2.5px solid #8b5cf6;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.13);
+  padding: 20px 22px 18px 60px;
+  margin-bottom: 20px;
+  position: relative;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-weight: 600;
+  color: #5b21b6;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+
+  &.success {
+    border-color: #22c55e;
+  }
+  &.pending {
+    border-color: #facc15;
+  }
+  &.error {
+    border-color: #ef4444;
+  }
+}
+
+.unread-card:hover {
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.18);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.unread-card .indicator {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgba(139, 92, 246, 0.18);
+}
+
+.unread-card .content {
+  color: #4b2676;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.tab-selected {
+  color: #8b5cf6 !important;
+  border-bottom: 2px solid #8b5cf6 !important;
+  background: #f3f0ff !important;
+}

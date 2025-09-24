@@ -36,6 +36,8 @@ export default function AccountDrawer({
 }) {
     const [syncLoading, setSyncLoading] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
+    const [restoreLoading, setRestoreLoading] = useState(false);
+    const [restoreResult, setRestoreResult] = useState(null);
 
     async function handleSyncMainBackups() {
         if (!selected) return;
@@ -49,6 +51,21 @@ export default function AccountDrawer({
             // error ya mostrado por handler
         } finally {
             setSyncLoading(false);
+        }
+    }
+
+    async function handleRestoreBackupsToMain() {
+        if (!selected) return;
+        setRestoreLoading(true);
+        setRestoreResult(null);
+        console.log('[FRONT][RESTORE] Click backups->main account', selected.id);
+        try {
+            const data = await accountService.syncBackupsToMain(selected.id);
+            setRestoreResult(data);
+        } catch (e) {
+            /* error ya mostrado */
+        } finally {
+            setRestoreLoading(false);
         }
     }
 
@@ -253,10 +270,14 @@ export default function AccountDrawer({
                                 <AppButton
                                     variant="cyan"
                                     width="140px"
-                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem' }}
-                                    disabled
+                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem', position:'relative' }}
+                                    onClick={handleRestoreBackupsToMain}
+                                    disabled={restoreLoading || selected.type !== 'main'}
                                 >
-                                    backups -&gt; main
+                                    {restoreLoading ? 'Restaurando…' : 'backups -> main'}
+                                    {restoreLoading && (
+                                        <CircularProgress size={16} color="inherit" sx={{ position: 'absolute', right: 8 }} />
+                                    )}
                                 </AppButton>
                                 <AppButton
                                     variant="purple"
@@ -272,21 +293,32 @@ export default function AccountDrawer({
                                 </AppButton>
                             </Stack>
                         </Stack>
-                        {syncResult && (
+                        {(syncResult || restoreResult) && (
                             <Box sx={{ mb: 1, mt: -1 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {`Subidas realizadas: ${(syncResult.performed ?? (syncResult.actions?.length || 0))} / Necesarias: ${(syncResult.totalUploads ?? 'n/d')}`}
-                                </Typography>
-                                {Array.isArray(syncResult.actions) && syncResult.actions.length > 0 && (
-                                    <Box sx={{ mt: 0.5, maxHeight: 120, overflow: 'auto', border: '1px solid rgba(255,255,255,0.12)', p: 0.5, borderRadius: 1 }}>
-                                        {syncResult.actions.slice(0,50).map((a, idx) => (
-                                            <Typography key={idx} variant="caption" sx={{ display: 'block' }}>
-                                                {`backup ${a.backupId} <- asset ${a.assetId} (${a.status})`}
-                                            </Typography>
-                                        ))}
-                                        {syncResult.actions.length > 50 && (
-                                            <Typography variant="caption" color="text.secondary">… {syncResult.actions.length - 50} más</Typography>
+                                {syncResult && (
+                                    <>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {`Sync main->backups: subidas ${(syncResult.performed ?? (syncResult.actions?.length || 0))} / necesarias ${(syncResult.totalUploads ?? 'n/d')}`}
+                                        </Typography>
+                                        {Array.isArray(syncResult.actions) && syncResult.actions.length > 0 && (
+                                            <Box sx={{ mt: 0.5, maxHeight: 120, overflow: 'auto', border: '1px solid rgba(255,255,255,0.12)', p: 0.5, borderRadius: 1 }}>
+                                                {syncResult.actions.slice(0,50).map((a, idx) => (
+                                                    <Typography key={idx} variant="caption" sx={{ display: 'block' }}>
+                                                        {`backup ${a.backupId} <- asset ${a.assetId} (${a.status})`}
+                                                    </Typography>
+                                                ))}
+                                                {syncResult.actions.length > 50 && (
+                                                    <Typography variant="caption" color="text.secondary">… {syncResult.actions.length - 50} más</Typography>
+                                                )}
+                                            </Box>
                                         )}
+                                    </>
+                                )}
+                                {restoreResult && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {`Restore backups->main: restaurados ${restoreResult.restored} / total candidatos ${restoreResult.total} (existían ${restoreResult.skippedExisting}, no encontrados ${restoreResult.notFoundInBackups})`}
+                                        </Typography>
                                     </Box>
                                 )}
                             </Box>
