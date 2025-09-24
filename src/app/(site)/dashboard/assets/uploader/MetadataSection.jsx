@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HttpService from '@/services/HttpService';
-import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
+// Eliminado uso de SweetAlert para creación rápida de categorías y tags
 
 const http = new HttpService();
 
@@ -40,6 +40,8 @@ export default function MetadataSection({
     const [newTag, setNewTag] = useState('');
     const [newTagEn, setNewTagEn] = useState('');
     const [loading, setLoading] = useState(false);
+    const [catError, setCatError] = useState(false);
+    const [tagError, setTagError] = useState(false);
 
     const slugify = (s) =>
         String(s || '')
@@ -87,16 +89,9 @@ export default function MetadataSection({
     const quickCreateCategory = async () => {
         const name = newCat.trim();
         const nameEn = newCatEn.trim();
-        if (!name || !nameEn) return; // EN obligatorio
-        const ok = await confirmAlert(
-            'Crear categoría',
-            `¿Crear la categoría "${name}" / "${nameEn}"?`,
-            'Sí, crear',
-            'Cancelar',
-            'question'
-        );
-        if (!ok) return;
+        if (!name || !nameEn) return; // ambos obligatorios
         try {
+            setCatError(false);
             const nameLc = name.toLowerCase();
             const nameEnLc = nameEn.toLowerCase();
             const body = {
@@ -114,33 +109,24 @@ export default function MetadataSection({
                 nameEn: String(c.nameEn || nameEnLc).toLowerCase(),
                 slugEn: String(c.slugEn || body.slugEn).toLowerCase(),
             };
-            const list = [...categories, normalized].sort((a, b) =>
-                a.name.localeCompare(b.name)
-            );
+            const list = [...categories, normalized].sort((a, b) => a.name.localeCompare(b.name));
             setCategories(list);
             setSelectedCategories([...(selectedCategories || []), normalized]);
             setNewCat('');
             setNewCatEn('');
-            await successAlert('Creada', 'La categoría fue creada');
         } catch (e) {
             console.error('create category failed', e);
-            await errorAlert('Error', 'No se pudo crear la categoría');
+            setCatError(true);
+            window.alert('No se pudo crear la categoría');
         }
     };
 
     const quickCreateTag = async () => {
         const name = newTag.trim();
         const nameEn = newTagEn.trim();
-        if (!name || !nameEn) return; // EN obligatorio
-        const ok = await confirmAlert(
-            'Crear tag',
-            `¿Crear el tag "${name}" / "${nameEn}"?`,
-            'Sí, crear',
-            'Cancelar',
-            'question'
-        );
-        if (!ok) return;
+        if (!name || !nameEn) return;
         try {
+            setTagError(false);
             const nameLc = name.toLowerCase();
             const nameEnLc = nameEn.toLowerCase();
             const body = {
@@ -155,20 +141,15 @@ export default function MetadataSection({
                 name: String(t.name || nameLc).toLowerCase(),
                 slug: String(t.slug || body.slug).toLowerCase(),
             };
-            const list = [...allTags, newOpt].sort((a, b) =>
-                (a.name || a.slug).localeCompare(b.name || b.slug)
-            );
+            const list = [...allTags, newOpt].sort((a, b) => (a.name || a.slug).localeCompare(b.name || b.slug));
             setAllTags(list);
-            // añadir el slug al form
-            setTags((prev) =>
-                Array.from(new Set([...(prev || []), newOpt.slug]))
-            );
+            setTags((prev) => Array.from(new Set([...(prev || []), newOpt.slug])));
             setNewTag('');
             setNewTagEn('');
-            await successAlert('Creado', 'El tag fue creado');
         } catch (e) {
             console.error('create tag failed', e);
-            await errorAlert('Error', 'No se pudo crear el tag');
+            setTagError(true);
+            window.alert('No se pudo crear el tag');
         }
     };
 
@@ -269,6 +250,7 @@ export default function MetadataSection({
                                     minWidth: 220,
                                 }}
                                 required
+                                error={catError}
                             />
                             <TextField
                                 size="small"
@@ -282,6 +264,7 @@ export default function MetadataSection({
                                     minWidth: 220,
                                 }}
                                 required
+                                error={catError}
                             />
                             <Tooltip title="Crear categoría">
                                 <span>
@@ -396,6 +379,7 @@ export default function MetadataSection({
                                     minWidth: 200,
                                 }}
                                 required
+                                error={tagError}
                             />
                             <TextField
                                 size="small"
@@ -409,6 +393,7 @@ export default function MetadataSection({
                                     minWidth: 200,
                                 }}
                                 required
+                                error={tagError}
                             />
                             <Tooltip title="Crear tag">
                                 <span>

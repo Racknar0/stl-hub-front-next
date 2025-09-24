@@ -101,6 +101,20 @@ export default function UploadAssetPage() {
 
   useEffect(() => { fetchAccounts() }, [])
 
+  // Ordenar cuentas para el modal: últimas verificadas primero, luego las nunca verificadas (lastCheckAt null) al final
+  const orderedAccounts = useMemo(() => {
+    const arr = Array.isArray(accounts) ? [...accounts] : []
+    arr.sort((a,b) => {
+      const ad = a.lastCheckAt ? new Date(a.lastCheckAt).getTime() : 0
+      const bd = b.lastCheckAt ? new Date(b.lastCheckAt).getTime() : 0
+      if (ad === 0 && bd === 0) return (a.id||0) - (b.id||0) // ambos null
+      if (ad === 0) return 1  // a sin fecha va después
+      if (bd === 0) return -1 // b sin fecha va después
+      return bd - ad // más reciente primero
+    })
+    return arr
+  }, [accounts])
+
   const testSelectedAccount = async () => {
     if (!selectedAcc) return
     try {
@@ -383,7 +397,7 @@ export default function UploadAssetPage() {
         <DialogContent dividers sx={{ p: 2 }}>
           <Box sx={{ maxHeight: '70vh', overflow: 'auto' }}>
             <Grid container spacing={2}>
-              {accounts.map((acc) => (
+              {orderedAccounts.map((acc) => (
                 <Grid item xs={12} md={4} key={acc.id}>
                   <Card
                     className="glass"
