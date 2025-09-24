@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Typography, Box, LinearProgress } from '@mui/material'
+import { Typography, Box, LinearProgress, Stack } from '@mui/material'
 import HttpService from '@/services/HttpService'
 
 const http = new HttpService()
@@ -9,8 +9,13 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   const [serverProgress, setServerProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
 
+  // Estado principal MEGA
   const [megaStatus, setMegaStatus] = useState('idle') // idle | processing | published | failed
   const [megaProgress, setMegaProgress] = useState(0)
+  // Réplicas
+  const [replicas, setReplicas] = useState([]) // [{id, accountId, alias, status, progress}]
+  const [overallProgress, setOverallProgress] = useState(0)
+  const [allDone, setAllDone] = useState(false)
   const pollRef = useRef(null)
 
   const [serverDone, setServerDone] = useState(false)
@@ -24,8 +29,11 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       setUploading(true)
       onUploadingChange?.(true)
       setServerProgress(0)
-      setMegaStatus('idle')
-      setMegaProgress(0)
+  setMegaStatus('idle')
+  setMegaProgress(0)
+  setReplicas([])
+  setOverallProgress(0)
+  setAllDone(false)
       setServerDone(false)
       setMegaDone(false)
 
@@ -62,28 +70,43 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       const created = resp.data
       setMegaStatus('processing')
 
-      // Polling a estado de MEGA hasta published/failed
+      // Polling de progreso completo (main + réplicas)
       clearPoll()
       pollRef.current = setInterval(async () => {
         try {
-          const r = await http.getData(`/assets/${created.id}/progress`)
-          const st = r.data?.status
-          const p = r.data?.progress ?? 0
-          setMegaProgress(p)
-          if (st === 'PUBLISHED') {
-            setMegaStatus('published')
-            setMegaDone(true)
+          const r = await http.getData(`/assets/${created.id}/full-progress`)
+          // main
+          const main = r.data?.main || { status: 'PROCESSING', progress: 0 }
+          // DEBUG opcional (se puede retirar luego)
+          // console.log('[FULL-PROGRESS]', r.data)
+          const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
+          const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
+          // expected replicas (from main account backups) to create placeholders
+          const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
+          let merged = repArr
+          if (expected.length) {
+            merged = expected.map(exp => {
+              const found = repArr.find(rp => rp.accountId === exp.accountId)
+              return found || { id: `expected-${exp.accountId}`, accountId: exp.accountId, alias: exp.alias, status: 'PENDING', progress: 0 }
+            })
+          }
+          setMegaProgress(main.progress ?? 0)
+          setReplicas(merged)
+          const mainStatus = (main.status || '').toLowerCase()
+          if (mainStatus === 'published') setMegaStatus('published')
+          else if (mainStatus === 'failed') setMegaStatus('failed')
+          else setMegaStatus('processing')
+          setMegaDone(mainStatus === 'published')
+          const overall = r.data?.overallPercent ?? main.progress ?? 0
+          setOverallProgress(overall)
+            
+          const doneFlag = !!r.data?.allDone
+          setAllDone(doneFlag)
+          if (doneFlag) {
             clearPoll()
             setUploading(false)
             onUploadingChange?.(false)
             onDone?.(created)
-          } else if (st === 'FAILED') {
-            setMegaStatus('failed')
-            clearPoll()
-            setUploading(false)
-            onUploadingChange?.(false)
-          } else {
-            setMegaStatus('processing')
           }
         } catch (e) {
           // mantener último estado y seguir intentando unos ciclos
@@ -99,31 +122,32 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
     }
   }
 
-  useImperativeHandle(ref, () => ({ startUpload }))
+  useImperativeHandle(ref, () => ({ startUpload, isAllDone: () => allDone, isUploading: () => uploading }))
   useEffect(() => () => { clearPoll() }, [])
 
-  const MegaBar = () => {
-    const isIndeterminate = megaStatus === 'processing' && megaProgress === 0
-    const value = isIndeterminate ? undefined : megaProgress
-    const megaColor = megaStatus === 'failed' ? 'error' : (megaDone ? 'success' : 'primary')
+  const ProgressRow = ({ label, value, status, height = 26 }) => {
+    const isIndeterminate = status === 'processing' && value === 0
+    const color = status === 'failed' ? 'error' : (status === 'published' || status === 'completed' || status === 'success' ? 'success' : 'primary')
     return (
-      <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>Subida a MEGA</Typography>
+      <Box sx={{ mt: 1 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+          <Typography variant="subtitle2" sx={{ opacity: 0.85 }}>{label}</Typography>
+          {status === 'failed' && <Typography variant="caption" color="error.main">Fallo</Typography>}
+          {(status === 'published' || status === 'completed') && <Typography variant="caption" color="success.main">OK</Typography>}
+        </Stack>
         <Box sx={{ position: 'relative', width: '100%', borderRadius: 999, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.08)' }}>
           <LinearProgress
-            color={megaColor}
+            color={color}
             variant={isIndeterminate ? 'indeterminate' : 'determinate'}
-            value={value}
-            sx={{ height: 30, borderRadius: 999, [`& .MuiLinearProgress-bar`]: { borderRadius: 999 } }}
+            value={isIndeterminate ? undefined : value}
+            sx={{ height, borderRadius: 999, [`& .MuiLinearProgress-bar`]: { borderRadius: 999 } }}
           />
           {!isIndeterminate && (
             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <Typography variant="caption" sx={{ opacity: 0.9, color: '#fff', fontSize: '1rem' }}>{megaProgress}%</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.9, color: '#fff', fontSize: '0.9rem' }}>{value}%</Typography>
             </Box>
           )}
         </Box>
-        {megaDone && <Typography variant="caption" color="success.main">OK</Typography>}
-        {megaStatus === 'failed' && <Typography variant="caption" color="error.main">Error</Typography>}
       </Box>
     )
   }
@@ -132,21 +156,20 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   return (
     <Box>
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>Subida al servidor</Typography>
-      <Box sx={{ position: 'relative', width: '100%', borderRadius: 999, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.08)' }}>
-        <LinearProgress
-          color={serverColor}
-          variant="determinate"
-          value={serverProgress}
-          sx={{ height: 30, borderRadius: 999, [`& .MuiLinearProgress-bar`]: { borderRadius: 999 } }}
-        />
-        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-          <Typography variant="caption" sx={{ opacity: 0.9, color: '#fff', fontSize: '1rem' }}>{serverProgress}%</Typography>
-        </Box>
-      </Box>
-      {serverDone && <Typography variant="caption" color="success.main">OK</Typography>}
-
-      <MegaBar />
+      <ProgressRow label="Subida al servidor" value={serverProgress} status={serverDone ? 'completed' : 'processing'} height={30} />
+      <ProgressRow label="MEGA principal" value={megaProgress} status={megaStatus} height={30} />
+      {replicas.length > 0 && replicas.map(r => (
+        <ProgressRow
+          key={r.id}
+            label={`Replica ${r.alias || r.accountId}`}
+            value={r.progress || 0}
+            status={(r.status || '').toLowerCase()}
+            height={24}
+          />
+        ))}
+      {replicas.length > 0 && (
+        <ProgressRow label="Total" value={overallProgress} status={allDone ? 'completed' : 'processing'} height={28} />
+      )}
     </Box>
   )
 })
