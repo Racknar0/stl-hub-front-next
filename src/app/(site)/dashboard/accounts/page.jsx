@@ -16,6 +16,8 @@ import {
     Drawer,
     TextField,
     CircularProgress,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
@@ -43,6 +45,11 @@ export default function AccountsOverviewPage() {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState(null);
+    const [backupCandidates, setBackupCandidates] = useState([]);
+    const [loadingBackups, setLoadingBackups] = useState(false);
+    const [addingBackup, setAddingBackup] = useState(false);
+    const [selectedBackupCandidate, setSelectedBackupCandidate] = useState('');
+    const [tab, setTab] = useState('main');
 
     // Estado del listado de assets en el modal derecho
     const [assets, setAssets] = useState([]);
@@ -53,7 +60,7 @@ export default function AccountsOverviewPage() {
         alias: '',
         email: '',
         baseFolder: '/STLHUB',
-        priority: 1,
+        type: 'main',
         username: '',
         password: '',
     });
@@ -108,7 +115,7 @@ export default function AccountsOverviewPage() {
     };
 
     const addAccount = async () => {
-        const { alias, email, baseFolder, priority, username, password } = form;
+        const { alias, email, baseFolder, type, username, password } = form;
         if (!alias || !email || !baseFolder || !username || !password) {
             await errorAlert(
                 'Faltan datos',
@@ -122,7 +129,7 @@ export default function AccountsOverviewPage() {
                 alias,
                 email,
                 baseFolder,
-                priority: Number(priority) || 1,
+                type: type === 'backup' ? 'backup' : 'main',
                 credentials: { type: 'login', username, password },
             };
             const res = await http.postData(`${API_BASE}`, body);
@@ -155,7 +162,7 @@ export default function AccountsOverviewPage() {
                 alias: '',
                 email: '',
                 baseFolder: '/STLHUB',
-                priority: 1,
+                type: 'main',
                 username: '',
                 password: '',
             });
@@ -190,11 +197,60 @@ export default function AccountsOverviewPage() {
     };
 
     const openDetail = async (acc) => {
-        setSelected(acc);
+        // Ya tenemos toda la info necesaria (backups/mains) en el objeto acc (vendrá vacío si backend aún no lo provee)
+    setSelected({ ...acc, backups: acc.backups || [], mains: acc.mains || [] });
         setOpen(true);
         try {
-            await fetchAccountAssets(acc.id);
-        } catch {}
+            await Promise.all([
+                fetchAccountAssets(acc.id),
+                loadBackupCandidates(acc.id, acc.type),
+            ]);
+        } catch (e) { console.error('openDetail error', e); }
+    // no flag de carga adicional necesaria
+    };
+
+    const refreshSelectedDetail = async () => {
+        if (!selected) return;
+        try {
+            const res = await http.getData(`${API_BASE}`);
+            const arr = res.data || [];
+            const found = arr.find(a => a.id === selected.id);
+            if (found) setSelected(prev => ({ ...prev, ...found }));
+        } catch (e) { console.error('refreshSelectedDetail', e); }
+    };
+
+    const loadBackupCandidates = async (id, type) => {
+        if (type !== 'main') { setBackupCandidates([]); return; }
+        try {
+            setLoadingBackups(true);
+            const res = await http.getData(`${API_BASE}/${id}/backup-candidates`);
+            setBackupCandidates(res.data?.items || []);
+        } catch (e) {
+            console.error('loadBackupCandidates error', e);
+            setBackupCandidates([]);
+        } finally {
+            setLoadingBackups(false);
+        }
+    };
+
+    const addBackup = async () => {
+        if (!selected || !selectedBackupCandidate) return;
+        try {
+            setAddingBackup(true);
+            await http.postData(`${API_BASE}/${selected.id}/backups`, { backupAccountId: Number(selectedBackupCandidate) });
+            await Promise.all([refreshSelectedDetail(), loadBackupCandidates(selected.id, selected.type)]);
+            setSelectedBackupCandidate('');
+        } catch (e) {
+            console.error('addBackup error', e);
+        } finally { setAddingBackup(false); }
+    };
+
+    const removeBackup = async (backupId) => {
+        if (!selected) return;
+        try {
+            await http.deleteRaw(`${API_BASE}/${selected.id}/backups/${backupId}`);
+            await Promise.all([refreshSelectedDetail(), loadBackupCandidates(selected.id, selected.type)]);
+        } catch (e) { console.error('removeBackup error', e); }
     };
     const refresh = async () => {
         await fetchAccounts();
@@ -238,7 +294,8 @@ export default function AccountsOverviewPage() {
 
     // Totales de almacenamiento de cuentas OK (CONNECTED)
     const totalStorage = useMemo(() => {
-        const ok = (accounts || []).filter((a) => a.status === 'CONNECTED');
+        // Solo cuentas MAIN en estado CONNECTED
+        const ok = (accounts || []).filter((a) => a.status === 'CONNECTED' && a.type === 'main');
         let used = 0;
         let total = 0;
         for (const a of ok) {
@@ -250,6 +307,10 @@ export default function AccountsOverviewPage() {
         const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
         return { used, total, pct, okCount: ok.length };
     }, [accounts]);
+
+    const mainAccounts = useMemo(() => accounts.filter(a => a.type === 'main'), [accounts]);
+    const backupAccounts = useMemo(() => accounts.filter(a => a.type === 'backup'), [accounts]);
+    const shownAccounts = tab === 'main' ? mainAccounts : backupAccounts;
 
     const isToday = (d) => {
       if (!d) return false;
@@ -305,19 +366,23 @@ export default function AccountsOverviewPage() {
                                 }
                             />
                         </Grid>
-                        <Grid item xs={6} md={1}>
+                        <Grid item xs={6} md={2}>
                             <TextField
-                                type="number"
-                                label="Prioridad"
+                                select
+                                label="Tipo"
                                 fullWidth
-                                value={form.priority}
+                                SelectProps={{ native: true }}
+                                value={form.type}
                                 onChange={(e) =>
                                     setForm((f) => ({
                                         ...f,
-                                        priority: e.target.value,
+                                        type: e.target.value,
                                     }))
                                 }
-                            />
+                            >
+                                <option value="main">main</option>
+                                <option value="backup">backup</option>
+                            </TextField>
                         </Grid>
                         <Grid item xs={12} md={2}>
                             <TextField
@@ -371,7 +436,7 @@ export default function AccountsOverviewPage() {
             {totalStorage.okCount > 0 && (
                 <Card className="glass" sx={{ mb: 2 }}>
                     <CardHeader
-                        title="Almacenamiento total (cuentas OK)"
+                        title="Almacenamiento total (MAIN OK)"
                         subheader={totalStorage.okCount === 1 ? '1 cuenta' : `${totalStorage.okCount} cuentas`}
                     />
                     <CardContent>
@@ -407,8 +472,37 @@ export default function AccountsOverviewPage() {
               </Stack>
             )}
 
+            {/* Tabs para separar cuentas main y backup */}
+            <Box sx={{ mb: 2 }}>
+                <Tabs
+                    value={tab}
+                    onChange={(e, v) => setTab(v)}
+                    sx={{
+                        minHeight: 36,
+                        '& .MuiTab-root': {
+                            color: 'rgba(255,255,255,0.65)',
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            minHeight: 36,
+                            padding: '6px 16px'
+                        },
+                        '& .MuiTab-root.Mui-selected': {
+                            color: '#fff'
+                        },
+                        '& .MuiTabs-indicator': {
+                            backgroundColor: '#fff',
+                            height: 3,
+                            borderRadius: 2
+                        }
+                    }}
+                >
+                    <Tab disableRipple value="main" label={`Main (${mainAccounts.length})`} />
+                    <Tab disableRipple value="backup" label={`Backups (${backupAccounts.length})`} />
+                </Tabs>
+            </Box>
+
             <Grid container spacing={2}>
-                {accounts.map((acc) => (
+                {shownAccounts.map((acc) => (
                     <Grid item xs={12} md={4} key={acc.id}>
                         <Card
                             className="glass"
@@ -544,6 +638,17 @@ export default function AccountsOverviewPage() {
                         </Card>
                     </Grid>
                 ))}
+                {shownAccounts.length === 0 && (
+                    <Grid item xs={12}>
+                        <Card className="glass">
+                            <CardContent>
+                                <Typography variant="body2" color="text.secondary">
+                                    {tab === 'main' ? 'No hay cuentas main' : 'No hay cuentas backup'}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                )}
             </Grid>
 
             <Drawer
@@ -575,12 +680,69 @@ export default function AccountsOverviewPage() {
                             </Typography>
 
                             <Divider sx={{ my: 2 }} />
-                            <Typography variant="subtitle2">
-                                Prioridad
-                            </Typography>
-                            <Typography variant="body2">
-                                {selected.priority}
-                            </Typography>
+                                                        <Typography variant="subtitle2">Tipo</Typography>
+                                                        <Typography variant="body2" sx={{ mb: 1 }}>{selected.type}</Typography>
+
+                                                        {/* Backups solo si es main */}
+                                                                                                                {selected.type === 'main' && (
+                                                            <Box sx={{ mb: 2 }}>
+                                                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Backups asignados</Typography>
+                                                                <Stack spacing={1} sx={{ mb: 1 }}>
+                                                                    {(selected.backups || []).length === 0 && (
+                                                                        <Typography variant="body2" color="text.secondary">Sin backups asignados</Typography>
+                                                                    )}
+                                                                    {(selected.backups || []).map(b => (
+                                                                        <Stack key={b.id} direction="row" alignItems="center" justifyContent="space-between" sx={{ border: '1px solid rgba(255,255,255,0.12)', p: 0.5, borderRadius: 1 }}>
+                                                                            <Typography variant="body2">{b.alias}</Typography>
+                                                                            <MUIButton size="small" color="error" onClick={() => removeBackup(b.id)}>Quitar</MUIButton>
+                                                                        </Stack>
+                                                                    ))}
+                                                                </Stack>
+                                                                <Divider sx={{ my: 1 }} />
+                                                                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Agregar backup</Typography>
+                                                                {loadingBackups ? (
+                                                                    <Typography variant="caption" color="text.secondary">Cargando candidatos…</Typography>
+                                                                ) : (
+                                                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                                                                        <TextField
+                                                                            select
+                                                                            size="small"
+                                                                            label="Cuenta backup"
+                                                                            value={selectedBackupCandidate}
+                                                                            onChange={(e)=>setSelectedBackupCandidate(e.target.value)}
+                                                                            SelectProps={{ native: true }}
+                                                                            InputLabelProps={{ shrink: true }}
+                                                                            sx={{ flex: 1 }}
+                                                                        >
+                                                                            <option value="">-- seleccionar --</option>
+                                                                            {backupCandidates.map(c => (
+                                                                                <option key={c.id} value={c.id}>{c.alias}</option>
+                                                                            ))}
+                                                                        </TextField>
+                                                                        <MUIButton variant="contained" size="small" disabled={!selectedBackupCandidate || addingBackup} onClick={addBackup}>
+                                                                            {addingBackup ? 'Agregando…' : 'Agregar'}
+                                                                        </MUIButton>
+                                                                    </Stack>
+                                                                )}
+                                                            </Box>
+                                                        )}
+
+                                                        {/* Mains si esta cuenta actúa como backup de otras */}
+                                                                                                                {selected.type === 'backup' && (
+                                                            <Box sx={{ mb: 2 }}>
+                                                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Es backup de</Typography>
+                                                                <Stack spacing={1}>
+                                                                    {(selected.mains || []).length === 0 && (
+                                                                        <Typography variant="body2" color="text.secondary">No asignada como backup</Typography>
+                                                                    )}
+                                                                    {(selected.mains || []).map(m => (
+                                                                        <Stack key={m.id} direction="row" alignItems="center" justifyContent="space-between" sx={{ border: '1px solid rgba(255,255,255,0.12)', p: 0.5, borderRadius: 1 }}>
+                                                                            <Typography variant="body2">{m.alias}</Typography>
+                                                                        </Stack>
+                                                                    ))}
+                                                                </Stack>
+                                                            </Box>
+                                                        )}
 
                             <Divider sx={{ my: 2 }} />
                             <Typography variant="subtitle2">Estado</Typography>

@@ -67,4 +67,8 @@ export default class HttpService {
       return response;
     });
   }
+
+  async deleteRaw(fullUrl) {
+    return axiosInstance.delete(fullUrl).then((response) => response);
+  }
 }
