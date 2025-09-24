@@ -101,18 +101,18 @@ export default function UploadAssetPage() {
 
   useEffect(() => { fetchAccounts() }, [])
 
-  // Ordenar cuentas para el modal: últimas verificadas primero, luego las nunca verificadas (lastCheckAt null) al final
-  const orderedAccounts = useMemo(() => {
-    const arr = Array.isArray(accounts) ? [...accounts] : []
-    arr.sort((a,b) => {
+  // Solo cuentas MAIN para selección en uploader; ordenar: más recientes primero
+  const orderedMainAccounts = useMemo(() => {
+    const mains = (accounts || []).filter(a => a.type === 'main')
+    mains.sort((a,b) => {
       const ad = a.lastCheckAt ? new Date(a.lastCheckAt).getTime() : 0
       const bd = b.lastCheckAt ? new Date(b.lastCheckAt).getTime() : 0
-      if (ad === 0 && bd === 0) return (a.id||0) - (b.id||0) // ambos null
-      if (ad === 0) return 1  // a sin fecha va después
-      if (bd === 0) return -1 // b sin fecha va después
-      return bd - ad // más reciente primero
+      if (ad === 0 && bd === 0) return (a.id||0) - (b.id||0)
+      if (ad === 0) return 1
+      if (bd === 0) return -1
+      return bd - ad
     })
-    return arr
+    return mains
   }, [accounts])
 
   const testSelectedAccount = async () => {
@@ -397,7 +397,7 @@ export default function UploadAssetPage() {
         <DialogContent dividers sx={{ p: 2 }}>
           <Box sx={{ maxHeight: '70vh', overflow: 'auto' }}>
             <Grid container spacing={2}>
-              {orderedAccounts.map((acc) => (
+              {orderedMainAccounts.map((acc) => (
                 <Grid item xs={12} md={4} key={acc.id}>
                   <Card
                     className="glass"
@@ -470,6 +470,11 @@ export default function UploadAssetPage() {
                   </Card>
                 </Grid>
               ))}
+              {orderedMainAccounts.length === 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary" sx={{ opacity: .8, p:1 }}>No hay cuentas main disponibles</Typography>
+                </Grid>
+              )}
             </Grid>
           </Box>
         </DialogContent>
