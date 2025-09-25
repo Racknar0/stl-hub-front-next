@@ -16,6 +16,7 @@ import { Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts'
+import CachedIcon from '@mui/icons-material/Cached';
 
 // Nuevos componentes
 import ToolbarBusqueda from './componentes/ToolbarBusqueda'
@@ -170,12 +171,12 @@ export default function AssetsAdminPage() {
   // Tabla: definición de columnas (ES)
   const columns = useMemo(() => ([
       {
-        header: ' ', accessorKey: 'thumbnail', size: 70, enableSorting: false,
+        header: ' ', accessorKey: 'thumbnail', size: 0, enableSorting: false,
         Cell: ({ row }) => {
           const imgs = Array.isArray(row.original.images) ? row.original.images : []
           const first = imgs[0]
           return first ? (
-            <img src={imgUrl(first)} alt="thumb" style={{ width: 64, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+            <img src={imgUrl(first)} alt="thumb" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }} />
           ) : (
             <Box sx={{ width: 64, height: 40, borderRadius: 6, bgcolor: 'rgba(255,255,255,0.06)' }} />
           )
@@ -186,61 +187,61 @@ export default function AssetsAdminPage() {
           <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.getValue()}</Typography>
         )
       },
+      // {
+      //   id: 'categoriesEs',
+      //   header: 'Categorías',
+      //   accessorFn: (row) => {
+      //     const cats = Array.isArray(row.categories) ? row.categories : []
+      //     const names = cats.map(c => c?.name).filter(Boolean)
+      //     return names.length ? names.join(', ') : ''
+      //   },
+      //   Cell: ({ row }) => {
+      //     const cats = Array.isArray(row.original.categories) ? row.original.categories : []
+      //     const names = cats.map(c => c?.name).filter(Boolean)
+      //     const toShow = names
+      //     return (
+      //       <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+      //         {toShow.length ? toShow.map((n, i) => <Chip key={`${n}-${i}`} size="small" label={n} variant="outlined" />) : <Typography variant="body2" color="text.secondary">-</Typography>}
+      //       </Stack>
+      //     )
+      //   },
+      //   size: 200,
+      // },
+      // {
+      //   id: 'tags',
+      //   header: 'Tags',
+      //   accessorFn: (row) => Array.isArray(row.tags) ? row.tags.map(t=>t?.name||t?.slug).join(',') : '',
+      //   Cell: ({ row }) => {
+      //     const tags = Array.isArray(row.original.tags) ? row.original.tags : []
+      //     return (
+      //       <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+      //         {tags.map((t, i) => <Chip key={`${t?.slug||t}-${i}`} size="small" label={t?.name || t?.slug || t} variant="outlined" />)}
+      //       </Stack>
+      //     )
+      //   },
+      // },
       {
-        id: 'categoriesEs',
-        header: 'Categorías',
-        accessorFn: (row) => {
-          const cats = Array.isArray(row.categories) ? row.categories : []
-          const names = cats.map(c => c?.name).filter(Boolean)
-          return names.length ? names.join(', ') : ''
-        },
-        Cell: ({ row }) => {
-          const cats = Array.isArray(row.original.categories) ? row.original.categories : []
-          const names = cats.map(c => c?.name).filter(Boolean)
-          const toShow = names
-          return (
-            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-              {toShow.length ? toShow.map((n, i) => <Chip key={`${n}-${i}`} size="small" label={n} variant="outlined" />) : <Typography variant="body2" color="text.secondary">-</Typography>}
-            </Stack>
-          )
-        },
-        size: 200,
-      },
-      {
-        id: 'tags',
-        header: 'Tags',
-        accessorFn: (row) => Array.isArray(row.tags) ? row.tags.map(t=>t?.name||t?.slug).join(',') : '',
-        Cell: ({ row }) => {
-          const tags = Array.isArray(row.original.tags) ? row.original.tags : []
-          return (
-            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-              {tags.map((t, i) => <Chip key={`${t?.slug||t}-${i}`} size="small" label={t?.name || t?.slug || t} variant="outlined" />)}
-            </Stack>
-          )
-        },
-      },
-      {
-        header: 'Plan', accessorKey: 'isPremium', size: 100,
+        header: 'Plan', accessorKey: 'isPremium', size: 20,
         Cell: ({ cell }) => <Chip size="small" label={cell.getValue() ? 'Premium' : 'Free'} color={cell.getValue() ? 'warning' : 'default'} />,
       },
       {
         header: 'Estado', accessorKey: 'status', size: 120,
         Cell: ({ cell }) => <Chip size="small" label={cell.getValue()} color={statusColor(cell.getValue())} />,
       },
-      {
-        id: 'sizeB',
-        header: 'Tamaño',
-        accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
-        Cell: ({ cell }) => <Typography variant="body2">{formatMBfromB(cell.getValue())}</Typography>,
-        size: 100,
-      },
+      // {
+      //   id: 'sizeB',
+      //   header: 'Tamaño',
+      //   accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
+      //   Cell: ({ cell }) => <Typography variant="body2">{formatMBfromB(cell.getValue())}</Typography>,
+      //   size: 100,
+      // },
       { header: 'Cuenta', accessorFn: (row) => row.account?.alias || row.accountId, size: 160,
         Cell: ({ row }) => <Typography variant="body2">{row.original.account?.alias || row.original.accountId}</Typography>
       },
-      {
-        header: 'Creado', accessorKey: 'createdAt', size: 160,
-        Cell: ({ cell }) => <Typography variant="body2">{cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '-'}</Typography>,
-      },
+      // {
+      //   header: 'Creado', accessorKey: 'createdAt', size: 160,
+      //   Cell: ({ cell }) => <Typography variant="body2">{cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '-'}</Typography>,
+      // },
       {
         header: 'MEGA', accessorKey: 'megaLink', size: 160,
         Cell: ({ cell }) => cell.getValue() ? (
@@ -281,9 +282,9 @@ export default function AssetsAdminPage() {
     muiTablePaperProps: { sx: { width: '100%' } },
     enableColumnFilters: false,
     enableGlobalFilter: false,
-  enableRowActions: true,
-  positionActionsColumn: 'first',
-  displayColumnDefOptions: { 'mrt-row-actions': { size: 80 } },
+    enableRowActions: true,
+    positionActionsColumn: 'first',
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 80 } },
     renderTopToolbarCustomActions: ({ table }) => (
       <ToolbarBusqueda
         q={q}
@@ -296,18 +297,27 @@ export default function AssetsAdminPage() {
       />
     ),
     renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <IconButton aria-label="Ver" size="small" onClick={() => { setSelected(row.original); setPreviewOpen(true); }} sx={{ p: 0.4 }}>
+      <Box sx={{ display: 'flex', gap: 0 }}>
+        <IconButton aria-label="Ver" size="small" onClick={() => { setSelected(row.original); setPreviewOpen(true); }} sx={{ p: 0.2 }} title="Ver detalle del STL">
           <VisibilityIcon fontSize="small" />
         </IconButton>
-        <IconButton aria-label="Editar" size="small" onClick={() => openEdit(row.original)} sx={{ p: 0.4 }}>
+        <IconButton aria-label="Editar" size="small" onClick={() => openEdit(row.original)} sx={{ p: 0.2 }} title="Editar STL">
           <EditIcon fontSize="small" />
         </IconButton>
-        <IconButton aria-label="Borrar" size="small" color="error" onClick={() => handleDelete(row.original)} sx={{ p: 0.4 }}>
+        <IconButton aria-label="Borrar" size="small" color="error" onClick={() => handleDelete(row.original)} sx={{ p: 0.2 }} title="Eliminar STL">
           <DeleteIcon fontSize="small" />
+        </IconButton>
+        <IconButton aria-label="Refrescar link" size="small" onClick={() => handleRestoreLink(row.original)} sx={{ p: 0.2 }} title="Verificar y restaurar link MEGA">
+          <CachedIcon fontSize="small" />
         </IconButton>
       </Box>
     ),
+    muiTableBodyRowProps: ({ row }) => {
+      // Cambia el color de fondo si el link está caído
+      return row.original.megaLinkAlive === false
+        ? { sx: { backgroundColor: '#fc8282' } } // rojo claro, puedes ajustar el color
+        : {};
+    },
   })
 
   // Abrir editor con datos del asset (sin categoría legacy)
@@ -433,6 +443,25 @@ export default function AssetsAdminPage() {
       console.error('randomize error', e)
       await errorAlert('Error', e?.response?.data?.message || 'No se pudo randomizar')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  // Recuperar link MEGA desde BACKUP
+  const handleRestoreLink = async (asset) => {
+    const ok = await confirmAlert('Restaurar link MEGA', `¿Deseas restaurar el link MEGA para "${asset.title}"?`, 'Sí, restaurar', 'Cancelar', 'warning')
+    if (!ok) return
+    try {
+      setLoading(true)
+      await http.postData(`/assets/${asset.id}/restore-link`)
+      await successAlert('Restaurado', 'El link MEGA fue restaurado correctamente')
+    } catch (e) {
+      console.error('Error restaurando link MEGA', e)
+      await errorAlert('Error', 'No se pudo restaurar el link MEGA')
+    } finally {
+      // refresh de la tabla para ver cambios
+      setRefreshTick(n=>n+1)
+
       setLoading(false)
     }
   }

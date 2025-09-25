@@ -13,6 +13,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "@paypal/react-paypal-js": "^8.9.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",

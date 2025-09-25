@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import SimplyModal from '../SimplyModal/SimplyModal';
 import Button from '../../layout/Buttons/Button';
 import HttpService from '../../../services/HttpService';
@@ -11,29 +12,28 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
   const isEn = String(language || 'es').toLowerCase() === 'en';
 
   const [note, setNote] = React.useState('');
-  const [captchaOk, setCaptchaOk] = React.useState(false);
+  const [captchaToken, setCaptchaToken] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState('idle'); // idle | success | error
 
   React.useEffect(() => {
     if (!open) {
       setNote('');
-      setCaptchaOk(false);
+      setCaptchaToken('');
       setSubmitting(false);
       setStatus('idle');
     }
   }, [open]);
 
   const handleSubmit = async () => {
-    if (!assetId || submitting || !captchaOk) return;
+    if (!assetId || submitting || !captchaToken) return;
     try {
       setSubmitting(true);
       await http.postData(`/assets/${assetId}/report-broken-link`, {
         note: String(note || '').slice(0, 1000),
-        // captchaToken: '', // TODO: integrar reCAPTCHA/turnstile aquí
+        captchaToken
       });
       setStatus('success');
-      // notificar al padre si lo requiere (sin cerrar ni alert)
       try { onSubmitted?.('success'); } catch {}
     } catch {
       setStatus('error');
@@ -76,22 +76,22 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
       )}
 
       {status !== 'success' && (
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: '.9rem', userSelect: 'none' }}>
-          <input
-            type="checkbox"
-            checked={captchaOk}
-            onChange={(e) => setCaptchaOk(e.target.checked)}
-            disabled={submitting}
+        <div style={{ marginBottom: '.9rem', display: 'flex', justifyContent: 'center' }}>
+          <ReCAPTCHA
+            sitekey={process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY}
+            onChange={setCaptchaToken}
+            theme="dark"
+            size="normal"
+            style={{ margin: '0 auto' }}
           />
-          <span>{isEn ? "I'm not a robot (placeholder)" : 'No soy un robot (placeholder)'}</span>
-        </label>
+        </div>
       )}
 
       {status === 'idle' && (
         <div className="actions center" style={{ justifyContent: 'center' }}>
           <Button
             onClick={handleSubmit}
-            disabled={!captchaOk || submitting || !assetId}
+            disabled={!captchaToken || submitting || !assetId}
             variant="purple"
             className="btn-big"
           >

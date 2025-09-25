@@ -106,8 +106,8 @@ const Account = () => {
           <h5 style={{marginTop:'1rem'}}>Historial de descargas</h5>
           {downloads?.length ? (
             <ul>
-              {downloads.map(it => (
-                <li key={it.id} style={{display:'flex', alignItems:'center', gap:'.6rem', justifyContent:'space-between', padding:'.4rem 0', borderBottom:'1px dashed #eee'}}>
+              {downloads.map((it, index) => (
+                <li key={index} style={{display:'flex', alignItems:'center', gap:'.6rem', justifyContent:'space-between', padding:'.4rem 0', borderBottom:'1px dashed #eee'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'.6rem'}}>
                     {it.image ? <img src={imgUrl(it.image)} alt={it.title} style={{width:48, height:48, objectFit:'cover', borderRadius:8}}/> : <div style={{width:48, height:48, background:'#eee', borderRadius:8}}/>}
                     <div>

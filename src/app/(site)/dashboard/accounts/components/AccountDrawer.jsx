@@ -39,6 +39,8 @@ export default function AccountDrawer({
     const [restoreLoading, setRestoreLoading] = useState(false);
     const [restoreResult, setRestoreResult] = useState(null);
 
+    console.log('backupCandidates', backupCandidates);
+
     async function handleSyncMainBackups() {
         if (!selected) return;
         setSyncLoading(true);
@@ -195,11 +197,13 @@ export default function AccountDrawer({
                                             <option value="">
                                                 -- seleccionar --
                                             </option>
-                                            {backupCandidates.map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.alias}
-                                                </option>
-                                            ))}
+                                            {backupCandidates
+                                                .filter((c) => !c.mains || c.mains.length === 0)
+                                                .map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.alias}
+                                                    </option>
+                                                ))}
                                         </TextField>
                                         <TextField
                                             type="button"

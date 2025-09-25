@@ -201,7 +201,9 @@ export default function AccountsOverviewPage() {
         try {
             setLoadingBackups(true);
             const res = await http.getData(`${API_BASE}/${id}/backup-candidates`);
-            setBackupCandidates(res.data?.items || []);
+            // Filtrar: solo mostrar cuentas que no tengan mains asociadas
+            const filtered = (res.data?.items || []).filter(c => !c.mains || c.mains.length === 0);
+            setBackupCandidates(filtered);
         } catch (e) {
             console.error('loadBackupCandidates error', e);
             setBackupCandidates([]);

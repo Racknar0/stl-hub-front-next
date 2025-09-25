@@ -11,15 +11,16 @@
 .subscribe-bar .container-narrow {
     pointer-events: auto;
     background: rgba(15, 20, 32, 0.9);
-    border: 1px solid rgba(124, 107, 255, 0.35);
+    border: 1px solid rgb(160, 245, 3);
     backdrop-filter: blur(8px) saturate(140%);
     border-radius: 999px;
-    padding: 0.4rem 1rem;
+    padding: 1rem 2rem;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 .msg {
     color: #e9efff;
     font-weight: 700;
+    font-size: 1.1rem;
 }
 
 /* Mobile */
