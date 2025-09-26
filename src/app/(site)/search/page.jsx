@@ -1,10 +1,10 @@
-'use client';
-import React from 'react';
-import { useSearchParams } from 'next/navigation';
-import SearchClient from './searchClient';
+import { Suspense } from 'react';
+import SearchClientPage from './SearchClientPage';
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const params = Object.fromEntries(searchParams.entries());
-  return <SearchClient initialParams={params} />;
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <SearchClientPage />
+    </Suspense>
+  );
 }

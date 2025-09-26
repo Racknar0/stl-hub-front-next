@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useStore from '../../../store/useStore';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
-import { useSearchParams } from 'next/navigation';
 import Button from '@/components/layout/Buttons/Button';
 
 const Register = () => {
