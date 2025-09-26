@@ -2,10 +2,11 @@ import axios from 'axios';
 import useStore from '../store/useStore';
 import { timerAlert } from '@/helpers/alerts';
 
+
 // Crear una instancia de Axios
 const axiosInstance = axios.create({
   // baseURL: "http://localhost:3001/api",
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api` || 'http://localhost:3001/api',
+  baseURL: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

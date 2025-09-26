@@ -1,4 +1,6 @@
+@use 'sass:color';
 @use '../../../styles/base/variables' as *;
+
 
 .pricing { padding:2rem 0; }
 .pricing-header { text-align:center; margin-bottom:2rem; 
@@ -42,7 +44,7 @@
   position:absolute; 
   top:-8px; 
   right:1rem; 
-  background: linear-gradient(135deg, $primary, darken($primary, 10%)); 
+  background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
   color:#fff; 
   font-weight:800; 
   font-size:.8rem; 
@@ -128,12 +130,12 @@
   cursor: pointer;
   
   &.fill {
-    background: linear-gradient(135deg, $primary, darken($primary, 10%));
+    background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
     color: white;
     border: none;
     
     &:hover {
-      background: linear-gradient(135deg, darken($primary, 5%), darken($primary, 15%));
+      background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
       transform: translateY(-1px);
       box-shadow: 0 6px 20px rgba($primary,.3);
     }
