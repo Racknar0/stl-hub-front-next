@@ -445,10 +445,11 @@ const Login = () => {
                                 href="/login"
                                 variant="purple"
                                 className="btn-big"
-                                width={'140px'}
+                                width={'160px'}
                                 styles={{ marginTop: 18 }}
+                                onClick={() => setShowResetModal(false)}
                             >
-                                {isEn ? 'Go to login' : 'Ir a iniciar sesión'}
+                                {isEn ? 'Go to login' : 'Iniciar sesión'}
                             </Button>
                         </div>
                     )}
