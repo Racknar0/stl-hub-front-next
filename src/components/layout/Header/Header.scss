@@ -165,7 +165,7 @@
         align-items: center;
         justify-content: center;
         background: #7c6bff; /* morado consistente con CTA */
-        color: #fff;
+        color: #fff !important; /* Asegura que el color de la lupa sea blanco */
         box-shadow: 0 6px 18px rgba(124, 107, 255, 0.35);
         cursor: pointer;
     }
@@ -235,4 +235,58 @@
     width: auto; padding: 18px 14px; overflow: auto;
   }
   .mega-container { grid-template-columns: 1fr; gap: 12px; }
+}
+
+
+
+// --- User profile menu ---
+.profile-menu-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.profile-circle-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #23263a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.profile-circle-btn:focus {
+    outline: 2px solid #b59cff;
+}
+.profile-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 44px;
+    min-width: 210px;
+    background: #23263a;
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    z-index: 1000;
+    padding: 1rem 0;
+}
+.profile-dropdown-header {
+    padding: 0.5rem 1.2rem;
+    border-bottom: 1px solid #35395a;
+    font-size: .97rem;
+    font-weight: 600;
+    color: #b59cff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.profile-dropdown-actions {
+    padding: 0.7rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }

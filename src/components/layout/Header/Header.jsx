@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import './Header.scss'
 import Button from '../Buttons/Button'
+import axiosInstance from '../../../services/AxiosInterceptor';
 import useStore from '../../../store/useStore'
 import { useRouter, usePathname } from 'next/navigation'
 import { confirmAlert } from '../../../helpers/alerts'
@@ -16,6 +17,45 @@ const Header = () => {
   const roleId = useStore((s) => s.roleId)
   const logout = useStore((s) => s.logout)
   const language = useStore((s) => s.language)
+  const [profile, setProfile] = React.useState(null);
+  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
+  const profileMenuRef = useRef(null);
+  const isEn = String(language || 'es').toLowerCase() === 'en';
+
+
+  // Cargar perfil solo si hay token
+  React.useEffect(() => {
+    let mounted = true;
+    async function loadProfile() {
+      try {
+        if (token) {
+          const res = await axiosInstance.get('/me/profile');
+          if (mounted) setProfile(res.data);
+        } else {
+          setProfile(null);
+        }
+      } catch (e) {
+        setProfile(null);
+      }
+    }
+    loadProfile();
+    return () => { mounted = false };
+  }, [token]);
+
+  // Cerrar el menú al hacer click fuera
+  React.useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    if (profileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileMenuOpen]);
   const setLanguage = useStore((s) => s.setLanguage)
   const router = useRouter()
   const pathname = usePathname()
@@ -219,73 +259,70 @@ const Header = () => {
           </div>
 
           <div className="header-cta d-flex gap-2 align-items-center">
-            {token ? (
-              <>
-                {isAdmin ? (
-                  <Button
-                    as={Link}
-                    href="/dashboard"
-                    variant="cyan"
-                    width="lg"
-                    aria-label="Dashboard"
-                    icon={(
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  >
-                  </Button>
-                ) : (
-                  <Button
-                    as={Link}
-                    href="/account"
-                    variant="cyan"
-                    width="lg"
-                    aria-label={t('header.account')}
-                    icon={(
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    )}
-                  >
-                  </Button>
-                )}
 
-                <Button
+
+            {token && (
+              <div ref={profileMenuRef} className="profile-menu-wrap">
+                <button
                   type="button"
-                  onClick={handleLogout}
-                  variant="dangerOutline"
-                  width="lg"
-                  aria-label={t('header.logout')}
-                  icon={(
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                  )}
-                ></Button>
-              </>
-            ) : (
+                  className="profile-circle-btn"
+                  aria-haspopup="true"
+                  aria-expanded={profileMenuOpen}
+                  onClick={() => setProfileMenuOpen((v) => !v)}
+                  title={profile?.email || 'Usuario'}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/>
+                    <path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/>
+                  </svg>
+                </button>
+                {profileMenuOpen && (
+                  <div className="profile-dropdown-menu">
+                    <div className="profile-dropdown-header">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/><path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/></svg>
+                      {profile?.email || 'Usuario'}
+                    </div>
+                    <div className="profile-dropdown-actions">
+                      
+                      
+                      <Button 
+                        styles={{width: '100%'}} 
+                        as={Link} href="/account" 
+                        variant="cyan" 
+                        width="lg" 
+                        aria-label={t('header.account')} 
+                        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/><path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >
+                          {isEn ? 'My profile' : 'Mi perfil'}
+                        </Button>
+
+                        {isAdmin && (
+                          <Button
+                              styles={{width: '100%'}}
+                            as={Link} href="/dashboard" variant="cyan" aria-label="Dashboard" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>} >
+                              {isEn ? 'Dashboard' : 'Panel'}
+                            </Button>
+                          )}
+
+                          <Button styles={{width: '100%'}} type="button" onClick={handleLogout} variant="dangerOutline" width="lg" aria-label={t('header.logout')} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >{t('header.logout')}</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!token && (
               <Button
                 as={Link}
                 href="/login"
                 variant="purple"
                 width="lg"
                 aria-label={t('header.login')}
-                icon={(
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                )}
+                icon={(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>)}
               >
                 {t('header.login')}
               </Button>
             )}
 
-            {/* Selector de idioma con imagen 32px */}
+                        {/* Selector de idioma con imagen 32px */}
             <div ref={langRef} className={`language-dropdown ${langOpen ? 'open' : ''}`}>
               <button
                 type="button"
@@ -303,28 +340,30 @@ const Header = () => {
                   height={22}
                 />
               </button>
-              <ul className="lang-list" role="listbox">
-                <li
-                  role="option"
-                  aria-selected={language === 'es'}
-                  className={`lang lang-es ${language === 'es' ? 'selected' : ''}`}
-                  onClick={() => selectLang('es')}
-                  title="Español"
-                >
-                  <img className="flag-img" src={FLAG_ES_32} alt="Español" width={20} height={20} />
-                  <span className="code">ES</span>
-                </li>
-                <li
-                  role="option"
-                  aria-selected={language === 'en'}
-                  className={`lang lang-en ${language === 'en' ? 'selected' : ''}`}
-                  onClick={() => selectLang('en')}
-                  title="English"
-                >
-                  <img className="flag-img" src={FLAG_EN_32} alt="English" width={20} height={20} />
-                  <span className="code">EN</span>
-                </li>
-              </ul>
+              {langOpen && (
+                <ul className="lang-list" role="listbox">
+                  <li
+                    role="option"
+                    aria-selected={language === 'es'}
+                    className={`lang lang-es ${language === 'es' ? 'selected' : ''}`}
+                    onClick={() => selectLang('es')}
+                    title="Español"
+                  >
+                    <img className="flag-img" src={FLAG_ES_32} alt="Español" width={20} height={20} />
+                    <span className="code">ES</span>
+                  </li>
+                  <li
+                    role="option"
+                    aria-selected={language === 'en'}
+                    className={`lang lang-en ${language === 'en' ? 'selected' : ''}`}
+                    onClick={() => selectLang('en')}
+                    title="English"
+                  >
+                    <img className="flag-img" src={FLAG_EN_32} alt="English" width={20} height={20} />
+                    <span className="code">EN</span>
+                  </li>
+                </ul>
+              )}
             </div>
           </div>
         </nav>
