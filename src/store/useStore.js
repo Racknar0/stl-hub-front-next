@@ -115,7 +115,7 @@ export const getState = useStore.getState;
 useStore.subscribe(
     (state) => state, // Selector: monitorea todo el estado
     (state) => {
-        console.log('Estado actualizado-------------------->:')
-        console.log(JSON.stringify(state, null, 2));
+        // console.log('Estado actualizado-------------------->:')
+        // console.log(JSON.stringify(state, null, 2));
     } // Callback ejecutado cada vez que el estado cambia
 );

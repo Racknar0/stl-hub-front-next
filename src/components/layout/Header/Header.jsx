@@ -133,7 +133,22 @@ const Header = () => {
     router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
   }
 
-  const selectLang = (l) => { setLanguage(l); setLangOpen(false) }
+  const selectLang = async (l) => {
+    try {
+      setLanguage(l);
+      setLangOpen(false);
+      // Si hay token, actualizar en backend (ruta protegida)
+      if (token) {
+        // axiosInstance ya tiene interceptor con token
+        
+        console.log('Language updated on server');
+        await http.patchData('/me/language', '', { language: l });
+      }
+    } catch (e) {
+      console.error('Error updating language on server', e);
+      // No revertimos el cambio en UI; opcional: mostrar mensaje
+    }
+  }
 
   // Imágenes de banderas en /public (32px)
   const FLAG_ES_32 = '/spain-flag-button-round-icon-32.png'
@@ -328,11 +343,11 @@ const Header = () => {
                 variant="purple"
                 width="lg"
                 aria-label={t('header.login')}
-                icon={(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>)}
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>}
               >
                 {t('header.login')}
               </Button>
-            )}
+              )}
 
                         {/* Selector de idioma con imagen 32px */}
             <div ref={langRef} className={`language-dropdown ${langOpen ? 'open' : ''}`}>

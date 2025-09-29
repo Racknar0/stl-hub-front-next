@@ -10,6 +10,32 @@ import Button from '@/components/layout/Buttons/Button';
 
 const Login = () => {
 
+    const login = useStore((state) => state.login);
+    const setLanguage = useStore((s) => s.setLanguage);
+    const httpService = useMemo(() => new HttpService(), []);
+    const router = useRouter();
+    const token = useStore((state) => state.token);
+    const language = useStore((s) => s.language);
+    const isEn = String(language || 'es').toLowerCase() === 'en';
+
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // tomar los pathparameters
+    const searchParams =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search)
+            : null;
+    const resetToken = searchParams ? searchParams.get('reset') : null;
+    const [resetStatus, setResetStatus] = useState(null); // null | 'success' | 'error'
+    const [resetMessage, setResetMessage] = useState('');
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+
     // Restaurar función handleLogin
     const handleLogin = async (data) => {
         setLoading(true);
@@ -17,7 +43,21 @@ const Login = () => {
             const response = await httpService.postData('/auth/login', data);
             if (response.status === 200) {
                 const token = response.data.token;
-                login(token);
+                // Esperar a que el store procese el login (guarda token y decodifica payload)
+                await login(token);
+
+                // Intentar obtener el perfil del usuario y setear idioma
+                try {
+                    console.log('Language updated on server');
+                    const profileRes = await httpService.getData('/me/profile');
+                    console.log('FprofileResprofileResprofileResprofileRese:', profileRes);
+                    const userLang = profileRes?.data?.language || 'es';
+                    console.log('Fetched profile after login, language:', userLang);
+                    setLanguage(userLang);
+                } catch (errProfile) {
+                    console.error('Error fetching profile after login', errProfile);
+                }
+
                 await timerAlert(
                     isEn ? 'Success' : 'Éxito',
                     isEn ? 'Logged in successfully!' : '¡Has iniciado sesión con éxito!',
@@ -46,32 +86,6 @@ const Login = () => {
 
 
 
-    const login = useStore((state) => state.login);
-    const httpService = useMemo(() => new HttpService(), []);
-    const router = useRouter();
-    const token = useStore((state) => state.token);
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
-
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-
-    // tomar los pathparameters
-    const searchParams =
-        typeof window !== 'undefined'
-            ? new URLSearchParams(window.location.search)
-            : null;
-    const resetToken = searchParams ? searchParams.get('reset') : null;
-    const [resetStatus, setResetStatus] = useState(null); // null | 'success' | 'error'
-    const [resetMessage, setResetMessage] = useState('');
-    const [showResetModal, setShowResetModal] = useState(false);
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmNewPassword, setConfirmNewPassword] = useState('');
-    const [resetLoading, setResetLoading] = useState(false);
-
-    console.log('Reset token from URL:', resetToken);
 
     useEffect(() => {
         if (token) {
