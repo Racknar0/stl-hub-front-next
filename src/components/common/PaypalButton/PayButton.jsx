@@ -2,9 +2,14 @@ import React from 'react';
 import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
 import HttpService from '@/services/HttpService'; 
 
-const PayButton = () => {
+const PayButton = ({
+    plan,
+    userId
+}) => {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     const httpService = new HttpService(); 
+
+    console.log('Selected plan in PayButton:', plan);
 
     return (
         <PayPalScriptProvider options={{ 'client-id': clientId }}>
@@ -15,20 +20,28 @@ const PayButton = () => {
                     shape: 'sharp',
                 }}
                 createOrder={async () => {
-                    const response = await httpService.postData('payments/paypal/order'); 
-                    console.log('ID createOrder response', response?.data?.id  ?? 'No ID found');
-                    const { id } = await response.data;
+                    // Llamar a tu backend para crear la orden
+                    const response = await httpService.postData('payments/paypal/order', {
+                        planId : plan.id,
+                        userId
+                    });
+                    const { id } = await response.data; // Aca se extrae el id
                     return id;
                 }}
                 onApprove={async (data) => {
-                    const response = await httpService.post('payments/paypal/capture', {
+                    const response = await httpService.postData('payments/paypal/capture', {
                         orderID: data.orderID,
+                        planId: plan.id, 
+                        userId: userId,
                     });
-                    // const json = await response.json();
                     console.log('onApprove response', response);
-                    // TODO: marcar compra OK en tu backend / UI
-                    console.log('CAPTURED', json);
-                    alert('Pago completado ✅');
+                    if (response.data?.success) {
+                        alert('Pago completado ✅ ¡Gracias por tu compra!');
+                        // Opcional: redirigir al usuario o actualizar la UI
+                        window.location.href = '/dashboard';
+                    } else {
+                        alert('Hubo un problema al procesar tu pago.');
+                    }
                 }}
             />
         </PayPalScriptProvider>

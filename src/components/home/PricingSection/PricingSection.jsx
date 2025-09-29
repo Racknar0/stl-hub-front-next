@@ -5,6 +5,7 @@ import SimplyModal from '../../common/SimplyModal/SimplyModal';
 import PayButton from '../../common/PaypalButton/PayButton';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
+import Button from '@/components/layout/Buttons/Button';
 
 const getFeatures = (t, isEn) => {
     if (typeof t === 'function') {
@@ -94,6 +95,8 @@ const PricingSection = ({
     const [selectedPlan, setSelectedPlan] = React.useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
     const [paymentMethod, setPaymentMethod] = React.useState(null); // 'paypal' | 'card' | 'pse'
+    const userId = useStore((s) => s.userId);
+    const [notLoggedInModal, setNotLoggedInModal] = React.useState(false);
 
     const title =
         (typeof t === 'function' && t('pricing.title')) ||
@@ -207,6 +210,14 @@ const PricingSection = ({
                                 p.highlight ? 'fill' : 'outline'
                             }`}
                             onClick={(e) => {
+
+                                console.log('User ID at plan selection:', userId);
+                                if (!userId) {
+                                    setNotLoggedInModal(true);
+                                    return;
+                                }
+
+
                                 e.preventDefault();
                                 setSelectedPlan(p);
                                 setShowModal(true);
@@ -224,11 +235,7 @@ const PricingSection = ({
             <SimplyModal
                 open={showModal}
                 onClose={() => setShowModal(false)}
-                title={
-                    isEn
-                        ? 'Select payment method'
-                        : 'Selecciona un método de pago'
-                }
+                title={ isEn ? 'Select payment method' : 'Selecciona un método de pago' }
                 brand="STL Hub"
             >
                 <div
@@ -318,7 +325,10 @@ const PricingSection = ({
                                 backgroundColor: '#fff',
                             }}
                         >
-                            <PayButton />
+                            <PayButton 
+                                plan={selectedPlan}
+                                userId={userId}
+                            />
                         </div>
                     )}
 
@@ -348,6 +358,31 @@ const PricingSection = ({
                     )}
                 </div>
             </SimplyModal>
+
+            {
+                !userId && (
+                     <SimplyModal
+                            open={notLoggedInModal}
+                            onClose={() => setNotLoggedInModal(false)}
+                            title={`${isEn ? 'You must be logged in' : 'Debes iniciar sesión'}`}
+                        >
+                            <p style={{ color: '#ffffff', textAlign: 'center' }}>
+                                {isEn
+                                    ? 'You need to be logged in to select a plan and proceed with payment.'
+                                    : 'Debes iniciar sesión para seleccionar un plan y continuar con el pago.'}
+                            </p>
+                            <Button 
+                                href="/login"
+                                as='link'
+                                variant="purple"
+                                width="160px"
+                            >
+                                {isEn ? 'Log in' : 'Iniciar sesión'}
+                            </Button>
+                        </SimplyModal>
+                )
+            }
+
         </section>
     );
 };
