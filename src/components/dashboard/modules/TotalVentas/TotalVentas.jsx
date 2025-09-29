@@ -28,16 +28,15 @@ export default function TotalVentas() {
   }
 
   const items = DATA[range] || []
+  const totalAmount = items.reduce((s, it) => s + (it.amount || 0), 0)
 
   return (
     <div className={`top-downloads-card ${open ? 'open' : 'collapsed'}`} style={{width:'100%', maxWidth: '300px'}}>
       <div className="card-header">
         <h6>Total ventas</h6>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div className="tabs" role="tablist">
-            {['1d','1w','1y','all'].map(r => (
-              <button key={r} role="tab" aria-selected={r === range} className={r === range ? 'active' : ''} onClick={() => setRange(r)}>{r}</button>
-            ))}
+          <div style={{textAlign:'right',marginLeft:8}}>
+            <div className="summary-value">${totalAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
           </div>
           <button
             type="button"
@@ -54,7 +53,13 @@ export default function TotalVentas() {
       </div>
 
       <div className="card-body">
-        <ul className="downloads-list">
+        <div className="range-controls">
+          {['1d','1w','1m','1y','all'].map(r => (
+            <button key={r} className={`range-btn ${r === range ? 'active' : ''}`} onClick={() => setRange(r)}>{r}</button>
+          ))}
+        </div>
+
+        <ul className="downloads-list" style={{marginTop:8}}>
           {items.map((it, idx) => (
             <li key={idx} className="download-item d-flex justify-content-between align-items-center">
               <div className="d-flex flex-column">

@@ -52,7 +52,7 @@ export default function Page() {
   return (
     <>
       <h1 className="mb-3">Dashboard</h1>
-      <div className=" p-3" style={{ display: 'grid', gap: 12, justifyItems: 'start', maxWidth: 1200, }}>
+      <div className=" p-3" style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
         <p>Panel principal</p>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <label htmlFor="free-count">Cantidad FREE aleatoria:</label>

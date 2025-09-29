@@ -39,9 +39,14 @@ export default function ReportsCard() {
                 <div className="name">{it.name}</div>
                 <div className="meta">Último: {it.last}</div>
               </div>
-              <div className="right">
+              <div className="right d-flex align-items-center" style={{gap:8}}>
                 <div className="count">{it.count}</div>
                 <a className="link" href={it.url}>Ver</a>
+                <button type="button" className="btn-check" title="Marcar como verificado">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
               </div>
             </li>
           ))}
