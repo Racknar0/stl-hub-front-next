@@ -1,0 +1,12 @@
+.stat-card{
+  background:linear-gradient(180deg,#fff,#fbfbff);
+  border:1px solid #eef2ff;
+  padding:8px 10px;
+  border-radius:8px;
+}
+.assets-subidos .label{ font-size:12px; color:#556; }
+.assets-subidos .value{ font-weight:700; margin-top:6px; font-size:18px; color:#111827 }
+.assets-subidos .range-controls{ margin-top:8px; display:flex; gap:6px }
+.assets-subidos .range-btn{ border:1px solid rgba(79,70,229,0.16); color:#4f46e5; background:transparent; padding:4px 8px; font-size:12px; border-radius:6px }
+.assets-subidos .range-btn.active{ background:#4f46e5; color:#fff; border-color:#4f46e5 }
+.assets-subidos .muted{ color:#6b7280; margin-top:6px; font-size:12px }

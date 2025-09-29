@@ -4,6 +4,17 @@ import { useRouter } from 'next/navigation';
 import useStore from '../../../store/useStore';
 import HttpService from '@/services/HttpService';
 import { successAlert, errorAlert } from '@/helpers/alerts';
+import TopDownloadsCard from '@/components/dashboard/modules/TopDownloadsCard/TopDownloadsCard';
+import AssetsSubidos from '@/components/dashboard/modules/AssetsSubidos/AssetsSubidos';
+import TotalArchivo from '@/components/dashboard/modules/TotalArchivo/TotalArchivo';
+import TotalUsers from '@/components/dashboard/modules/TotalUsers/TotalUsers';
+import ConexionesHoy from '@/components/dashboard/modules/ConexionesHoy/ConexionesHoy';
+import Storage from '@/components/dashboard/modules/Storage/Storage';
+import TotalDescargas from '@/components/dashboard/modules/TotalDescargas/TotalDescargas';
+import TotalVisitas from '@/components/dashboard/modules/TotalVisitas/TotalVisitas';
+import TotalRegistros from '@/components/dashboard/modules/TotalRegistros/TotalRegistros';
+import ReportsCard from '@/components/dashboard/modules/ReportsCard/ReportsCard';
+import TotalVentas from '@/components/dashboard/modules/TotalVentas/TotalVentas';
 
 export default function Page() {
   const router = useRouter();
@@ -41,7 +52,7 @@ export default function Page() {
   return (
     <>
       <h1 className="mb-3">Dashboard</h1>
-      <div className="card glass p-3" style={{ display: 'grid', gap: 12 }}>
+      <div className=" p-3" style={{ display: 'grid', gap: 12, justifyItems: 'start', maxWidth: 1200, }}>
         <p>Panel principal</p>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <label htmlFor="free-count">Cantidad FREE aleatoria:</label>
@@ -57,6 +68,23 @@ export default function Page() {
             {loading ? 'Procesando…' : 'Randomizar FREE'}
           </button>
         </div>
+        <div style={{display:'flex',gap:8,marginBottom:8,justifyContent:'center',flexWrap:'wrap'}}>
+          <AssetsSubidos />
+          <TotalArchivo value={1234} />
+          <TotalUsers value={256} />
+          <ConexionesHoy value={42} />
+          <Storage used={5120} total={20480} />
+          <TotalDescargas value={98765} />
+          <TotalVisitas value={54321} />
+          <TotalRegistros value={4321} />
+        </div>
+
+        <div className='d-flex justify-content-start' style={{gap:12,width:'100%'}}>
+            <TopDownloadsCard />
+              <ReportsCard />
+              <TotalVentas />
+        </div>
+
       </div>
     </>
   );
