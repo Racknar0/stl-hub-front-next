@@ -57,9 +57,9 @@ const en = {
   },
   hero: {
     slides: [
-      { id: 1, title: 'THE BEST 3D MODELS', subtitle: 'DESIGN YOUR REALITY', cta: '', image: '/hero/hero1.jpg' },
-      { id: 2, title: 'PRINT IT!', subtitle: 'LOOK NO FURTHER', cta: '', image: '/hero/hero2.jpg' },
-      { id: 3, title: 'PREMIUM MODELS', subtitle: 'INTEGRATED PREVIEW', cta: '', image: '/hero/hero3.jpg' },
+      { id: 1, title: 'Premium STL Files', subtitle: 'Ready to print — FDM & resin', cta: '', image: '/hero/hero1.jpg' },
+      { id: 2, title: 'MEGA Direct Links', subtitle: 'Fast, reliable downloads', cta: '', image: '/hero/hero2.jpg' },
+      { id: 3, title: 'Model Previews', subtitle: 'Integrated viewer on each page', cta: '', image: '/hero/hero3.jpg' },
     ]
   },
   home: {

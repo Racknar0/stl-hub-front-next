@@ -57,9 +57,9 @@ const es = {
   },
   hero: {
     slides: [
-      { id: 1, title: 'LOS MEJORES MODELOS 3D', subtitle: 'DISEÑA TU REALIDAD', cta: '', image: '/hero/hero1.jpg' },
-      { id: 2, title: 'IMPRIMELO!', subtitle: 'NO BUSQUES MÁS', cta: '', image: '/hero/hero2.jpg' },
-      { id: 3, title: 'MODELOS PREMIUM', subtitle: 'VISTA PREVIA INTEGRADA', cta: '', image: '/hero/hero3.jpg' },
+      { id: 1, title: 'STL Premium', subtitle: 'Listos para imprimir — FDM y resina', cta: '', image: '/hero/hero1.jpg' },
+      { id: 2, title: 'Enlaces MEGA Directos', subtitle: 'Descargas rápidas y seguras', cta: '', image: '/hero/hero2.jpg' },
+      { id: 3, title: 'Vista Integrada', subtitle: 'Previsualiza cada modelo al detalle', cta: '', image: '/hero/hero3.jpg' },
     ]
   },
   home: {
