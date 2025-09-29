@@ -156,6 +156,7 @@ const Header = () => {
     </div>
   )
 
+
   return (
     <header className="app-header">
       {/* Eliminado loader global del layout */}
@@ -188,11 +189,22 @@ const Header = () => {
                   <div className="col-title">{t('header.categories')}</div>
                   <ul>
                     {categories.length > 0 ? (
-                      categories.map((c) => (
-                        <li key={c.id}>
-                          <a href={`/search?categories=${encodeURIComponent(c.name)}`} onClick={() => setExploreOpen(false)}>#{c.name}</a>
-                        </li>
-                      ))
+                      categories.map((c) => {
+
+                        const name = isEn && c.nameEn ? c.nameEn : c.name;
+                        const dinamycHref = `/search?categories=${encodeURIComponent(name)}`;
+
+                        return (
+                            <li key={c.id}>
+                                <a
+                                    href={dinamycHref}
+                                    onClick={() => setExploreOpen(false)}
+                                >
+                                    {isEn ? `${c.nameEn}` : `${c.name}`}
+                                </a>
+                            </li>
+                        );
+                      })
                     ) : (
                       <>
                         <li>{t('header.loading')}</li>
