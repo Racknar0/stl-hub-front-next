@@ -38,7 +38,7 @@ const PayButton = ({
                     if (response.data?.success) {
                         alert('Pago completado ✅ ¡Gracias por tu compra!');
                         // Opcional: redirigir al usuario o actualizar la UI
-                        window.location.href = '/dashboard';
+                        window.location.href = '/account';
                     } else {
                         alert('Hubo un problema al procesar tu pago.');
                     }
