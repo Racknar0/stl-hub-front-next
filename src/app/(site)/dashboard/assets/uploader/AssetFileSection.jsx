@@ -11,6 +11,7 @@ import {
 
 export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false }) {
     const [selectedFile, setSelectedFile] = React.useState(null);
+    const [error, setError] = React.useState('');
     const fileInputRef = React.useRef(null);
 
     const openPicker = () => !disabled && fileInputRef.current?.click();
@@ -34,6 +35,22 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
 
     const handlePick = (file) => {
         if (!file) return;
+        setError('')
+        // Validar extensión
+        const name = file.name || ''
+        const extMatch = name.toLowerCase().match(/\.([0-9a-z]+)$/)
+        const ext = extMatch ? extMatch[1] : ''
+        const allowed = ['zip', 'rar', '7z']
+        if (!allowed.includes(ext)) {
+            // Mostrar alerta nativa y no anexar
+            try { window.alert('Solo se permiten archivos .zip, .rar o .7z') } catch (e) {}
+            // resetear input para permitir reintento
+            try { if (fileInputRef.current) fileInputRef.current.value = '' } catch (e) {}
+            setSelectedFile(null)
+            if (onFileSelected) onFileSelected(null)
+            return
+        }
+        // Solo un archivo: reemplaza el anterior
         setSelectedFile(file);
         if (onFileSelected) onFileSelected(file);
         // Autorrellenar títulos ES/EN con el nombre normalizado del archivo
@@ -60,7 +77,7 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
     const shownSize = selectedFile ? formatBytes(selectedFile.size) : '';
 
     return (
-        <Card className="glass mb-4" >
+        <Card className="glass mb-3" >
             <CardHeader title="Archivo del stl" />
             <CardContent>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
@@ -102,6 +119,11 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
                 <Typography variant="body2" gutterBottom>
                     Seleccionado: <strong>{shownName}</strong>{shownSize ? ` · ${shownSize}` : ''}
                 </Typography>
+                {error && (
+                    <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                        {error}
+                    </Typography>
+                )}
             </CardContent>
         </Card>
     );

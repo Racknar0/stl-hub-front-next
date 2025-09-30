@@ -50,9 +50,9 @@ export default function ImagesSection({
     }
 
     return (
-        <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
+        <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%' , maxHeight: '930px'}}>
             <CardHeader title="Imágenes" />
-            <CardContent>
+            <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                 {/* Slider de vista previa */}
                 <Box
                     sx={{
@@ -60,7 +60,8 @@ export default function ImagesSection({
                         width: '100%',
                         maxWidth: 1600,
                         mx: 'auto',
-                        height: 560,
+                        flex: 1,
+                        minHeight: 280,
                         bgcolor: 'rgba(255,255,255,0.04)',
                         border: '1px solid rgba(255,255,255,0.16)',
                         borderRadius: 2,
@@ -169,7 +170,7 @@ export default function ImagesSection({
                 </Box>
 
                 {/* Miniaturas anexadas con orden arrastrable */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, maxHeight: 160, overflowY: 'auto' }}>
                     {imageFiles.map((img, idx) => (
                         <Box
                             key={img.id}

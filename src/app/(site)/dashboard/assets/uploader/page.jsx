@@ -24,10 +24,10 @@ import ImagesSection from './ImagesSection'
 import AssetFileSection from './AssetFileSection'
 import MetadataSection from './MetadataSection'
 import StatusSection from './StatusSection'
-import AssetsUploadedWidget from './AssetsUploadedWidget'
 import AppButton from '@/components/layout/Buttons/Button'
 import MegaStatus from './MegaStatus'
 import StatusChip from './StatusChip'
+import AssetsUploadedWidget from './AssetsUploadedWidget'
 
 const http = new HttpService()
 const API_BASE = '/accounts'
@@ -277,12 +277,38 @@ export default function UploadAssetPage() {
         onTest={testSelectedAccount}
       />
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        {/* <AssetsUploadedWidget /> */}
+      </div>
+
       {/* 2) Layout de carga */}
-  <Box sx={{ maxWidth: 1600, ms: 'auto' }}>
-        <Grid  spacing={2} >
-          {/* Izquierda */}
-          <Grid item >
-            <Stack spacing={2}>
+      <Box sx={{ ms: 'auto' }}>
+  <Grid container spacing={2} alignItems="stretch" sx={{ display: 'flex', alignItems: 'stretch' }}>
+          {/* Izquierda: 5/12 → AssetFileSection arriba, Metadata abajo */}
+            <Grid item sx={{ width: '100%', ['@media (min-width:768px)']: { width: '30%' }, display: 'flex', flexDirection: 'column' }}>
+
+              <AssetFileSection
+                setTitle={setTitle}
+                setTitleEn={setTitleEn}
+                onFileSelected={setArchiveFile}
+                disabled={isUploading}
+              />
+
+              <MetadataSection
+                title={title} setTitle={setTitle}
+                titleEn={titleEn} setTitleEn={setTitleEn}
+                selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
+                tags={tags} setTags={setTags}
+                isPremium={isPremium} setIsPremium={setIsPremium}
+                disabled={isUploading}
+                errors={fieldErrors}
+              />
+
+          </Grid>
+
+          {/* Derecha: 7/12 → selector de imágenes (ocupa el resto) */}
+            <Grid item sx={{ width: '100%', ['@media (min-width:768px)']: { width: '67%' }, display: 'flex', flexDirection: 'column' }}>
+            <Stack spacing={2} sx={{ flex: 1 }}>
               <ImagesSection
                 imageFiles={imageFiles}
                 previewIndex={previewIndex}
@@ -298,102 +324,82 @@ export default function UploadAssetPage() {
                 onReorder={onReorderImages}
                 disabled={isUploading}
               />
-
-              <AssetFileSection setTitle={setTitle} setTitleEn={setTitleEn} onFileSelected={setArchiveFile} disabled={isUploading} />
-            </Stack>
-          </Grid>
-
-          {/* Derecha */}
-          <Grid item xs={12} md={5}>
-            <Stack spacing={2}>
-              {/* Floating summary widget (sticky top-right) */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <AssetsUploadedWidget />
-              </div>
-              <MetadataSection
-                title={title} setTitle={setTitle}
-                titleEn={titleEn} setTitleEn={setTitleEn}
-                selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
-                tags={tags} setTags={setTags}
-                isPremium={isPremium} setIsPremium={setIsPremium}
-                disabled={isUploading}
-                errors={fieldErrors}
-              />
-
-              <Card className="glass">
-                <CardHeader title="Estado" />
-                <CardContent>
-                  <StatusSection
-                    key={statusKey}
-                    ref={statusRef}
-                    getFormData={() => ({
-                      archiveFile,
-                      title,
-                      titleEn,
-                      // enviar categorías seleccionadas para el FormData
-                      categories: selectedCategories,
-                      // mantener category legacy en blanco
-                      category: '',
-                      tags,
-                      isPremium,
-                      accountId: selectedAcc?.id,
-                      images: imageFiles.map(f => f.file)
-                    })}
-                    onUploadingChange={setIsUploading}
-                    onDone={async () => {
-                      setUploadFinished(true)
-                      try {
-                        if (selectedAcc?.id) {
-                          await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
-                          await fetchAccounts()
-                        }
-                      } catch (e) {
-                        console.error('refresh account after upload failed', e)
-                      }
-                    }}
-                  />
-                  <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {uploadFinished ? (
-                      <AppButton
-                        type="button"
-                        onClick={resetForm}
-                        variant="purple"
-                        width="300px"
-                        styles={{ color: '#fff' }}
-                        aria-label="Subir otro STL"
-                      >
-                        Subir otro STL
-                      </AppButton>
-                    ) : (
-                      <>
-                        <AppButton
-                          type="button"
-                          onClick={() => statusRef.current?.startUpload()}
-                          variant={canUpload ? 'purple' : 'dangerOutline'}
-                          width="300px"
-                          styles={canUpload ? { color: '#fff' } : undefined}
-                          aria-label={canUpload ? 'Subir' : 'No permitido'}
-                          disabled={!canUpload || isUploading}
-                        >
-                          {canUpload ? 'Subir' : 'Completa los campos'}
-                        </AppButton>
-                        {!canUpload && (
-                          <Box sx={{ mt: 1 }}>
-                            {missingReasons.map((m, idx) => (
-                              <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
-                                • {m}
-                              </Typography>
-                            ))}
-                          </Box>
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
             </Stack>
           </Grid>
         </Grid>
+
+        {/* Abajo: barra/estado a lo ancho */}
+        <Card className="glass" sx={{ mt: 2 }}>
+          <CardHeader title="Estado" />
+          <CardContent>
+            <StatusSection
+              key={statusKey}
+              ref={statusRef}
+              getFormData={() => ({
+                archiveFile,
+                title,
+                titleEn,
+                // enviar categorías seleccionadas para el FormData
+                categories: selectedCategories,
+                // mantener category legacy en blanco
+                category: '',
+                tags,
+                isPremium,
+                accountId: selectedAcc?.id,
+                images: imageFiles.map(f => f.file)
+              })}
+              onUploadingChange={setIsUploading}
+              onDone={async () => {
+                setUploadFinished(true)
+                try {
+                  if (selectedAcc?.id) {
+                    await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
+                    await fetchAccounts()
+                  }
+                } catch (e) {
+                  console.error('refresh account after upload failed', e)
+                }
+              }}
+            />
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {uploadFinished ? (
+                <AppButton
+                  type="button"
+                  onClick={resetForm}
+                  variant="purple"
+                  width="300px"
+                  styles={{ color: '#fff' }}
+                  aria-label="Subir otro STL"
+                >
+                  Subir otro STL
+                </AppButton>
+              ) : (
+                <>
+                  <AppButton
+                    type="button"
+                    onClick={() => statusRef.current?.startUpload()}
+                    variant={canUpload ? 'purple' : 'dangerOutline'}
+                    width="300px"
+                    styles={canUpload ? { color: '#fff' } : undefined}
+                    aria-label={canUpload ? 'Subir' : 'No permitido'}
+                    disabled={!canUpload || isUploading}
+                  >
+                    {canUpload ? 'Subir' : 'Completa los campos'}
+                  </AppButton>
+                  {!canUpload && (
+                    <Box sx={{ mt: 1 }}>
+                      {missingReasons.map((m, idx) => (
+                        <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
+                          • {m}
+                        </Typography>
+                      ))}
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
 
       {/* Modal de selección de cuenta */}
