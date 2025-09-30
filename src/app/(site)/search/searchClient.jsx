@@ -146,9 +146,18 @@ export default function SearchClient({ initialParams }) {
               <div className="finfo">
                 <div className="ftitle">{it.title}</div>
                 <div className="chips">
-                  {it.chips.map((c,i)=> (
-                    <Link key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}>#{c}</Link>
+                  {(it.chips || []).slice(0, 3).map((c, i) => (
+                    <Link
+                      key={i}
+                      className="chip chip--link"
+                      href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
+                    >
+                      #{c}
+                    </Link>
                   ))}
+                  {(it.chips || []).length > 3 && (
+                    <span className="chip">+{(it.chips || []).length - 3}</span>
+                  )}
                 </div>
               </div>
               <span className="badge" aria-hidden="true">✓</span>
