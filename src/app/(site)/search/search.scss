@@ -29,6 +29,22 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
+
+  /* Centrar el conjunto de columnas cuando hay hueco */
+  justify-content: center;
+  /* Alineación por defecto de los items dentro de sus celdas */
+  justify-items: center;
+  align-items: center;
+  /* si quieres centrar vertical/horizontal de golpe: place-items: center; */
+
+  @media (max-width: 600px) {
+    // centrar en 1 columna en móviles
+    grid-template-columns: 1fr;
+    // centrar verticalmente y centrar items dentro de la columna
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+  }
 }
 
 /* Reutiliza estilos de FeatureSection (fcard) */

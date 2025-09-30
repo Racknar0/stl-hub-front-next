@@ -114,6 +114,21 @@
             flex: 1 1 auto;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+
+            // estilos al scrollbar para navegadores WebKit (Chrome/Safari)
+            &::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            &::-webkit-scrollbar-thumb {
+                border-radius: 6px;
+                // efecto degradado
+                background: linear-gradient(
+                    180deg,
+                    rgba(124, 107, 255, 0.7),
+                    rgba(181, 156, 255, 0.7)
+                );
+            }
         }
     }
     .meta .meta-content {
@@ -173,6 +188,7 @@
         font-weight: 800;
         width: 100%;
         max-width: 320px;
+        
     }
 
     /* Galería cuadrada */
@@ -180,6 +196,7 @@
         overflow: hidden;
         display: flex;
         justify-content: center;
+        min-height: 307px;
 
         @media (max-width: 991.98px) {
             aspect-ratio: 1 / 1;
