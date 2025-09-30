@@ -278,7 +278,7 @@ export default function UploadAssetPage() {
       />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {/* <AssetsUploadedWidget /> */}
+        <AssetsUploadedWidget />
       </div>
 
       {/* 2) Layout de carga */}
