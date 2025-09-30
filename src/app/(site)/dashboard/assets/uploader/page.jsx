@@ -24,6 +24,7 @@ import ImagesSection from './ImagesSection'
 import AssetFileSection from './AssetFileSection'
 import MetadataSection from './MetadataSection'
 import StatusSection from './StatusSection'
+import AssetsUploadedWidget from './AssetsUploadedWidget'
 import AppButton from '@/components/layout/Buttons/Button'
 import MegaStatus from './MegaStatus'
 import StatusChip from './StatusChip'
@@ -277,7 +278,7 @@ export default function UploadAssetPage() {
       />
 
       {/* 2) Layout de carga */}
-      <Box sx={{ maxWidth: 1600, ms: 'auto' }}>
+  <Box sx={{ maxWidth: 1600, ms: 'auto' }}>
         <Grid  spacing={2} >
           {/* Izquierda */}
           <Grid item >
@@ -305,6 +306,10 @@ export default function UploadAssetPage() {
           {/* Derecha */}
           <Grid item xs={12} md={5}>
             <Stack spacing={2}>
+              {/* Floating summary widget (sticky top-right) */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <AssetsUploadedWidget />
+              </div>
               <MetadataSection
                 title={title} setTitle={setTitle}
                 titleEn={titleEn} setTitleEn={setTitleEn}
