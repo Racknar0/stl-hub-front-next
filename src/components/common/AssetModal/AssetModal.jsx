@@ -449,7 +449,6 @@ export default function AssetModal({ open, onClose, asset }) {
                                     loop
                                 >
                                     {(data.images || [])
-                                        .slice(0, 3)
                                         .map((src, idx) => (
                                             <SwiperSlide key={idx}>
                                                 <img

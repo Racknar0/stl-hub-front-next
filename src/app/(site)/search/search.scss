@@ -57,6 +57,10 @@
   flex-direction: column;
   padding: 0.7rem;
   min-height: 0;
+
+  &:hover{
+    cursor: pointer;
+  }
 }
 .ftitle {
   font-weight: 800;
