@@ -53,6 +53,42 @@ export default function ImagesSection({
         <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%' , maxHeight: '930px'}}>
             <CardHeader title="Imágenes" />
             <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+ {/* Dropzone clickeable */}
+                <Box
+                    onDrop={onDrop}
+                    onDragOver={onDragOver}
+                    onClick={onOpenFilePicker}
+                    sx={{
+                        width: '100%',
+                        maxWidth: 1600,
+                        mx: 'auto',
+                        p: 3,
+                        border: '2px dotted rgba(0,0,0,0.6)',
+                        borderRadius: 2,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        mb: 2,
+                    }}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={onSelectFiles}
+                        disabled={disabled}
+                    />
+                    <Stack alignItems="center" spacing={0.5}>
+                        <Typography variant="body2">
+                            Arrastra y suelta imágenes aquí
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            o haz clic para seleccionar
+                        </Typography>
+                    </Stack>
+                </Box>
+
                 {/* Slider de vista previa */}
                 <Box
                     sx={{
@@ -133,41 +169,7 @@ export default function ImagesSection({
                     )}
                 </Box>
 
-                {/* Dropzone clickeable */}
-                <Box
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    onClick={onOpenFilePicker}
-                    sx={{
-                        width: '100%',
-                        maxWidth: 1600,
-                        mx: 'auto',
-                        p: 3,
-                        border: '2px dotted rgba(0,0,0,0.6)',
-                        borderRadius: 2,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        mb: 2,
-                    }}
-                >
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={onSelectFiles}
-                        disabled={disabled}
-                    />
-                    <Stack alignItems="center" spacing={0.5}>
-                        <Typography variant="body2">
-                            Arrastra y suelta imágenes aquí
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            o haz clic para seleccionar
-                        </Typography>
-                    </Stack>
-                </Box>
+               
 
                 {/* Miniaturas anexadas con orden arrastrable */}
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, maxHeight: 160, overflowY: 'auto' }}>
