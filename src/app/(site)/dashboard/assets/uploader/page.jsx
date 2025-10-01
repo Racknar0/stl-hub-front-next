@@ -78,6 +78,18 @@ export default function UploadAssetPage() {
   const [expandedAccId, setExpandedAccId] = useState(null)
   // Eliminado: estados de listado de assets en este modal
 
+  // ==== Cola de subidas (solo frontend) ====
+  const [uploadQueue, setUploadQueue] = useState([]) // [{id, archiveFile, images:File[], meta:{...}, sizeBytes, status}]
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false)
+  const [queueIndex, setQueueIndex] = useState(-1)
+  const [cooldown, setCooldown] = useState(0)
+  const cooldownTimerRef = React.useRef(null)
+
+  // Derivados de estado para la cola
+  const queueActive = isProcessingQueue || cooldown > 0
+  const hasQueuedItems = uploadQueue.some(it => it.status === 'queued')
+  const allCompleted = uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')
+
   const remotePath = '/STLHUB/assets/slug-demo/'
 
   // Eliminado: formatMB y fetchAccountAssets aquí
@@ -251,6 +263,122 @@ export default function UploadAssetPage() {
     setStatusKey(k => k + 1) // fuerza remount de StatusSection para limpiar progresos
   }
 
+  const formatBytes = (b) => {
+    const n = Number(b||0)
+    if (n < 1024) return `${n} B`
+    const kb = n/1024; if (kb < 1024) return `${kb.toFixed(1)} KB`
+    const mb = kb/1024; if (mb < 1024) return `${mb.toFixed(1)} MB`
+    const gb = mb/1024; return `${gb.toFixed(2)} GB`
+  }
+
+  const canEnqueue = !!archiveFile && imageFiles.length >= 1
+
+  const handleAddToQueue = () => {
+    // snapshot rápido del formulario y archivos
+    if (!archiveFile || imageFiles.length < 1) return;
+    const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
+    const item = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      archiveFile,
+      images: imageFiles.map((f) => f.file || f),
+      meta: {
+        title,
+        titleEn,
+        categories: selectedCategories,
+        tags,
+        isPremium,
+        accountId: selectedAcc?.id || null,
+      },
+      sizeBytes,
+      status: 'queued', // queued | running | success | error
+    }
+    setUploadQueue((q) => [...q, item])
+    // limpiar el formulario para permitir agregar otro
+    resetForm()
+  }
+
+  const populateFormFromQueueItem = (item) => {
+    // Cargar estados del snapshot en el formulario para que StatusSection use getFormData()
+    const acc = accounts.find(a => a.id === item.meta.accountId)
+    if (acc) setSelectedAcc(acc)
+    setTitle(item.meta.title || '')
+    setTitleEn(item.meta.titleEn || '')
+    setSelectedCategories(Array.isArray(item.meta.categories) ? item.meta.categories : [])
+    setTags(Array.isArray(item.meta.tags) ? item.meta.tags : [])
+    setIsPremium(!!item.meta.isPremium)
+    setArchiveFile(item.archiveFile)
+    // mapear files a estructura de ImagesSection
+    const mapped = (item.images||[]).map((f, i) => ({ id: `${Date.now()}_${i}`, file: f, name: f.name, url: URL.createObjectURL(f) }))
+    // liberar previas y fijar nuevas
+    setImageFiles((prev) => {
+      prev.forEach(it => { try { URL.revokeObjectURL(it.url) } catch {} })
+      return mapped
+    })
+    setPreviewIndex(mapped.length ? 0 : -1)
+    // reiniciar StatusSection
+    setStatusKey(k => k + 1)
+  }
+
+  const startNextFromQueue = async (startAt = 0) => {
+    const q = uploadQueue
+    if (!q.length || startAt >= q.length) {
+      setIsProcessingQueue(false)
+      setQueueIndex(-1)
+      return
+    }
+    setQueueIndex(startAt)
+    // marcar running
+    setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'running' } : it))
+    const item = q[startAt]
+    populateFormFromQueueItem(item)
+    // pequeña espera para que React pinte el formulario antes de subir
+    setTimeout(() => {
+      statusRef.current?.startUpload?.()
+    }, 50)
+  }
+
+  const handleStartQueue = () => {
+    if (isUploading) return
+    if (isProcessingQueue || uploadQueue.length === 0) return
+    setIsProcessingQueue(true)
+    setCooldown(0)
+    if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
+    startNextFromQueue(0)
+  }
+
+  const handleItemFinished = (ok = true) => {
+    const idx = queueIndex
+    if (idx < 0) return
+    // marcar estado del item
+    setUploadQueue(arr => arr.map((it, i) => i === idx ? { ...it, status: ok ? 'success' : 'error' } : it))
+    // countdown de 10s antes del siguiente
+    let remain = 10
+    setCooldown(remain)
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current)
+    cooldownTimerRef.current = setInterval(() => {
+      remain -= 1
+      setCooldown(remain)
+      if (remain <= 0) {
+        clearInterval(cooldownTimerRef.current)
+        cooldownTimerRef.current = null
+        const next = idx + 1
+        startNextFromQueue(next)
+      }
+    }, 1000)
+  }
+
+  const handleResetQueue = () => {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current)
+      cooldownTimerRef.current = null
+    }
+    setCooldown(0)
+    setIsProcessingQueue(false)
+    setQueueIndex(-1)
+    setUploadQueue([])
+    resetForm()
+  }
+
   const usedMB = selectedAcc ? Math.max(0, selectedAcc.storageUsedMB || 0) : 0
   const totalMB = selectedAcc ? (selectedAcc.storageTotalMB > 0 ? selectedAcc.storageTotalMB : FREE_QUOTA_MB) : FREE_QUOTA_MB
   const usedPct = Math.min(100, totalMB ? (usedMB / totalMB) * 100 : 0)
@@ -359,6 +487,10 @@ export default function UploadAssetPage() {
                 } catch (e) {
                   console.error('refresh account after upload failed', e)
                 }
+                // Si estamos procesando la cola, pasar al siguiente tras 10s
+                if (isProcessingQueue) {
+                  handleItemFinished(true)
+                }
               }}
             />
             <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -370,6 +502,7 @@ export default function UploadAssetPage() {
                   width="300px"
                   styles={{ color: '#fff' }}
                   aria-label="Subir otro STL"
+                  disabled={queueActive}
                 >
                   Subir otro STL
                 </AppButton>
@@ -382,10 +515,45 @@ export default function UploadAssetPage() {
                     width="300px"
                     styles={canUpload ? { color: '#fff' } : undefined}
                     aria-label={canUpload ? 'Subir' : 'No permitido'}
-                    disabled={!canUpload || isUploading}
+                    disabled={!canUpload || isUploading || queueActive}
                   >
                     {canUpload ? 'Subir' : 'Completa los campos'}
                   </AppButton>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <AppButton
+                      type="button"
+                      onClick={handleAddToQueue}
+                      variant={canEnqueue ? 'cyan' : 'dangerOutline'}
+                      width="220px"
+                      styles={{ color: '#fff' }}
+                      disabled={!canEnqueue || isUploading}
+                    >
+                      Añadir a la cola
+                    </AppButton>
+                    {allCompleted ? (
+                      <AppButton
+                        type="button"
+                        onClick={handleResetQueue}
+                        variant={'cyan'}
+                        width="220px"
+                        styles={{ color: '#fff' }}
+                        disabled={queueActive || isUploading}
+                      >
+                        Limpiar e iniciar nueva cola
+                      </AppButton>
+                    ) : (
+                      <AppButton
+                        type="button"
+                        onClick={handleStartQueue}
+                        variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading ? 'cyan' : 'dangerOutline'}
+                        width="220px"
+                        styles={{ color: '#fff' }}
+                        disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading}
+                      >
+                        Iniciar cola {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
+                      </AppButton>
+                    )}
+                  </Box>
                   {!canUpload && (
                     <Box sx={{ mt: 1 }}>
                       {missingReasons.map((m, idx) => (
@@ -398,6 +566,64 @@ export default function UploadAssetPage() {
                 </>
               )}
             </Box>
+          </CardContent>
+        </Card>
+
+        {/* Listado de la cola */}
+        <Card className="glass" sx={{ mt: 2 }}>
+          <CardHeader
+            title="Cola de subidas"
+            subheader={
+              queueActive
+                ? (cooldown > 0 ? `Procesando… (siguiente en ${cooldown}s)` : 'Procesando…')
+                : (allCompleted
+                    ? 'Completada'
+                    : (uploadQueue.length ? `${uploadQueue.length} en cola` : 'Vacía'))
+            }
+          />
+          <CardContent>
+            {uploadQueue.length === 0 ? (
+              <Typography variant="body2" sx={{ opacity: 0.7 }}>No hay elementos en la cola</Typography>
+            ) : (
+              <Box sx={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderSpacing: 0, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color:'#9aa4c7' }}>
+                      <th style={{ padding:'6px 8px' }}>#</th>
+                      <th style={{ padding:'6px 8px' }}>Nombre</th>
+                      <th style={{ padding:'6px 8px' }}>Imágenes</th>
+                      <th style={{ padding:'6px 8px' }}>Categorías</th>
+                      <th style={{ padding:'6px 8px' }}>Tags</th>
+                      <th style={{ padding:'6px 8px' }}>Peso</th>
+                      <th style={{ padding:'6px 8px' }}>Estado</th>
+                      <th style={{ padding:'6px 8px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadQueue.map((it, idx) => (
+                      <tr key={it.id} style={{ background: idx === queueIndex ? 'rgba(181,156,255,0.08)' : 'transparent' }}>
+                        <td style={{ padding:'8px' }}>{idx+1}</td>
+                        <td style={{ padding:'8px' }}>{it.meta?.title || '-'}</td>
+                        <td style={{ padding:'8px' }}>{it.images?.length || 0}</td>
+                        <td style={{ padding:'8px', maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {(it.meta?.categories || []).map((c,i)=> (typeof c === 'string' ? c : (c?.name || c?.nameEn || c?.slug))).filter(Boolean).slice(0,3).join(', ')}{(it.meta?.categories?.length||0) > 3 ? ` +${(it.meta.categories.length-3)}` : ''}
+                        </td>
+                        <td style={{ padding:'8px', maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {(it.meta?.tags || []).map(t=>String(t)).filter(Boolean).slice(0,3).join(', ')}{(it.meta?.tags?.length||0) > 3 ? ` +${(it.meta.tags.length-3)}` : ''}
+                        </td>
+                        <td style={{ padding:'8px' }}>{formatBytes(it.sizeBytes)}</td>
+                        <td style={{ padding:'8px', textTransform:'capitalize' }}>{it.status}</td>
+                        <td style={{ padding:'8px' }}>
+                          {it.status === 'queued' ? (
+                            <Button size="small" color="warning" variant="outlined" onClick={() => setUploadQueue(arr => arr.filter(x => x.id !== it.id))}>Eliminar</Button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Box>
