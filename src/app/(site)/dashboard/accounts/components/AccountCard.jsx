@@ -20,7 +20,15 @@ export default function AccountCard({ acc, onClick, isPending, onTest, loadingAn
       sx={{
         cursor:'pointer',
         position:'relative',
-        border: acc.status === 'CONNECTED' ? '1px solid #2e7d32' : acc.status === 'ERROR' ? '1px solid #d32f2f' : '1px solid transparent'
+        border: acc.status === 'CONNECTED' ? '1px solid #2e7d32' : acc.status === 'ERROR' ? '1px solid #d32f2f' : '1px solid transparent',
+        ...( (() => {
+          const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+          const used = Math.max(0, acc.storageUsedMB || 0);
+          const pct = total ? (used / total) * 100 : 0;
+          return pct >= 80 
+            ? { backgroundColor: 'rgb(255, 191, 186)', border: '2px solid rgba(244,67,54,0.4)' } 
+            : {};
+        })() )
       }}
     >
       {isToday(acc.lastCheckAt) && (
@@ -47,9 +55,26 @@ export default function AccountCard({ acc, onClick, isPending, onTest, loadingAn
                 const used = Math.max(0, acc.storageUsedMB || 0);
                 return Math.min(100, (used / total) * 100);
               })()}
-              sx={{ my:0.5 }}
+              sx={{
+                my:0.5,
+                ...( (() => {
+                  const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+                  const used = Math.max(0, acc.storageUsedMB || 0);
+                  const pct = total ? (used / total) * 100 : 0;
+                  return pct >= 80
+                    ? { backgroundColor: 'rgba(244,67,54,0.2)', '& .MuiLinearProgress-bar': { backgroundColor: 'error.main' } }
+                    : {};
+                })() )
+              }}
             />
-            <Typography variant="caption">{acc.storageUsedMB} MB / {acc.storageTotalMB > 0 ? `${acc.storageTotalMB} MB` : `${FREE_QUOTA_MB} MB`}</Typography>
+            <Typography variant="caption">
+              {(() => {
+                const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+                const used = Math.max(0, acc.storageUsedMB || 0);
+                const pct = Math.min(100, total ? (used / total) * 100 : 0);
+                return `${used} MB / ${total} MB (${Math.round(pct)}%)`;
+              })()}
+            </Typography>
           </Box>
           <Grid container spacing={1}>
             <Grid item xs={6}>

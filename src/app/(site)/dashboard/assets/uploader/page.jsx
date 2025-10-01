@@ -11,6 +11,7 @@ import {
   Chip,
   Tooltip,
   Button,
+  IconButton,
   TextField,
   LinearProgress,
   Stack,
@@ -18,6 +19,7 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
 import ImagesSection from './ImagesSection'
@@ -281,14 +283,7 @@ export default function UploadAssetPage() {
       id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
       archiveFile,
       images: imageFiles.map((f) => f.file || f),
-      meta: {
-        title,
-        titleEn,
-        categories: selectedCategories,
-        tags,
-        isPremium,
-        accountId: selectedAcc?.id || null,
-      },
+      meta: { title, titleEn, categories: selectedCategories, tags, isPremium, accountId: selectedAcc?.id || null, },
       sizeBytes,
       status: 'queued', // queued | running | success | error
     }
@@ -644,9 +639,22 @@ export default function UploadAssetPage() {
                       borderRadius: 2,
                       position: 'relative',
                       transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease',
+                      // Resaltar en rojo suave si el uso >= 80%
+                      ...( (() => { 
+                        const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB; 
+                        const used = Math.max(0, acc.storageUsedMB || 0); 
+                        const pct = total ? (used / total) * 100 : 0; 
+                        return pct >= 80 ? { backgroundColor: 'rgba(244,67,54,0.08)', borderColor: 'rgba(244,67,54,0.4)' } : {}; 
+                      })() ),
                       '&:hover': {
-                        borderColor: '#7C4DFF',
-                        boxShadow: '0 0 0 3px rgba(124,77,255,0.25)'
+                        ...( (() => { 
+                          const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB; 
+                          const used = Math.max(0, acc.storageUsedMB || 0); 
+                          const pct = total ? (used / total) * 100 : 0; 
+                          return pct >= 80 
+                            ? { borderColor: 'rgba(244,67,54,0.7)', boxShadow: '0 0 0 3px rgba(244,67,54,0.25)' } 
+                            : { borderColor: '#7C4DFF', boxShadow: '0 0 0 3px rgba(124,77,255,0.25)' };
+                        })() )
                       },
                       '&:active': { transform: 'scale(0.997)' }
                     }}
@@ -663,7 +671,6 @@ export default function UploadAssetPage() {
                         </Stack>
                         <Typography variant="body2" color="text.secondary">{acc.email}</Typography>
                         <Box>
-                          <Typography variant="caption">Uso de almacenamiento</Typography>
                           <LinearProgress
                             variant="determinate"
                             value={(() => {
@@ -671,9 +678,65 @@ export default function UploadAssetPage() {
                               const used = Math.max(0, acc.storageUsedMB || 0)
                               return Math.min(100, (used / total) * 100)
                             })()}
-                            sx={{ my: 0.5 }}
+                            sx={{
+                              my: 0.5,
+                              ...( (() => {
+                                const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+                                const used = Math.max(0, acc.storageUsedMB || 0);
+                                const pct = total ? (used / total) * 100 : 0;
+                                return pct >= 80
+                                  ? {
+                                      backgroundColor: 'rgba(244,67,54,0.2)',
+                                      '& .MuiLinearProgress-bar': { backgroundColor: 'error.main' },
+                                    }
+                                  : {};
+                              })() ),
+                            }}
                           />
-                          <Typography variant="caption">{acc.storageUsedMB} MB / {acc.storageTotalMB > 0 ? `${acc.storageTotalMB} MB` : `${FREE_QUOTA_MB} MB`}</Typography>
+                          <Typography variant="caption">
+                            {(() => {
+                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+                              const used = Math.max(0, acc.storageUsedMB || 0);
+                              const pct = Math.min(100, total ? (used / total) * 100 : 0);
+                              return `${used} MB / ${total} MB (${Math.round(pct)}%)`;
+                            })()}
+                          </Typography>
+                          {/* Backups row */}
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              Backups:
+                              {Array.isArray(acc.backups) && acc.backups.length === 0 && (
+                                <span style={{ color: '#ef5350' }}>Sin backup</span>
+                              )}
+                              {Array.isArray(acc.backups) && acc.backups.length > 0 && (
+                                <span style={{ opacity: .8 }}>({acc.backups.length})</span>
+                              )}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              disabled={!Array.isArray(acc.backups) || acc.backups.length === 0}
+                              onClick={() => setExpandedAccId(prev => prev === acc.id ? null : acc.id)}
+                              sx={{
+                                transform: expandedAccId === acc.id ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform .15s ease',
+                              }}
+                              aria-label="Toggle backups"
+                            >
+                              <ExpandMoreIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                          {expandedAccId === acc.id && Array.isArray(acc.backups) && acc.backups.length > 0 && (
+                            <Box sx={{ mt: 1, pl: 0.5 }}>
+                              <Stack spacing={0.5}>
+                                {acc.backups.map((b) => (
+                                  <Stack key={b.id} direction="row" alignItems="center" spacing={1}>
+                                    <Typography variant="caption" sx={{ fontWeight: 500 }}>{b.alias}</Typography>
+                                    <StatusChip status={b.status} />
+                                  </Stack>
+                                ))}
+                              </Stack>
+                            </Box>
+                          )}
                         </Box>
                         <Grid container spacing={1}>
                           <Grid item xs={6}>
@@ -693,10 +756,23 @@ export default function UploadAssetPage() {
                           <Button
                             variant="contained"
                             onClick={() => {
+                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
+                              const used = Math.max(0, acc.storageUsedMB || 0);
+                              const pct = Math.min(100, total ? (used / total) * 100 : 0);
+                              const hasBackup = Array.isArray(acc.backups) && acc.backups.length > 0;
+                              if (!hasBackup) {
+                                window.alert('Esta cuenta no tiene backup asignado. No puede seleccionarse.');
+                                return;
+                              }
                               setSelectedAcc(acc)
                               setAccStatus('disconnected')
                               setAccReason(undefined)
                               setModalOpen(false)
+                              if (pct >= 80) {
+                                setTimeout(() => {
+                                  window.alert('Esta cuenta ha superado el 80% de su almacenamiento. Considera usar otra cuenta o liberar espacio.')
+                                }, 0)
+                              }
                             }}
                           >
                             Seleccionar
