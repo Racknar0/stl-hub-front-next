@@ -242,6 +242,7 @@ export default function SearchClient({ initialParams }) {
                       key={i}
                       className="chip chip--link"
                       href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
+                      onClick={(e) => { e.stopPropagation(); }}
                     >
                       #{c}
                     </Link>
