@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import axios from '../../../services/AxiosInterceptor';
@@ -7,6 +7,8 @@ import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
+// Importamos el estilo del loader global para reutilizar el mismo spinner inline
+import '../../../components/common/GlobalLoader/GlobalLoader.scss';
 import './search.scss';
 
 function toDisplayItem(a, lang) {
@@ -55,12 +57,42 @@ export default function SearchClient({ initialParams }) {
   const language = useStore((s)=>s.language);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const isEn = String(language || 'es').toLowerCase() === 'en';
+  // paginación real
+  const PAGE_SIZE = 24;
   const [q, setQ] = useState(initialParams?.q || '');
   const [categories, setCategories] = useState(initialParams?.categories || '');
   const [tags, setTags] = useState(initialParams?.tags || '');
   const [order, setOrder] = useState(initialParams?.order || '');
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
+  const [page, setPage] = useState(0); // zero-based
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
+  // Refs para evitar condiciones de carrera y loops
+  const pageRef = useRef(0);
+  const isLoadingRef = useRef(false);
+  const hasMoreRef = useRef(true);
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const Spinner = () => (
+    <div className="sk-circle" aria-hidden="true">
+      <div className="sk-circle1 sk-child"></div>
+      <div className="sk-circle2 sk-child"></div>
+      <div className="sk-circle3 sk-child"></div>
+      <div className="sk-circle4 sk-child"></div>
+      <div className="sk-circle5 sk-child"></div>
+      <div className="sk-circle6 sk-child"></div>
+      <div className="sk-circle7 sk-child"></div>
+      <div className="sk-circle8 sk-child"></div>
+      <div className="sk-circle9 sk-child"></div>
+      <div className="sk-circle10 sk-child"></div>
+      <div className="sk-circle11 sk-child"></div>
+      <div className="sk-circle12 sk-child"></div>
+    </div>
+  );
 
   // sincronizar con cambios de la URL
   useEffect(() => {
@@ -78,24 +110,79 @@ export default function SearchClient({ initialParams }) {
   const catList = useMemo(() => String(categories || '').split(',').map(s=>s.trim()).filter(Boolean), [categories]);
   const tagList = useMemo(() => String(tags || '').split(',').map(s=>s.trim()).filter(Boolean), [tags]);
 
+  // Reset y carga inicial cuando cambian filtros
   useEffect(() => {
-    const controller = new AbortController();
-    const run = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get('/assets/search', { params, signal: controller.signal });
-        const items = (res.data?.items || []).map(a => toDisplayItem(a, language));
-        setItems(items);
-      } catch (e) {
-        if (e.name !== 'CanceledError') console.error(e);
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
-    return () => controller.abort();
+    setItems([]);
+    setPage(0);
+    setHasMore(true);
+    setIsLoadingMore(false);
+    setLoading(true);
+    pageRef.current = 0;
+    hasMoreRef.current = true;
+    isLoadingRef.current = false;
+  }, [params.q, params.categories, params.tags, params.order, params.plan]);
+
+  const loadPageReal = useCallback(async (nextPage) => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    if (nextPage > 0) setIsLoadingMore(true);
+    try {
+      // Delay artificial para visualizar el loader
+      await sleep(0);
+      const res = await axios.get('/assets/search', {
+        params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
+      });
+      const list = (res.data?.items || []).map(a => toDisplayItem(a, language));
+      setItems(prev => nextPage === 0 ? list : [...prev, ...list]);
+      const total = Number(res.data?.total ?? 0);
+      const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
+      const computedHasMore = typeof res.data?.hasMore === 'boolean'
+        ? !!res.data.hasMore
+        : ((nextPage + 1) * pageSize < total);
+      setHasMore(computedHasMore);
+      pageRef.current = nextPage + 1;
+      setPage(pageRef.current);
+      hasMoreRef.current = computedHasMore;
+    } catch (e) {
+      console.error(e);
+      if (nextPage === 0) setItems([]);
+      setHasMore(false);
+      hasMoreRef.current = false;
+    } finally {
+      if (nextPage > 0) setIsLoadingMore(false);
+      if (nextPage === 0) setLoading(false);
+      isLoadingRef.current = false;
+    }
+  }, [params, language]);
+
+  // Carga inicial
+  useEffect(() => {
+    loadPageReal(0);
   }, [params.q, params.categories, params.tags, params.order, params.plan, language]);
+
+  // Cargar más
+  const loadMoreReal = useCallback(() => {
+    // Evitar disparar la primera carga; esa la hace el efecto inicial
+    if (pageRef.current === 0 && items.length === 0) return;
+    if (!hasMoreRef.current || isLoadingRef.current) return;
+    loadPageReal(pageRef.current);
+  }, [loadPageReal, items.length]);
+
+  // IntersectionObserver para scroll infinito
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (!entry.isIntersecting) return;
+      loadMoreReal();
+    }, { root: null, rootMargin: '200px', threshold: 0 });
+    obs.observe(el);
+    return () => {
+      try { obs.unobserve(el); } catch {}
+      obs.disconnect();
+    };
+  }, [loadMoreReal, page, hasMore, isLoadingMore]);
 
   const catHref = (c) => {
     if (!c) return '#'
@@ -124,11 +211,15 @@ export default function SearchClient({ initialParams }) {
               {t('search.mostDownloaded')}
             </Button>
           </div>
-          {/* Eliminado toggle de simulación de suscripción */}
         </div>
 
-        {loading ? <p>{t('search.loading')}</p> : null}
-        {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
+  {/* Loader inline con el mismo estilo que el global */}
+  {loading && items.length === 0 ? (
+    <div style={{display:'flex',justifyContent:'center',padding:'14px 0'}}>
+      <Spinner />
+    </div>
+  ) : null}
+  {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
 
         <div className="results-grid">
           {items.map((it) => (
@@ -163,10 +254,25 @@ export default function SearchClient({ initialParams }) {
               <span className="badge" aria-hidden="true">✓</span>
             </article>
           ))}
+          {items.length > 0 && (
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+            {hasMore ? (
+              <div ref={sentinelRef} style={{ color: '#9aa4c7', fontSize: '.9rem', display:'flex', alignItems:'center', gap:'10px' }}>
+                {isLoadingMore ? <Spinner /> : 'Cargar más…'}
+              </div>
+            ) : (
+              <div style={{ color: '#9aa4c7', fontSize: '.9rem' }}>
+                {
+                  isEn ? 'No more results' : 'No hay más resultados'
+                }
+              </div>
+            )}
+          </div>
+          )}
         </div>
       </div>
 
-      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
+  <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
     </section>
   );
 }
