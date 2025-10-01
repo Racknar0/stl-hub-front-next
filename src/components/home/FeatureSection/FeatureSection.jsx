@@ -4,6 +4,8 @@ import React from 'react';
 import Image from 'next/image';
 import Button from '../../layout/Buttons/Button';
 import './FeatureSection.scss';
+// Reutilizamos el spinner del loader global (estilos)
+import '../../common/GlobalLoader/GlobalLoader.scss';
 // Slider
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -23,7 +25,24 @@ const FeatureSection = ({
     const finalTitle = title || t('sliders.feature.title');
     const finalSubtitle = subtitle || t('sliders.feature.subtitle');
     const finalCta = ctaLabel || t('sliders.feature.cta');
-    const list = items; // ya viene con título según idioma
+        const list = items; // ya viene con título según idioma
+        const showLoader = !Array.isArray(list) || list.length === 0;
+        const Spinner = ({ size = 36 }) => (
+            <div className="sk-circle" style={{ width: size, height: size }}>
+                <div className="sk-circle1 sk-child" />
+                <div className="sk-circle2 sk-child" />
+                <div className="sk-circle3 sk-child" />
+                <div className="sk-circle4 sk-child" />
+                <div className="sk-circle5 sk-child" />
+                <div className="sk-circle6 sk-child" />
+                <div className="sk-circle7 sk-child" />
+                <div className="sk-circle8 sk-child" />
+                <div className="sk-circle9 sk-child" />
+                <div className="sk-circle10 sk-child" />
+                <div className="sk-circle11 sk-child" />
+                <div className="sk-circle12 sk-child" />
+            </div>
+        );
     return (
         <section className="feature-section">
             <div className="container-narrow">
@@ -42,8 +61,12 @@ const FeatureSection = ({
                             </Button>
                         </div>
 
-                        {/* Slider de cards */}
-                        {list && list.length > 0 ? (
+                                                {/* Slider de cards o loader mientras carga */}
+                                                {showLoader ? (
+                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 220, margin: "0 auto" }}>
+                                                        <Spinner size={36} />
+                                                    </div>
+                                                ) : (
                           <Swiper
                               className="cards"
                               modules={[Navigation]}
@@ -93,8 +116,8 @@ const FeatureSection = ({
                                       </SwiperSlide>
                                   );
                               })}
-                          </Swiper>
-                        ) : null}
+                                                    </Swiper>
+                                                )}
                     </div>
                 </div>
             </div>

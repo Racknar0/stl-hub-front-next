@@ -9,10 +9,28 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
+import '../../common/GlobalLoader/GlobalLoader.scss';
 
-const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => {
+const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false }) => {
   const { t } = useI18n();
   const finalLinkLabel = linkLabel || t('sliders.row.more');
+  const Spinner = ({ size = 36 }) => (
+    <div className="sk-circle" style={{ width: size, height: size }}>
+      <div className="sk-circle1 sk-child" />
+      <div className="sk-circle2 sk-child" />
+      <div className="sk-circle3 sk-child" />
+      <div className="sk-circle4 sk-child" />
+      <div className="sk-circle5 sk-child" />
+      <div className="sk-circle6 sk-child" />
+      <div className="sk-circle7 sk-child" />
+      <div className="sk-circle8 sk-child" />
+      <div className="sk-circle9 sk-child" />
+      <div className="sk-circle10 sk-child" />
+      <div className="sk-circle11 sk-child" />
+      <div className="sk-circle12 sk-child" />
+    </div>
+  );
+  const showLoader = loading || !Array.isArray(items) || items.length === 0;
   return (
     <section className="section-row">
       <div className="container-narrow">
@@ -25,43 +43,48 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick }) => 
             </Button>
           ) : null}
         </div>
-
-        <Swiper
-          className="row-slider"
-          modules={[Navigation]}
-          navigation
-          slidesPerView="auto"
-          spaceBetween={16}
-          grabCursor
-          watchOverflow
-        >
-          {items.map((it) => (
-            <SwiperSlide key={it.id}>
-              <article className="card-item" onClick={() => onItemClick?.(it)}>
-                <div
-                  className="thumb"
-                  style={{ backgroundImage: `url(${it.thumb})` }}
-                />
-                <div className="info">
-                  {/* it.title ya viene en el idioma derivado por Home */}
-                  <div className="title">{it.title || '-'}</div>
-                  <div className="chips">
-                    {it.chips?.map((c, idx) => (
-                      <Link
-                        className="chip chip--link"
-                        key={idx}
-                        href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        #{c}
-                      </Link>
-                    ))}
+        {showLoader ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+            <Spinner size={36} />
+          </div>
+        ) : (
+          <Swiper
+            className="row-slider"
+            modules={[Navigation]}
+            navigation
+            slidesPerView="auto"
+            spaceBetween={16}
+            grabCursor
+            watchOverflow
+          >
+            {items.map((it) => (
+              <SwiperSlide key={it.id}>
+                <article className="card-item" onClick={() => onItemClick?.(it)}>
+                  <div
+                    className="thumb"
+                    style={{ backgroundImage: `url(${it.thumb})` }}
+                  />
+                  <div className="info">
+                    {/* it.title ya viene en el idioma derivado por Home */}
+                    <div className="title">{it.title || '-'}</div>
+                    <div className="chips">
+                      {it.chips?.map((c, idx) => (
+                        <Link
+                          className="chip chip--link"
+                          key={idx}
+                          href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          #{c}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </article>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+                </article>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        )}
       </div>
     </section>
   );

@@ -74,7 +74,7 @@ const en = {
     },
     // New: Free
     free: {
-      title: 'Free (updated daily)',
+      title: 'Freebies: new and random every day',
       more: 'See more'
     },
     // New: categories
