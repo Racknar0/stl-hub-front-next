@@ -6,7 +6,7 @@ import './Header.scss'
 import Button from '../Buttons/Button'
 import axiosInstance from '../../../services/AxiosInterceptor';
 import useStore from '../../../store/useStore'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { confirmAlert } from '../../../helpers/alerts'
 import HttpService from '../../../services/HttpService'
 // import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
@@ -59,6 +59,7 @@ const Header = () => {
   const setLanguage = useStore((s) => s.setLanguage)
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const http = new HttpService()
   const { t } = useI18n()
 
@@ -86,8 +87,11 @@ const Header = () => {
     return () => { mounted = false }
   }, [])
 
-  // Resetear spinner local al cambiar de ruta
-  useEffect(() => { setSearchLoading(false) }, [pathname])
+  // Resetear spinner local al cambiar de ruta o de querystring (importante en /search)
+  useEffect(() => {
+    // cualquier cambio de path o de parámetros de búsqueda libera el loading
+    setSearchLoading(false)
+  }, [pathname, searchParams?.toString()])
 
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
