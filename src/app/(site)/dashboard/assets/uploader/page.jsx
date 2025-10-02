@@ -273,6 +273,22 @@ export default function UploadAssetPage() {
     const gb = mb/1024; return `${gb.toFixed(2)} GB`
   }
 
+  const statusPillStyle = (s) => {
+    const base = { display:'inline-block', padding:'2px 8px', borderRadius:999, fontSize:12, fontWeight:600, letterSpacing:.2 }
+    switch(String(s)){
+      case 'success':
+        return { ...base, color:'#2e7d32', background:'rgba(46,125,50,0.15)', border:'1px solid rgba(46,125,50,0.25)', textTransform:'none' }
+      case 'queued':
+        return { ...base, color:'#8d6e00', background:'rgba(255,193,7,0.18)', border:'1px solid rgba(255,193,7,0.35)', textTransform:'none' }
+      case 'running':
+        return { ...base, color:'#1565c0', background:'rgba(21,101,192,0.14)', border:'1px solid rgba(21,101,192,0.3)', textTransform:'none' }
+      case 'error':
+        return { ...base, color:'#d32f2f', background:'rgba(244,67,54,0.16)', border:'1px solid rgba(244,67,54,0.35)', textTransform:'none' }
+      default:
+        return { ...base, color:'#9aa4c7', background:'rgba(154,164,199,0.15)', border:'1px solid rgba(154,164,199,0.3)', textTransform:'none' }
+    }
+  }
+
   const canEnqueue = !!archiveFile && imageFiles.length >= 1
 
   const handleAddToQueue = () => {
@@ -616,7 +632,9 @@ export default function UploadAssetPage() {
                           {(it.meta?.tags || []).map(t=>String(t)).filter(Boolean).slice(0,3).join(', ')}{(it.meta?.tags?.length||0) > 3 ? ` +${(it.meta.tags.length-3)}` : ''}
                         </td>
                         <td style={{ padding:'8px' }}>{formatBytes(it.sizeBytes)}</td>
-                        <td style={{ padding:'8px', textTransform:'capitalize' }}>{it.status}</td>
+                        <td style={{ padding:'8px' }}>
+                          <span style={statusPillStyle(it.status)}>{it.status}</span>
+                        </td>
                         <td style={{ padding:'8px' }}>
                           {it.status === 'queued' ? (
                             <Button size="small" color="warning" variant="outlined" onClick={() => setUploadQueue(arr => arr.filter(x => x.id !== it.id))}>Eliminar</Button>
