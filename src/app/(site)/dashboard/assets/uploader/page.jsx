@@ -9,18 +9,9 @@ import {
   CardHeader,
   CardContent,
   Typography,
-  Chip,
-  Tooltip,
   Button,
-  IconButton,
-  TextField,
-  LinearProgress,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
 } from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
 import ImagesSection from './ImagesSection'
@@ -29,8 +20,9 @@ import MetadataSection from './MetadataSection'
 import StatusSection from './StatusSection'
 import AppButton from '@/components/layout/Buttons/Button'
 import MegaStatus from './MegaStatus'
-import StatusChip from './StatusChip'
 import AssetsUploadedWidget from './AssetsUploadedWidget'
+import SelectMegaAccountModal from './SelectMegaAccountModal'
+import ProfilesBar from './ProfilesBar'
 
 const http = new HttpService()
 const API_BASE = '/accounts'
@@ -79,7 +71,6 @@ export default function UploadAssetPage() {
   const [uploadFinished, setUploadFinished] = useState(false)
   const [statusKey, setStatusKey] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const [expandedAccId, setExpandedAccId] = useState(null)
   // Eliminado: estados de listado de assets en este modal
 
   // ==== Perfiles locales (categorías + tags) ====
@@ -460,6 +451,19 @@ export default function UploadAssetPage() {
   const totalMB = selectedAcc ? (selectedAcc.storageTotalMB > 0 ? selectedAcc.storageTotalMB : FREE_QUOTA_MB) : FREE_QUOTA_MB
   const usedPct = Math.min(100, totalMB ? (usedMB / totalMB) * 100 : 0)
 
+  // Selección de cuenta desde el modal
+  const handleSelectAccount = useCallback((acc, pct) => {
+    setSelectedAcc(acc)
+    setAccStatus('disconnected')
+    setAccReason(undefined)
+    setModalOpen(false)
+    if (pct >= 80) {
+      setTimeout(() => {
+        window.alert('Esta cuenta ha superado el 80% de su almacenamiento. Considera usar otra cuenta o liberar espacio.')
+      }, 0)
+    }
+  }, [])
+
   // Bloqueo de navegación/recarga si hay cola o subida activa
   useEffect(() => {
     const message = 'Hay subidas en curso o elementos en cola. Si sales, podrías perder el progreso. ¿Deseas salir?'
@@ -552,40 +556,16 @@ export default function UploadAssetPage() {
         onTest={testSelectedAccount}
       />
 
-      {/* Perfiles rápidos (chips arriba) */}
-      <Card className="glass" sx={{ mt: 1, mb: 1 }}>
-        <CardContent sx={{ display:'flex', flexWrap:'wrap', gap: 1, alignItems:'center' }}>
-          <Typography variant="subtitle2" sx={{ mr: 1, opacity: 0.9 }}>Perfiles:</Typography>
-          {profiles.length === 0 && (
-            <Typography variant="caption" sx={{ opacity: 0.6 }}>No hay perfiles. Crea uno con tus categorías y tags frecuentes.</Typography>
-          )}
-          {profiles.map((p) => (
-            <Chip
-              key={p.name}
-              label={p.name}
-              size="small"
-              onClick={() => applyProfile(p)}
-              onDelete={() => removeProfile(p.name)}
-              sx={{ cursor:'pointer' }}
-            />
-          ))}
-          <Box sx={{ display:'inline-flex', gap: 1, alignItems:'center', ml:'auto', flexWrap:'wrap' }}>
-            {!addProfileOpen ? (
-              <Button size="small" variant="outlined" onClick={() => setAddProfileOpen(true)}>Añadir perfil</Button>
-            ) : (
-              <>
-                <TextField size="small" placeholder="Nombre del perfil" value={newProfileName} onChange={(e)=>setNewProfileName(e.target.value)} sx={{ minWidth: 200 }} />
-                <Button size="small" variant="contained" onClick={handleSaveProfileFromCurrent} disabled={!newProfileName.trim()}>Guardar</Button>
-                <Button size="small" onClick={()=>{ setAddProfileOpen(false); setNewProfileName('') }}>Cancelar</Button>
-              </>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <AssetsUploadedWidget />
-      </div>
+      <ProfilesBar
+        profiles={profiles}
+        onApply={applyProfile}
+        onDelete={(name) => removeProfile(name)}
+        addProfileOpen={addProfileOpen}
+        setAddProfileOpen={setAddProfileOpen}
+        newProfileName={newProfileName}
+        setNewProfileName={setNewProfileName}
+        onSaveCurrent={handleSaveProfileFromCurrent}
+      />
 
       {/* 2) Layout de carga */}
       <Box sx={{ ms: 'auto' }}>
@@ -665,6 +645,10 @@ export default function UploadAssetPage() {
                 } catch (e) {
                   console.error('refresh account after upload failed', e)
                 }
+                try {
+                  // Notificar a widgets interesados que hubo una subida exitosa
+                  window.dispatchEvent(new CustomEvent('assets:uploaded'))
+                } catch {}
                 // Si estamos procesando la cola, pasar al siguiente tras 10s
                 if (isProcessingQueue) {
                   handleItemFinished(true)
@@ -817,175 +801,14 @@ export default function UploadAssetPage() {
         </Card>
       </Box>
 
-      {/* Modal de selección de cuenta */}
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>Seleccionar cuenta MEGA</DialogTitle>
-        <DialogContent dividers sx={{ p: 2 }}>
-          <Box sx={{ maxHeight: '70vh', overflow: 'auto' }}>
-            <Grid container spacing={2}>
-              {orderedMainAccounts.map((acc) => (
-                <Grid item xs={12} md={4} key={acc.id}>
-                  <Card
-                    className="glass"
-                    sx={{
-                      cursor: 'pointer',
-                      border: '2px solid rgba(255,255,255,0.28)',
-                      borderRadius: 2,
-                      position: 'relative',
-                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease',
-                      // Resaltar en rojo suave si el uso >= 80%
-                      ...( (() => { 
-                        const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB; 
-                        const used = Math.max(0, acc.storageUsedMB || 0); 
-                        const pct = total ? (used / total) * 100 : 0; 
-                        return pct >= 80 ? { backgroundColor: 'rgba(244,67,54,0.08)', borderColor: 'rgba(244,67,54,0.4)' } : {}; 
-                      })() ),
-                      '&:hover': {
-                        ...( (() => { 
-                          const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB; 
-                          const used = Math.max(0, acc.storageUsedMB || 0); 
-                          const pct = total ? (used / total) * 100 : 0; 
-                          return pct >= 80 
-                            ? { borderColor: 'rgba(244,67,54,0.7)', boxShadow: '0 0 0 3px rgba(244,67,54,0.25)' } 
-                            : { borderColor: '#7C4DFF', boxShadow: '0 0 0 3px rgba(124,77,255,0.25)' };
-                        })() )
-                      },
-                      '&:active': { transform: 'scale(0.997)' }
-                    }}
-                  >
-                    {/* Barra verde si se verificó hoy */}
-                    {(() => { const dt = acc.lastCheckAt && new Date(acc.lastCheckAt); const now = new Date(); return dt && !isNaN(dt) && dt.getFullYear()===now.getFullYear() && dt.getMonth()===now.getMonth() && dt.getDate()===now.getDate(); })() && (
-                      <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, bgcolor: 'success.main', borderBottomLeftRadius: 8, borderBottomRightRadius: 8, zIndex: 1 }} />
-                    )}
-                    <CardContent>
-                      <Stack spacing={1}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Typography variant="h6">{acc.alias}</Typography>
-                          <StatusChip status={acc.status} />
-                        </Stack>
-                        <Typography variant="body2" color="text.secondary">{acc.email}</Typography>
-                        <Box>
-                          <LinearProgress
-                            variant="determinate"
-                            value={(() => {
-                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB
-                              const used = Math.max(0, acc.storageUsedMB || 0)
-                              return Math.min(100, (used / total) * 100)
-                            })()}
-                            sx={{
-                              my: 0.5,
-                              ...( (() => {
-                                const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
-                                const used = Math.max(0, acc.storageUsedMB || 0);
-                                const pct = total ? (used / total) * 100 : 0;
-                                return pct >= 80
-                                  ? {
-                                      backgroundColor: 'rgba(244,67,54,0.2)',
-                                      '& .MuiLinearProgress-bar': { backgroundColor: 'error.main' },
-                                    }
-                                  : {};
-                              })() ),
-                            }}
-                          />
-                          <Typography variant="caption">
-                            {(() => {
-                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
-                              const used = Math.max(0, acc.storageUsedMB || 0);
-                              const pct = Math.min(100, total ? (used / total) * 100 : 0);
-                              return `${used} MB / ${total} MB (${Math.round(pct)}%)`;
-                            })()}
-                          </Typography>
-                          {/* Backups row */}
-                          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
-                            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              Backups:
-                              {Array.isArray(acc.backups) && acc.backups.length === 0 && (
-                                <span style={{ color: '#ef5350' }}>Sin backup</span>
-                              )}
-                              {Array.isArray(acc.backups) && acc.backups.length > 0 && (
-                                <span style={{ opacity: .8 }}>({acc.backups.length})</span>
-                              )}
-                            </Typography>
-                            <IconButton
-                              size="small"
-                              disabled={!Array.isArray(acc.backups) || acc.backups.length === 0}
-                              onClick={() => setExpandedAccId(prev => prev === acc.id ? null : acc.id)}
-                              sx={{
-                                transform: expandedAccId === acc.id ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform .15s ease',
-                              }}
-                              aria-label="Toggle backups"
-                            >
-                              <ExpandMoreIcon fontSize="small" />
-                            </IconButton>
-                          </Stack>
-                          {expandedAccId === acc.id && Array.isArray(acc.backups) && acc.backups.length > 0 && (
-                            <Box sx={{ mt: 1, pl: 0.5 }}>
-                              <Stack spacing={0.5}>
-                                {acc.backups.map((b) => (
-                                  <Stack key={b.id} direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="caption" sx={{ fontWeight: 500 }}>{b.alias}</Typography>
-                                    <StatusChip status={b.status} />
-                                  </Stack>
-                                ))}
-                              </Stack>
-                            </Box>
-                          )}
-                        </Box>
-                        <Grid container spacing={1}>
-                          <Grid item xs={6}>
-                            <Typography variant="caption">Archivos</Typography>
-                            <Typography variant="body2">{acc.fileCount ?? 0}</Typography>
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Typography variant="caption">Carpetas</Typography>
-                            <Typography variant="body2">{acc.folderCount ?? 0}</Typography>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <Typography variant="caption">Última verificación</Typography>
-                            <Typography variant="body2">{acc.lastCheckAt ? new Date(acc.lastCheckAt).toLocaleString() : '-'}</Typography>
-                          </Grid>
-                        </Grid>
-                        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
-                          <Button
-                            variant="contained"
-                            onClick={() => {
-                              const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
-                              const used = Math.max(0, acc.storageUsedMB || 0);
-                              const pct = Math.min(100, total ? (used / total) * 100 : 0);
-                              const hasBackup = Array.isArray(acc.backups) && acc.backups.length > 0;
-                              if (!hasBackup) {
-                                window.alert('Esta cuenta no tiene backup asignado. No puede seleccionarse.');
-                                return;
-                              }
-                              setSelectedAcc(acc)
-                              setAccStatus('disconnected')
-                              setAccReason(undefined)
-                              setModalOpen(false)
-                              if (pct >= 80) {
-                                setTimeout(() => {
-                                  window.alert('Esta cuenta ha superado el 80% de su almacenamiento. Considera usar otra cuenta o liberar espacio.')
-                                }, 0)
-                              }
-                            }}
-                          >
-                            Seleccionar
-                          </Button>
-                        </Stack>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-              {orderedMainAccounts.length === 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary" sx={{ opacity: .8, p:1 }}>No hay cuentas main disponibles</Typography>
-                </Grid>
-              )}
-            </Grid>
-          </Box>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de selección de cuenta extraído */}
+      <SelectMegaAccountModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        accounts={orderedMainAccounts}
+        freeQuotaMB={FREE_QUOTA_MB}
+        onSelectAccount={handleSelectAccount}
+      />
     </div>
   )
 }

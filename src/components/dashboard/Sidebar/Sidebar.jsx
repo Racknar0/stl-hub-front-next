@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
+import AssetsUploadedWidget from '@/app/(site)/dashboard/assets/uploader/AssetsUploadedWidget'
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false)
@@ -136,6 +137,9 @@ const Sidebar = () => {
             </li>
           </ul>
         </nav>
+        <div className="sidebar-bottom">
+          <AssetsUploadedWidget />
+        </div>
       </aside>
     </>
   )

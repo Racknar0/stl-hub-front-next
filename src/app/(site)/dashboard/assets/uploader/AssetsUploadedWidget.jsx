@@ -23,7 +23,9 @@ const AssetsUploadedWidget = ({ counts: initialCounts }) => {
       }
     }
     fetchCounts()
-    return () => { mounted = false }
+    const onUploaded = () => { if (mounted) fetchCounts() }
+    window.addEventListener('assets:uploaded', onUploaded)
+    return () => { mounted = false; window.removeEventListener('assets:uploaded', onUploaded) }
   }, [])
 
 
