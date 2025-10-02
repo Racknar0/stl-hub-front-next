@@ -82,6 +82,36 @@ export default function UploadAssetPage() {
   const [expandedAccId, setExpandedAccId] = useState(null)
   // Eliminado: estados de listado de assets en este modal
 
+  // ==== Perfiles locales (categorías + tags) ====
+  const LS_PROFILES_KEY = 'uploader_profiles_v1'
+  const [profiles, setProfiles] = useState([]) // [{ name, categories: string[], tags: string[] }]
+  const [categoriesCatalog, setCategoriesCatalog] = useState([]) // para mapear slugs -> objetos
+  const [addProfileOpen, setAddProfileOpen] = useState(false)
+  const [newProfileName, setNewProfileName] = useState('')
+
+  const listProfiles = useCallback(() => {
+    try { return JSON.parse(localStorage.getItem(LS_PROFILES_KEY)) || [] } catch { return [] }
+  }, [])
+  const saveProfiles = useCallback((arr) => {
+    localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(arr))
+  }, [])
+  const addProfile = useCallback((name, catsSlugs = [], tagsList = []) => {
+    const trimmed = String(name || '').trim()
+    if (!trimmed) return
+    const all = listProfiles()
+    const idx = all.findIndex(p => String(p.name).toLowerCase() === trimmed.toLowerCase())
+    const next = { name: trimmed, categories: Array.from(new Set(catsSlugs)), tags: Array.from(new Set(tagsList)) }
+    if (idx >= 0) all[idx] = next; else all.push(next)
+    saveProfiles(all)
+    setProfiles(all)
+  }, [listProfiles, saveProfiles])
+  const removeProfile = useCallback((name) => {
+    const all = listProfiles()
+    const next = all.filter(p => String(p.name).toLowerCase() !== String(name||'').toLowerCase())
+    saveProfiles(next)
+    setProfiles(next)
+  }, [listProfiles, saveProfiles])
+
   // ==== Cola de subidas (solo frontend) ====
   const [uploadQueue, setUploadQueue] = useState([]) // [{id, archiveFile, images:File[], meta:{...}, sizeBytes, status}]
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
@@ -120,6 +150,18 @@ export default function UploadAssetPage() {
   }
 
   useEffect(() => { fetchAccounts() }, [])
+
+  // Cargar perfiles y catálogo de categorías al montar
+  useEffect(() => {
+    setProfiles(listProfiles())
+    ;(async () => {
+      try {
+        const resCats = await http.getData('/categories')
+        const items = (resCats.data?.items || []).map(c => ({ id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug, slugEn: c.slugEn }))
+        setCategoriesCatalog(items)
+      } catch (e) { setCategoriesCatalog([]) }
+    })()
+  }, [listProfiles])
 
   // Solo cuentas MAIN para selección en uploader; ordenar: más recientes primero
   const orderedMainAccounts = useMemo(() => {
@@ -335,6 +377,25 @@ export default function UploadAssetPage() {
     setStatusKey(k => k + 1)
   }
 
+  // Aplicar un perfil (categorías por slug -> objetos del catálogo, tags como strings)
+  const applyProfile = useCallback((profile) => {
+    if (!profile) return
+    const slugs = Array.isArray(profile.categories) ? profile.categories.map(s=>String(s).toLowerCase()) : []
+    const mappedCats = (categoriesCatalog || []).filter(c => slugs.includes(String(c.slug||'').toLowerCase()) || slugs.includes(String(c.slugEn||'').toLowerCase()))
+    setSelectedCategories(mappedCats)
+    setTags(Array.isArray(profile.tags) ? profile.tags : [])
+  }, [categoriesCatalog])
+
+  const handleSaveProfileFromCurrent = useCallback(() => {
+    const name = String(newProfileName||'').trim()
+    if (!name) return
+    const catsSlugs = (selectedCategories || []).map(c => String(c?.slug || c?.slugEn || '').toLowerCase()).filter(Boolean)
+    const tagsList = Array.isArray(tags) ? tags.map(t=>String(t).toLowerCase()) : []
+    addProfile(name, catsSlugs, tagsList)
+    setNewProfileName('')
+    setAddProfileOpen(false)
+  }, [newProfileName, selectedCategories, tags, addProfile])
+
   const startNextFromQueue = async (startAt = 0) => {
     const q = uploadQueue
     if (!q.length || startAt >= q.length) {
@@ -490,6 +551,37 @@ export default function UploadAssetPage() {
         onOpenModal={() => setModalOpen(true)}
         onTest={testSelectedAccount}
       />
+
+      {/* Perfiles rápidos (chips arriba) */}
+      <Card className="glass" sx={{ mt: 1, mb: 1 }}>
+        <CardContent sx={{ display:'flex', flexWrap:'wrap', gap: 1, alignItems:'center' }}>
+          <Typography variant="subtitle2" sx={{ mr: 1, opacity: 0.9 }}>Perfiles:</Typography>
+          {profiles.length === 0 && (
+            <Typography variant="caption" sx={{ opacity: 0.6 }}>No hay perfiles. Crea uno con tus categorías y tags frecuentes.</Typography>
+          )}
+          {profiles.map((p) => (
+            <Chip
+              key={p.name}
+              label={p.name}
+              size="small"
+              onClick={() => applyProfile(p)}
+              onDelete={() => removeProfile(p.name)}
+              sx={{ cursor:'pointer' }}
+            />
+          ))}
+          <Box sx={{ display:'inline-flex', gap: 1, alignItems:'center', ml:'auto', flexWrap:'wrap' }}>
+            {!addProfileOpen ? (
+              <Button size="small" variant="outlined" onClick={() => setAddProfileOpen(true)}>Añadir perfil</Button>
+            ) : (
+              <>
+                <TextField size="small" placeholder="Nombre del perfil" value={newProfileName} onChange={(e)=>setNewProfileName(e.target.value)} sx={{ minWidth: 200 }} />
+                <Button size="small" variant="contained" onClick={handleSaveProfileFromCurrent} disabled={!newProfileName.trim()}>Guardar</Button>
+                <Button size="small" onClick={()=>{ setAddProfileOpen(false); setNewProfileName('') }}>Cancelar</Button>
+              </>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <AssetsUploadedWidget />
