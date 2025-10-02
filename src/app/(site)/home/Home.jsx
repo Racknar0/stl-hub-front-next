@@ -133,12 +133,13 @@ const Home = () => {
         const latestArr = Array.isArray(res.data) ? res.data : [];
         setLatestRaw(latestArr);
 
-        const resTop = await http.getData('/assets/top?limit=19');
+  const resTop = await http.getData('/assets/top?limit=20');
         const topArr = Array.isArray(resTop.data) ? resTop.data : [];
         setTopRaw(topArr);
 
         // Nuevo: FREE actuales (público vía /assets/search)
-        const resFree = await http.getData('/assets/search?plan=free&order=downloads');
+  // Orden: últimos primero (id desc) y límite 20
+  const resFree = await http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20');
         const freeArr = Array.isArray(resFree.data?.items) ? resFree.data.items : [];
         setFreeRaw(freeArr);
 
@@ -175,7 +176,10 @@ const Home = () => {
     setLoadingMoreCats(true);
     try {
       // peticiones en paralelo por categoría
-      const results = await Promise.allSettled(slice.map(cat => http.getData(`/assets/search?categories=${encodeURIComponent(cat.slug)}&order=downloads`)));
+      // Categorías: últimos primero (id desc) y límite 20 por slider
+      const results = await Promise.allSettled(
+        slice.map(cat => http.getData(`/assets/search?categories=${encodeURIComponent(cat.slug)}&pageIndex=0&pageSize=20`))
+      );
       const nextMap = { ...catMap };
       const nextOrder = [...catOrder];
       results.forEach((res, idx) => {
@@ -219,14 +223,15 @@ const Home = () => {
   }, [language, latestRaw, topRaw, freeRaw]);
 
   // Derivar listas según idioma
-  const latest = useMemo(() => latestData.map(a => toCardItem(a, language)), [latestData, language]);
-  const top = useMemo(() => topData.map(a => toCardItem(a, language)), [topData, language]);
-  const free = useMemo(() => freeData.map(a => toCardItem(a, language)), [freeData, language]);
+  // Limitar sliders a 20 elementos por seguridad adicional
+  const latest = useMemo(() => latestData.slice(0,20).map(a => toCardItem(a, language)), [latestData, language]);
+  const top = useMemo(() => topData.slice(0,20).map(a => toCardItem(a, language)), [topData, language]);
+  const free = useMemo(() => freeData.slice(0,20).map(a => toCardItem(a, language)), [freeData, language]);
 
   const catSliders = useMemo(() => (
     catOrder.map(slug => {
       const cat = cats.find(c => c.slug === slug);
-      const items = (catMap[slug] || []).map(a => toCardItem(a, language));
+      const items = (catMap[slug] || []).slice(0,20).map(a => toCardItem(a, language));
       return {
         slug,
         title: language === 'en' ? (cat?.nameEn || cat?.name || slug) : (cat?.name || cat?.nameEn || slug),
