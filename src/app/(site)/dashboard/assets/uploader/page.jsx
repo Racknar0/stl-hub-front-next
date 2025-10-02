@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Box,
   Grid,
@@ -50,6 +51,7 @@ const mapBackendToUiStatus = (s) => {
 }
 
 export default function UploadAssetPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState([])
   const [selectedAcc, setSelectedAcc] = useState(null)
   const [accStatus, setAccStatus] = useState('idle')
@@ -91,6 +93,9 @@ export default function UploadAssetPage() {
   const queueActive = isProcessingQueue || cooldown > 0
   const hasQueuedItems = uploadQueue.some(it => it.status === 'queued')
   const allCompleted = uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')
+  const hasActiveQueued = uploadQueue.some(it => it.status === 'queued' || it.status === 'running')
+  const shouldBlockNav = isUploading || queueActive || hasActiveQueued
+  const navBypassRef = React.useRef(false)
 
   const remotePath = '/STLHUB/assets/slug-demo/'
 
@@ -393,6 +398,76 @@ export default function UploadAssetPage() {
   const usedMB = selectedAcc ? Math.max(0, selectedAcc.storageUsedMB || 0) : 0
   const totalMB = selectedAcc ? (selectedAcc.storageTotalMB > 0 ? selectedAcc.storageTotalMB : FREE_QUOTA_MB) : FREE_QUOTA_MB
   const usedPct = Math.min(100, totalMB ? (usedMB / totalMB) * 100 : 0)
+
+  // Bloqueo de navegación/recarga si hay cola o subida activa
+  useEffect(() => {
+    const message = 'Hay subidas en curso o elementos en cola. Si sales, podrías perder el progreso. ¿Deseas salir?'
+
+    const handleBeforeUnload = (e) => {
+      if (!shouldBlockNav) return
+      e.preventDefault()
+      e.returnValue = message
+      return message
+    }
+
+    const handleDocumentClick = (e) => {
+      if (!shouldBlockNav) return
+      const anchor = e.target && e.target.closest ? e.target.closest('a[href]') : null
+      if (!anchor) return
+      const href = anchor.getAttribute('href')
+      if (!href || href.startsWith('#')) return
+      if (anchor.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      // sólo navegación interna
+      try {
+        const url = new URL(href, window.location.origin)
+        if (url.origin !== window.location.origin) return
+        e.preventDefault()
+        const ok = window.confirm(message)
+        if (ok) {
+          navBypassRef.current = true
+          router.push(url.pathname + url.search + url.hash)
+          setTimeout(() => { navBypassRef.current = false }, 1000)
+        }
+      } catch { /* ignore */ }
+    }
+
+    const originalPushState = history.pushState
+    const originalReplaceState = history.replaceState
+    const patchHistory = (original) => function (...args) {
+      try {
+        const url = args[2]
+        const dest = typeof url === 'string' ? new URL(url, window.location.origin) : url
+        if (shouldBlockNav && !navBypassRef.current && dest && dest.href && dest.pathname !== window.location.pathname) {
+          const ok = window.confirm(message)
+          if (!ok) return
+        }
+      } catch { /* ignore */ }
+      return original.apply(this, args)
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('click', handleDocumentClick, true)
+    history.pushState = patchHistory(originalPushState)
+    history.replaceState = patchHistory(originalReplaceState)
+
+    const onPopState = (e) => {
+      if (!shouldBlockNav) return
+      const ok = window.confirm(message)
+      if (!ok) {
+        // revertir la navegación
+        history.forward()
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('click', handleDocumentClick, true)
+      history.pushState = originalPushState
+      history.replaceState = originalReplaceState
+      window.removeEventListener('popstate', onPopState)
+    }
+  }, [shouldBlockNav, router])
 
   return (
     <div className="dashboard-content p-3">
