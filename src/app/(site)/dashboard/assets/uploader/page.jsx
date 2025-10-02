@@ -575,6 +575,15 @@ export default function UploadAssetPage() {
                     ? 'Completada'
                     : (uploadQueue.length ? `${uploadQueue.length} en cola` : 'Vacía'))
             }
+            action={(() => {
+              const totalBytes = (uploadQueue||[]).reduce((s, it) => s + (it.sizeBytes || 0), 0)
+              const totalMB = totalBytes / (1024 * 1024)
+              return (
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  {`Total: ${totalMB.toFixed(1)} MB`}
+                </Typography>
+              )
+            })()}
           />
           <CardContent>
             {uploadQueue.length === 0 ? (
