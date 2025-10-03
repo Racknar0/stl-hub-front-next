@@ -179,6 +179,7 @@ export default function MetadataSection({
                         size="small"
                         sx={inputSx}
                         error={!!errors?.title}
+                        helperText={errors?.titleMessage || undefined}
                     />
                     <TextField
                         label="Nombre del stl (EN)"

@@ -71,6 +71,8 @@ export default function UploadAssetPage() {
   const [uploadFinished, setUploadFinished] = useState(false)
   const [statusKey, setStatusKey] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  // Error de unicidad de slug
+  const [slugConflict, setSlugConflict] = useState({ conflict: false, suggestion: '', checking: false })
   // Eliminado: estados de listado de assets en este modal
 
   // ==== Perfiles locales (categorías + tags) ====
@@ -270,8 +272,31 @@ export default function UploadAssetPage() {
     if (fieldErrors.titleEn) list.push('Nombre (EN) requerido')
     if (fieldErrors.categories) list.push('Selecciona al menos 1 categoría')
     if (fieldErrors.tags) list.push('Agrega al menos 2 tags')
+    if (slugConflict.conflict) list.push(`Ya existe un asset con esta carpeta. Prueba con: ${slugConflict.suggestion}`)
     return list
-  }, [accStatus, selectedAcc, archiveFile, imageFiles.length, fieldErrors])
+  }, [accStatus, selectedAcc, archiveFile, imageFiles.length, fieldErrors, slugConflict.conflict, slugConflict.suggestion])
+
+  // Limpiar error de conflicto al cambiar el título (sin llamadas en vivo)
+  useEffect(() => { setSlugConflict({ conflict:false, suggestion:'', checking:false }) }, [title])
+
+  // Helper: verificar unicidad del slug al intentar subir/añadir
+  const slugifyTitle = useCallback((s) => String(s||'').toLowerCase().trim().replace(/[^a-z0-9-\s_]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80), [])
+  const ensureUniqueSlugOrSetError = useCallback(async () => {
+    const base = slugifyTitle(title)
+    if (!base) return false
+    try {
+      const res = await http.getData(`/assets/check-unique?slug=${encodeURIComponent(base)}`)
+      const data = res.data || {}
+      if (data.conflict) {
+        setSlugConflict({ conflict: true, suggestion: data.suggestion || base, checking: false })
+        return false
+      }
+      return true
+    } catch (e) {
+      // En caso de fallo del endpoint, permitimos continuar y que el backend real decida.
+      return true
+    }
+  }, [http, title, slugifyTitle])
 
   const canUpload = (
     accStatus === 'connected' &&
@@ -329,9 +354,15 @@ export default function UploadAssetPage() {
 
   const canEnqueue = !!archiveFile && imageFiles.length >= 1
 
-  const handleAddToQueue = () => {
+  const titleErrorMessage = slugConflict.conflict
+    ? `Ya existe un asset con esta carpeta. Prueba con: ${slugConflict.suggestion}`
+    : undefined
+
+  const handleAddToQueue = async () => {
     // snapshot rápido del formulario y archivos
     if (!archiveFile || imageFiles.length < 1) return;
+    const unique = await ensureUniqueSlugOrSetError()
+    if (!unique) return
     const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
     const item = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
@@ -395,9 +426,28 @@ export default function UploadAssetPage() {
       return
     }
     setQueueIndex(startAt)
-    // marcar running
-    setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'running' } : it))
     const item = q[startAt]
+    // Pre-flight: validar unicidad del slug del título del item
+    const base = String(item?.meta?.title || '').toLowerCase().trim().replace(/[^a-z0-9-\s_]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)
+    if (!base) {
+      // sin título válido -> marcar error y continuar
+      setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'error' } : it))
+      handleItemFinished(false)
+      return
+    }
+    try {
+      const res = await http.getData(`/assets/check-unique?slug=${encodeURIComponent(base)}`)
+      if (res?.data?.conflict) {
+        // conflicto -> marcar error y continuar
+        setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'error' } : it))
+        handleItemFinished(false)
+        return
+      }
+    } catch (e) {
+      // si el check falla, por seguridad seguimos y dejamos que el backend decida
+    }
+    // marcar running y poblar el formulario
+    setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'running' } : it))
     populateFormFromQueueItem(item)
     // pequeña espera para que React pinte el formulario antes de subir
     setTimeout(() => {
@@ -587,7 +637,7 @@ export default function UploadAssetPage() {
                 tags={tags} setTags={setTags}
                 isPremium={isPremium} setIsPremium={setIsPremium}
                 disabled={isUploading}
-                errors={fieldErrors}
+                errors={{...fieldErrors, titleMessage: titleErrorMessage}}
               />
 
           </Grid>
@@ -672,7 +722,11 @@ export default function UploadAssetPage() {
                 <>
                   <AppButton
                     type="button"
-                    onClick={() => statusRef.current?.startUpload()}
+                    onClick={async () => {
+                      const ok = await ensureUniqueSlugOrSetError()
+                      if (!ok) return
+                      statusRef.current?.startUpload()
+                    }}
                     variant={canUpload ? 'purple' : 'dangerOutline'}
                     width="300px"
                     styles={canUpload ? { color: '#fff' } : undefined}
@@ -716,7 +770,7 @@ export default function UploadAssetPage() {
                       </AppButton>
                     )}
                   </Box>
-                  {!canUpload && (
+                  {(!canUpload || slugConflict.conflict) && (
                     <Box sx={{ mt: 1 }}>
                       {missingReasons.map((m, idx) => (
                         <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
