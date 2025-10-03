@@ -73,6 +73,8 @@ export default function UploadAssetPage() {
   const [isUploading, setIsUploading] = useState(false)
   // Error de unicidad de slug
   const [slugConflict, setSlugConflict] = useState({ conflict: false, suggestion: '', checking: false })
+  // Título original de la pestaña para restaurar al finalizar
+  const originalTitleRef = React.useRef('')
   // Eliminado: estados de listado de assets en este modal
 
   // ==== Perfiles locales (categorías + tags) ====
@@ -143,6 +145,41 @@ export default function UploadAssetPage() {
   }
 
   useEffect(() => { fetchAccounts() }, [])
+
+  // Guardar título original al montar y restaurar al desmontar
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      originalTitleRef.current = document.title
+    }
+    return () => {
+      try { if (typeof document !== 'undefined' && originalTitleRef.current) document.title = originalTitleRef.current } catch {}
+    }
+  }, [])
+
+  // Actualizar título del tab con el progreso de la cola (x/y completo)
+  const [activeStage, setActiveStage] = useState({ stage: 'idle', percent: 0, alias: '' })
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const total = uploadQueue.length
+    const completed = uploadQueue.filter(it => it.status === 'success').length
+    const busy = isUploading || isProcessingQueue || queueActive
+    if (busy && total > 0) {
+      const base = originalTitleRef.current || document.title
+      const pct = Math.max(0, Math.min(100, Math.round(activeStage.percent || 0)))
+      let stageLabel = ''
+      if (activeStage.stage === 'server') stageLabel = `Srv${pct}%`
+      else if (activeStage.stage === 'mega') stageLabel = `Mga${pct}%`
+      else if (activeStage.stage === 'backup') {
+        const alias = activeStage.alias ? String(activeStage.alias).slice(0, 10) : ''
+        stageLabel = `Bkc_${alias}_${pct}%`
+      } else stageLabel = ''
+
+      const label = stageLabel ? `${completed}/${total} - ${stageLabel}` : `${completed}/${total}`
+      document.title = `${label} · ${base}`
+    } else {
+      if (originalTitleRef.current) document.title = originalTitleRef.current
+    }
+  }, [uploadQueue, isUploading, isProcessingQueue, queueActive, activeStage])
 
   // Cargar perfiles y catálogo de categorías al montar
   useEffect(() => {
@@ -685,6 +722,7 @@ export default function UploadAssetPage() {
                 images: imageFiles.map(f => f.file)
               })}
               onUploadingChange={setIsUploading}
+              onProgressUpdate={(p) => setActiveStage(p)}
               onDone={async () => {
                 setUploadFinished(true)
                 try {

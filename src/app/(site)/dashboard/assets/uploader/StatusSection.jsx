@@ -5,7 +5,7 @@ import HttpService from '@/services/HttpService'
 const http = new HttpService()
 
 const StatusSection = forwardRef(function StatusSection(props, ref) {
-  const { getFormData, onDone, onUploadingChange } = props
+  const { getFormData, onDone, onUploadingChange, onProgressUpdate } = props
   const [serverProgress, setServerProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
 
@@ -61,12 +61,14 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
           if (!evt.total) return
           const pct = Math.round((evt.loaded * 100) / evt.total)
           setServerProgress(Math.min(99, pct))
+          try { onProgressUpdate?.({ stage: 'server', percent: Math.min(99, pct) }) } catch {}
         }
       })
 
       // Archivo e imágenes ya en backend, asset creado y MEGA encolado
-      setServerProgress(100)
+  setServerProgress(100)
       setServerDone(true)
+  try { onProgressUpdate?.({ stage: 'server', percent: 100 }) } catch {}
       const created = resp.data
       setMegaStatus('processing')
 
@@ -99,6 +101,21 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
           setMegaDone(mainStatus === 'published')
           const overall = r.data?.overallPercent ?? main.progress ?? 0
           setOverallProgress(overall)
+
+          // Notificar etapa activa: mega principal o primer backup en PROCESO
+          try {
+            const mainStatus = (main.status || '').toLowerCase()
+            if (mainStatus === 'processing' && (main.progress ?? 0) < 100) {
+              onProgressUpdate?.({ stage: 'mega', percent: Math.max(0, Math.min(100, Math.round(main.progress ?? 0))) })
+            } else {
+              const activeReplica = merged.find(rp => (rp.status || '').toLowerCase() === 'processing')
+              if (activeReplica) {
+                onProgressUpdate?.({ stage: 'backup', percent: Math.max(0, Math.min(100, Math.round(activeReplica.progress || 0))), alias: activeReplica.alias || String(activeReplica.accountId || '') })
+              } else if (doneFlag) {
+                onProgressUpdate?.({ stage: 'idle', percent: 100 })
+              }
+            }
+          } catch {}
             
           const doneFlag = !!r.data?.allDone
           setAllDone(doneFlag)
