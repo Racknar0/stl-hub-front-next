@@ -501,6 +501,45 @@ export default function UploadAssetPage() {
     startNextFromQueue(0)
   }
 
+  // Reintentar desde el último completado: busca el último índice con success y arranca desde el siguiente queued/error
+  const handleRetryFromLastCompleted = () => {
+    if (isUploading) return
+    if (!uploadQueue.length) return
+    // limpiar cualquier cooldown previo
+    if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
+    setCooldown(0)
+    // determinar punto de arranque
+    let lastOk = -1
+    uploadQueue.forEach((it, idx) => { if (it.status === 'success') lastOk = idx })
+    const startAt = Math.min(uploadQueue.length - 1, Math.max(0, lastOk + 1))
+    // si desde startAt no hay elementos pendientes, intentar encontrar el primero con estado 'error'
+    let hasPendingAhead = uploadQueue.slice(startAt).some(it => it.status === 'queued' || it.status === 'error')
+    let start = startAt
+    if (!hasPendingAhead) {
+      const firstPending = uploadQueue.findIndex(it => it.status === 'queued' || it.status === 'error')
+      if (firstPending >= 0) start = firstPending
+      else return // nada que reintentar
+    }
+    setIsProcessingQueue(true)
+    // marcar los 'error' como 'queued' para reintentar
+    setUploadQueue(arr => arr.map((it, idx) => (idx >= start && it.status === 'error') ? { ...it, status: 'queued' } : it))
+    startNextFromQueue(start)
+  }
+
+  // Reintentar un item puntual con error: repoblar formulario y lanzar upload
+  const handleRetrySingle = (index) => {
+    if (isUploading) return
+    const item = uploadQueue[index]
+    if (!item || item.status !== 'error') return
+    // resetear cooldown
+    if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
+    setCooldown(0)
+    // marcar como queued y preparar formulario
+    setUploadQueue(arr => arr.map((it, idx) => idx === index ? { ...it, status: 'queued' } : it))
+    setIsProcessingQueue(true)
+    startNextFromQueue(index)
+  }
+
   const handleItemFinished = (ok = true) => {
     const idx = queueIndex
     if (idx < 0) return
@@ -784,6 +823,16 @@ export default function UploadAssetPage() {
                     >
                       Añadir a la cola
                     </AppButton>
+                    <AppButton
+                      type="button"
+                      onClick={handleRetryFromLastCompleted}
+                      variant={uploadQueue.some(it => it.status === 'error') ? 'cyan' : 'dangerOutline'}
+                      width="260px"
+                      styles={{ color: '#fff' }}
+                      disabled={isUploading || (!uploadQueue.some(it => it.status === 'error'))}
+                    >
+                      Reintentar desde el último completo
+                    </AppButton>
                     {allCompleted ? (
                       <AppButton
                         type="button"
@@ -881,6 +930,8 @@ export default function UploadAssetPage() {
                         <td style={{ padding:'8px' }}>
                           {it.status === 'queued' ? (
                             <Button size="small" color="warning" variant="outlined" onClick={() => setUploadQueue(arr => arr.filter(x => x.id !== it.id))}>Eliminar</Button>
+                          ) : it.status === 'error' ? (
+                            <Button size="small" color="primary" variant="outlined" onClick={() => handleRetrySingle(idx)}>Reintentar este</Button>
                           ) : null}
                         </td>
                       </tr>
