@@ -389,7 +389,12 @@ export default function UploadAssetPage() {
     }
   }
 
-  const canEnqueue = !!archiveFile && imageFiles.length >= 1
+  const canEnqueue = (
+    accStatus === 'connected' &&
+    !!selectedAcc &&
+    !!archiveFile && 
+    imageFiles.length >= 1
+  )
 
   const titleErrorMessage = slugConflict.conflict
     ? `Ya existe un asset con esta carpeta. Prueba con: ${slugConflict.suggestion}`
@@ -398,6 +403,7 @@ export default function UploadAssetPage() {
   const handleAddToQueue = async () => {
     // snapshot rápido del formulario y archivos
     if (!archiveFile || imageFiles.length < 1) return;
+    if (accStatus !== 'connected' || !selectedAcc) return;
     const unique = await ensureUniqueSlugOrSetError()
     if (!unique) return
     const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
@@ -494,6 +500,7 @@ export default function UploadAssetPage() {
 
   const handleStartQueue = () => {
     if (isUploading) return
+    if (accStatus !== 'connected' || !selectedAcc) return
     if (isProcessingQueue || uploadQueue.length === 0) return
     setIsProcessingQueue(true)
     setCooldown(0)
@@ -504,6 +511,7 @@ export default function UploadAssetPage() {
   // Reintentar desde el último completado: busca el último índice con success y arranca desde el siguiente queued/error
   const handleRetryFromLastCompleted = () => {
     if (isUploading) return
+    if (accStatus !== 'connected' || !selectedAcc) return
     if (!uploadQueue.length) return
     // limpiar cualquier cooldown previo
     if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
@@ -529,6 +537,7 @@ export default function UploadAssetPage() {
   // Reintentar un item puntual con error: repoblar formulario y lanzar upload
   const handleRetrySingle = (index) => {
     if (isUploading) return
+    if (accStatus !== 'connected' || !selectedAcc) return
     const item = uploadQueue[index]
     if (!item || item.status !== 'error') return
     // resetear cooldown
@@ -826,10 +835,10 @@ export default function UploadAssetPage() {
                     <AppButton
                       type="button"
                       onClick={handleRetryFromLastCompleted}
-                      variant={uploadQueue.some(it => it.status === 'error') ? 'cyan' : 'dangerOutline'}
+                      variant={uploadQueue.some(it => it.status === 'error') && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
                       width="260px"
                       styles={{ color: '#fff' }}
-                      disabled={isUploading || (!uploadQueue.some(it => it.status === 'error'))}
+                      disabled={isUploading || (!uploadQueue.some(it => it.status === 'error')) || accStatus !== 'connected' || !selectedAcc}
                     >
                       Reintentar desde el último completo
                     </AppButton>
@@ -848,10 +857,10 @@ export default function UploadAssetPage() {
                       <AppButton
                         type="button"
                         onClick={handleStartQueue}
-                        variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading ? 'cyan' : 'dangerOutline'}
+                        variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
                         width="220px"
                         styles={{ color: '#fff' }}
-                        disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading}
+                        disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
                       >
                         Iniciar cola {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
                       </AppButton>
@@ -931,7 +940,12 @@ export default function UploadAssetPage() {
                           {it.status === 'queued' ? (
                             <Button size="small" color="warning" variant="outlined" onClick={() => setUploadQueue(arr => arr.filter(x => x.id !== it.id))}>Eliminar</Button>
                           ) : it.status === 'error' ? (
-                            <Button size="small" color="primary" variant="outlined" onClick={() => handleRetrySingle(idx)}>Reintentar este</Button>
+                            <Button size="small" color="primary" variant="outlined" 
+                              onClick={() => handleRetrySingle(idx)}
+                              disabled={accStatus !== 'connected' || !selectedAcc}
+                            >
+                              Reintentar este
+                            </Button>
                           ) : null}
                         </td>
                       </tr>
