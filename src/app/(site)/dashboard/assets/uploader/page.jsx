@@ -393,7 +393,9 @@ export default function UploadAssetPage() {
     accStatus === 'connected' &&
     !!selectedAcc &&
     !!archiveFile && 
-    imageFiles.length >= 1
+    imageFiles.length >= 1 &&
+    Array.isArray(selectedCategories) && selectedCategories.length >= 1 &&
+    tagsCleanCount >= 2
   )
 
   const titleErrorMessage = slugConflict.conflict
@@ -404,6 +406,8 @@ export default function UploadAssetPage() {
     // snapshot rápido del formulario y archivos
     if (!archiveFile || imageFiles.length < 1) return;
     if (accStatus !== 'connected' || !selectedAcc) return;
+    if (!Array.isArray(selectedCategories) || selectedCategories.length < 1) return;
+    if (!(tagsCleanCount >= 2)) return;
     const unique = await ensureUniqueSlugOrSetError()
     if (!unique) return
     const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
@@ -508,31 +512,7 @@ export default function UploadAssetPage() {
     startNextFromQueue(0)
   }
 
-  // Reintentar desde el último completado: busca el último índice con success y arranca desde el siguiente queued/error
-  const handleRetryFromLastCompleted = () => {
-    if (isUploading) return
-    if (accStatus !== 'connected' || !selectedAcc) return
-    if (!uploadQueue.length) return
-    // limpiar cualquier cooldown previo
-    if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
-    setCooldown(0)
-    // determinar punto de arranque
-    let lastOk = -1
-    uploadQueue.forEach((it, idx) => { if (it.status === 'success') lastOk = idx })
-    const startAt = Math.min(uploadQueue.length - 1, Math.max(0, lastOk + 1))
-    // si desde startAt no hay elementos pendientes, intentar encontrar el primero con estado 'error'
-    let hasPendingAhead = uploadQueue.slice(startAt).some(it => it.status === 'queued' || it.status === 'error')
-    let start = startAt
-    if (!hasPendingAhead) {
-      const firstPending = uploadQueue.findIndex(it => it.status === 'queued' || it.status === 'error')
-      if (firstPending >= 0) start = firstPending
-      else return // nada que reintentar
-    }
-    setIsProcessingQueue(true)
-    // marcar los 'error' como 'queued' para reintentar
-    setUploadQueue(arr => arr.map((it, idx) => (idx >= start && it.status === 'error') ? { ...it, status: 'queued' } : it))
-    startNextFromQueue(start)
-  }
+  // Eliminado: reintentar desde el último completo
 
   // Reintentar un item puntual con error: repoblar formulario y lanzar upload
   const handleRetrySingle = (index) => {
@@ -568,6 +548,27 @@ export default function UploadAssetPage() {
         startNextFromQueue(next)
       }
     }, 1000)
+  }
+
+  // Cancelar la subida actual y reiniciar desde el índice en curso
+  const handleRestartFromCurrent = () => {
+    if (accStatus !== 'connected' || !selectedAcc) return
+    const idx = queueIndex
+    // Si hay algo subiendo, cancelar
+    try { statusRef.current?.cancelUpload?.() } catch {}
+    // Limpiar cooldown
+    if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null }
+    setCooldown(0)
+    // Marcar item actual como 'queued' de nuevo si estaba running
+    if (idx >= 0 && uploadQueue[idx]?.status === 'running') {
+      setUploadQueue(arr => arr.map((it, i) => i === idx ? { ...it, status: 'queued' } : it))
+      setIsProcessingQueue(true)
+      startNextFromQueue(idx)
+    } else if (idx >= 0) {
+      // si no estaba running, igualmente reintentar desde idx
+      setIsProcessingQueue(true)
+      startNextFromQueue(idx)
+    }
   }
 
   const handleResetQueue = () => {
@@ -702,6 +703,80 @@ export default function UploadAssetPage() {
         onSaveCurrent={handleSaveProfileFromCurrent}
       />
 
+      {/* Barra de acciones (debajo de perfiles): cola primero y luego subida individual */}
+      <Card className="glass" sx={{ mt: 2, mb: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <AppButton
+            type="button"
+            onClick={handleAddToQueue}
+            variant={canEnqueue ? 'cyan' : 'dangerOutline'}
+            width="220px"
+            styles={{ color: '#fff' }}
+            disabled={!canEnqueue || isUploading}
+          >
+            Añadir a la cola
+          </AppButton>
+          {allCompleted ? (
+            <AppButton
+              type="button"
+              onClick={handleResetQueue}
+              variant={'cyan'}
+              width="220px"
+              styles={{ color: '#fff' }}
+              disabled={queueActive || isUploading}
+            >
+              Limpiar e iniciar nueva cola
+            </AppButton>
+          ) : (
+            <AppButton
+              type="button"
+              onClick={handleStartQueue}
+              variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
+              width="220px"
+              styles={{ color: '#fff' }}
+              disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
+            >
+              Iniciar cola {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
+            </AppButton>
+          )}
+          <AppButton
+            type="button"
+            onClick={handleRestartFromCurrent}
+            variant={accStatus === 'connected' && selectedAcc && (isProcessingQueue || isUploading) ? 'cyan' : 'dangerOutline'}
+            width="300px"
+            styles={{ color: '#fff' }}
+            disabled={accStatus !== 'connected' || !selectedAcc || (!isProcessingQueue && !isUploading)}
+          >
+            Reiniciar cola desde este punto
+          </AppButton>
+          <AppButton
+            type="button"
+            onClick={async () => {
+              const ok = await ensureUniqueSlugOrSetError()
+              if (!ok) return
+              statusRef.current?.startUpload()
+            }}
+            variant={canUpload ? 'purple' : 'dangerOutline'}
+            width="300px"
+            styles={canUpload ? { color: '#fff' } : undefined}
+            aria-label={canUpload ? 'Subir' : 'No permitido'}
+            disabled={!canUpload || isUploading || queueActive}
+          >
+            {canUpload ? 'Subir' : 'Completa los campos'}
+          </AppButton>
+        </CardContent>
+          {(!canUpload || slugConflict.conflict) && (
+          <Box sx={{ mt: 1, mb: 1, px: 2 }}>
+            {missingReasons.map((m, idx) => (
+              <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
+                • {m}
+              </Typography>
+            ))}
+          </Box>
+        )}
+      </Card>
+      
+
       {/* 2) Layout de carga */}
       <Box sx={{ ms: 'auto' }}>
   <Grid container spacing={2} alignItems="stretch" sx={{ display: 'flex', alignItems: 'stretch' }}>
@@ -792,7 +867,7 @@ export default function UploadAssetPage() {
               }}
             />
             <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {uploadFinished ? (
+              {uploadFinished && (
                 <AppButton
                   type="button"
                   onClick={resetForm}
@@ -804,78 +879,6 @@ export default function UploadAssetPage() {
                 >
                   Subir otro STL
                 </AppButton>
-              ) : (
-                <>
-                  <AppButton
-                    type="button"
-                    onClick={async () => {
-                      const ok = await ensureUniqueSlugOrSetError()
-                      if (!ok) return
-                      statusRef.current?.startUpload()
-                    }}
-                    variant={canUpload ? 'purple' : 'dangerOutline'}
-                    width="300px"
-                    styles={canUpload ? { color: '#fff' } : undefined}
-                    aria-label={canUpload ? 'Subir' : 'No permitido'}
-                    disabled={!canUpload || isUploading || queueActive}
-                  >
-                    {canUpload ? 'Subir' : 'Completa los campos'}
-                  </AppButton>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <AppButton
-                      type="button"
-                      onClick={handleAddToQueue}
-                      variant={canEnqueue ? 'cyan' : 'dangerOutline'}
-                      width="220px"
-                      styles={{ color: '#fff' }}
-                      disabled={!canEnqueue || isUploading}
-                    >
-                      Añadir a la cola
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      onClick={handleRetryFromLastCompleted}
-                      variant={uploadQueue.some(it => it.status === 'error') && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
-                      width="260px"
-                      styles={{ color: '#fff' }}
-                      disabled={isUploading || (!uploadQueue.some(it => it.status === 'error')) || accStatus !== 'connected' || !selectedAcc}
-                    >
-                      Reintentar desde el último completo
-                    </AppButton>
-                    {allCompleted ? (
-                      <AppButton
-                        type="button"
-                        onClick={handleResetQueue}
-                        variant={'cyan'}
-                        width="220px"
-                        styles={{ color: '#fff' }}
-                        disabled={queueActive || isUploading}
-                      >
-                        Limpiar e iniciar nueva cola
-                      </AppButton>
-                    ) : (
-                      <AppButton
-                        type="button"
-                        onClick={handleStartQueue}
-                        variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
-                        width="220px"
-                        styles={{ color: '#fff' }}
-                        disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
-                      >
-                        Iniciar cola {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
-                      </AppButton>
-                    )}
-                  </Box>
-                  {(!canUpload || slugConflict.conflict) && (
-                    <Box sx={{ mt: 1 }}>
-                      {missingReasons.map((m, idx) => (
-                        <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
-                          • {m}
-                        </Typography>
-                      ))}
-                    </Box>
-                  )}
-                </>
               )}
             </Box>
           </CardContent>

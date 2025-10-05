@@ -20,6 +20,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   const [serverDone, setServerDone] = useState(false)
   const [megaDone, setMegaDone] = useState(false)
+  const abortRef = useRef(null)
 
   const clearPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
 
@@ -56,13 +57,16 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       fd.append('isPremium', String(Boolean(isPremium)))
       fd.append('accountId', String(accountId))
 
+      // Crear controlador de cancelación para la subida al servidor
+      abortRef.current = new AbortController()
       const resp = await http.postFormData('/assets/upload', fd, {
         onUploadProgress: (evt) => {
           if (!evt.total) return
           const pct = Math.round((evt.loaded * 100) / evt.total)
           setServerProgress(Math.min(99, pct))
           try { onProgressUpdate?.({ stage: 'server', percent: Math.min(99, pct) }) } catch {}
-        }
+        },
+        signal: abortRef.current.signal,
       })
 
       // Archivo e imágenes ya en backend, asset creado y MEGA encolado
@@ -131,7 +135,11 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
         }
       }, 1200)
     } catch (e) {
-      console.error('[UPLOAD] error:', e)
+      if (e?.name === 'CanceledError' || e?.message?.toLowerCase?.().includes('canceled') || e?.message?.toLowerCase?.().includes('aborted')) {
+        console.warn('[UPLOAD] cancelado por el usuario')
+      } else {
+        console.error('[UPLOAD] error:', e)
+      }
       setUploading(false)
       onUploadingChange?.(false)
     } finally {
@@ -139,7 +147,19 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
     }
   }
 
-  useImperativeHandle(ref, () => ({ startUpload, isAllDone: () => allDone, isUploading: () => uploading }))
+  const cancelUpload = () => {
+    try {
+      if (abortRef.current) {
+        // AbortController para la subida al servidor
+        abortRef.current.abort()
+      }
+    } catch {}
+    try { clearPoll() } catch {}
+    setUploading(false)
+    onUploadingChange?.(false)
+  }
+
+  useImperativeHandle(ref, () => ({ startUpload, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
   useEffect(() => () => { clearPoll() }, [])
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {
