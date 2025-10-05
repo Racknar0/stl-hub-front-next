@@ -113,6 +113,10 @@ export default function UploadAssetPage() {
   const [queueIndex, setQueueIndex] = useState(-1)
   const [cooldown, setCooldown] = useState(0)
   const cooldownTimerRef = React.useRef(null)
+  // Cronómetro de subida/cola
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const elapsedTimerRef = React.useRef(null)
+  const startTimeRef = React.useRef(null)
 
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
@@ -373,6 +377,15 @@ export default function UploadAssetPage() {
     const gb = mb/1024; return `${gb.toFixed(2)} GB`
   }
 
+  const formatDuration = (ms) => {
+    const total = Math.max(0, Math.floor((ms||0)/1000))
+    const h = Math.floor(total/3600)
+    const m = Math.floor((total%3600)/60)
+    const s = total%60
+    const pad = (n) => String(n).padStart(2,'0')
+    return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
+  }
+
   const statusPillStyle = (s) => {
     const base = { display:'inline-block', padding:'2px 8px', borderRadius:999, fontSize:12, fontWeight:600, letterSpacing:.2 }
     switch(String(s)){
@@ -580,6 +593,10 @@ export default function UploadAssetPage() {
     setIsProcessingQueue(false)
     setQueueIndex(-1)
     setUploadQueue([])
+    // Resetear cronómetro
+    if (elapsedTimerRef.current) { clearInterval(elapsedTimerRef.current); elapsedTimerRef.current = null }
+    startTimeRef.current = null
+    setElapsedMs(0)
     resetForm()
   }
 
@@ -669,6 +686,29 @@ export default function UploadAssetPage() {
       window.removeEventListener('popstate', onPopState)
     }
   }, [shouldBlockNav, router])
+
+  // Arranque/parada del cronómetro cuando hay actividad (subida o cola activa)
+  useEffect(() => {
+    const anyActive = isUploading || queueActive
+    if (anyActive) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now()
+        setElapsedMs(0)
+      }
+      if (!elapsedTimerRef.current) {
+        elapsedTimerRef.current = setInterval(() => {
+          if (startTimeRef.current) setElapsedMs(Date.now() - startTimeRef.current)
+        }, 1000)
+      }
+    } else {
+      if (elapsedTimerRef.current) { clearInterval(elapsedTimerRef.current); elapsedTimerRef.current = null }
+      // no reiniciamos elapsedMs; queda congelado hasta próximo inicio
+    }
+    return () => {
+      // cleanup si el efecto se re-ejecuta o desmonta
+      // no limpiamos si sigue activo; el bloque superior lo gestiona
+    }
+  }, [isUploading, queueActive])
 
   return (
     <div className="dashboard-content p-3">
@@ -898,9 +938,11 @@ export default function UploadAssetPage() {
             action={(() => {
               const totalBytes = (uploadQueue||[]).reduce((s, it) => s + (it.sizeBytes || 0), 0)
               const totalMB = totalBytes / (1024 * 1024)
+              const showTime = (isUploading || queueActive) || elapsedMs > 0
               return (
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
                   {`Total: ${totalMB.toFixed(1)} MB`}
+                  {showTime ? ` • Tiempo: ${formatDuration(elapsedMs)}` : ''}
                 </Typography>
               )
             })()}
