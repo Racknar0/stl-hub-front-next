@@ -27,14 +27,17 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   const startUpload = async () => {
     if (uploading) return
     try {
+      const startTime = Date.now()
+      console.log('🚀 [UPLOAD METRICS] ===== INICIANDO UPLOAD =====')
+      
       setUploading(true)
       onUploadingChange?.(true)
       setServerProgress(0)
-  setMegaStatus('idle')
-  setMegaProgress(0)
-  setReplicas([])
-  setOverallProgress(0)
-  setAllDone(false)
+      setMegaStatus('idle')
+      setMegaProgress(0)
+      setReplicas([])
+      setOverallProgress(0)
+      setAllDone(false)
       setServerDone(false)
       setMegaDone(false)
 
@@ -42,7 +45,18 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       if (!archiveFile) throw new Error('Selecciona el archivo del asset')
       if (!accountId) throw new Error('Selecciona una cuenta')
 
+      // Métricas iniciales
+      const totalImagesSize = (images || []).reduce((s, f) => s + (f.size || 0), 0)
+      console.log('📊 [UPLOAD METRICS] Datos iniciales:', {
+        archiveSize: `${(archiveFile.size / (1024*1024)).toFixed(1)} MB`,
+        imagesCount: images?.length || 0,
+        totalImagesSize: `${(totalImagesSize / (1024*1024)).toFixed(1)} MB`,
+        totalSize: `${((archiveFile.size + totalImagesSize) / (1024*1024)).toFixed(1)} MB`,
+        timestamp: new Date().toISOString()
+      })
+
       // Un solo request con archivo + imágenes
+      const formDataStart = Date.now()
       const fd = new FormData()
       fd.append('archive', archiveFile)
       ;(images || []).forEach((f) => fd.append('images', f))
@@ -56,21 +70,73 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       fd.append('tags', JSON.stringify((tags || []).map(t => String(t).trim().toLowerCase())))
       fd.append('isPremium', String(Boolean(isPremium)))
       fd.append('accountId', String(accountId))
+      
+      const formDataTime = Date.now() - formDataStart
+      console.log('📝 [UPLOAD METRICS] FormData preparado en:', formDataTime, 'ms')
 
+      let lastProgressTime = Date.now()
+      let lastProgressLoaded = 0
+      
       // Crear controlador de cancelación para la subida al servidor
       abortRef.current = new AbortController()
+      const uploadStart = Date.now()
+      console.log('⬆️ [UPLOAD METRICS] Iniciando envío HTTP...')
+      
       const resp = await http.postFormData('/assets/upload', fd, {
         onUploadProgress: (evt) => {
           if (!evt.total) return
+          const now = Date.now()
+          const elapsed = now - uploadStart
+          const totalElapsed = now - startTime
           const pct = Math.round((evt.loaded * 100) / evt.total)
+          
+          // Calcular velocidad instantánea y promedio
+          const instantSpeed = lastProgressTime ? 
+            ((evt.loaded - lastProgressLoaded) / (1024*1024)) / ((now - lastProgressTime) / 1000) : 0
+          const avgSpeed = (evt.loaded / (1024*1024)) / (elapsed / 1000)
+          
+          // Log cada 2 segundos o en cambios significativos
+          if (now - lastProgressTime > 2000 || pct >= 99) {
+            console.log('📈 [UPLOAD METRICS] Progreso:', {
+              loaded: `${(evt.loaded / (1024*1024)).toFixed(1)} MB`,
+              total: `${(evt.total / (1024*1024)).toFixed(1)} MB`,
+              percent: pct,
+              uploadElapsed: `${elapsed}ms`,
+              totalElapsed: `${totalElapsed}ms`,
+              instantSpeed: `${instantSpeed.toFixed(2)} MB/s`,
+              avgSpeed: `${avgSpeed.toFixed(2)} MB/s`,
+              eta: avgSpeed > 0 ? `${Math.round(((evt.total - evt.loaded) / (1024*1024)) / avgSpeed)}s` : 'N/A'
+            })
+            lastProgressTime = now
+            lastProgressLoaded = evt.loaded
+          }
+          
           setServerProgress(Math.min(99, pct))
           try { onProgressUpdate?.({ stage: 'server', percent: Math.min(99, pct) }) } catch {}
         },
         signal: abortRef.current.signal,
+        // Optimizaciones para diagnosticar
+        maxContentLength: 5 * 1024 * 1024 * 1024, // 5GB
+        maxBodyLength: 5 * 1024 * 1024 * 1024,
+        timeout: 30 * 60 * 1000, // 30 min
       })
 
       // Archivo e imágenes ya en backend, asset creado y MEGA encolado
-  setServerProgress(100)
+      const uploadEnd = Date.now()
+      const totalTime = uploadEnd - startTime
+      const uploadTime = uploadEnd - uploadStart
+      
+      console.log('✅ [UPLOAD METRICS] Upload al servidor completado:', {
+        totalTime: `${totalTime}ms`,
+        uploadTime: `${uploadTime}ms`, 
+        formDataTime: `${formDataTime}ms`,
+        setupTime: `${(uploadStart - startTime - formDataTime)}ms`,
+        totalSize: `${((archiveFile.size + totalImagesSize) / (1024*1024)).toFixed(1)} MB`,
+        avgSpeed: `${(((archiveFile.size + totalImagesSize) / (1024*1024)) / (uploadTime / 1000)).toFixed(2)} MB/s`,
+        efficiency: `${((uploadTime / totalTime) * 100).toFixed(1)}%`
+      })
+      
+      setServerProgress(100)
       setServerDone(true)
   try { onProgressUpdate?.({ stage: 'server', percent: 100 }) } catch {}
       const created = resp.data
@@ -135,10 +201,15 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
         }
       }, 1200)
     } catch (e) {
+      const errorTime = Date.now()
       if (e?.name === 'CanceledError' || e?.message?.toLowerCase?.().includes('canceled') || e?.message?.toLowerCase?.().includes('aborted')) {
-        console.warn('[UPLOAD] cancelado por el usuario')
+        console.warn('⚠️ [UPLOAD METRICS] Upload cancelado por el usuario')
       } else {
-        console.error('[UPLOAD] error:', e)
+        console.error('❌ [UPLOAD METRICS] Error en upload:', {
+          error: e?.message || String(e),
+          timeToError: startTime ? `${errorTime - startTime}ms` : 'N/A',
+          uploadPhase: serverDone ? 'MEGA_processing' : 'server_upload'
+        })
       }
       setUploading(false)
       onUploadingChange?.(false)
