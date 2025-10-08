@@ -1172,7 +1172,7 @@ export default function UploadAssetPage() {
                   <Button size="small" onClick={() => navigator.clipboard?.writeText(cmd)}>Copiar</Button>
                 </div>
               )
-            })()}
+            })()} 
           </Box>
           {/* Tip de PowerShell eliminado a pedido */}
         </DialogContent>
