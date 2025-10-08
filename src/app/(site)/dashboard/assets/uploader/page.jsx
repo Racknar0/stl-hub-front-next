@@ -566,6 +566,42 @@ export default function UploadAssetPage() {
     }, 50)
   }
 
+  // --- Detección pasiva del ítem activo por SCP (solo visual) ---
+  const [scpActiveIndex, setScpActiveIndex] = useState(null)
+  useEffect(() => {
+    if (queueMode !== 'scp' || !isProcessingQueue || !batchId) {
+      setScpActiveIndex(null)
+      return
+    }
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const id = batchId
+        const pending = uploadQueue
+          .map((it, idx) => ({ it, idx }))
+          .filter(({ it }) => it.status === 'queued' || it.status === 'running')
+        let best = { idx: null, percent: -1 }
+        for (const { it, idx } of pending) {
+          const name = it.archiveFile?.name
+          const expected = it.archiveFile?.size || 0
+          if (!name || !expected) continue
+          const dirRel = `tmp/${id}`
+          try {
+            const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(`${dirRel}/${name}`)}&expectedSize=${expected}`)
+            const pct = Number.isFinite(r?.data?.percent) ? Number(r.data.percent) : 0
+            if (pct > best.percent) best = { idx, percent: pct }
+          } catch {}
+        }
+        if (!cancelled) setScpActiveIndex(best.percent > 0 ? best.idx : null)
+      } catch {
+        if (!cancelled) setScpActiveIndex(null)
+      }
+    }
+    const h = setInterval(tick, 1500)
+    tick()
+    return () => { cancelled = true; clearInterval(h) }
+  }, [queueMode, isProcessingQueue, batchId, uploadQueue])
+
   const handleStartQueue = () => {
     if (isUploading) return
     if (accStatus !== 'connected' || !selectedAcc) return
@@ -1093,6 +1129,18 @@ export default function UploadAssetPage() {
                         <td style={{ padding:'8px' }}>{formatBytes(it.sizeBytes)}</td>
                         <td style={{ padding:'8px' }}>
                           <span style={statusPillStyle(it.status)}>{it.status}</span>
+                          {queueMode === 'scp' && scpActiveIndex === idx && (
+                            <span style={{
+                              marginLeft: 8,
+                              padding: '2px 6px',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: 'rgba(123,97,255,0.15)',
+                              color: '#b8a7ff',
+                              border: '1px solid rgba(123,97,255,0.35)'
+                            }}>SCP activo</span>
+                          )}
                         </td>
                         <td style={{ padding:'8px' }}>
                           {it.status === 'queued' ? (
