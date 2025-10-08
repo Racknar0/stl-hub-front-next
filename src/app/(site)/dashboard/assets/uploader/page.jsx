@@ -493,19 +493,46 @@ export default function UploadAssetPage() {
   }, [newProfileName, selectedCategories, tags, addProfile])
 
   const startNextFromQueue = async (startAt = 0) => {
-    const q = uploadQueue
+    let q = uploadQueue
     if (!q.length || startAt >= q.length) {
       setIsProcessingQueue(false)
       setQueueIndex(-1)
       return
     }
-    setQueueIndex(startAt)
-    const item = q[startAt]
+    // En modo SCP: detectar si hay algún archivo del batch que ya esté subiendo (size > 0) y priorizarlo
+    let chosenIndex = startAt
+    if (queueMode === 'scp') {
+      try {
+        const id = batchId || `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
+        if (!batchId) setBatchId(id)
+        const pending = q
+          .map((it, idx) => ({ it, idx }))
+          .filter(({ it }) => it.status === 'queued' || it.status === 'running')
+        let best = { idx: chosenIndex, percent: -1 }
+        for (const { it, idx } of pending) {
+          const name = it.archiveFile?.name
+          const expected = it.archiveFile?.size || 0
+          if (!name || !expected) continue
+          const dirRel = `tmp/${id}`
+          try {
+            const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(`${dirRel}/${name}`)}&expectedSize=${expected}`)
+            const pct = Number.isFinite(r?.data?.percent) ? Number(r.data.percent) : 0
+            if (pct > best.percent) best = { idx, percent: pct }
+          } catch {}
+        }
+        if (best.percent > 0 && best.idx !== chosenIndex) {
+          chosenIndex = best.idx
+        }
+      } catch {}
+    }
+
+    setQueueIndex(chosenIndex)
+    const item = q[chosenIndex]
     // Pre-flight: validar unicidad del slug del título del item
     const base = String(item?.meta?.title || '').toLowerCase().trim().replace(/[^a-z0-9-\s_]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)
     if (!base) {
       // sin título válido -> marcar error y continuar
-      setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'error' } : it))
+      setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'error' } : it))
       handleItemFinished(false)
       return
     }
@@ -513,7 +540,7 @@ export default function UploadAssetPage() {
       const res = await http.getData(`/assets/check-unique?slug=${encodeURIComponent(base)}`)
       if (res?.data?.conflict) {
         // conflicto -> marcar error y continuar
-        setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'error' } : it))
+        setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'error' } : it))
         handleItemFinished(false)
         return
       }
@@ -521,7 +548,7 @@ export default function UploadAssetPage() {
       // si el check falla, por seguridad seguimos y dejamos que el backend decida
     }
     // marcar running y poblar el formulario
-    setUploadQueue(arr => arr.map((it, idx) => idx === startAt ? { ...it, status: 'running' } : it))
+    setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'running' } : it))
     populateFormFromQueueItem(item)
     // pequeña espera para que React pinte el formulario antes de subir
     setTimeout(() => {
@@ -1093,6 +1120,9 @@ export default function UploadAssetPage() {
           </Stack>
           <TextField label="Ruta remota base" value={scpRemoteBase} onChange={e=>setScpRemoteBase(e.target.value)} fullWidth sx={{ mb:2 }} />
           <Box sx={{ p: 1.5, borderRadius: 1, background: 'rgba(255,255,255,0.06)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 13 }}>
+            <div># Crear carpeta del batch (una vez)</div>
+            <div>{`ssh ${scpUser || 'user'}@${scpHost || 'host'} "mkdir -p ${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}"`}</div>
+            <br />
             <div># Ejemplo un archivo (adapta la ruta local)</div>
             <div>{`scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}</div>
             <br />
