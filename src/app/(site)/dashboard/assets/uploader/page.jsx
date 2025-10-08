@@ -865,7 +865,17 @@ export default function UploadAssetPage() {
           {queueMode === 'scp' && (
             <AppButton
               type="button"
-              onClick={() => setScpModalOpen(true)}
+              onClick={async () => {
+                try {
+                  const r = await http.getData('/assets/scp-config')
+                  const cfg = r?.data || {}
+                  if (cfg.host) setScpHost(cfg.host)
+                  if (cfg.user) setScpUser(cfg.user)
+                  if (cfg.port) setScpPort(String(cfg.port))
+                  if (cfg.remoteBase) setScpRemoteBase(cfg.remoteBase)
+                } catch {}
+                setScpModalOpen(true)
+              }}
               variant={'cyan'}
               width="220px"
               styles={{ color: '#fff' }}
