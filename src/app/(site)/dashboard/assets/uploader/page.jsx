@@ -1130,7 +1130,18 @@ export default function UploadAssetPage() {
           </Stack>
           <TextField label="Ruta remota base" value={scpRemoteBase} onChange={e=>setScpRemoteBase(e.target.value)} fullWidth sx={{ mb:2 }} />
           <Box sx={{ p: 1.5, borderRadius: 1, background: 'rgba(255,255,255,0.06)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 13 }}>
-            <div># Crear carpeta del batch (una vez)</div>
+            {/* Nombre de carpeta recomendado (local) */}
+            {(() => {
+              const folderName = `batch_${batchId || '<batchId>'}`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div><span style={{ fontWeight: 700, fontSize: 15 }}>Nombre de carpeta recomendado (local):</span> {folderName}</div>
+                  <Button size="small" onClick={() => navigator.clipboard?.writeText(folderName)}>Copiar</Button>
+                </div>
+              )
+            })()}
+
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Crear carpeta del batch (una vez)</div>
             {(() => {
               const cmd = `ssh ${scpUser || 'user'}@${scpHost || 'host'} "mkdir -p ${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}"`
               return (
@@ -1141,7 +1152,7 @@ export default function UploadAssetPage() {
               )
             })()}
             <br />
-            <div># Ejemplo un archivo (adapta la ruta local)</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Ejemplo un archivo (adapta la ruta local)</div>
             {(() => {
               const cmd = `scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
               return (
@@ -1152,9 +1163,9 @@ export default function UploadAssetPage() {
               )
             })()}
             <br />
-            <div># Subir SOLO el contenido de una carpeta (evita subir la carpeta raíz):</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Subir SOLO el contenido de una carpeta (evita subir la carpeta raíz)</div>
             {(() => {
-              const cmd = `cd C:\\stl-hub\\cola-${batchId || '<batchId>'}; scp -P ${scpPort || 22} -r .\\* ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
+              const cmd = `cd C:\\stl-hub\\batch_${batchId || '<batchId>'}; scp -P ${scpPort || 22} -r .\\* ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div>{cmd}</div>
@@ -1163,9 +1174,7 @@ export default function UploadAssetPage() {
               )
             })()}
           </Box>
-          <Typography variant="caption" sx={{ display:'block', mt: 1, opacity: 0.8 }}>
-            Tip (PowerShell): entra a C:\stl-hub\cola-{batchId || '<batchId>'} y usa <b>scp -r .\*</b> para enviar solo su contenido al servidor.
-          </Typography>
+          {/* Tip de PowerShell eliminado a pedido */}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setScpModalOpen(false)}>Cerrar</Button>
