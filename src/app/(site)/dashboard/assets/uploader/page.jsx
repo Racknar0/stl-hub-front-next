@@ -493,25 +493,27 @@ export default function UploadAssetPage() {
   }, [newProfileName, selectedCategories, tags, addProfile])
 
   const startNextFromQueue = async (startAt = 0) => {
-    let q = uploadQueue
-    if (!q.length || startAt >= q.length) {
+    const q = uploadQueue
+    // Construir lista de pendientes (solo 'queued')
+    const pendingIdxs = q.map((it, idx) => (it?.status === 'queued' ? idx : null)).filter((v) => v !== null)
+    if (!pendingIdxs.length) {
       setIsProcessingQueue(false)
       setQueueIndex(-1)
       return
     }
-    // En modo SCP: detectar si hay algún archivo del batch que ya esté subiendo (size > 0) y priorizarlo
-    let chosenIndex = startAt
+
+    // Selección del siguiente
+    let chosenIndex = null
     if (queueMode === 'scp') {
+      // En SCP elegimos el que más avanzado esté en staging (siempre reevaluando)
       try {
         const id = batchId || `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
         if (!batchId) setBatchId(id)
-        const pending = q
-          .map((it, idx) => ({ it, idx }))
-          .filter(({ it }) => it.status === 'queued' || it.status === 'running')
-        let best = { idx: chosenIndex, percent: -1 }
-        for (const { it, idx } of pending) {
-          const name = it.archiveFile?.name
-          const expected = it.archiveFile?.size || 0
+        let best = { idx: pendingIdxs[0], percent: -1 }
+        for (const idx of pendingIdxs) {
+          const it = q[idx]
+          const name = it?.archiveFile?.name
+          const expected = it?.archiveFile?.size || 0
           if (!name || !expected) continue
           const dirRel = `tmp/${id}`
           try {
@@ -520,10 +522,20 @@ export default function UploadAssetPage() {
             if (pct > best.percent) best = { idx, percent: pct }
           } catch {}
         }
-        if (best.percent > 0 && best.idx !== chosenIndex) {
-          chosenIndex = best.idx
-        }
-      } catch {}
+        chosenIndex = best.idx
+      } catch {
+        // Fallback: el primero pendiente
+        chosenIndex = pendingIdxs[0]
+      }
+    } else {
+      // HTTP: respetar orden, buscar primero >= startAt, si no hay, el primero pendiente
+      const after = pendingIdxs.find((i) => i >= startAt)
+      chosenIndex = typeof after === 'number' ? after : pendingIdxs[0]
+    }
+    if (chosenIndex === null || typeof chosenIndex !== 'number') {
+      setIsProcessingQueue(false)
+      setQueueIndex(-1)
+      return
     }
 
     setQueueIndex(chosenIndex)
@@ -644,8 +656,13 @@ export default function UploadAssetPage() {
       if (remain <= 0) {
         clearInterval(cooldownTimerRef.current)
         cooldownTimerRef.current = null
-        const next = idx + 1
-        startNextFromQueue(next)
+        if (queueMode === 'scp') {
+          // En SCP siempre reevaluamos el mejor candidato (puede ser fuera de orden)
+          startNextFromQueue(0)
+        } else {
+          const next = idx + 1
+          startNextFromQueue(next)
+        }
       }
     }, 1000)
   }
