@@ -127,10 +127,10 @@ export default function UploadAssetPage() {
   const [queueMode, setQueueMode] = useState('http')
   const [batchId, setBatchId] = useState('')
   const [scpModalOpen, setScpModalOpen] = useState(false)
-  const [scpHost, setScpHost] = useState(process.env.NEXT_PUBLIC_SCP_HOST || '')
-  const [scpUser, setScpUser] = useState(process.env.NEXT_PUBLIC_SCP_USER || '')
-  const [scpPort, setScpPort] = useState(String(process.env.NEXT_PUBLIC_SCP_PORT || '22'))
-  const [scpRemoteBase, setScpRemoteBase] = useState(process.env.NEXT_PUBLIC_SCP_REMOTE_BASE || '/var/www')
+  const [scpHost, setScpHost] = useState('')
+  const [scpUser, setScpUser] = useState('')
+  const [scpPort, setScpPort] = useState('22')
+  const [scpRemoteBase, setScpRemoteBase] = useState('')
 
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
@@ -1131,16 +1131,40 @@ export default function UploadAssetPage() {
           <TextField label="Ruta remota base" value={scpRemoteBase} onChange={e=>setScpRemoteBase(e.target.value)} fullWidth sx={{ mb:2 }} />
           <Box sx={{ p: 1.5, borderRadius: 1, background: 'rgba(255,255,255,0.06)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 13 }}>
             <div># Crear carpeta del batch (una vez)</div>
-            <div>{`ssh ${scpUser || 'user'}@${scpHost || 'host'} "mkdir -p ${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}"`}</div>
+            {(() => {
+              const cmd = `ssh ${scpUser || 'user'}@${scpHost || 'host'} "mkdir -p ${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}"`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div>{cmd}</div>
+                  <Button size="small" onClick={() => navigator.clipboard?.writeText(cmd)}>Copiar</Button>
+                </div>
+              )
+            })()}
             <br />
             <div># Ejemplo un archivo (adapta la ruta local)</div>
-            <div>{`scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}</div>
+            {(() => {
+              const cmd = `scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div>{cmd}</div>
+                  <Button size="small" onClick={() => navigator.clipboard?.writeText(cmd)}>Copiar</Button>
+                </div>
+              )
+            })()}
             <br />
-            <div># Ejemplo por carpeta local (recomendado para varios):</div>
-            <div>{`scp -P ${scpPort || 22} -r "C:\\stl-hub\\cola-${batchId || '<batchId>'}\\" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}</div>
+            <div># Subir SOLO el contenido de una carpeta (evita subir la carpeta raíz):</div>
+            {(() => {
+              const cmd = `cd C:\\stl-hub\\cola-${batchId || '<batchId>'}; scp -P ${scpPort || 22} -r .\\* ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div>{cmd}</div>
+                  <Button size="small" onClick={() => navigator.clipboard?.writeText(cmd)}>Copiar</Button>
+                </div>
+              )
+            })()}
           </Box>
           <Typography variant="caption" sx={{ display:'block', mt: 1, opacity: 0.8 }}>
-            Tip: crea la carpeta local C:\stl-hub\cola-{batchId || '<batchId>'} con todos los .zip/.rar y usa el comando con -r.
+            Tip (PowerShell): entra a C:\stl-hub\cola-{batchId || '<batchId>'} y usa <b>scp -r .\*</b> para enviar solo su contenido al servidor.
           </Typography>
         </DialogContent>
         <DialogActions>
