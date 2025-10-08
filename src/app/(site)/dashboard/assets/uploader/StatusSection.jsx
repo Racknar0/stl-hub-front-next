@@ -24,10 +24,32 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   const clearPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
 
+  // Helper: esperar a que un archivo aparezca en uploads/tmp y alcance expectedSize
+  const waitForStagedFile = async ({ pathRel, expectedSize, signal, onTick }) => {
+    // Poll cada 1s a /assets/staged-status
+    const start = Date.now()
+    let lastSize = 0
+    while (true) {
+      if (signal?.aborted) throw new Error('aborted')
+      try {
+        const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(pathRel)}&expectedSize=${expectedSize}`)
+        const data = r?.data || {}
+        const pct = Number.isFinite(data.percent) ? Math.max(0, Math.min(100, Math.round(data.percent))) : 0
+        if (onTick) onTick(pct, data)
+        if (data.exists && data.sizeB >= expectedSize) return data
+        lastSize = data.sizeB || 0
+      } catch (e) {
+        // ignorar y reintentar
+      }
+      await new Promise(res => setTimeout(res, 1000))
+      // Seguridad: si tarda demasiado, seguimos esperando; no aplicamos timeout aquí
+    }
+  }
+
   const startUpload = async () => {
     if (uploading) return
+    const startTime = Date.now()
     try {
-      const startTime = Date.now()
       console.log('🚀 [UPLOAD METRICS] ===== INICIANDO UPLOAD =====')
       
       setUploading(true)
@@ -118,7 +140,8 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
         // Optimizaciones para diagnosticar
         maxContentLength: 5 * 1024 * 1024 * 1024, // 5GB
         maxBodyLength: 5 * 1024 * 1024 * 1024,
-        timeout: 30 * 60 * 1000, // 30 min
+        // Timeout infinito para soportar archivos muy grandes
+        timeout: 0,
       })
 
       // Archivo e imágenes ya en backend, asset creado y MEGA encolado
@@ -171,6 +194,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
           setMegaDone(mainStatus === 'published')
           const overall = r.data?.overallPercent ?? main.progress ?? 0
           setOverallProgress(overall)
+          const doneFlag = !!r.data?.allDone
 
           // Notificar etapa activa: mega principal o primer backup en PROCESO
           try {
@@ -186,8 +210,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
               }
             }
           } catch {}
-            
-          const doneFlag = !!r.data?.allDone
+          
           setAllDone(doneFlag)
           if (doneFlag) {
             clearPoll()
@@ -218,6 +241,146 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
     }
   }
 
+  // Nuevo: flujo SCP. Requiere que el archivo se haya subido por SCP/SFTP a uploads/tmp/<batch>/<originalName>
+  // scpCfg: { scpDirRel: 'tmp/<batchId>' }
+  const startUploadScp = async (scpCfg) => {
+    if (uploading) return
+    try {
+      const startTime = Date.now()
+      console.log('🚀 [UPLOAD METRICS][SCP] ===== ESPERANDO ARCHIVO STAGED =====')
+
+      setUploading(true)
+      onUploadingChange?.(true)
+      setServerProgress(0)
+      setMegaStatus('idle')
+      setMegaProgress(0)
+      setReplicas([])
+      setOverallProgress(0)
+      setAllDone(false)
+      setServerDone(false)
+      setMegaDone(false)
+
+      const { archiveFile, title, titleEn, categories, tags, isPremium, accountId, images } = getFormData?.() || {}
+      if (!archiveFile) throw new Error('Selecciona el archivo del asset')
+      if (!accountId) throw new Error('Selecciona una cuenta')
+      const dirRel = String(scpCfg?.scpDirRel || '').replace(/\\/g,'/').replace(/^\/+/, '')
+      if (!dirRel) throw new Error('scpDirRel requerido')
+      const originalName = archiveFile.name
+      const pathRel = `${dirRel}/${originalName}`
+
+      // Métricas iniciales
+      const totalImagesSize = (images || []).reduce((s, f) => s + (f.size || 0), 0)
+      console.log('📊 [UPLOAD METRICS][SCP] Datos iniciales:', {
+        archiveSize: `${(archiveFile.size / (1024*1024)).toFixed(1)} MB`,
+        imagesCount: images?.length || 0,
+        totalImagesSize: `${(totalImagesSize / (1024*1024)).toFixed(1)} MB`,
+        totalSize: `${((archiveFile.size + totalImagesSize) / (1024*1024)).toFixed(1)} MB`,
+        stagedRelPath: pathRel,
+      })
+
+      // Poll a staged-status y actualizar barra de servidor
+      abortRef.current = new AbortController()
+      const staged = await waitForStagedFile({
+        pathRel,
+        expectedSize: archiveFile.size,
+        signal: abortRef.current.signal,
+        onTick: (pct) => {
+          setServerProgress(Math.min(99, pct || 0))
+          try { onProgressUpdate?.({ stage: 'server', percent: Math.min(99, pct || 0) }) } catch {}
+        }
+      })
+      console.log('✅ [UPLOAD METRICS][SCP] Archivo staged listo:', staged)
+      setServerProgress(100)
+      setServerDone(true)
+      try { onProgressUpdate?.({ stage: 'server', percent: 100 }) } catch {}
+
+      // Crear asset en DB usando el archivo staged
+      const payload = {
+        title: title || '',
+        titleEn: titleEn || '',
+        categories: Array.isArray(categories) ? categories.map(c => String(c.slug || c).toLowerCase()) : [],
+        tags: Array.isArray(tags) ? tags.map(t => String(t).trim().toLowerCase()) : [],
+        isPremium: Boolean(isPremium),
+        accountId: String(accountId),
+        tempArchivePath: pathRel, // relativo a uploads/
+        archiveOriginal: originalName,
+      }
+      const createdResp = await http.postData('/assets', payload)
+      const created = createdResp.data
+
+      // Subir imágenes (HTTP), luego encolar MEGA
+      if (Array.isArray(images) && images.length) {
+        const fdImgs = new FormData()
+        images.forEach((f) => fdImgs.append('images', f))
+        await http.postFormData(`/assets/${created.id}/images?replace=true`, fdImgs, { timeout: 0 })
+      }
+
+      await http.postData(`/assets/${created.id}/enqueue`, {})
+      setMegaStatus('processing')
+
+      // Polling de progreso completo (main + réplicas)
+      clearPoll()
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await http.getData(`/assets/${created.id}/full-progress`)
+          const main = r.data?.main || { status: 'PROCESSING', progress: 0 }
+          const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
+          const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
+          const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
+          let merged = repArr
+          if (expected.length) {
+            merged = expected.map(exp => {
+              const found = repArr.find(rp => rp.accountId === exp.accountId)
+              return found || { id: `expected-${exp.accountId}`, accountId: exp.accountId, alias: exp.alias, status: 'PENDING', progress: 0 }
+            })
+          }
+          setMegaProgress(main.progress ?? 0)
+          setReplicas(merged)
+          const mainStatus = (main.status || '').toLowerCase()
+          if (mainStatus === 'published') setMegaStatus('published')
+          else if (mainStatus === 'failed') setMegaStatus('failed')
+          else setMegaStatus('processing')
+          setMegaDone(mainStatus === 'published')
+          const overall = r.data?.overallPercent ?? main.progress ?? 0
+          setOverallProgress(overall)
+          const doneFlag = !!r.data?.allDone
+
+          try {
+            if (mainStatus === 'processing' && (main.progress ?? 0) < 100) {
+              onProgressUpdate?.({ stage: 'mega', percent: Math.max(0, Math.min(100, Math.round(main.progress ?? 0))) })
+            } else {
+              const activeReplica = merged.find(rp => (rp.status || '').toLowerCase() === 'processing')
+              if (activeReplica) {
+                onProgressUpdate?.({ stage: 'backup', percent: Math.max(0, Math.min(100, Math.round(activeReplica.progress || 0))), alias: activeReplica.alias || String(activeReplica.accountId || '') })
+              } else if (doneFlag) {
+                onProgressUpdate?.({ stage: 'idle', percent: 100 })
+              }
+            }
+          } catch {}
+          setAllDone(doneFlag)
+          if (doneFlag) {
+            clearPoll()
+            setUploading(false)
+            onUploadingChange?.(false)
+            onDone?.(created)
+          }
+        } catch (e) {
+          console.warn('[UPLOAD][poll][SCP] error', e?.message)
+        }
+      }, 1200)
+    } catch (e) {
+      const errorTime = Date.now()
+      console.error('❌ [UPLOAD METRICS][SCP] Error:', {
+        error: e?.message || String(e),
+        timeToError: `${errorTime}ms`,
+      })
+      setUploading(false)
+      onUploadingChange?.(false)
+    } finally {
+      // polling se limpia al terminar
+    }
+  }
+
   const cancelUpload = () => {
     try {
       if (abortRef.current) {
@@ -230,7 +393,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
     onUploadingChange?.(false)
   }
 
-  useImperativeHandle(ref, () => ({ startUpload, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
+  useImperativeHandle(ref, () => ({ startUpload, startUploadScp, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
   useEffect(() => () => { clearPoll() }, [])
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {

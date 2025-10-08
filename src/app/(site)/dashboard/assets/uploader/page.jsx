@@ -11,6 +11,11 @@ import {
   Typography,
   Button,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
@@ -117,6 +122,15 @@ export default function UploadAssetPage() {
   const [elapsedMs, setElapsedMs] = useState(0)
   const elapsedTimerRef = React.useRef(null)
   const startTimeRef = React.useRef(null)
+
+  // Modo de cola: 'http' (por defecto) o 'scp' (staging en uploads/tmp)
+  const [queueMode, setQueueMode] = useState('http')
+  const [batchId, setBatchId] = useState('')
+  const [scpModalOpen, setScpModalOpen] = useState(false)
+  const [scpHost, setScpHost] = useState(process.env.NEXT_PUBLIC_SCP_HOST || '')
+  const [scpUser, setScpUser] = useState(process.env.NEXT_PUBLIC_SCP_USER || '')
+  const [scpPort, setScpPort] = useState(String(process.env.NEXT_PUBLIC_SCP_PORT || '22'))
+  const [scpRemoteBase, setScpRemoteBase] = useState(process.env.NEXT_PUBLIC_SCP_REMOTE_BASE || '/var/www')
 
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
@@ -511,7 +525,17 @@ export default function UploadAssetPage() {
     populateFormFromQueueItem(item)
     // pequeña espera para que React pinte el formulario antes de subir
     setTimeout(() => {
-      statusRef.current?.startUpload?.()
+      if (queueMode === 'scp') {
+        let id = batchId
+        if (!id) {
+          id = `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
+          setBatchId(id)
+        }
+        const dirRel = `tmp/${id}`
+        statusRef.current?.startUploadScp?.({ scpDirRel: dirRel })
+      } else {
+        statusRef.current?.startUpload?.()
+      }
     }, 50)
   }
 
@@ -746,6 +770,28 @@ export default function UploadAssetPage() {
       {/* Barra de acciones (debajo de perfiles): cola primero y luego subida individual */}
       <Card className="glass" sx={{ mt: 2, mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Botón para alternar modo HTTP/SCP */}
+          <AppButton
+            type="button"
+            onClick={() => {
+              if (queueActive || isUploading) return
+              const next = queueMode === 'http' ? 'scp' : 'http'
+              setQueueMode(next)
+              if (next === 'scp') {
+                const id = `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
+                setBatchId(id)
+              } else {
+                setBatchId('')
+              }
+            }}
+            variant={queueMode === 'scp' ? 'purple' : 'cyan'}
+            width="260px"
+            styles={{ color: '#fff' }}
+            disabled={queueActive || isUploading}
+          >
+            {queueMode === 'scp' ? 'Modo SCP (activo)' : 'Activar modo SCP (beta)'}
+          </AppButton>
+
           <AppButton
             type="button"
             onClick={handleAddToQueue}
@@ -776,7 +822,7 @@ export default function UploadAssetPage() {
               styles={{ color: '#fff' }}
               disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
             >
-              Iniciar cola {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
+              {queueMode === 'scp' ? 'Iniciar cola (SCP)' : 'Iniciar cola'} {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
             </AppButton>
           )}
           <AppButton
@@ -789,12 +835,34 @@ export default function UploadAssetPage() {
           >
             Reiniciar cola desde este punto
           </AppButton>
+          {queueMode === 'scp' && (
+            <AppButton
+              type="button"
+              onClick={() => setScpModalOpen(true)}
+              variant={'cyan'}
+              width="220px"
+              styles={{ color: '#fff' }}
+              disabled={isUploading}
+            >
+              Ver comando SCP
+            </AppButton>
+          )}
           <AppButton
             type="button"
             onClick={async () => {
               const ok = await ensureUniqueSlugOrSetError()
               if (!ok) return
-              statusRef.current?.startUpload()
+              if (queueMode === 'scp') {
+                if (!batchId) {
+                  window.alert('Activa el modo SCP primero')
+                  return
+                }
+                // Directorio relativo a uploads/ para staging via SCP
+                const dirRel = `tmp/${batchId}`
+                statusRef.current?.startUploadScp?.({ scpDirRel: dirRel })
+              } else {
+                statusRef.current?.startUpload()
+              }
             }}
             variant={canUpload ? 'purple' : 'dangerOutline'}
             width="300px"
@@ -802,9 +870,17 @@ export default function UploadAssetPage() {
             aria-label={canUpload ? 'Subir' : 'No permitido'}
             disabled={!canUpload || isUploading || queueActive}
           >
-            {canUpload ? 'Subir' : 'Completa los campos'}
+            {queueMode === 'scp' ? (canUpload ? 'Registrar desde SCP' : 'Completa los campos') : (canUpload ? 'Subir' : 'Completa los campos')}
           </AppButton>
         </CardContent>
+        {queueMode === 'scp' && batchId && (
+          <Box sx={{ mt: 1, mb: 1, px: 2 }}>
+            <Typography variant="caption" sx={{ color: 'info.light', display: 'block', lineHeight: 1.6 }}>
+              Modo SCP activo: Copia el archivo principal de cada ítem al servidor en la ruta <b>uploads/tmp/{batchId}/&lt;NOMBRE_DEL_ARCHIVO&gt;</b>.
+              Puedes usar WinSCP/SFTP o scp. Una vez esté completo, pulsa "Registrar desde SCP" para crear el asset y encolarlo a MEGA.
+            </Typography>
+          </Box>
+        )}
           {(!canUpload || slugConflict.conflict) && (
           <Box sx={{ mt: 1, mb: 1, px: 2 }}>
             {missingReasons.map((m, idx) => (
@@ -1002,6 +1078,35 @@ export default function UploadAssetPage() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Modal: comando SCP */}
+      <Dialog open={scpModalOpen} onClose={() => setScpModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Subida por SCP</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Configura tu destino y copia el comando. Ruta remota calculada: {`${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}
+          </Typography>
+          <Stack direction={{ xs:'column', md:'row' }} spacing={2} sx={{ mb: 2 }}>
+            <TextField label="Host" value={scpHost} onChange={e=>setScpHost(e.target.value)} fullWidth />
+            <TextField label="Usuario" value={scpUser} onChange={e=>setScpUser(e.target.value)} fullWidth />
+            <TextField label="Puerto" value={scpPort} onChange={e=>setScpPort(e.target.value)} fullWidth />
+          </Stack>
+          <TextField label="Ruta remota base" value={scpRemoteBase} onChange={e=>setScpRemoteBase(e.target.value)} fullWidth sx={{ mb:2 }} />
+          <Box sx={{ p: 1.5, borderRadius: 1, background: 'rgba(255,255,255,0.06)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 13 }}>
+            <div># Ejemplo un archivo (adapta la ruta local)</div>
+            <div>{`scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}</div>
+            <br />
+            <div># Ejemplo por carpeta local (recomendado para varios):</div>
+            <div>{`scp -P ${scpPort || 22} -r "C:\\stl-hub\\cola-${batchId || '<batchId>'}\\" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}</div>
+          </Box>
+          <Typography variant="caption" sx={{ display:'block', mt: 1, opacity: 0.8 }}>
+            Tip: crea la carpeta local C:\stl-hub\cola-{batchId || '<batchId>'} con todos los .zip/.rar y usa el comando con -r.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScpModalOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Modal de selección de cuenta extraído */}
       <SelectMegaAccountModal
