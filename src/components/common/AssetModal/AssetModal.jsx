@@ -2,10 +2,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './AssetModal.scss';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination } from 'swiper/modules';
+import { Navigation, Pagination, Zoom } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import 'swiper/css/zoom';
 import Button from '../../layout/Buttons/Button';
 import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
@@ -460,20 +461,21 @@ export default function AssetModal({ open, onClose, asset }) {
                                         <FullscreenIcon fontSize="large" />
                                     </IconButton>
                                     <Swiper
-                                        modules={[Navigation, Pagination]}
+                                        modules={[Navigation, Pagination, Zoom]}
                                         navigation
                                         pagination
                                         loop
+                                        zoom={{ maxRatio: 3 }}
                                     >
                                         {(data.images || [])
                                             .map((src, idx) => (
                                                 <SwiperSlide key={idx}>
-                                                    <img
-                                                        src={imgUrl(src)}
-                                                        alt={`${displayTitle} ${
-                                                            idx + 1
-                                                        }`}
-                                                    />
+                                                    <div className="swiper-zoom-container">
+                                                        <img
+                                                            src={imgUrl(src)}
+                                                            alt={`${displayTitle} ${idx + 1}`}
+                                                        />
+                                                    </div>
                                                 </SwiperSlide>
                                             ))}
                                     </Swiper>
@@ -528,14 +530,17 @@ export default function AssetModal({ open, onClose, asset }) {
                                 }
                             }}>
                                 <Swiper
-                                    modules={[Navigation, Pagination]}
+                                    modules={[Navigation, Pagination, Zoom]}
                                     navigation
                                     pagination
                                     loop
+                                    zoom={{ maxRatio: 3 }}
                                 >
                                     {(data.images || []).map((src, idx) => (
                                         <SwiperSlide key={`full-${idx}`}>
-                                            <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
+                                            <div className="swiper-zoom-container">
+                                                <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
+                                            </div>
                                         </SwiperSlide>
                                     ))}
                                 </Swiper>
