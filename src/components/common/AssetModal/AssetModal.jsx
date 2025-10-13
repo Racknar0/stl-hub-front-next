@@ -13,6 +13,9 @@ import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import SimplyModal from '../SimplyModal/SimplyModal';
 import ReportBrokenModal from '../ReportBrokenModal/ReportBrokenModal';
+import { Dialog, IconButton, Box } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
 
 export default function AssetModal({ open, onClose, asset }) {
     const http = useMemo(() => new HttpService(), []);
@@ -34,6 +37,7 @@ export default function AssetModal({ open, onClose, asset }) {
     const [downloading, setDownloading] = useState(false);
     const [reporting, setReporting] = useState(false);
     const [showReport, setShowReport] = useState(false);
+    const [fullOpen, setFullOpen] = useState(false);
 
     // Modal de acceso (dinámico según /me/profile)
     // kind: 'not-auth' | 'expired' | 'no-sub' | 'error' | null
@@ -442,24 +446,38 @@ export default function AssetModal({ open, onClose, asset }) {
 
                         <div className="modal-body dialog-body">
                             <div className="gallery">
-                                <Swiper
-                                    modules={[Navigation, Pagination]}
-                                    navigation
-                                    pagination
-                                    loop
-                                >
-                                    {(data.images || [])
-                                        .map((src, idx) => (
-                                            <SwiperSlide key={idx}>
-                                                <img
-                                                    src={imgUrl(src)}
-                                                    alt={`${displayTitle} ${
-                                                        idx + 1
-                                                    }`}
-                                                />
-                                            </SwiperSlide>
-                                        ))}
-                                </Swiper>
+                               
+                                <div className="slider-container" style={{ position: 'relative' }}>
+
+                                     {/* Botón pantalla completa */}
+                                    <IconButton
+                                        onClick={() => setFullOpen(true)}
+                                        aria-label={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                        size="small"
+                                        sx={{ position: 'absolute', right: 8, bottom: 8, zIndex: 2, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' } }}
+                                        title={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                    >
+                                        <FullscreenIcon fontSize="large" />
+                                    </IconButton>
+                                    <Swiper
+                                        modules={[Navigation, Pagination]}
+                                        navigation
+                                        pagination
+                                        loop
+                                    >
+                                        {(data.images || [])
+                                            .map((src, idx) => (
+                                                <SwiperSlide key={idx}>
+                                                    <img
+                                                        src={imgUrl(src)}
+                                                        alt={`${displayTitle} ${
+                                                            idx + 1
+                                                        }`}
+                                                    />
+                                                </SwiperSlide>
+                                            ))}
+                                    </Swiper>
+                                </div>
                             </div>
 
                             <div className="meta">
@@ -467,6 +485,63 @@ export default function AssetModal({ open, onClose, asset }) {
                                     className="meta-content"
                                     style={{ position: 'relative' }}
                                 >
+
+                    {/* Dialog a pantalla completa con el mismo slider (sin AppBar) */}
+                    <Dialog fullScreen open={fullOpen} onClose={() => setFullOpen(false)}>
+                        <Box sx={{ position: 'relative', p: 0, bgcolor: 'black', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+                            {/* Botón cerrar flotante */}
+                            <IconButton
+                                onClick={() => setFullOpen(false)}
+                                aria-label={isEn ? 'Close' : 'Cerrar'}
+                                sx={{ position: 'absolute', right: 16, top: 16, zIndex: 3, color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', width: 56, height: 56, '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+                                title={isEn ? 'Close' : 'Cerrar'}
+                            >
+                                <CloseIcon sx={{ fontSize: 30 }} />
+                            </IconButton>
+                            <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                '& .swiper': {
+                                    width: '100vw',
+                                    height: '100vh',
+                                    overflow: 'hidden'
+                                },
+                                '& .swiper-wrapper': {
+                                    alignItems: 'center'
+                                },
+                                '& .swiper-slide': {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                },
+                                '& img': {
+                                    maxWidth: '100vw',
+                                    maxHeight: '100vh',
+                                    width: 'auto',
+                                    height: 'auto',
+                                    objectFit: 'contain',
+                                    display: 'block',
+                                    margin: '0 auto'
+                                }
+                            }}>
+                                <Swiper
+                                    modules={[Navigation, Pagination]}
+                                    navigation
+                                    pagination
+                                    loop
+                                >
+                                    {(data.images || []).map((src, idx) => (
+                                        <SwiperSlide key={`full-${idx}`}>
+                                            <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
+                                        </SwiperSlide>
+                                    ))}
+                                </Swiper>
+                            </Box>
+                        </Box>
+                    </Dialog>
                                     <img
                                         className="brand-logo"
                                         src="/nuevo_horizontal.png"
