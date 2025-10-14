@@ -79,8 +79,6 @@ const FeatureSection = ({
                               loopAdditionalSlides={Math.min(4, list.length)}
                           >
                               {list.map((it) => {
-
-                                 console.log('it:', it);
                                   const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/vite.svg';
                                   const formatUploadDate = (raw) => {
                                       if (!raw) return null;

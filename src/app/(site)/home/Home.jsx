@@ -108,6 +108,7 @@ const Home = () => {
     const thumb = images[0] ? imgUrl(images[0]) : '/vite.svg'
     return {
       id: a.id,
+      slug: a.slug, // necesario para enlace "ver detalle"
       title,
       chips: (chips || []).slice(0,3),
       thumb,
