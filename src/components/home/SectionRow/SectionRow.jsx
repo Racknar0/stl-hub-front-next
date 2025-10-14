@@ -57,32 +57,48 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
             grabCursor
             watchOverflow
           >
-            {items.map((it) => (
-              <SwiperSlide key={it.id}>
-                <article className="card-item" onClick={() => onItemClick?.(it)}>
-                  <div
-                    className="thumb"
-                    style={{ backgroundImage: `url(${it.thumb})` }}
-                  />
-                  <div className="info">
-                    {/* it.title ya viene en el idioma derivado por Home */}
-                    <div className="title">{it.title || '-'}</div>
-                    <div className="chips">
-                      {it.chips?.map((c, idx) => (
-                        <Link
-                          className="chip chip--link"
-                          key={idx}
-                          href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          #{c}
-                        </Link>
-                      ))}
+            {items.map((it) => {
+              const formatUploadDate = (raw) => {
+                if (!raw) return null;
+                const d = new Date(raw);
+                if (isNaN(d.getTime())) return null;
+                const dd = String(d.getDate()).padStart(2, '0');
+                const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                const mmm = months[d.getMonth()];
+                const yyyy = d.getFullYear();
+                return `${dd}-${mmm}-${yyyy}`;
+              };
+              const uploadDate = formatUploadDate(it.createdAt);
+              return (
+                <SwiperSlide key={it.id}>
+                  <article className="card-item" onClick={() => onItemClick?.(it)}>
+                    <div
+                      className="thumb"
+                      style={{ backgroundImage: `url(${it.thumb})` }}
+                    />
+                    <div className="info">
+                      {/* it.title ya viene en el idioma derivado por Home */}
+                      <div className="title">{it.title || '-'}</div>
+                      <div className="chips">
+                        {it.chips?.map((c, idx) => (
+                          <Link
+                            className="chip chip--link"
+                            key={idx}
+                            href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            #{c}
+                          </Link>
+                        ))}
+                      </div>
+                      {uploadDate && (
+                        <div className="fmeta">upload: {uploadDate}</div>
+                      )}
                     </div>
-                  </div>
-                </article>
-              </SwiperSlide>
-            ))}
+                  </article>
+                </SwiperSlide>
+              );
+            })}
           </Swiper>
         )}
       </div>

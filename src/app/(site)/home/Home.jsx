@@ -123,6 +123,7 @@ const Home = () => {
       tagSlugs: tagsEs,
       categoryEn: a.categoryEn,
       categories: Array.isArray(a.categories) ? a.categories : [],
+      createdAt: a.createdAt,
     }
   }
 

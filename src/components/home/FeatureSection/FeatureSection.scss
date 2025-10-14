@@ -57,7 +57,7 @@
     border-radius: 16px;
     min-width: 240px;
     max-width: 240px;
-    height: 350px; /* altura uniforme */
+    height: 375px; /* altura uniforme */
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
     position: relative;
     display: flex;
@@ -104,7 +104,6 @@
     display: flex;
     gap: 0.35rem;
     flex-wrap: wrap;
-    margin-top: auto; /* empujar chips al fondo para uniformidad */
 }
 .finfo .chip {
     background: rgba(255, 255, 255, 0.06);
@@ -125,6 +124,12 @@
 .fmeta {
     font-size: 0.85rem;
     opacity: 0.7;
+}
+.finfo .fbottom {
+    margin-top: auto; /* empuja el bloque inferior (chips + fecha) al fondo */
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 .badge {
     position: absolute;
@@ -176,6 +181,6 @@
     .intro {
         flex: 0 0 auto;
     }
-    .fcard { height: 300px; }
-    .fcard .thumb { height: 140px; flex-basis: 140px; }
+    .fcard { height: 330px; }
+    .fcard .thumb { height: 180px; flex-basis: 180px; }
 }

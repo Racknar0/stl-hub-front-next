@@ -79,7 +79,21 @@ const FeatureSection = ({
                               loopAdditionalSlides={Math.min(4, list.length)}
                           >
                               {list.map((it) => {
+
+                                 console.log('it:', it);
                                   const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/vite.svg';
+                                  const formatUploadDate = (raw) => {
+                                      if (!raw) return null;
+                                      const d = new Date(raw);
+                                      if (isNaN(d.getTime())) return null;
+                                      const dd = String(d.getDate()).padStart(2, '0');
+                                      const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                                      const mmm = months[d.getMonth()];
+                                      const yyyy = d.getFullYear();
+                                      return `${dd}-${mmm}-${yyyy}`;
+                                  };
+                                  const rawDate = it.createdAt; // solo usamos createdAt del backend
+                                  const uploadDate = formatUploadDate(rawDate);
                                   return (
                                       <SwiperSlide key={it.id}>
                                           <article className="fcard" onClick={() => onItemClick?.(it)}>
@@ -96,17 +110,22 @@ const FeatureSection = ({
                                               <div className="finfo">
                                                   {/* it.title ya está en el idioma activo */}
                                                   <div className="ftitle">{it.title || '-'}</div>
-                                                  <div className="chips">
-                                                      {it.chips?.map((c, idx) => (
-                                                          <Link
-                                                            className="chip chip--link"
-                                                            key={idx}
-                                                            href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                          >
-                                                            #{c}
-                                                          </Link>
-                                                      ))}
+                                                  <div className="fbottom">
+                                                      <div className="chips">
+                                                          {it.chips?.map((c, idx) => (
+                                                              <Link
+                                                                className="chip chip--link"
+                                                                key={idx}
+                                                                href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                              >
+                                                                #{c}
+                                                              </Link>
+                                                          ))}
+                                                      </div>
+                                                      {uploadDate && (
+                                                          <div className="fmeta">upload: {uploadDate}</div>
+                                                      )}
                                                   </div>
                                               </div>
                                               <span className="badge" aria-hidden="true">
