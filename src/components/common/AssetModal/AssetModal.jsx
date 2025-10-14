@@ -317,6 +317,41 @@ export default function AssetModal({ open, onClose, asset }) {
         ? data.tags.map((t) => t?.slug).filter(Boolean)
         : derivedTagsEs;
 
+    // Fallback de descripción (por si el asset viene de listados y aún no pasó por /slug)
+    const buildAutoDescription = (lang) => {
+        const isPremium = !!data?.isPremium;
+        const titleEs = data?.title || '';
+        const titleEn = data?.titleEn || data?.title || '';
+        const titleNormEs = titleEs.replace(/^\s*STL\s*-/i, '').trim();
+        const titleNormEn = titleEn.replace(/^\s*STL\s*-/i, '').trim();
+        const catObj = Array.isArray(data?.categories) && data.categories.length ? data.categories[0] : null;
+        const catEs = catObj ? (catObj.name || catObj.slug || '') : '';
+        const catEn = catObj ? (catObj.nameEn || catObj.name || catObj.slugEn || catObj.slug || '') : '';
+        const tagsListEs = derivedTagsEs.slice(0, 6).join(', ');
+        const tagsListEn = derivedTagsEn.slice(0, 6).join(', ');
+        if (lang === 'en') {
+            let intro = isPremium
+                ? `Premium STL download of "${titleNormEn || data?.slug}" via MEGA (fast & secure).`
+                : `Free STL download of "${titleNormEn || data?.slug}" via MEGA instantly.`;
+            if (catEn) intro += ` Category: ${catEn}.`;
+            intro += isPremium
+                ? ' Subscribe to unlock this and more exclusive models.'
+                : ' Print it today at no cost.';
+            if (tagsListEn) intro += ` Tags: ${tagsListEn}.`;
+            return intro.length > 300 ? intro.slice(0, 297).replace(/[,.;:\s]+$/,'') + '…' : intro;
+        } else {
+            let intro = isPremium
+                ? `Descarga STL premium de "${titleNormEs || data?.slug}" vía MEGA (acceso rápido y seguro).`
+                : `Descarga gratuita STL de "${titleNormEs || data?.slug}" vía MEGA al instante.`;
+            if (catEs) intro += ` Categoría: ${catEs}.`;
+            intro += isPremium
+                ? ' Suscríbete para desbloquear este y más modelos exclusivos.'
+                : ' Imprime en 3D hoy mismo sin costo.';
+            if (tagsListEs) intro += ` Tags: ${tagsListEs}.`;
+            return intro.length > 300 ? intro.slice(0, 297).replace(/[,.;:\s]+$/,'') + '…' : intro;
+        }
+    };
+
     // Estado y handler para "Reportar link caído"
     const showReportButton = !data?.isPremium || !!token;
     const handleReportBroken = () => setShowReport(true);
@@ -592,6 +627,27 @@ export default function AssetModal({ open, onClose, asset }) {
                                                 >detail</Link>
                                             )}
                                         </h3>
+                                        {/* Descripción (autogenerada del backend si existe) */}
+                                        {(() => {
+                                            const rawDesc = isEn
+                                                ? (data.descriptionEn || data.description)
+                                                : (data.description || data.descriptionEn);
+                                            const baseDesc = rawDesc && rawDesc.trim().length ? rawDesc : buildAutoDescription(isEn ? 'en' : 'es');
+                                            if (!baseDesc) return null;
+                                            const short = baseDesc.length > 220 ? baseDesc.slice(0, 217).replace(/[,.;:\s]+$/,'') + '…' : baseDesc;
+                                            return (
+                                                <p
+                                                    className="asset-desc"
+                                                    style={{
+                                                        margin: '0 0 .75rem',
+                                                        fontSize: '.78rem',
+                                                        lineHeight: 1.3,
+                                                        color: '#fdc3ff',
+                                                        maxWidth: '640px'
+                                                    }}
+                                                >{short}</p>
+                                            );
+                                        })()}
 
                                         {/* Categorías */}
                                         <div className="meta-block">

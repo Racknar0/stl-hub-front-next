@@ -40,15 +40,16 @@ export async function generateMetadata({ params }) {
         (asset.tagsEs?.length
             ? ` Tags: ${asset.tagsEs.slice(0, 6).join(', ')}`
             : '');
+    const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
     return {
         title: baseTitle,
         description: desc,
-        alternates: { canonical: `/asset/${asset.slug}` },
+        alternates: { canonical: `${site}/asset/${asset.slug}` },
         openGraph: {
             title: baseTitle,
             description: desc,
             type: 'article',
-            url: `/asset/${asset.slug}`,
+            url: `${site}/asset/${asset.slug}`,
             images: asset.images?.length
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
@@ -63,33 +64,67 @@ export default async function AssetPage({ params }) {
       // Para otros errores mostrar fallback simple (sin notFound para diferenciar 500)
       return <div style={{padding:'2rem'}}><h1>Error</h1><p>No pudimos cargar el asset.</p></div>;
     }
-    const jsonLd = {
+    const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
+    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
+    const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
+    // CreativeWork base + Product/Offer enriquecido para distinguir premium/free
+    const productLd = {
         '@context': 'https://schema.org',
-        '@type': 'CreativeWork',
-        name: asset.title,
-        description: asset.description || undefined,
-        datePublished: asset.createdAt,
-        inLanguage: 'es',
-        keywords: (asset.tagsEs || []).join(', '),
-        url: `${
-            process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-        }/asset/${asset.slug}`,
-        image: (asset.images || [])
-            .slice(0, 3)
-            .map((i) =>
-                i.startsWith('http')
-                    ? i
-                    : `${
-                          process.env.NEXT_PUBLIC_UPLOADS_BASE ||
-                          'http://localhost:3001/uploads'
-                      }/${i}`
-            ),
+        '@graph': [
+            {
+                '@type': 'CreativeWork',
+                '@id': `${site}/asset/${asset.slug}#creative`,
+                name: asset.title,
+                description: asset.description || undefined,
+                datePublished: asset.createdAt,
+                inLanguage: 'es',
+                keywords: (asset.tagsEs || []).join(', '),
+                url: `${site}/asset/${asset.slug}`,
+                image: imgList,
+            },
+            {
+                '@type': 'Product',
+                '@id': `${site}/asset/${asset.slug}#product`,
+                name: asset.title,
+                description: asset.description || undefined,
+                url: `${site}/asset/${asset.slug}`,
+                image: imgList,
+                isAccessoryOrSparePart: false,
+                offers: {
+                    '@type': 'Offer',
+                    price: asset.isPremium ? '4.99' : '0', // Ajusta precio real si existe
+                    priceCurrency: 'USD',
+                    availability: 'https://schema.org/InStock',
+                    url: `${site}/asset/${asset.slug}`,
+                    itemCondition: 'https://schema.org/NewCondition',
+                },
+            },
+        ],
     };
+
+    // Bloque SSR de contenido textual para crawlers (visualmente puede esconderse con CSS leve, NO display:none)
+    const categoryNames = Array.isArray(asset.categories)
+        ? asset.categories.map(c => c?.name || c?.nameEn || c?.slug).filter(Boolean)
+        : [];
+    const tagListEs = (asset.tagsEs || []).slice(0, 20);
     return (
         <>
-            {/* JSON-LD para SEO (renderizado en el servidor) */}
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            {/* El modal se abre automáticamente reutilizando la misma UI que en la home */}
+            {/* JSON-LD enriquecido */}
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
+            {/* Contenido indexable SSR */}
+            <section style={{padding:'0.5rem 1rem'}} className="asset-ssr-indexable">
+                <h1 style={{fontSize:'1.35rem',margin:'0 0 .5rem'}}>{asset.title}</h1>
+                {asset.description && (
+                    <p style={{margin:'0 0 .75rem',lineHeight:1.4}}>{asset.description}</p>
+                )}
+                {categoryNames.length > 0 && (
+                    <p style={{margin:'0 0 .5rem'}}><strong>Categorías:</strong> {categoryNames.join(', ')}</p>
+                )}
+                {tagListEs.length > 0 && (
+                    <p style={{margin:0}}><strong>Tags:</strong> {tagListEs.join(', ')}</p>
+                )}
+            </section>
+            {/* Modal visual interactivo */}
             <AssetModalPageClient asset={asset} />
         </>
     );
