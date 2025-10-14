@@ -57,7 +57,7 @@ const es = {
   },
   hero: {
     slides: [
-      { id: 1, title: 'STL Premium', subtitle: 'Listos para imprimir — FDM y resina', cta: '', image: '/hero/hero1.jpg' },
+      { id: 1, title: 'STL gratis Premium', subtitle: 'Descarga archivos STL premium gratis cada día', cta: '', image: '/hero/hero1.jpg' },
       { id: 2, title: 'Enlaces MEGA Directos', subtitle: 'Descargas rápidas y seguras', cta: '', image: '/hero/hero2.jpg' },
       { id: 3, title: 'Vista Integrada', subtitle: 'Previsualiza cada modelo al detalle', cta: '', image: '/hero/hero3.jpg' },
     ]
@@ -74,7 +74,7 @@ const es = {
     },
     // Nuevo: Free
     free: {
-      title: 'Freebies: nuevos y aleatorios cada día',
+      title: 'Freebies: descar STL gratis cada día',
       more: 'Ver más'
     },
     // Nuevo: categorías

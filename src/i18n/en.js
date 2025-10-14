@@ -57,7 +57,7 @@ const en = {
   },
   hero: {
     slides: [
-      { id: 1, title: 'Premium STL Files', subtitle: 'Ready to print — FDM & resin', cta: '', image: '/hero/hero1.jpg' },
+      { id: 1, title: 'Premium Free STL Files', subtitle: 'Download free stl premium files every day', cta: '', image: '/hero/hero1.jpg' },
       { id: 2, title: 'MEGA Direct Links', subtitle: 'Fast, reliable downloads', cta: '', image: '/hero/hero2.jpg' },
       { id: 3, title: 'Model Previews', subtitle: 'Integrated viewer on each page', cta: '', image: '/hero/hero3.jpg' },
     ]
@@ -74,7 +74,7 @@ const en = {
     },
     // New: Free
     free: {
-      title: 'Freebies: new and random every day',
+      title: 'Freebies: free STL files every day',
       more: 'See more'
     },
     // New: categories
