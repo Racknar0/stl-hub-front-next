@@ -88,6 +88,9 @@ export default function UploadAssetPage() {
   const [categoriesCatalog, setCategoriesCatalog] = useState([]) // para mapear slugs -> objetos
   const [addProfileOpen, setAddProfileOpen] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+  const sortProfilesByName = useCallback((arr=[]) => {
+    return [...(arr||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity: 'base' }))
+  }, [])
 
   const listProfiles = useCallback(() => {
     try { return JSON.parse(localStorage.getItem(LS_PROFILES_KEY)) || [] } catch { return [] }
@@ -102,15 +105,17 @@ export default function UploadAssetPage() {
     const idx = all.findIndex(p => String(p.name).toLowerCase() === trimmed.toLowerCase())
     const next = { name: trimmed, categories: Array.from(new Set(catsSlugs)), tags: Array.from(new Set(tagsList)) }
     if (idx >= 0) all[idx] = next; else all.push(next)
-    saveProfiles(all)
-    setProfiles(all)
-  }, [listProfiles, saveProfiles])
+    const ordered = sortProfilesByName(all)
+    saveProfiles(ordered)
+    setProfiles(ordered)
+  }, [listProfiles, saveProfiles, sortProfilesByName])
   const removeProfile = useCallback((name) => {
     const all = listProfiles()
     const next = all.filter(p => String(p.name).toLowerCase() !== String(name||'').toLowerCase())
-    saveProfiles(next)
-    setProfiles(next)
-  }, [listProfiles, saveProfiles])
+    const ordered = sortProfilesByName(next)
+    saveProfiles(ordered)
+    setProfiles(ordered)
+  }, [listProfiles, saveProfiles, sortProfilesByName])
 
   // ==== Cola de subidas (solo frontend) ====
   const [uploadQueue, setUploadQueue] = useState([]) // [{id, archiveFile, images:File[], meta:{...}, sizeBytes, status}]
@@ -201,7 +206,7 @@ export default function UploadAssetPage() {
 
   // Cargar perfiles y catálogo de categorías al montar
   useEffect(() => {
-    setProfiles(listProfiles())
+    setProfiles(sortProfilesByName(listProfiles()))
     ;(async () => {
       try {
         const resCats = await http.getData('/categories')
@@ -209,7 +214,7 @@ export default function UploadAssetPage() {
         setCategoriesCatalog(items)
       } catch (e) { setCategoriesCatalog([]) }
     })()
-  }, [listProfiles])
+  }, [listProfiles, sortProfilesByName])
 
   // Solo cuentas MAIN para selección en uploader; ordenar: más recientes primero
   const orderedMainAccounts = useMemo(() => {

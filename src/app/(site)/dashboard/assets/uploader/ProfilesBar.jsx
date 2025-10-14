@@ -18,7 +18,7 @@ export default function ProfilesBar({
         {profiles.length === 0 && (
           <Typography variant="caption" sx={{ opacity: 0.6 }}>No hay perfiles. Crea uno con tus categorías y tags frecuentes.</Typography>
         )}
-        {profiles.map((p) => (
+        {[...(profiles||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity:'base' })).map((p) => (
           <Chip
             key={p.name}
             label={p.name}
