@@ -276,7 +276,7 @@ export default function SearchClient({ initialParams }) {
                             aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                             style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
                           >
-                            {dateStr && <span>upload · {dateStr} · ver detalle</span>}
+                            {dateStr && <span>upload · {dateStr} · detail</span>}
                             <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
                           </Link>
                         ) : (

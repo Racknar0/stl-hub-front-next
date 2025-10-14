@@ -130,7 +130,7 @@ const FeatureSection = ({
                                                                       aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                                                                       style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
                                                                   >
-                                                                      {uploadDate && <span>upload · {uploadDate} · ver detalle</span>}
+                                                                      {uploadDate && <span>upload · {uploadDate} · detail</span>}
                                                                       <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
                                                                   </Link>
                                                               ) : (
