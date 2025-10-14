@@ -49,6 +49,7 @@ function toDisplayItem(a, lang) {
     tagSlugs: tagsEs,
     categoryEn: a.categoryEn,
     categories: Array.isArray(a.categories) ? a.categories : [],
+    createdAt: a.createdAt,
   };
 }
 
@@ -236,20 +237,31 @@ export default function SearchClient({ initialParams }) {
               </div>
               <div className="finfo">
                 <div className="ftitle">{it.title}</div>
-                <div className="chips">
-                  {(it.chips || []).slice(0, 3).map((c, i) => (
-                    <Link
-                      key={i}
-                      className="chip chip--link"
-                      href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
-                      onClick={(e) => { e.stopPropagation(); }}
-                    >
-                      #{c}
-                    </Link>
-                  ))}
-                  {(it.chips || []).length > 3 && (
-                    <span className="chip">+{(it.chips || []).length - 3}</span>
-                  )}
+                <div className="fbottom">
+                  <div className="chips">
+                    {(it.chips || []).slice(0, 3).map((c, i) => (
+                      <Link
+                        key={i}
+                        className="chip chip--link"
+                        href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
+                        onClick={(e) => { e.stopPropagation(); }}
+                      >
+                        #{c}
+                      </Link>
+                    ))}
+                    {(it.chips || []).length > 3 && (
+                      <span className="chip">+{(it.chips || []).length - 3}</span>
+                    )}
+                  </div>
+                  {it.createdAt && (() => {
+                    const d = new Date(it.createdAt);
+                    if (isNaN(d.getTime())) return null;
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                    const mmm = months[d.getMonth()];
+                    const yyyy = d.getFullYear();
+                    return <div className="fmeta">upload: {`${dd}-${mmm}-${yyyy}`}</div>;
+                  })()}
                 </div>
               </div>
               <span className="badge" aria-hidden="true">✓</span>
