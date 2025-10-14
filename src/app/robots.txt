@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Evitar indexación de endpoints internos (ajusta si cambias rutas)
+Disallow: /api/
+Disallow: /admin
+
+Sitemap: https://stl-hub.com/sitemap.xml

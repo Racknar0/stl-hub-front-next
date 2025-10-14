@@ -284,14 +284,38 @@ export default function AssetModal({ open, onClose, asset }) {
         return `/search?categories=${q}`;
     };
 
+    // --- TAGS / CHIPS NORMALIZATION ---
+    // Listados (home/buscador) proveen: chipsEs, chipsEn, tagSlugs
+    // Página detalle (/asset/[slug]) provee: tags (objetos) + tagsEs + tagsEn
+    // Unificamos para que el modal siempre muestre tags correctamente.
+    const derivedTagsEs = Array.isArray(data.tagsEs)
+        ? data.tagsEs
+        : Array.isArray(data.tags)
+        ? data.tags.map((t) => t?.slug).filter(Boolean)
+        : [];
+    const derivedTagsEn = Array.isArray(data.tagsEn)
+        ? data.tagsEn
+        : Array.isArray(data.tags)
+        ? data.tags
+              .map((t) => t?.nameEn || t?.name || t?.slug)
+              .filter(Boolean)
+        : [];
     const chipsEs = Array.isArray(data.chipsEs)
         ? data.chipsEs
         : Array.isArray(data.chips)
         ? data.chips
-        : [];
-    const chipsEn = Array.isArray(data.chipsEn) ? data.chipsEn : chipsEs;
+        : derivedTagsEs;
+    const chipsEn = Array.isArray(data.chipsEn)
+        ? data.chipsEn
+        : derivedTagsEn.length
+        ? derivedTagsEn
+        : chipsEs;
     const chips = isEn ? chipsEn : chipsEs;
-    const tagSlugs = Array.isArray(data.tagSlugs) ? data.tagSlugs : chipsEs;
+    const tagSlugs = Array.isArray(data.tagSlugs)
+        ? data.tagSlugs
+        : Array.isArray(data.tags)
+        ? data.tags.map((t) => t?.slug).filter(Boolean)
+        : derivedTagsEs;
 
     // Estado y handler para "Reportar link caído"
     const showReportButton = !data?.isPremium || !!token;

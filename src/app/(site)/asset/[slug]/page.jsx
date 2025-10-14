@@ -1,6 +1,7 @@
 import React from 'react';
-import AssetDetailCore from '../../../../components/asset/AssetDetailCore';
 import { notFound } from 'next/navigation';
+// Importar directamente el componente cliente (puede usarse dentro de un Server Component)
+import AssetModalPageClient from './AssetModalPageClient';
 
 export const revalidate = 3600; // ISR 1h
 
@@ -85,11 +86,11 @@ export default async function AssetPage({ params }) {
             ),
     };
     return (
-        <main className="asset-page-standalone" style={{ padding: '1rem 0' }}>
-            <div className="container-narrow">
-                <AssetDetailCore asset={asset} />
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            </div>
-        </main>
+        <>
+            {/* JSON-LD para SEO (renderizado en el servidor) */}
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            {/* El modal se abre automáticamente reutilizando la misma UI que en la home */}
+            <AssetModalPageClient asset={asset} />
+        </>
     );
 }
