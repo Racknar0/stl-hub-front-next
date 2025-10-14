@@ -50,6 +50,7 @@ function toDisplayItem(a, lang) {
     categoryEn: a.categoryEn,
     categories: Array.isArray(a.categories) ? a.categories : [],
     createdAt: a.createdAt,
+    slug: a.slug,
   };
 }
 
@@ -253,14 +254,36 @@ export default function SearchClient({ initialParams }) {
                       <span className="chip">+{(it.chips || []).length - 3}</span>
                     )}
                   </div>
-                  {it.createdAt && (() => {
-                    const d = new Date(it.createdAt);
-                    if (isNaN(d.getTime())) return null;
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-                    const mmm = months[d.getMonth()];
-                    const yyyy = d.getFullYear();
-                    return <div className="fmeta">upload: {`${dd}-${mmm}-${yyyy}`}</div>;
+                  {(() => {
+                    if (!it.createdAt && !it.slug) return null;
+                    let dateStr = '';
+                    if (it.createdAt) {
+                      const d = new Date(it.createdAt);
+                      if (!isNaN(d.getTime())) {
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                        const mmm = months[d.getMonth()];
+                        const yyyy = d.getFullYear();
+                        dateStr = `${dd}-${mmm}-${yyyy}`;
+                      }
+                    }
+                    return (
+                      <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {it.slug ? (
+                          <Link
+                            href={`/asset/${it.slug}`}
+                            onClick={(e)=>{ e.stopPropagation(); }}
+                            aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
+                            style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                          >
+                            {dateStr && <span>upload · {dateStr} · ver detalle</span>}
+                            <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
+                          </Link>
+                        ) : (
+                          dateStr && <span>upload: {dateStr}</span>
+                        )}
+                      </div>
+                    );
                   })()}
                 </div>
               </div>

@@ -557,8 +557,16 @@ export default function AssetModal({ open, onClose, asset }) {
                                         <h3
                                             id="asset-modal-title"
                                             className="title"
+                                            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}
                                         >
-                                            {displayTitle}
+                                            <span>{displayTitle}</span>
+                                            {data?.slug && (
+                                                <Link
+                                                    href={`/asset/${data.slug}`}
+                                                    onClick={(e)=> e.stopPropagation()}
+                                                    style={{ color: 'inherit', textDecoration: 'underline', fontSize: '.7rem' }}
+                                                >detail</Link>
+                                            )}
                                         </h3>
 
                                         {/* Categorías */}

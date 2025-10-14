@@ -91,8 +91,22 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                           </Link>
                         ))}
                       </div>
-                      {uploadDate && (
-                        <div className="fmeta">upload: {uploadDate}</div>
+                      {(uploadDate || it.slug) && (
+                        <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {it.slug ? (
+                            <Link
+                              href={`/asset/${it.slug}`}
+                              onClick={(e)=>{ e.stopPropagation(); }}
+                              aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
+                              style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                            >
+                              {uploadDate && <span>upload · {uploadDate} · ver detalle</span>}
+                              <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
+                            </Link>
+                          ) : (
+                            uploadDate && <span>upload: {uploadDate}</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </article>
