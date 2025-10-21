@@ -136,6 +136,7 @@ export default function UploadAssetPage() {
   const [scpUser, setScpUser] = useState('')
   const [scpPort, setScpPort] = useState('22')
   const [scpRemoteBase, setScpRemoteBase] = useState('')
+  const [copiedNameMap, setCopiedNameMap] = useState({}) // feedback de copiado por item
 
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
@@ -1128,6 +1129,7 @@ export default function UploadAssetPage() {
                     <tr style={{ textAlign: 'left', color:'#9aa4c7' }}>
                       <th style={{ padding:'6px 8px' }}>#</th>
                       <th style={{ padding:'6px 8px' }}>Nombre</th>
+                      <th style={{ padding:'6px 8px' }}>Archivo</th>
                       <th style={{ padding:'6px 8px' }}>Imágenes</th>
                       <th style={{ padding:'6px 8px' }}>Categorías</th>
                       <th style={{ padding:'6px 8px' }}>Tags</th>
@@ -1141,6 +1143,41 @@ export default function UploadAssetPage() {
                       <tr key={it.id} style={{ background: idx === queueIndex ? 'rgba(181,156,255,0.08)' : 'transparent' }}>
                         <td style={{ padding:'8px' }}>{idx+1}</td>
                         <td style={{ padding:'8px' }}>{it.meta?.title || '-'}</td>
+                        <td style={{ padding:'8px', maxWidth:300 }}>
+                          {it?.archiveFile?.name ? (
+                            <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:380 }}>
+                              <div
+                                role="button"
+                                title="Click para copiar"
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard?.writeText(it.archiveFile.name)
+                                    setCopiedNameMap((m)=>({ ...m, [it.id]: true }))
+                                    setTimeout(()=> setCopiedNameMap((m)=>({ ...m, [it.id]: false })), 1200)
+                                  } catch {}
+                                }}
+                                style={{
+                                  cursor:'pointer',
+                                  maxWidth:320,
+                                  overflow:'hidden',
+                                  textOverflow:'ellipsis',
+                                  whiteSpace:'nowrap',
+                                  padding:'2px 6px',
+                                  borderRadius:6,
+                                  border:'1px solid rgba(255,255,255,0.15)',
+                                  background:'rgba(255,255,255,0.06)'
+                                }}
+                              >
+                                {it.archiveFile.name}
+                              </div>
+                              {copiedNameMap[it.id] && (
+                                <span style={{ color:'#98e6b5', fontSize:12 }}>Copiado</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span>-</span>
+                          )}
+                        </td>
                         <td style={{ padding:'8px' }}>{it.images?.length || 0}</td>
                         <td style={{ padding:'8px', maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {(it.meta?.categories || []).map((c,i)=> (typeof c === 'string' ? c : (c?.name || c?.nameEn || c?.slug))).filter(Boolean).slice(0,3).join(', ')}{(it.meta?.categories?.length||0) > 3 ? ` +${(it.meta.categories.length-3)}` : ''}
