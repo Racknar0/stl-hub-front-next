@@ -129,12 +129,20 @@ const Header = () => {
 
   const isAdmin = roleId === 2
 
-  const onSearchSubmit = (e) => {
-    e.preventDefault()
-    const input = e.currentTarget.querySelector('input[type="text"]')
-    const val = input?.value?.trim() || ''
-    setSearchLoading(true)
-    router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
+  const onSearchSubmit = async (e) => {
+    try {
+      e.preventDefault()
+      const input = e.currentTarget.querySelector('input[type="text"]')
+      const val = input?.value?.trim() || ''
+      setSearchLoading(true)
+      // await router.push para poder resetear el loading aunque la URL no cambie
+      await router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
+    } catch (err) {
+      console.error('Navigation error on search submit', err)
+    } finally {
+      // Aseguramos que el spinner local siempre se resetea
+      setSearchLoading(false)
+    }
   }
 
   const selectLang = async (l) => {
