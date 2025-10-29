@@ -71,9 +71,9 @@ export default function Page() {
         <div style={{display:'flex',gap:8,marginBottom:8,justifyContent:'center',flexWrap:'wrap'}}>
           <AssetsSubidos />
           <TotalArchivo value={1234} />
-          <TotalUsers value={256} />
+          <TotalUsers />
           <ConexionesHoy value={42} />
-          <Storage used={5120} total={20480} />
+          <Storage />
           <TotalDescargas value={98765} />
           <TotalVisitas value={54321} />
           <TotalRegistros value={4321} />
