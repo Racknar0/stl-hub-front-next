@@ -1,19 +1,51 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import './ReportsCard.scss'
+import HttpService from '@/services/HttpService'
 
 export default function ReportsCard() {
   const [open, setOpen] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [reports, setReports] = useState([])
+  const [actionLoading, setActionLoading] = useState(null) // assetId being processed
 
-  const DATA = Array.from({ length: 20 }).map((_, i) => ({
-    name: `Recurso Roto #${i + 1}`,
-    count: Math.max(1, 10 - (i % 5)),
-    last: new Date(Date.now() - i * 1000 * 60 * 60 * 24).toISOString().slice(0, 10),
-    url: '#'
-  }))
+  const http = new HttpService()
+
+  const fetchReports = async () => {
+    setLoading(true)
+    try {
+      const res = await http.getData('/admin/reports/broken')
+      if (res?.data?.ok) setReports(res.data.data || [])
+    } catch (e) {
+      console.error('Error fetching broken reports', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchReports() }, [])
+
+  const handleSolve = async (assetId) => {
+    if (!confirm('Marcar como resuelto y eliminar todos los reportes de este asset?')) return
+    setActionLoading(assetId)
+    try {
+      const res = await http.deleteRaw(`/admin/reports/broken/asset/${assetId}`)
+      if (res?.data?.ok) {
+        // refrescar lista
+        await fetchReports()
+      } else {
+        alert('No se pudo eliminar los reportes')
+      }
+    } catch (e) {
+      console.error('Error deleting reports for asset', assetId, e)
+      alert('Error al eliminar reportes')
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   return (
-    <div className={`reports-card ${open ? 'open' : 'collapsed'}`} style={{width:'100%', maxWidth: '320px'}}>
+    <div className={`reports-card ${open ? 'open' : 'collapsed'}`} style={{width:'100%', maxWidth: '420px'}}>
       <div className="card-header d-flex justify-content-between align-items-center gap-5">
         <h6>Reportes caídos</h6>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -32,25 +64,31 @@ export default function ReportsCard() {
       </div>
 
       <div className="card-body">
-        <ul className="reports-list">
-          {DATA.map((it, idx) => (
-            <li key={idx} className="report-item d-flex justify-content-between align-items-center">
-              <div className="left d-flex flex-column">
-                <div className="name">{it.name}</div>
-                <div className="meta">Último: {it.last}</div>
-              </div>
-              <div className="right d-flex align-items-center" style={{gap:8}}>
-                <div className="count">{it.count}</div>
-                <a className="link" href={it.url}>Ver</a>
-                <button type="button" className="btn-check" title="Marcar como verificado">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <ul className="reports-list">
+            {reports.length === 0 && <li className="empty">No hay reportes</li>}
+            {reports.map((it) => (
+              <li key={it.id} className="report-item d-flex justify-content-between align-items-center">
+                <div className="left d-flex flex-column">
+                  <div className="name">{it.assetTitle || `Asset #${it.assetId}`}</div>
+                  <div className="meta">{new Date(it.createdAt).toLocaleString()} · {it.note || ''}</div>
+                </div>
+                <div className="right d-flex align-items-center" style={{gap:8}}>
+                  <button
+                    type="button"
+                    className="btn-solve"
+                    onClick={() => handleSolve(it.assetId)}
+                    disabled={actionLoading && actionLoading !== it.assetId}
+                  >
+                    {actionLoading === it.assetId ? '...' : 'Solved'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

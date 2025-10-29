@@ -48,6 +48,8 @@
     border: 1px solid #f1f3f5;
 }
 .report-item .left {
+    display:flex;
+    flex-direction:column;
 }
 .report-item .name {
     font-size: 13px;
@@ -58,6 +60,8 @@
     color: #6b7280;
 }
 .report-item .right {
+    display:flex;
+    align-items:center;
 }
 .report-item .count {
     font-weight: 700;
@@ -86,3 +90,13 @@
     background:rgba(34,197,94,0.12);
     transform: translateY(-1px);
 }
+
+.report-item .btn-solve{
+    border:1px solid rgba(59,130,246,0.15);
+    background:rgba(59,130,246,0.06);
+    color:#2563eb;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+}
+.report-item .btn-solve:disabled{ opacity:0.6; cursor:default }
