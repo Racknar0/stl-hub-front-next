@@ -1,23 +1,37 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import './TopDownloadsCard.scss'
+import HttpService from '@/services/HttpService'
 
 const TopDownloadsCard = () => {
   const [tab, setTab] = useState('1d')
   const [open, setOpen] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState({ '1d': [], '1w': [], '1m': [], '1y': [], all: [] })
+  const http = new HttpService()
 
-  // Datos quemados: top 30 STL por periodo
-  const DATA = {
-    '1d': Array.from({ length: 30 }).map((_, i) => ({ name: `STL Día #${i + 1}`, count: Math.max(1, 1000 - i * 7) })),
-    '1w': Array.from({ length: 30 }).map((_, i) => ({ name: `STL Semana #${i + 1}`, count: Math.max(1, 5000 - i * 10) })),
-    '1m': Array.from({ length: 30 }).map((_, i) => ({ name: `STL Mes #${i + 1}`, count: Math.max(1, 20000 - i * 50) })),
-    '1y': Array.from({ length: 30 }).map((_, i) => ({ name: `STL Año #${i + 1}`, count: Math.max(1, 100000 - i * 200) })),
-    all: Array.from({ length: 30 }).map((_, i) => ({ name: `STL Total #${i + 1}`, count: Math.max(1, 200000 - i * 400) })),
-  }
+  useEffect(() => {
+    let mounted = true
+    const fetchTop = async () => {
+      setLoading(true)
+      try {
+        const res = await http.getData('/metrics/top-downloads')
+        if (!mounted) return
+        setData(res.data || { '1d': [], '1w': [], '1m': [], '1y': [], all: [] })
+      } catch (e) {
+        console.error('TopDownloads fetch error', e)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    fetchTop()
+    const onUploaded = () => fetchTop()
+    window.addEventListener('assets:uploaded', onUploaded)
+    return () => { mounted = false; window.removeEventListener('assets:uploaded', onUploaded) }
+  }, [])
 
-  const items = DATA[tab] || []
-
+  const items = loading ? [] : (data[tab] || [])
   const total = items.reduce((s, it) => s + (it.count || 0), 0)
 
   return (
@@ -29,7 +43,7 @@ const TopDownloadsCard = () => {
             <h6>Top 30 descargas</h6>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
               <div style={{textAlign:'right',marginLeft:8}}>
-                <div className="summary-value">{total.toLocaleString()}</div>
+                <div className="summary-value">{loading ? '...' : total.toLocaleString()}</div>
               </div>
               <button
                 type="button"
@@ -55,12 +69,16 @@ const TopDownloadsCard = () => {
             </div>
 
             <ul className="downloads-list" style={{marginTop:8}}>
-              {items.map((it, idx) => (
-                <li key={idx} className="download-item d-flex justify-content-between align-items-center">
-                  <span className="name">{it.name}</span>
-                  <span className="count">{it.count}</span>
-                </li>
-              ))}
+              {loading ? (
+                <li className="download-item">Cargando…</li>
+              ) : (
+                items.map((it, idx) => (
+                  <li key={idx} className="download-item d-flex justify-content-between align-items-center">
+                    <span className="name">{it.name}</span>
+                    <span className="count">{it.count.toLocaleString()}</span>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
         </div>

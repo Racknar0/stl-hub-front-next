@@ -74,7 +74,7 @@ const es = {
     },
     // Nuevo: Free
     free: {
-      title: 'Freebies: descar STL gratis cada día',
+      title: 'Freebies: descar STL gratis cada día se renueva diariamente',
       more: 'Ver más'
     },
     // Nuevo: categorías
