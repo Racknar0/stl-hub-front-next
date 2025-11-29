@@ -515,20 +515,37 @@ export default function UploadAssetPage() {
       try {
         const id = batchId || `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
         if (!batchId) setBatchId(id)
-        let best = { idx: pendingIdxs[0], percent: -1 }
-        for (const idx of pendingIdxs) {
-          const it = q[idx]
-          const name = it?.archiveFile?.name
-          const expected = it?.archiveFile?.size || 0
-          if (!name || !expected) continue
-          const dirRel = `tmp/${id}`
+        const dirRel = `tmp/${id}`
+        // Usar endpoint batch para evitar múltiples llamadas individuales
+        const candidates = pendingIdxs
+          .map((idx) => {
+            const it = q[idx]
+            const name = it?.archiveFile?.name
+            const expected = it?.archiveFile?.size || 0
+            return name && expected ? { idx, path: `${dirRel}/${name}`, expected } : null
+          })
+          .filter(Boolean)
+        if (candidates.length > 0) {
           try {
-            const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(`${dirRel}/${name}`)}&expectedSize=${expected}`)
-            const pct = Number.isFinite(r?.data?.percent) ? Number(r.data.percent) : 0
-            if (pct > best.percent) best = { idx, percent: pct }
-          } catch {}
+            const r = await http.postData(`/assets/staged-status/batch`, {
+              paths: candidates.map(c => c.path),
+              expectedSizes: candidates.map(c => c.expected),
+            })
+            const arr = r?.data?.data || []
+            let best = { idx: candidates[0].idx, percent: -1 }
+            for (let i = 0; i < arr.length; i++) {
+              const itStatus = arr[i]
+              const pct = Number.isFinite(itStatus?.percent) ? Number(itStatus.percent) : 0
+              if (pct > best.percent) best = { idx: candidates[i].idx, percent: pct }
+            }
+            chosenIndex = best.idx
+          } catch {
+            // Fallback: el primero pendiente si falla la llamada batch
+            chosenIndex = pendingIdxs[0]
+          }
+        } else {
+          chosenIndex = pendingIdxs[0]
         }
-        chosenIndex = best.idx
       } catch {
         // Fallback: el primero pendiente
         chosenIndex = pendingIdxs[0]
@@ -613,11 +630,10 @@ export default function UploadAssetPage() {
         let best = { idx: null, percent: -1 }
         if (paths.length > 0) {
           try {
-            const qp = new URLSearchParams({
-              paths: JSON.stringify(paths),
-              expectedSizes: JSON.stringify(expectedSizes),
-            }).toString()
-            const r = await http.getData(`/assets/staged-status/batch?${qp}`)
+            const r = await http.postData(`/assets/staged-status/batch`, {
+              paths,
+              expectedSizes,
+            })
             const arr = r?.data?.data || []
             for (let i = 0; i < arr.length; i++) {
               const itStatus = arr[i]
@@ -668,7 +684,7 @@ export default function UploadAssetPage() {
     if (idx < 0) return
     // marcar estado del item
     setUploadQueue(arr => arr.map((it, i) => i === idx ? { ...it, status: ok ? 'success' : 'error' } : it))
-    // countdown de 10s antes del siguiente
+    // countdown de 2s antes del siguiente
     let remain = 2
     setCooldown(remain)
     if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current)
