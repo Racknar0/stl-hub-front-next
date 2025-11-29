@@ -184,6 +184,22 @@ export default function UploadAssetPage() {
 
   // Actualizar título del tab con el progreso de la cola (x/y completo)
   const [activeStage, setActiveStage] = useState({ stage: 'idle', percent: 0, alias: '' })
+  // Batch status map para uso interno (incluye percent y size por path) - solo SCP
+  const scpStatusMapRef = React.useRef({})
+  const scpBatchPaths = React.useMemo(() => {
+    if (queueMode !== 'scp' || !batchId) return []
+    const dirRel = `tmp/${batchId}`
+    return uploadQueue
+      .filter(it => it.status === 'queued' || it.status === 'running')
+      .map(it => it?.archiveFile?.name ? `${dirRel}/${it.archiveFile.name}` : null)
+      .filter(Boolean)
+  }, [queueMode, batchId, uploadQueue])
+  const scpBatchExpectedSizes = React.useMemo(() => {
+    if (queueMode !== 'scp' || !batchId) return []
+    return uploadQueue
+      .filter(it => it.status === 'queued' || it.status === 'running')
+      .map(it => it?.archiveFile?.size || 0)
+  }, [queueMode, batchId, uploadQueue])
   useEffect(() => {
     if (typeof document === 'undefined') return
     const total = uploadQueue.length
@@ -1090,6 +1106,8 @@ export default function UploadAssetPage() {
             <Grid item sx={{ width: '100%', ['@media (min-width:768px)']: { width: '67%' }, display: 'flex', flexDirection: 'column' }}>
             <Stack spacing={2} sx={{ flex: 1 }}>
               <ImagesSection
+                scpBatchPaths={scpBatchPaths}
+                scpBatchExpectedSizes={scpBatchExpectedSizes}
                 imageFiles={imageFiles}
                 previewIndex={previewIndex}
                 onPrev={prevSlide}

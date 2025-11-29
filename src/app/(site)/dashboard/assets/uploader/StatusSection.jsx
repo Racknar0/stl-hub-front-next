@@ -25,24 +25,32 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   const clearPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
 
   // Helper: esperar a que un archivo aparezca en uploads/tmp y alcance expectedSize
+  // Poll staging usando batch cuando se proveen scpBatchPaths; cae a single si no
   const waitForStagedFile = async ({ pathRel, expectedSize, signal, onTick }) => {
-    // Poll cada 1s a /assets/staged-status
-    const start = Date.now()
-    let lastSize = 0
+    const useBatch = Array.isArray(props.scpBatchPaths) && props.scpBatchPaths.length > 0
     while (true) {
       if (signal?.aborted) throw new Error('aborted')
       try {
-        const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(pathRel)}&expectedSize=${expectedSize}`)
-        const data = r?.data || {}
-        const pct = Number.isFinite(data.percent) ? Math.max(0, Math.min(100, Math.round(data.percent))) : 0
-        if (onTick) onTick(pct, data)
-        if (data.exists && data.sizeB >= expectedSize) return data
-        lastSize = data.sizeB || 0
-      } catch (e) {
-        // ignorar y reintentar
-      }
+        if (useBatch) {
+          // Una sola llamada para todos los paths (incluye el activo)
+          const r = await http.postData('/assets/staged-status/batch', {
+            paths: props.scpBatchPaths,
+            expectedSizes: props.scpBatchExpectedSizes || []
+          })
+          const arr = r?.data?.data || []
+          const found = arr.find(x => x.path === pathRel) || {}
+          const pct = Number.isFinite(found.percent) ? Math.max(0, Math.min(100, Math.round(found.percent))) : 0
+          if (onTick) onTick(pct, found)
+          if (found.exists && found.sizeB >= expectedSize) return found
+        } else {
+          const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(pathRel)}&expectedSize=${expectedSize}`)
+          const data = r?.data || {}
+            const pct = Number.isFinite(data.percent) ? Math.max(0, Math.min(100, Math.round(data.percent))) : 0
+            if (onTick) onTick(pct, data)
+            if (data.exists && data.sizeB >= expectedSize) return data
+        }
+      } catch {}
       await new Promise(res => setTimeout(res, 1000))
-      // Seguridad: si tarda demasiado, seguimos esperando; no aplicamos timeout aquí
     }
   }
 
