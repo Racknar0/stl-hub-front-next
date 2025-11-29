@@ -669,7 +669,7 @@ export default function UploadAssetPage() {
     // marcar estado del item
     setUploadQueue(arr => arr.map((it, i) => i === idx ? { ...it, status: ok ? 'success' : 'error' } : it))
     // countdown de 10s antes del siguiente
-    let remain = 10
+    let remain = 2
     setCooldown(remain)
     if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current)
     cooldownTimerRef.current = setInterval(() => {
