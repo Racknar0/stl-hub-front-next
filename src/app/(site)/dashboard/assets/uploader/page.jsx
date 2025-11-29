@@ -137,6 +137,8 @@ export default function UploadAssetPage() {
   const [scpPort, setScpPort] = useState('22')
   const [scpRemoteBase, setScpRemoteBase] = useState('')
   const [copiedNameMap, setCopiedNameMap] = useState({}) // feedback de copiado por item
+  // Overlay oscuro manual (switch flotante)
+  const [darkOverlay, setDarkOverlay] = useState(false)
 
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
@@ -860,7 +862,45 @@ export default function UploadAssetPage() {
         .scroll-x { overflow-x: auto; white-space: nowrap; }
         .img-thumb { display:inline-block; margin-right:8px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
         .img-thumb img { display:block; height:120px; }
+        .floating-overlay-btn { position:fixed; right:24px; bottom:24px; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
+        .floating-overlay-btn:hover { background:#927dff; }
+        .floating-overlay-btn:active { transform:scale(.94); }
+        .floating-overlay-btn:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+        .dark-overlay-root { position:fixed; inset:0; z-index:10000; background:rgba(0, 0, 0, 0.863); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; }
+        .dark-overlay-close { background:#222; color:#fff; border:1px solid #555; padding:14px 26px; font-size:16px; font-weight:600; border-radius:10px; cursor:pointer; letter-spacing:.5px; box-shadow:0 4px 14px -2px rgba(0,0,0,.6); transition:background .2s, transform .15s; }
+        .dark-overlay-close:hover { background:#333; }
+        .dark-overlay-close:active { transform:scale(.95); }
+        .dark-overlay-close:focus-visible { outline:3px solid #7b61ff; outline-offset:3px; }
       `}</style>
+
+      {/* Botón flotante para activar/desactivar overlay oscuro */}
+      <button
+        type="button"
+        className="floating-overlay-btn"
+        aria-label={darkOverlay ? 'Ocultar overlay oscuro' : 'Mostrar overlay oscuro'}
+        onClick={() => setDarkOverlay(v => !v)}
+      >
+        {darkOverlay ? 'Cerrar overlay' : 'Oscurecer pantalla'}
+      </button>
+
+      {/* Overlay oscuro superpuesto */}
+      {darkOverlay && (
+        <div className="dark-overlay-root" role="dialog" aria-modal="true" aria-label="Overlay oscuro">
+          <div style={{ maxWidth:680, width:'100%', textAlign:'center' }}>
+            <h2 style={{ margin:'0 0 24px', fontSize:34, fontWeight:700, color:'#7e7e7e' }}>Overlay oscuro activo</h2>
+            <p style={{ margin:'0 0 36px', fontSize:16, lineHeight:1.6, color:'#888888' }}>
+              Has activado el modo de oscurecimiento manual. Usa esto para centrar tu atención en otra ventana o evitar distracciones temporales.
+            </p>
+            <button
+              type="button"
+              className="dark-overlay-close"
+              onClick={() => setDarkOverlay(false)}
+            >
+              Cerrar overlay
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 1) Cabecera */}
       <HeaderBar
