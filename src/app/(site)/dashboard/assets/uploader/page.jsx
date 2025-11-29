@@ -598,16 +598,32 @@ export default function UploadAssetPage() {
         const pending = uploadQueue
           .map((it, idx) => ({ it, idx }))
           .filter(({ it }) => it.status === 'queued' || it.status === 'running')
-        let best = { idx: null, percent: -1 }
+        const dirRel = `tmp/${id}`
+        const paths = []
+        const expectedSizes = []
+        const idxMap = []
         for (const { it, idx } of pending) {
           const name = it.archiveFile?.name
           const expected = it.archiveFile?.size || 0
           if (!name || !expected) continue
-          const dirRel = `tmp/${id}`
+          paths.push(`${dirRel}/${name}`)
+          expectedSizes.push(expected)
+          idxMap.push(idx)
+        }
+        let best = { idx: null, percent: -1 }
+        if (paths.length > 0) {
           try {
-            const r = await http.getData(`/assets/staged-status?path=${encodeURIComponent(`${dirRel}/${name}`)}&expectedSize=${expected}`)
-            const pct = Number.isFinite(r?.data?.percent) ? Number(r.data.percent) : 0
-            if (pct > best.percent) best = { idx, percent: pct }
+            const qp = new URLSearchParams({
+              paths: JSON.stringify(paths),
+              expectedSizes: JSON.stringify(expectedSizes),
+            }).toString()
+            const r = await http.getData(`/assets/staged-status/batch?${qp}`)
+            const arr = r?.data?.data || []
+            for (let i = 0; i < arr.length; i++) {
+              const itStatus = arr[i]
+              const pct = Number.isFinite(itStatus?.percent) ? Number(itStatus.percent) : 0
+              if (pct > best.percent) best = { idx: idxMap[i], percent: pct }
+            }
           } catch {}
         }
         if (!cancelled) setScpActiveIndex(best.percent > 0 ? best.idx : null)
@@ -615,7 +631,7 @@ export default function UploadAssetPage() {
         if (!cancelled) setScpActiveIndex(null)
       }
     }
-    const h = setInterval(tick, 1500)
+    const h = setInterval(tick, 2000)
     tick()
     return () => { cancelled = true; clearInterval(h) }
   }, [queueMode, isProcessingQueue, batchId, uploadQueue])
