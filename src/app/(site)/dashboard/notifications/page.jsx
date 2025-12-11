@@ -8,6 +8,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead'
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread'
+import DeleteIcon from '@mui/icons-material/Delete'
 import HttpService from '@/services/HttpService'
 import { successAlert, errorAlert } from '@/helpers/alerts'
 
@@ -103,6 +104,8 @@ export default function NotificationsPage(){
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Refrescar"><span><IconButton onClick={fetchAll} disabled={loading}><RefreshIcon /></IconButton></span></Tooltip>
             <Tooltip title="Marcar todas como leídas"><span><IconButton color="primary" onClick={markAll} disabled={marking || unreadCount===0}><DoneAllIcon /></IconButton></span></Tooltip>
+            {/* Limpiar automatizaciones */}
+            <Tooltip title="Limpiar automatizaciones"><span><IconButton color="error" onClick={async ()=>{ try{ setMarking(true); await http.postData('/admin/notifications/clear-automation', {}); await successAlert('Hecho', 'Notificaciones de automatizaciones eliminadas'); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudieron eliminar las automatizaciones'); } finally{ setMarking(false); } }} disabled={marking || items.filter(i=>i.type==='AUTOMATION').length===0}><DeleteIcon /></IconButton></span></Tooltip>
           </Stack>
         } />
         <CardContent sx={{ pt:0 }}>
@@ -143,6 +146,16 @@ export default function NotificationsPage(){
                       <Typography variant="subtitle2" sx={{ fontWeight: unread ? 700 : 500, fontSize: '1rem', lineHeight:1.2, color:'#222' }}>{n.title}</Typography>
                       {n.body && <Typography variant="body2" sx={{ whiteSpace:'pre-wrap', opacity:0.95, mt:0.3, fontSize:'0.97rem', lineHeight:1.25, color:'#222' }}>{n.body}</Typography>}
                     </Box>
+                    {/* Borrar notificación si es de automatización */}
+                    {n.type==='AUTOMATION' && (
+                      <Tooltip title="Eliminar automatización">
+                        <span>
+                          <IconButton size="small" onClick={async()=>{ try{ await http.deleteData('/admin/notifications', n.id); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudo eliminar'); } }} color="error" sx={{p:0.5}}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
                     <Tooltip title={unread ? 'Marcar como leída' : 'Marcar como no leída'}>
                       <span>
                         <IconButton size="small" onClick={()=>toggleOne(n)} color={unread ? 'info':'default'} sx={{p:0.5}}>
