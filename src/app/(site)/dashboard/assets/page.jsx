@@ -49,6 +49,9 @@ export default function AssetsAdminPage() {
   const [loading, setLoading] = useState(false)
   const [q, setQ] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  // Nuevos filtros: por cuenta y por ID
+  const [accountQ, setAccountQ] = useState('')
+  const [assetIdQ, setAssetIdQ] = useState('')
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(50)
   const [rowCount, setRowCount] = useState(0)
@@ -129,6 +132,14 @@ export default function AssetsAdminPage() {
           pageSize: String(pageSize),
         })
         if (showFreeOnly) params.set('plan', 'free')
+        // Añadir filtros nuevos si están presentes
+        const accTrim = String(accountQ || '').trim()
+        if (accTrim) {
+          // si es número, tomar como accountId; si no, alias
+          const asNum = Number(accTrim)
+          if (Number.isFinite(asNum) && asNum > 0) params.set('accountId', String(asNum))
+          else params.set('accountAlias', accTrim)
+        }
         const res = await http.getData(`/assets?${params.toString()}`)
         const payload = res.data
         if (payload && Array.isArray(payload.items)) {
@@ -169,23 +180,55 @@ export default function AssetsAdminPage() {
   }, [previewOpen, selected?.id])
 
   // Tabla: definición de columnas (ES)
+  const StatusDot = ({ status }) => {
+    const s = String(status || '').toUpperCase()
+    const map = { DRAFT: '#9e9e9e', PROCESSING: '#29b6f6', PUBLISHED: '#66bb6a', FAILED: '#ef5350' }
+    const color = map[s] || '#9e9e9e'
+    return <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: color, display: 'inline-block' }} />
+  }
   const columns = useMemo(() => ([
+      // ID
+      { header: 'ID', accessorKey: 'id', size: 60,
+        Cell: ({ cell }) => <Typography variant="body2" sx={{ width: 50, textAlign: 'right' }}>{cell.getValue()}</Typography>
+      },
       {
         header: ' ', accessorKey: 'thumbnail', size: 0, enableSorting: false,
         Cell: ({ row }) => {
           const imgs = Array.isArray(row.original.images) ? row.original.images : []
           const first = imgs[0]
           return first ? (
-            <img src={imgUrl(first)} alt="thumb" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }} />
+            <img
+              src={imgUrl(first)}
+              alt="thumb"
+              style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }}
+              onClick={() => { setSelected(row.original); setPreviewOpen(true); }}
+              title="Ver imágenes"
+            />
           ) : (
             <Box sx={{ width: 64, height: 40, borderRadius: 6, bgcolor: 'rgba(255,255,255,0.06)' }} />
           )
         }
       },
       { header: 'Nombre', accessorKey: 'title',
-        Cell: ({ cell }) => (
-          <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.getValue()}</Typography>
-        )
+        Cell: ({ row, cell }) => {
+          const titleEs = cell.getValue()
+          const titleEn = row?.original?.titleEn || ''
+          return (
+            <Box sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>es:</Typography>
+                {titleEs}
+              </Typography>
+              {titleEn ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>en:</Typography>
+                  {titleEn}
+                </Typography>
+              ) : null}
+            </Box>
+          )
+        },
+        size: 300,
       },
       // {
       //   id: 'categoriesEs',
@@ -221,12 +264,23 @@ export default function AssetsAdminPage() {
       //   },
       // },
       {
-        header: 'Plan', accessorKey: 'isPremium', size: 20,
-        Cell: ({ cell }) => <Chip size="small" label={cell.getValue() ? 'Premium' : 'Free'} color={cell.getValue() ? 'warning' : 'default'} />,
+        header: 'Plan', accessorKey: 'isPremium', size: 40,
+        Cell: ({ cell }) => {
+          const isPrem = !!cell.getValue()
+          const bg = isPrem ? '#ffeb3b33' : '#4caf5033' // amarillo suave para P, verde suave para F
+          const fg = isPrem ? '#fbc02d' : '#43a047'
+          return (
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 26, height: 22, px: 0.5, borderRadius: 8, bgcolor: bg }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: fg }}>
+                {isPrem ? 'P' : 'F'}
+              </Typography>
+            </Box>
+          )
+        },
       },
       {
-        header: 'Estado', accessorKey: 'status', size: 120,
-        Cell: ({ cell }) => <Chip size="small" label={cell.getValue()} color={statusColor(cell.getValue())} />,
+        header: 'Estado', accessorKey: 'status', size: 60,
+        Cell: ({ cell }) => <StatusDot status={cell.getValue()} />,
       },
       // {
       //   id: 'sizeB',
@@ -235,8 +289,8 @@ export default function AssetsAdminPage() {
       //   Cell: ({ cell }) => <Typography variant="body2">{formatMBfromB(cell.getValue())}</Typography>,
       //   size: 100,
       // },
-      { header: 'Cuenta', accessorFn: (row) => row.account?.alias || row.accountId, size: 160,
-        Cell: ({ row }) => <Typography variant="body2">{row.original.account?.alias || row.original.accountId}</Typography>
+      { header: 'Cuenta', accessorFn: (row) => row.account?.alias || row.accountId, size: 140,
+        Cell: ({ row }) => <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.original.account?.alias || row.original.accountId}</Typography>
       },
       // {
       //   header: 'Creado', accessorKey: 'createdAt', size: 160,
@@ -294,6 +348,28 @@ export default function AssetsAdminPage() {
         freeCount={freeCount}
         setFreeCount={setFreeCount}
         onRandomize={onRandomize}
+        accountQ={accountQ}
+        setAccountQ={setAccountQ}
+        onBuscarCuenta={() => { setSearchTerm(''); setPageIndex(0); setShowFreeOnly(false); setRefreshTick(n=>n+1) }}
+        assetIdQ={assetIdQ}
+        setAssetIdQ={setAssetIdQ}
+        onBuscarId={async () => {
+          const idNum = Number(assetIdQ)
+          if (!Number.isFinite(idNum) || idNum <= 0) return
+          try {
+            setLoading(true)
+            const res = await http.getData(`/assets/${idNum}`)
+            const item = res.data
+            setAssets(item ? [item] : [])
+            setRowCount(item ? 1 : 0)
+            setPageIndex(0)
+          } catch (e) {
+            setAssets([])
+            setRowCount(0)
+          } finally {
+            setLoading(false)
+          }
+        }}
       />
     ),
     renderRowActions: ({ row }) => (
