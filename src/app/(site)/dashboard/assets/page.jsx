@@ -282,13 +282,13 @@ export default function AssetsAdminPage() {
         header: 'Estado', accessorKey: 'status', size: 60,
         Cell: ({ cell }) => <StatusDot status={cell.getValue()} />,
       },
-      // {
-      //   id: 'sizeB',
-      //   header: 'Tamaño',
-      //   accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
-      //   Cell: ({ cell }) => <Typography variant="body2">{formatMBfromB(cell.getValue())}</Typography>,
-      //   size: 100,
-      // },
+      {
+        id: 'sizeB',
+        header: 'Tamaño',
+        accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
+        Cell: ({ cell }) => <Typography variant="body2">{formatMBfromB(cell.getValue())}</Typography>,
+        size: 100,
+      },
       { header: 'Cuenta', accessorFn: (row) => row.account?.alias || row.accountId, size: 140,
         Cell: ({ row }) => <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.original.account?.alias || row.original.accountId}</Typography>
       },
