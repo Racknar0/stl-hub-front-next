@@ -196,7 +196,8 @@
         overflow: hidden;
         display: flex;
         justify-content: center;
-        min-height: 307px;
+        /* Altura del contenedor para que los hijos puedan usar 100% */
+        height: 100%;
 
         @media (max-width: 991.98px) {
             aspect-ratio: 1 / 1;
@@ -211,12 +212,33 @@
     }
     .gallery .swiper {
         width: var(--sq);
-        height: var(--sq);
+        height: 100%; /* ocupar el 100% del contenedor .gallery */
         border-radius: 14px;
     }
-    .gallery img {
+    .gallery .swiper-wrapper,
+    .gallery .swiper-slide {
+        height: 100%;
+    }
+    /* asegurar que el contenedor del zoom también centre la imagen */
+    .gallery .swiper-zoom-container {
         width: 100%;
         height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Centrado perfecto de las imágenes dentro del slide */
+    .gallery .swiper-slide {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+    }
+    .gallery img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
         object-fit: contain;
         display: block;
         border-radius: 14px;
