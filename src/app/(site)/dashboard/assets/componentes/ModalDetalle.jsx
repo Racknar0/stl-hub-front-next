@@ -155,6 +155,8 @@ export default function ModalDetalle({
                                     <Grid container spacing={0.5}>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Cuenta</Typography></Grid>
                                         <Grid item xs={7}><Typography variant="body2">{detail?.account?.alias || detail?.accountId || selected?.account?.alias || selected?.accountId}</Typography></Grid>
+                                        <Grid item xs={5}><Typography variant="body2" color="text.secondary">Archivo</Typography></Grid>
+                                        <Grid item xs={7}><Typography variant="body2">{detail?.archiveName ?? selected?.archiveName ?? '-'}</Typography></Grid>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Tamaño</Typography></Grid>
                                         <Grid item xs={7}><Typography variant="body2">{formatMBfromB(detail?.fileSizeB ?? detail?.archiveSizeB ?? selected?.fileSizeB ?? selected?.archiveSizeB)}</Typography></Grid>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Creado</Typography></Grid>

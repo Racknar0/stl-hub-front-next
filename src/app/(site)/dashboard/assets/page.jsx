@@ -213,6 +213,7 @@ export default function AssetsAdminPage() {
         Cell: ({ row, cell }) => {
           const titleEs = cell.getValue()
           const titleEn = row?.original?.titleEn || ''
+          const archiveName = row?.original?.archiveName || ''
           return (
             <Box sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -223,6 +224,12 @@ export default function AssetsAdminPage() {
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
                   <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>en:</Typography>
                   {titleEn}
+                </Typography>
+              ) : null}
+              {archiveName ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>file:</Typography>
+                  {archiveName}
                 </Typography>
               ) : null}
             </Box>
