@@ -8,7 +8,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutline'
-import ShuffleIcon from '@mui/icons-material/Shuffle'
 import ImagesSection from './uploader/ImagesSection'
 import HttpService from '@/services/HttpService'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -22,6 +21,7 @@ import CachedIcon from '@mui/icons-material/Cached';
 import ToolbarBusqueda from './componentes/ToolbarBusqueda'
 import ModalDetalle from './componentes/ModalDetalle'
 import ModalEditar from './componentes/ModalEditar'
+import ModalResultadosDrop from './componentes/ModalResultadosDrop'
 
 // Mapea estado a color de chip
 const statusColor = (s) => ({
@@ -56,12 +56,15 @@ export default function AssetsAdminPage() {
   const [pageSize, setPageSize] = useState(50)
   const [rowCount, setRowCount] = useState(0)
   const [refreshTick, setRefreshTick] = useState(0)
-  // Nuevo: filtro solo Free
+  // filtro plan (se mantiene en backend, pero aquí no exponemos UI adicional salvo búsqueda normal)
   const [showFreeOnly, setShowFreeOnly] = useState(false)
 
   // Estado: modales
   const [previewOpen, setPreviewOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [dropResultsOpen, setDropResultsOpen] = useState(false)
+  const [dropFound, setDropFound] = useState([])
+  const [dropNotFound, setDropNotFound] = useState([])
 
   // Estado: selección actual y formularios
   const [selected, setSelected] = useState(null)
@@ -80,8 +83,7 @@ export default function AssetsAdminPage() {
   const [editPreviewIndex, setEditPreviewIndex] = useState(0)
   const fileInputRef = useRef(null)
 
-  // Estado: cantidad para randomizar freebies
-  const [freeCount, setFreeCount] = useState(0)
+  // (Randomizar freebies se movió a otra pantalla del dashboard)
 
   // Cargar catálogos (categorías y tags)
   const loadMeta = async () => {
@@ -119,6 +121,67 @@ export default function AssetsAdminPage() {
     const n = Number(bytes)
     if (!n || n <= 0) return '0 MB'
     return `${(n / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const normalizeBase = (name) => String(name || '').replace(/^.*[\\/]/, '').replace(/\.[^/.]+$/, '').trim().toLowerCase()
+
+  // Drop múltiple: busca assets por archiveName (exacto) y por nombre base como fallback.
+  const handleDropManyFiles = async (fileNames) => {
+    const names = Array.from(fileNames || []).map((n) => String(n || '').trim()).filter(Boolean)
+    if (!names.length) return
+
+    try {
+      setLoading(true)
+
+      // 1) Traer una ventana grande (pero limitada) de assets para poder matchear localmente.
+      // Si necesitas más de 1000, más adelante podemos iterar por páginas.
+      const res = await http.getData(`/assets?pageIndex=0&pageSize=1000`) // admin route
+      const payload = res.data
+      const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : []
+
+      const byArchiveLower = new Map()
+      const byBaseLower = new Map()
+      items.forEach((a) => {
+        const an = String(a?.archiveName || '').trim()
+        if (an) byArchiveLower.set(an.toLowerCase(), a)
+        const bn = normalizeBase(an)
+        if (bn) byBaseLower.set(bn, a)
+      })
+
+      const found = []
+      const notFound = []
+      const seenAssetIds = new Set()
+
+      names.forEach((n) => {
+        const key = n.toLowerCase()
+        const base = normalizeBase(n)
+        const asset = byArchiveLower.get(key) || (base ? byBaseLower.get(base) : null)
+        if (asset?.id) {
+          found.push({ name: n, match: asset.archiveName || '' , assetId: asset.id })
+          seenAssetIds.add(asset.id)
+        } else {
+          notFound.push(n)
+        }
+      })
+
+      // 2) Mostrar en tabla los assets encontrados (sin duplicados)
+      const foundAssets = items.filter((a) => seenAssetIds.has(a.id))
+      setAssets(foundAssets)
+      setRowCount(foundAssets.length)
+      setPageIndex(0)
+
+      // 3) Mostrar modal con resumen
+      setDropFound(found)
+      setDropNotFound(notFound)
+      setDropResultsOpen(true)
+    } catch (e) {
+      console.error('drop many search error', e)
+      setDropFound([])
+      setDropNotFound(Array.from(fileNames || []))
+      setDropResultsOpen(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Cargar datos de la tabla (paginación servidor)
@@ -351,10 +414,6 @@ export default function AssetsAdminPage() {
         q={q}
         setQ={setQ}
         onBuscar={() => { setSearchTerm(q); setPageIndex(0); setShowFreeOnly(false) }}
-        onBuscarFree={() => { setSearchTerm(q); setPageIndex(0); setShowFreeOnly(true) }}
-        freeCount={freeCount}
-        setFreeCount={setFreeCount}
-        onRandomize={onRandomize}
         accountQ={accountQ}
         setAccountQ={setAccountQ}
         onBuscarCuenta={() => { setSearchTerm(''); setPageIndex(0); setShowFreeOnly(false); setRefreshTick(n=>n+1) }}
@@ -377,6 +436,7 @@ export default function AssetsAdminPage() {
             setLoading(false)
           }
         }}
+        onDropManyFiles={handleDropManyFiles}
       />
     ),
     renderRowActions: ({ row }) => (
@@ -512,24 +572,6 @@ export default function AssetsAdminPage() {
     }
   }
 
-  // Randomizar freebies
-  const onRandomize = async () => {
-    const ok = await confirmAlert('Randomizar Freebies', `Se seleccionarán ${freeCount} assets como Free y el resto quedarán Premium. ¿Continuar?`, 'Sí, randomizar', 'Cancelar', 'warning')
-    if (!ok) return
-    try {
-      setLoading(true)
-      const res = await http.postData('/assets/randomize-free', { count: Number(freeCount)||0 })
-      const { total, selected } = res.data || {}
-      await successAlert('Hecho', `Total: ${total ?? '-'} | Seleccionados Free: ${selected ?? '-'}`)
-      setRefreshTick(n=>n+1)
-    } catch (e) {
-      console.error('randomize error', e)
-      await errorAlert('Error', e?.response?.data?.message || 'No se pudo randomizar')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // Recuperar link MEGA desde BACKUP
   const handleRestoreLink = async (asset) => {
     const ok = await confirmAlert('Restaurar link MEGA', `¿Deseas restaurar el link MEGA para "${asset.title}"?`, 'Sí, restaurar', 'Cancelar', 'warning')
@@ -568,6 +610,14 @@ export default function AssetsAdminPage() {
         imgUrl={imgUrl}
         formatMBfromB={formatMBfromB}
         loadingDetail={loadingDetail}
+      />
+
+      {/* Modal: encontrados / no encontrados por drag&drop */}
+      <ModalResultadosDrop
+        open={dropResultsOpen}
+        onClose={() => setDropResultsOpen(false)}
+        found={dropFound}
+        notFound={dropNotFound}
       />
 
       {/* Modal: Edición (sin categoría legacy) */}
