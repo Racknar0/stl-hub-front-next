@@ -140,6 +140,60 @@ export default function UploadAssetPage() {
   // Overlay oscuro manual (switch flotante)
   const [darkOverlay, setDarkOverlay] = useState(false)
 
+  // Hold de uploads-active para sesiones largas en modo SCP (evita que el cron toque MEGAcmd)
+  const [scpHoldId, setScpHoldId] = useState('')
+  const [scpHoldUntilMs, setScpHoldUntilMs] = useState(0)
+  const scpHoldStartRef = React.useRef(0)
+
+  const startScpHold = useCallback(async (minutes = 360) => {
+    try {
+      // si ya tenemos hold, no duplicar
+      if (scpHoldId) return scpHoldId
+      const r = await http.postData('/assets/hold-uploads-active', {
+        minutes,
+        label: 'scp-session',
+      })
+      const id = r?.data?.holdId
+      if (id) {
+        setScpHoldId(id)
+        setScpHoldUntilMs(Number(r?.data?.untilMs || 0))
+        scpHoldStartRef.current = Date.now()
+        return id
+      }
+    } catch (e) {
+      console.warn('[SCP][HOLD] no pude iniciar hold:', e?.message)
+    }
+    return null
+  }, [scpHoldId])
+
+  const releaseScpHold = useCallback(async () => {
+    try {
+      const id = scpHoldId
+      if (!id) return
+      await http.postData('/assets/hold-uploads-active', { action: 'release', holdId: id })
+    } catch (e) {
+      console.warn('[SCP][HOLD] no pude liberar hold:', e?.message)
+    } finally {
+      setScpHoldId('')
+      setScpHoldUntilMs(0)
+      scpHoldStartRef.current = 0
+    }
+  }, [scpHoldId])
+
+  const scpHoldLabel = useMemo(() => {
+    if (!scpHoldId) return ''
+    try {
+      const ts = scpHoldUntilMs || (scpHoldStartRef.current ? (scpHoldStartRef.current + 360 * 60 * 1000) : 0)
+      if (!ts) return '🛡️ Protección anti-cron activa'
+      const d = new Date(ts)
+      const hh = String(d.getHours()).padStart(2, '0')
+      const mm = String(d.getMinutes()).padStart(2, '0')
+      return `🛡️ Protección anti-cron activa (hasta ${hh}:${mm})`
+    } catch {
+      return '🛡️ Protección anti-cron activa'
+    }
+  }, [scpHoldId, scpHoldUntilMs])
+
   // Derivados de estado para la cola
   const queueActive = isProcessingQueue || cooldown > 0
   const hasQueuedItems = uploadQueue.some(it => it.status === 'queued')
@@ -181,6 +235,13 @@ export default function UploadAssetPage() {
       try { if (typeof document !== 'undefined' && originalTitleRef.current) document.title = originalTitleRef.current } catch {}
     }
   }, [])
+
+  // Cleanup: si el usuario navega fuera, liberar hold SCP
+  useEffect(() => {
+    return () => {
+      try { releaseScpHold() } catch {}
+    }
+  }, [releaseScpHold])
 
   // Actualizar título del tab con el progreso de la cola (x/y completo)
   const [activeStage, setActiveStage] = useState({ stage: 'idle', percent: 0, alias: '' })
@@ -954,8 +1015,12 @@ export default function UploadAssetPage() {
               if (next === 'scp') {
                 const id = `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
                 setBatchId(id)
+                // Iniciar hold largo al activar SCP (usuario puede tardar horas en scp + rellenar)
+                startScpHold(360)
               } else {
                 setBatchId('')
+                // Volver a HTTP: liberar hold SCP
+                releaseScpHold()
               }
             }}
             variant={queueMode === 'scp' ? 'purple' : 'cyan'}
@@ -976,6 +1041,25 @@ export default function UploadAssetPage() {
           >
             Añadir a la cola
           </AppButton>
+
+          {queueMode === 'scp' && scpHoldId && (
+            <Box
+              sx={{
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 2,
+                background: 'rgba(0, 180, 255, 0.14)',
+                border: '1px solid rgba(0, 180, 255, 0.35)',
+                color: 'info.light',
+                fontSize: 12,
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+              }}
+              title="Mientras esto esté activo, el cron evita mega-logout/reset para no interferir con tus subidas."
+            >
+              {scpHoldLabel}
+            </Box>
+          )}
           {allCompleted ? (
             <AppButton
               type="button"
@@ -1013,6 +1097,8 @@ export default function UploadAssetPage() {
             <AppButton
               type="button"
               onClick={async () => {
+                // Asegurar hold mientras el usuario copia/usa el comando y hace scp en otra terminal
+                await startScpHold(360)
                 try {
                   const r = await http.getData('/assets/scp-config')
                   const cfg = r?.data || {}
@@ -1314,7 +1400,18 @@ export default function UploadAssetPage() {
       </Box>
 
       {/* Modal: comando SCP */}
-      <Dialog open={scpModalOpen} onClose={() => setScpModalOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={scpModalOpen}
+        onClose={() => {
+          setScpModalOpen(false)
+          // Si el usuario ya no está en SCP y no hay cola activa, liberar hold
+          if (queueMode !== 'scp' && !queueActive && !isUploading) {
+            releaseScpHold()
+          }
+        }}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Subida por SCP</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
