@@ -144,6 +144,7 @@ export default function UploadAssetPage() {
   const [scpHoldId, setScpHoldId] = useState('')
   const [scpHoldUntilMs, setScpHoldUntilMs] = useState(0)
   const scpHoldStartRef = React.useRef(0)
+  const scpHoldCreatedAtRef = React.useRef(0)
 
   const startScpHold = useCallback(async (minutes = 360) => {
     try {
@@ -158,6 +159,7 @@ export default function UploadAssetPage() {
         setScpHoldId(id)
         setScpHoldUntilMs(Number(r?.data?.untilMs || 0))
         scpHoldStartRef.current = Date.now()
+        scpHoldCreatedAtRef.current = Date.now()
         return id
       }
     } catch (e) {
@@ -177,6 +179,7 @@ export default function UploadAssetPage() {
       setScpHoldId('')
       setScpHoldUntilMs(0)
       scpHoldStartRef.current = 0
+      scpHoldCreatedAtRef.current = 0
     }
   }, [scpHoldId])
 
@@ -237,11 +240,19 @@ export default function UploadAssetPage() {
   }, [])
 
   // Cleanup: si el usuario navega fuera, liberar hold SCP
+  // IMPORTANTE: en dev, React StrictMode puede montar/desmontar dos veces y disparar este cleanup.
+  // Para evitar liberar inmediatamente tras activarlo, aplicamos un "guard" temporal y por modo.
   useEffect(() => {
     return () => {
-      try { releaseScpHold() } catch {}
+      try {
+        const justCreatedMs = Date.now() - (scpHoldCreatedAtRef.current || 0)
+        const justCreated = scpHoldCreatedAtRef.current && justCreatedMs < 4000
+        if (queueMode === 'scp') return
+        if (justCreated) return
+        releaseScpHold()
+      } catch {}
     }
-  }, [releaseScpHold])
+  }, [releaseScpHold, queueMode])
 
   // Actualizar título del tab con el progreso de la cola (x/y completo)
   const [activeStage, setActiveStage] = useState({ stage: 'idle', percent: 0, alias: '' })
