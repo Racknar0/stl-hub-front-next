@@ -470,7 +470,9 @@ export default function AssetModal({ open, onClose, asset }) {
                 <div className="modal-dialog modal-dialog-centered">
                     <div className="modal-content asset-modal__content">
                         <div className="topbar">
-                            <span className="brand">STL Hub</span>
+                            <Link href="/" className="brand" aria-label="Ir al inicio">
+                                STL Hub
+                            </Link>
                             {showReportButton && (
                                 <button
                                     type="button"
@@ -606,11 +608,18 @@ export default function AssetModal({ open, onClose, asset }) {
                             </Box>
                         </Box>
                     </Dialog>
-                                    <img
-                                        className="brand-logo"
-                                        src="/nuevo_horizontal.png"
-                                        alt="STL Hub"
-                                    />
+                                    <Link
+                                        href="/"
+                                        aria-label="Ir al inicio"
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{ display: 'inline-flex' }}
+                                    >
+                                        <img
+                                            className="brand-logo"
+                                            src="/nuevo_horizontal.png"
+                                            alt="STL Hub"
+                                        />
+                                    </Link>
 
                                     <div className="meta-details">
                                         <h3

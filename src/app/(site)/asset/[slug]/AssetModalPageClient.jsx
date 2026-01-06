@@ -13,18 +13,13 @@ export default function AssetModalPageClient({ asset }) {
   const router = useRouter();
   const [open, setOpen] = useState(true); // abierto desde el inicio
 
-  // Cerrar modal: intentar back seguro, si no redirigir.
+  // Cerrar modal: SIEMPRE ir al home.
+  // Motivo: si el usuario entra directo desde Google, hacer back puede devolverlo al buscador
+  // (o a un historial no deseado). Queremos que cerrar el modal equivalga a "volver al sitio".
   const handleClose = useCallback(() => {
     setOpen(false);
     // Pequeño timeout para permitir animación fade (si existiera)
     setTimeout(() => {
-      // Heurística: si el referrer es mismo dominio o existe historial navegable, usar back.
-      try {
-        if (window.history.length > 1) {
-          router.back();
-          return;
-        }
-      } catch {}
       router.push('/');
     }, 80);
   }, [router]);

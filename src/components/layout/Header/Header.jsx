@@ -189,8 +189,21 @@ const Header = () => {
       {/* Eliminado loader global del layout */}
       <div className="container-narrow">
         <nav className="navbar d-flex align-items-center justify-content-between">
-          <Link href="/" className="brand d-flex align-items-center" aria-label={t('header.homeAria')}>
-            <img src="/nuevo_horizontal.png" alt="STL HUB" className="brand-logo" />
+          <Link
+            href="/"
+            className="brand d-flex align-items-center"
+            aria-label={t('header.homeAria')}
+          >
+            <img
+              src="/nuevo_horizontal.png"
+              alt="STL HUB"
+              className="brand-logo"
+              onClick={(e) => {
+                // Defensa extra: si por algún motivo el Link no navega (overlay/captura), forzamos home.
+                // No hacemos preventDefault para no romper el comportamiento normal del Link.
+                try { router.push('/') } catch {}
+              }}
+            />
           </Link>
 
           {/* Botón Explorar (desktop + mobile) */}
