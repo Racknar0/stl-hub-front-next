@@ -11,6 +11,8 @@ import {
   Typography,
   Button,
   Stack,
+  Divider,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,6 +30,7 @@ import MegaStatus from './MegaStatus'
 import AssetsUploadedWidget from './AssetsUploadedWidget'
 import SelectMegaAccountModal from './SelectMegaAccountModal'
 import ProfilesBar from './ProfilesBar'
+import RightSidebar from './RightSidebar'
 
 const http = new HttpService()
 const API_BASE = '/accounts'
@@ -49,6 +52,15 @@ const mapBackendToUiStatus = (s) => {
 
 export default function UploadAssetPage() {
   const router = useRouter()
+  const RIGHT_SIDEBAR_WIDTH = 380
+
+  // ==== Similaridad (no bloqueante) por ítem de cola ==== 
+  const [similarityMap, setSimilarityMap] = useState({}) // { [queueItemId]: { status, query, base, tokens, items, error } }
+  const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
+  const [queueItemThumbs, setQueueItemThumbs] = useState([]) // [{ src, name }]
+  const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
+  const [imgPreviewSrc, setImgPreviewSrc] = useState('')
+
   const [accounts, setAccounts] = useState([])
   const [selectedAcc, setSelectedAcc] = useState(null)
   const [accStatus, setAccStatus] = useState('idle')
@@ -563,6 +575,78 @@ export default function UploadAssetPage() {
     const gb = mb/1024; return `${gb.toFixed(2)} GB`
   }
 
+  const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads'
+  const makeUploadsUrl = (rel) => {
+    const s = String(rel || '').trim()
+    if (!s) return ''
+    if (s.startsWith('http')) return s
+    return `${uploadsBase}/${s.replace(/\\/g,'/').replace(/^\/+/, '')}`
+  }
+
+  const startSimilarityCheck = useCallback((queueItem) => {
+    const id = queueItem?.id
+    const filename = queueItem?.archiveFile?.name
+    if (!id || !filename) return
+
+    setSimilarityMap((m) => {
+      const prev = m?.[id]
+      if (prev?.status === 'loading') return m
+      return {
+        ...(m || {}),
+        [id]: {
+          status: 'loading',
+          query: filename,
+          base: '',
+          tokens: [],
+          items: [],
+          error: '',
+          startedAt: Date.now(),
+        },
+      }
+    })
+
+    ;(async () => {
+      try {
+        const r = await http.getData(`/assets/similar?filename=${encodeURIComponent(filename)}&limit=8`)
+        const data = r?.data || {}
+        const items = Array.isArray(data?.items) ? data.items : []
+        setSimilarityMap((m) => ({
+          ...(m || {}),
+          [id]: {
+            status: 'done',
+            query: String(data?.query || filename),
+            base: String(data?.base || ''),
+            tokens: Array.isArray(data?.tokens) ? data.tokens : [],
+            items,
+            error: '',
+            finishedAt: Date.now(),
+          },
+        }))
+      } catch (e) {
+        console.error('similarity check error', e)
+        setSimilarityMap((m) => ({
+          ...(m || {}),
+          [id]: {
+            status: 'error',
+            query: filename,
+            base: '',
+            tokens: [],
+            items: [],
+            error: 'No se pudo buscar similares',
+            finishedAt: Date.now(),
+          },
+        }))
+      }
+    })()
+  }, [http])
+
+  const openImgPreview = useCallback((src) => {
+    const s = String(src || '').trim()
+    if (!s) return
+    setImgPreviewSrc(s)
+    setImgPreviewOpen(true)
+  }, [])
+
   const formatDuration = (ms) => {
     const total = Math.max(0, Math.floor((ms||0)/1000))
     const h = Math.floor(total/3600)
@@ -637,6 +721,8 @@ export default function UploadAssetPage() {
         status: 'queued', // queued | running | success | error
       }
       setUploadQueue((q) => [...q, item])
+      setSimilaritySelectedId(item.id)
+      startSimilarityCheck(item)
       // limpiar el formulario para permitir agregar otro
       resetForm()
     } finally {
@@ -922,6 +1008,8 @@ export default function UploadAssetPage() {
     setIsProcessingQueue(false)
     setQueueIndex(-1)
     setUploadQueue([])
+    setSimilarityMap({})
+    setSimilaritySelectedId(null)
     // Resetear cronómetro
     if (elapsedTimerRef.current) { clearInterval(elapsedTimerRef.current); elapsedTimerRef.current = null }
     startTimeRef.current = null
@@ -1053,8 +1141,53 @@ export default function UploadAssetPage() {
     }
   }, [isUploading, queueActive])
 
+  const sidebarQueueItem = useMemo(() => {
+    if (similaritySelectedId) {
+      return (uploadQueue || []).find((it) => it?.id === similaritySelectedId) || null
+    }
+    if (queueIndex >= 0 && (uploadQueue || [])[queueIndex]) return uploadQueue[queueIndex]
+    return uploadQueue?.length ? uploadQueue[uploadQueue.length - 1] : null
+  }, [uploadQueue, similaritySelectedId, queueIndex])
+
+  const sidebarSimilarity = sidebarQueueItem ? similarityMap?.[sidebarQueueItem.id] : null
+
+  // Thumbs para el ítem en cola (File -> objectURL). Se regeneran por cambio de ítem.
+  useEffect(() => {
+    const files = Array.isArray(sidebarQueueItem?.images) ? sidebarQueueItem.images : []
+    if (!files.length) {
+      setQueueItemThumbs([])
+      return
+    }
+
+    const created = files
+      .map((f) => {
+        try {
+          const src = URL.createObjectURL(f)
+          return { src, name: f?.name || '' }
+        } catch {
+          return null
+        }
+      })
+      .filter(Boolean)
+
+    setQueueItemThumbs(created)
+    return () => {
+      created.forEach((t) => {
+        try { URL.revokeObjectURL(t.src) } catch {}
+      })
+    }
+  }, [sidebarQueueItem?.id])
+
   return (
-    <div className="dashboard-content p-3">
+    <div
+      className="dashboard-content p-3"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
+        gap: 16,
+        alignItems: 'start',
+      }}
+    >
       <style jsx global>{`
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -1076,6 +1209,7 @@ export default function UploadAssetPage() {
       <button
         type="button"
         className="floating-overlay-btn"
+        style={{ right: RIGHT_SIDEBAR_WIDTH + 24 }}
         aria-label={darkOverlay ? 'Ocultar overlay oscuro' : 'Mostrar overlay oscuro'}
         onClick={() => setDarkOverlay(v => !v)}
       >
@@ -1101,6 +1235,7 @@ export default function UploadAssetPage() {
         </div>
       )}
 
+      <div style={{ minWidth: 0 }}>
       {/* 1) Cabecera */}
       <HeaderBar
         selectedAcc={selectedAcc}
@@ -1310,9 +1445,32 @@ export default function UploadAssetPage() {
 
       {/* 2) Layout de carga */}
       <Box sx={{ ms: 'auto' }}>
-  <Grid container spacing={2} alignItems="stretch" sx={{ display: 'flex', alignItems: 'stretch' }}>
+  <Grid
+    container
+    spacing={0}
+    alignItems="stretch"
+    sx={{
+      display: 'flex',
+      alignItems: 'stretch',
+      gap: 2,
+      flexWrap: { xs: 'wrap', md: 'nowrap' },
+    }}
+  >
           {/* Izquierda: 5/12 → AssetFileSection arriba, Metadata abajo */}
-            <Grid item sx={{ width: '100%', ['@media (min-width:768px)']: { width: '30%' }, display: 'flex', flexDirection: 'column' }}>
+            <Grid
+              item
+              sx={{
+                width: '100%',
+                ['@media (min-width:768px)']: {
+                  width: 'auto',
+                  flex: '0 0 30%',
+                  maxWidth: '30%',
+                },
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: 0,
+              }}
+            >
 
               <AssetFileSection
                 setTitle={setTitle}
@@ -1334,7 +1492,19 @@ export default function UploadAssetPage() {
           </Grid>
 
           {/* Derecha: 7/12 → selector de imágenes (ocupa el resto) */}
-            <Grid item sx={{ width: '100%', ['@media (min-width:768px)']: { width: '67%' }, display: 'flex', flexDirection: 'column' }}>
+            <Grid
+              item
+              sx={{
+                width: '100%',
+                ['@media (min-width:768px)']: {
+                  width: 'auto',
+                  flex: '1 1 0',
+                  minWidth: 0,
+                },
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
             <Stack spacing={2} sx={{ flex: 1 }}>
               <ImagesSection
                 scpBatchPaths={scpBatchPaths}
@@ -1529,16 +1699,46 @@ export default function UploadAssetPage() {
                           )}
                         </td>
                         <td style={{ padding:'8px' }}>
-                          {it.status === 'queued' ? (
-                            <Button size="small" color="warning" variant="outlined" onClick={() => setUploadQueue(arr => arr.filter(x => x.id !== it.id))}>Eliminar</Button>
-                          ) : it.status === 'error' ? (
-                            <Button size="small" color="primary" variant="outlined" 
-                              onClick={() => handleRetrySingle(idx)}
-                              disabled={accStatus !== 'connected' || !selectedAcc}
+                          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                            <Button
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              onClick={() => {
+                                setSimilaritySelectedId(it.id)
+                                const st = similarityMap?.[it.id]?.status
+                                if (st !== 'done' && st !== 'loading') startSimilarityCheck(it)
+                              }}
                             >
-                              Reintentar este
+                              Similares
                             </Button>
-                          ) : null}
+
+                            {it.status === 'queued' ? (
+                              <Button
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                                onClick={() => {
+                                  setUploadQueue(arr => arr.filter(x => x.id !== it.id))
+                                  setSimilarityMap(m => {
+                                    const next = { ...(m || {}) }
+                                    delete next[it.id]
+                                    return next
+                                  })
+                                  setSimilaritySelectedId(prev => (prev === it.id ? null : prev))
+                                }}
+                              >
+                                Eliminar
+                              </Button>
+                            ) : it.status === 'error' ? (
+                              <Button size="small" color="primary" variant="outlined" 
+                                onClick={() => handleRetrySingle(idx)}
+                                disabled={accStatus !== 'connected' || !selectedAcc}
+                              >
+                                Reintentar este
+                              </Button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1634,6 +1834,220 @@ export default function UploadAssetPage() {
         freeQuotaMB={FREE_QUOTA_MB}
         onSelectAccount={handleSelectAccount}
       />
+      </div>
+
+      <RightSidebar
+        side="right"
+        collapsible={false}
+        inFlow
+        open
+        width={RIGHT_SIDEBAR_WIDTH}
+        title="Búsqueda"
+      >
+        {!sidebarQueueItem ? (
+          <Typography variant="body2" sx={{ opacity: 0.8, px: 1 }}>
+            Selecciona un ítem de la cola y pulsa “Similares”.
+          </Typography>
+        ) : (
+          <Box sx={{ px: 1 }}>
+            <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem en cola</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
+              {sidebarQueueItem?.archiveFile?.name || '(sin archivo)'}
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.75, display: 'block' }}>
+              {formatBytes(sidebarQueueItem?.sizeBytes || 0)} • {(sidebarQueueItem?.images || []).length} imágenes
+            </Typography>
+
+            {queueItemThumbs.length > 0 && (
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.9, flexWrap: 'wrap' }}>
+                {queueItemThumbs.slice(0, 12).map((t, i) => (
+                  <Box
+                    key={`${sidebarQueueItem?.id}_qimg_${i}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openImgPreview(t.src)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openImgPreview(t.src) }}
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'rgba(0,0,0,0.2)',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      '&:focus-visible': { boxShadow: '0 0 0 2px rgba(123,97,255,0.55)' },
+                    }}
+                    title={t.name || 'Ver'}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={t.src}
+                      alt={t.name || ''}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      loading="lazy"
+                    />
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            <Divider sx={{ my: 1.25, opacity: 0.2 }} />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Assets similares</Typography>
+              {sidebarSimilarity?.status === 'loading' && (
+                <CircularProgress size={14} />
+              )}
+              <Box sx={{ flex: 1 }} />
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() => {
+                  if (!sidebarQueueItem?.id) return
+                  if (sidebarQueueItem?.status !== 'queued') return
+                  setUploadQueue(arr => arr.filter(x => x.id !== sidebarQueueItem.id))
+                  setSimilarityMap(m => {
+                    const next = { ...(m || {}) }
+                    delete next[sidebarQueueItem.id]
+                    return next
+                  })
+                  setSimilaritySelectedId(prev => (prev === sidebarQueueItem.id ? null : prev))
+                }}
+                disabled={sidebarQueueItem?.status !== 'queued' || sidebarSimilarity?.status === 'loading'}
+              >
+                Eliminar de la cola
+              </Button>
+            </Box>
+
+            {sidebarSimilarity?.status === 'error' && (
+              <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.75 }}>
+                {sidebarSimilarity?.error || 'No se pudo buscar'}
+              </Typography>
+            )}
+
+            {sidebarSimilarity?.status === 'done' && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
+                {(sidebarSimilarity?.items || []).length} encontrados
+              </Typography>
+            )}
+
+            {!sidebarSimilarity && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
+                Aún no se ha ejecutado la búsqueda para este ítem.
+              </Typography>
+            )}
+
+            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1.1 }}>
+              {(sidebarSimilarity?.items || []).map((a) => {
+                const imgs = Array.isArray(a?.images) ? a.images : []
+                const size = a?.fileSizeB ?? a?.archiveSizeB ?? 0
+                const titleText = a?.title || a?.titleEn || a?.slug || `#${a?.id}`
+                return (
+                  <Box
+                    key={a?.id || a?.slug || Math.random()}
+                    sx={{
+                      p: 1,
+                      borderRadius: 2,
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.05)',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.25 }}>
+                      {titleText}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.25, wordBreak: 'break-word' }}>
+                      {a?.archiveName || '(sin archiveName)'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.25 }}>
+                      {formatBytes(size)} • {imgs.length} imágenes
+                    </Typography>
+                    {imgs.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.75, flexWrap: 'wrap' }}>
+                        {imgs.slice(0, 6).map((rel, i) => {
+                          const src = makeUploadsUrl(rel)
+                          if (!src) return null
+                          return (
+                            <Box
+                              key={`${a?.id || a?.slug}_${i}`}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => openImgPreview(src)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openImgPreview(src) }}
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                background: 'rgba(0,0,0,0.2)',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                '&:focus-visible': { boxShadow: '0 0 0 2px rgba(123,97,255,0.55)' },
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={src}
+                                alt=""
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                loading="lazy"
+                              />
+                            </Box>
+                          )
+                        })}
+                      </Box>
+                    )}
+                  </Box>
+                )
+              })}
+            </Box>
+
+            {sidebarSimilarity?.status === 'done' && (sidebarSimilarity?.items || []).length === 0 && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
+                No se encontraron coincidencias.
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {/* Modal de previsualización de imagen */}
+        <Dialog
+          open={imgPreviewOpen}
+          onClose={() => setImgPreviewOpen(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>Vista previa</DialogTitle>
+          <DialogContent>
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: 320,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imgPreviewSrc}
+                alt=""
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setImgPreviewOpen(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+      </RightSidebar>
     </div>
   )
 }
