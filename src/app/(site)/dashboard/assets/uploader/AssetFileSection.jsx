@@ -4,7 +4,6 @@ import {
     CardHeader,
     CardContent,
     Stack,
-    Button,
     Box,
     Typography,
 } from '@mui/material';
@@ -80,11 +79,6 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
         <Card className="glass mb-3" >
             <CardHeader title="Archivo del stl" />
             <CardContent>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
-                    <Button variant="outlined" onClick={openPicker} disabled={disabled}>Seleccionar archivo</Button>
-                    <Box sx={{ flex: 1 }} />
-                </Stack>
-
                 {/* Dropzone para arrastrar y soltar */}
                 <Box
                     onDrop={onDrop}

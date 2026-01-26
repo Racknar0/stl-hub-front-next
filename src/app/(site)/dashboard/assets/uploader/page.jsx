@@ -10,6 +10,7 @@ import {
   CardContent,
   Typography,
   Button,
+  IconButton,
   Stack,
   Divider,
   CircularProgress,
@@ -19,6 +20,7 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
 import ImagesSection from './ImagesSection'
@@ -52,7 +54,9 @@ const mapBackendToUiStatus = (s) => {
 
 export default function UploadAssetPage() {
   const router = useRouter()
-  const RIGHT_SIDEBAR_WIDTH = 380
+  const RIGHT_SIDEBAR_WIDTH = 340
+
+  const ACTION_BTN_STYLES = { height: '32px', padding: '0 10px', fontSize: 12, fontWeight: 800 }
 
   // ==== Similaridad (no bloqueante) por ítem de cola ==== 
   const [similarityMap, setSimilarityMap] = useState({}) // { [queueItemId]: { status, query, base, tokens, items, error } }
@@ -102,6 +106,7 @@ export default function UploadAssetPage() {
   const [newProfileName, setNewProfileName] = useState('')
   const [importProfilesOpen, setImportProfilesOpen] = useState(false)
   const [importProfilesText, setImportProfilesText] = useState('')
+  const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const sortProfilesByName = useCallback((arr=[]) => {
     return [...(arr||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity: 'base' }))
   }, [])
@@ -1186,7 +1191,7 @@ export default function UploadAssetPage() {
       style={{
         display: 'grid',
         gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
-        gap: 16,
+        gap: 0,
         alignItems: 'start',
       }}
     >
@@ -1196,7 +1201,7 @@ export default function UploadAssetPage() {
         .scroll-x { overflow-x: auto; white-space: nowrap; }
         .img-thumb { display:inline-block; margin-right:8px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
         .img-thumb img { display:block; height:120px; }
-        .floating-overlay-btn { position:fixed; right:20px; bottom:10px; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
+        .floating-overlay-btn { position:fixed; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
         .floating-overlay-btn:hover { background:#927dff; }
         .floating-overlay-btn:active { transform:scale(.94); }
         .floating-overlay-btn:focus-visible { outline:3px solid #fff; outline-offset:3px; }
@@ -1211,7 +1216,7 @@ export default function UploadAssetPage() {
       <button
         type="button"
         className="floating-overlay-btn"
-        style={{ right: RIGHT_SIDEBAR_WIDTH + 24 }}
+        style={{ left: 10 , bottom: 10 }}
         aria-label={darkOverlay ? 'Ocultar overlay oscuro' : 'Mostrar overlay oscuro'}
         onClick={() => setDarkOverlay(v => !v)}
       >
@@ -1250,18 +1255,38 @@ export default function UploadAssetPage() {
         onTest={testSelectedAccount}
       />
 
-      <ProfilesBar
-        profiles={profiles}
-        onApply={applyProfile}
-        onDelete={(name) => removeProfile(name)}
-        onImport={importProfiles}
-        onExport={exportProfiles}
-        addProfileOpen={addProfileOpen}
-        setAddProfileOpen={setAddProfileOpen}
-        newProfileName={newProfileName}
-        setNewProfileName={setNewProfileName}
-        onSaveCurrent={handleSaveProfileFromCurrent}
-      />
+      <Dialog
+        open={profilesModalOpen}
+        onClose={() => setProfilesModalOpen(false)}
+        fullWidth
+        maxWidth="md"
+        sx={{
+          zIndex: 22500,
+        }}
+      >
+        <DialogTitle sx={{ pr: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography fontWeight={800}>Perfiles</Typography>
+            <IconButton onClick={() => setProfilesModalOpen(false)} size="small" aria-label="Cerrar">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <ProfilesBar
+            profiles={profiles}
+            onApply={applyProfile}
+            onDelete={(name) => removeProfile(name)}
+            onImport={importProfiles}
+            onExport={exportProfiles}
+            addProfileOpen={addProfileOpen}
+            setAddProfileOpen={setAddProfileOpen}
+            newProfileName={newProfileName}
+            setNewProfileName={setNewProfileName}
+            onSaveCurrent={handleSaveProfileFromCurrent}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={importProfilesOpen} onClose={() => setImportProfilesOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>Importar perfiles (JSON)</DialogTitle>
@@ -1286,7 +1311,19 @@ export default function UploadAssetPage() {
 
       {/* Barra de acciones (debajo de perfiles): cola primero y luego subida individual */}
       <Card className="glass" sx={{ mt: 2, mb: 2 }}>
-        <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+        <CardContent
+          sx={{
+            display: 'grid',
+            gap: 1,
+            alignItems: 'center',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(3, minmax(0, 1fr))',
+              lg: 'repeat(4, minmax(0, 1fr))',
+            },
+          }}
+        >
           {/* Botón para alternar modo HTTP/SCP */}
           <AppButton
             type="button"
@@ -1306,19 +1343,19 @@ export default function UploadAssetPage() {
               }
             }}
             variant={queueMode === 'scp' ? 'purple' : 'cyan'}
-            width="260px"
-            styles={{ color: '#fff' }}
+            width="100%"
+            styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={queueActive || isUploading}
           >
-            {queueMode === 'scp' ? 'Modo SCP (activo)' : 'Activar modo SCP (beta)'}
+            {queueMode === 'scp' ? 'Modo SCP (activo)' : 'Activar modo SCP'}
           </AppButton>
 
           <AppButton
             type="button"
             onClick={handleAddToQueue}
             variant={canEnqueue ? 'cyan' : 'dangerOutline'}
-            width="220px"
-            styles={{ color: '#fff' }}
+            width="100%"
+            styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={!canEnqueue || isUploading}
           >
             Añadir a la cola
@@ -1347,8 +1384,8 @@ export default function UploadAssetPage() {
               type="button"
               onClick={handleResetQueue}
               variant={'cyan'}
-              width="220px"
-              styles={{ color: '#fff' }}
+              width="100%"
+              styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={queueActive || isUploading}
             >
               Limpiar e iniciar nueva cola
@@ -1358,8 +1395,8 @@ export default function UploadAssetPage() {
               type="button"
               onClick={handleStartQueue}
               variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
-              width="220px"
-              styles={{ color: '#fff' }}
+              width="100%"
+              styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
             >
               {queueMode === 'scp' ? 'Iniciar cola (SCP)' : 'Iniciar cola'} {cooldown > 0 ? `(siguiente en ${cooldown}s)` : ''}
@@ -1369,8 +1406,8 @@ export default function UploadAssetPage() {
             type="button"
             onClick={handleRestartFromCurrent}
             variant={accStatus === 'connected' && selectedAcc && (isProcessingQueue || isUploading) ? 'cyan' : 'dangerOutline'}
-            width="300px"
-            styles={{ color: '#fff' }}
+            width="100%"
+            styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={accStatus !== 'connected' || !selectedAcc || (!isProcessingQueue && !isUploading)}
           >
             Reiniciar cola desde este punto
@@ -1392,8 +1429,8 @@ export default function UploadAssetPage() {
                 setScpModalOpen(true)
               }}
               variant={'cyan'}
-              width="220px"
-              styles={{ color: '#fff' }}
+              width="100%"
+              styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={isUploading}
             >
               Ver comando SCP
@@ -1417,8 +1454,8 @@ export default function UploadAssetPage() {
               }
             }}
             variant={canUpload ? 'purple' : 'dangerOutline'}
-            width="300px"
-            styles={canUpload ? { color: '#fff' } : undefined}
+            width="100%"
+            styles={{ ...(canUpload ? { color: '#fff' } : undefined), ...ACTION_BTN_STYLES }}
             aria-label={canUpload ? 'Subir' : 'No permitido'}
             disabled={!canUpload || isUploading || queueActive}
           >
@@ -1434,14 +1471,28 @@ export default function UploadAssetPage() {
           </Box>
         )} */}
           {(!canUpload || slugConflict.conflict) && (
-          <Box sx={{ mt: 1, mb: 1, px: 2 }}>
-            {missingReasons.map((m, idx) => (
-              <Typography key={idx} variant="caption" sx={{ color: 'error.main', display: 'block', lineHeight: 1.6 }}>
-                • {m}
-              </Typography>
-            ))}
-          </Box>
-        )}
+            <Box
+              sx={{
+                mt: 1,
+                mb: 1,
+                px: 2,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                columnGap: 2,
+                rowGap: 0.25,
+              }}
+            >
+              {missingReasons.map((m, idx) => (
+                <Typography
+                  key={idx}
+                  variant="caption"
+                  sx={{ color: 'error.main', lineHeight: 1.2, fontSize: 12 }}
+                >
+                  • {m}
+                </Typography>
+              ))}
+            </Box>
+          )}
       </Card>
       
 
@@ -1489,6 +1540,7 @@ export default function UploadAssetPage() {
                 isPremium={isPremium} setIsPremium={setIsPremium}
                 disabled={isUploading}
                 errors={{...fieldErrors, titleMessage: titleErrorMessage}}
+                onOpenProfiles={() => setProfilesModalOpen(true)}
               />
 
           </Grid>
@@ -1704,15 +1756,16 @@ export default function UploadAssetPage() {
                           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                             <Button
                               size="small"
-                              color="secondary"
+                              color={it.approved ? 'success' : 'secondary'}
                               variant="outlined"
                               onClick={() => {
                                 setSimilaritySelectedId(it.id)
                                 const st = similarityMap?.[it.id]?.status
                                 if (st !== 'done' && st !== 'loading') startSimilarityCheck(it)
                               }}
+                              sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
                             >
-                              Similares
+                              {it.approved ? 'Aprobado' : 'Similares'}
                             </Button>
 
                             {it.status === 'queued' ? (
@@ -1729,6 +1782,7 @@ export default function UploadAssetPage() {
                                   })
                                   setSimilaritySelectedId(prev => (prev === it.id ? null : prev))
                                 }}
+                                sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
                               >
                                 Eliminar
                               </Button>
@@ -1902,6 +1956,39 @@ export default function UploadAssetPage() {
                 <CircularProgress size={14} />
               )}
               <Box sx={{ flex: 1 }} />
+              {sidebarQueueItem?.approved ? (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'success.main',
+                    fontWeight: 800,
+                    letterSpacing: 0.2,
+                    px: 0.9,
+                    py: 0.35,
+                    borderRadius: 999,
+                    border: '1px solid rgba(76, 175, 80, 0.35)',
+                    background: 'rgba(76, 175, 80, 0.10)',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  Aprobado
+                </Typography>
+              ) : (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  onClick={() => {
+                    if (!sidebarQueueItem?.id) return
+                    if (sidebarQueueItem?.status !== 'queued') return
+                    setUploadQueue(arr => arr.map(x => x.id === sidebarQueueItem.id ? { ...x, approved: true } : x))
+                  }}
+                  disabled={sidebarQueueItem?.status !== 'queued' || sidebarSimilarity?.status === 'loading'}
+                  sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
+                >
+                  Aprobar
+                </Button>
+              )}
               <Button
                 size="small"
                 variant="outlined"
@@ -1918,8 +2005,9 @@ export default function UploadAssetPage() {
                   setSimilaritySelectedId(prev => (prev === sidebarQueueItem.id ? null : prev))
                 }}
                 disabled={sidebarQueueItem?.status !== 'queued' || sidebarSimilarity?.status === 'loading'}
+                sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
               >
-                Eliminar de la cola
+                Eliminar
               </Button>
             </Box>
 

@@ -4,6 +4,7 @@ import {
     CardHeader,
     CardContent,
     Stack,
+    Button,
     TextField,
     FormControlLabel,
     Autocomplete,
@@ -32,6 +33,7 @@ export default function MetadataSection({
     setIsPremium,
     disabled = false,
     errors = {},
+    onOpenProfiles,
 }) {
     const [categories, setCategories] = useState([]);
     const [allTags, setAllTags] = useState([]);
@@ -166,7 +168,22 @@ export default function MetadataSection({
 
     return (
         <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1 }}>
-            <CardHeader title="Metadatos" />
+            <CardHeader
+                title="Metadatos"
+                action={
+                    onOpenProfiles ? (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={onOpenProfiles}
+                            disabled={disabled}
+                            sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
+                        >
+                            Perfiles
+                        </Button>
+                    ) : null
+                }
+            />
             <CardContent>
                 <Stack spacing={2}>
                     <TextField
