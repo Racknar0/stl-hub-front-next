@@ -83,39 +83,116 @@ export default function UploadAssetPage() {
   // Eliminado: estados de listado de assets en este modal
 
   // ==== Perfiles locales (categorías + tags) ====
-  const LS_PROFILES_KEY = 'uploader_profiles_v1'
+  const LS_PROFILES_KEY = 'uploader_profiles_v1' // legacy: migración desde localStorage -> DB
   const [profiles, setProfiles] = useState([]) // [{ name, categories: string[], tags: string[] }]
   const [categoriesCatalog, setCategoriesCatalog] = useState([]) // para mapear slugs -> objetos
   const [addProfileOpen, setAddProfileOpen] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+  const [importProfilesOpen, setImportProfilesOpen] = useState(false)
+  const [importProfilesText, setImportProfilesText] = useState('')
   const sortProfilesByName = useCallback((arr=[]) => {
     return [...(arr||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity: 'base' }))
   }, [])
 
-  const listProfiles = useCallback(() => {
+  const readLegacyProfilesFromLocalStorage = useCallback(() => {
     try { return JSON.parse(localStorage.getItem(LS_PROFILES_KEY)) || [] } catch { return [] }
   }, [])
-  const saveProfiles = useCallback((arr) => {
-    localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(arr))
-  }, [])
+
+  const saveProfilesToDb = useCallback(async (arr) => {
+    const ordered = sortProfilesByName(arr)
+    try {
+      await http.postData('/me/uploader-profiles', { profiles: ordered })
+    } catch (e) {
+      console.error('saveProfilesToDb error', e)
+    }
+    return ordered
+  }, [http, sortProfilesByName])
+
+  const loadProfilesFromDb = useCallback(async () => {
+    try {
+      const res = await http.getData('/me/uploader-profiles')
+      const arr = Array.isArray(res?.data?.profiles) ? res.data.profiles : []
+
+      // Migración 1 vez: si DB está vacía pero LS tiene datos, subirlos
+      if (arr.length === 0) {
+        const legacy = readLegacyProfilesFromLocalStorage()
+        if (Array.isArray(legacy) && legacy.length > 0) {
+          const ordered = await saveProfilesToDb(legacy)
+          setProfiles(ordered)
+          return ordered
+        }
+      }
+
+      const ordered = sortProfilesByName(arr)
+      setProfiles(ordered)
+      return ordered
+    } catch (e) {
+      console.error('loadProfilesFromDb error', e)
+      setProfiles([])
+      return []
+    }
+  }, [http, readLegacyProfilesFromLocalStorage, saveProfilesToDb, sortProfilesByName])
+
   const addProfile = useCallback((name, catsSlugs = [], tagsList = []) => {
     const trimmed = String(name || '').trim()
     if (!trimmed) return
-    const all = listProfiles()
-    const idx = all.findIndex(p => String(p.name).toLowerCase() === trimmed.toLowerCase())
-    const next = { name: trimmed, categories: Array.from(new Set(catsSlugs)), tags: Array.from(new Set(tagsList)) }
-    if (idx >= 0) all[idx] = next; else all.push(next)
-    const ordered = sortProfilesByName(all)
-    saveProfiles(ordered)
-    setProfiles(ordered)
-  }, [listProfiles, saveProfiles, sortProfilesByName])
+
+    setProfiles((prev) => {
+      const all = Array.isArray(prev) ? [...prev] : []
+      const idx = all.findIndex(p => String(p?.name || '').toLowerCase() === trimmed.toLowerCase())
+      const next = { name: trimmed, categories: Array.from(new Set(catsSlugs)), tags: Array.from(new Set(tagsList)) }
+      if (idx >= 0) all[idx] = next
+      else all.push(next)
+      const ordered = sortProfilesByName(all)
+      void saveProfilesToDb(ordered)
+      return ordered
+    })
+  }, [saveProfilesToDb, sortProfilesByName])
+
   const removeProfile = useCallback((name) => {
-    const all = listProfiles()
-    const next = all.filter(p => String(p.name).toLowerCase() !== String(name||'').toLowerCase())
-    const ordered = sortProfilesByName(next)
-    saveProfiles(ordered)
+    const target = String(name || '').toLowerCase()
+    setProfiles((prev) => {
+      const all = Array.isArray(prev) ? prev : []
+      const next = all.filter(p => String(p?.name || '').toLowerCase() !== target)
+      const ordered = sortProfilesByName(next)
+      void saveProfilesToDb(ordered)
+      return ordered
+    })
+  }, [saveProfilesToDb, sortProfilesByName])
+
+  const exportProfiles = useCallback(async () => {
+    try {
+      const json = JSON.stringify(profiles || [], null, 2)
+      await navigator.clipboard.writeText(json)
+      window.alert('Perfiles copiados al portapapeles')
+    } catch (e) {
+      console.error('exportProfiles error', e)
+      window.alert('No pude copiar al portapapeles')
+    }
+  }, [profiles])
+
+  const importProfiles = useCallback(() => {
+    setImportProfilesText(JSON.stringify(profiles || [], null, 2))
+    setImportProfilesOpen(true)
+  }, [profiles])
+
+  const applyImportedProfiles = useCallback(async () => {
+    let parsed
+    try {
+      parsed = JSON.parse(importProfilesText)
+    } catch {
+      window.alert('JSON inválido')
+      return
+    }
+    if (!Array.isArray(parsed)) {
+      window.alert('El JSON debe ser un array de perfiles')
+      return
+    }
+    const ordered = sortProfilesByName(parsed)
     setProfiles(ordered)
-  }, [listProfiles, saveProfiles, sortProfilesByName])
+    await saveProfilesToDb(ordered)
+    setImportProfilesOpen(false)
+  }, [importProfilesText, saveProfilesToDb, sortProfilesByName])
 
   // ==== Cola de subidas (solo frontend) ====
   const [uploadQueue, setUploadQueue] = useState([]) // [{id, archiveFile, images:File[], meta:{...}, sizeBytes, status}]
@@ -294,7 +371,7 @@ export default function UploadAssetPage() {
 
   // Cargar perfiles y catálogo de categorías al montar
   useEffect(() => {
-    setProfiles(sortProfilesByName(listProfiles()))
+    void loadProfilesFromDb()
     ;(async () => {
       try {
         const resCats = await http.getData('/categories')
@@ -302,7 +379,7 @@ export default function UploadAssetPage() {
         setCategoriesCatalog(items)
       } catch (e) { setCategoriesCatalog([]) }
     })()
-  }, [listProfiles, sortProfilesByName])
+  }, [loadProfilesFromDb])
 
   // Solo cuentas MAIN para selección en uploader; ordenar: más recientes primero
   const orderedMainAccounts = useMemo(() => {
@@ -1040,12 +1117,35 @@ export default function UploadAssetPage() {
         profiles={profiles}
         onApply={applyProfile}
         onDelete={(name) => removeProfile(name)}
+        onImport={importProfiles}
+        onExport={exportProfiles}
         addProfileOpen={addProfileOpen}
         setAddProfileOpen={setAddProfileOpen}
         newProfileName={newProfileName}
         setNewProfileName={setNewProfileName}
         onSaveCurrent={handleSaveProfileFromCurrent}
       />
+
+      <Dialog open={importProfilesOpen} onClose={() => setImportProfilesOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Importar perfiles (JSON)</DialogTitle>
+        <DialogContent>
+          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+            Pega un array JSON de perfiles con formato: {'{'}"name","categories":[],"tags":[]{'}'}
+          </Typography>
+          <TextField
+            value={importProfilesText}
+            onChange={(e) => setImportProfilesText(e.target.value)}
+            multiline
+            minRows={10}
+            fullWidth
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportProfilesOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={applyImportedProfiles}>Guardar en DB</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Barra de acciones (debajo de perfiles): cola primero y luego subida individual */}
       <Card className="glass" sx={{ mt: 2, mb: 2 }}>

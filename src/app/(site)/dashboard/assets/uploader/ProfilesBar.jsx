@@ -5,6 +5,8 @@ export default function ProfilesBar({
   profiles = [],
   onApply,
   onDelete,
+  onImport,
+  onExport,
   addProfileOpen,
   setAddProfileOpen,
   newProfileName,
@@ -29,6 +31,12 @@ export default function ProfilesBar({
           />
         ))}
         <Box sx={{ display:'inline-flex', gap: 1, alignItems:'center', ml:'auto', flexWrap:'wrap' }}>
+          <Button size="small" variant="outlined" onClick={() => onExport?.()} disabled={profiles.length === 0}>
+            Exportar JSON
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => onImport?.()}>
+            Importar JSON
+          </Button>
           {!addProfileOpen ? (
             <Button size="small" variant="outlined" onClick={() => setAddProfileOpen?.(true)}>Añadir perfil</Button>
           ) : (
