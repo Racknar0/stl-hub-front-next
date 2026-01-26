@@ -2121,11 +2121,9 @@ export default function UploadAssetPage() {
           onClose={() => setImgPreviewOpen(false)}
           maxWidth="lg"
           fullWidth
-          sx={{ zIndex: 22000 }}
-          slotProps={{
-            backdrop: {
-              sx: { zIndex: 21999 },
-            },
+          sx={{
+            zIndex: 22000,
+            '& .MuiBackdrop-root': { zIndex: -1 },
           }}
         >
           <DialogTitle>Vista previa</DialogTitle>
