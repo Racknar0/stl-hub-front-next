@@ -33,7 +33,9 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
   const showLoader = loading || !Array.isArray(items) || items.length === 0;
   return (
     <section className="section-row">
-      <div className="container-narrow">
+      <div className="container-narrow" style={{
+                maxWidth: "90%"
+            }}>
         <div className="header">
           <h3>{title}</h3>
           {/* Botón Ver más opcional */}

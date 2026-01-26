@@ -45,7 +45,9 @@ const FeatureSection = ({
         );
     return (
         <section className="feature-section">
-            <div className="container-narrow">
+            <div className="container-narrow" style={{
+                maxWidth: "90%"
+            }}>
                 <div className="panel">
                     <div className="panel-inner">
                         <div className="intro">
