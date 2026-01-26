@@ -110,9 +110,9 @@ const Home = () => {
       id: a.id,
       slug: a.slug, // necesario para enlace "ver detalle"
       title,
-      chips: (chips || []).slice(0,3),
+      chips: (chips || []),
       thumb,
-      images: images.slice(0,3).map(imgUrl),
+      images: images.map(imgUrl),
       // downloadUrl eliminado en vistas públicas
       category: a.category,
       isPremium: !!a.isPremium,
