@@ -2,6 +2,12 @@ import React from 'react'
 import { Card, CardContent, Grid, FormControl, Box, Typography, Button, Stack, LinearProgress } from '@mui/material'
 
 export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, usedPct, usedMB, totalMB, onOpenModal, onTest }) {
+  const backups = Array.isArray(selectedAcc?.backups) ? selectedAcc.backups : []
+  const firstBackup = backups[0]
+  const backupLabel = firstBackup?.alias
+    ? (backups.length > 1 ? `${firstBackup.alias} (+${backups.length - 1})` : firstBackup.alias)
+    : null
+
   return (
     <Card className="glass mb-3" sx={{ maxWidth: 1600, ms: 'auto' }}>
       <CardContent>
@@ -12,6 +18,15 @@ export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, used
                 <Box>
                   <Typography variant="caption" color="text.secondary">Cuenta MEGA</Typography>
                   <Typography variant="body2">{selectedAcc ? selectedAcc.alias : 'Ninguna seleccionada'}</Typography>
+                  {selectedAcc && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mt: 0.25, fontSize: '0.72rem', opacity: 0.85 }}
+                    >
+                      backup: {backupLabel || '—'}
+                    </Typography>
+                  )}
                 </Box>
                 <Button sx={{ marginLeft: '10px' }} variant="contained" onClick={onOpenModal}>
                   Cuenta

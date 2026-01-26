@@ -217,17 +217,11 @@ export default function UploadAssetPage() {
       const res = await http.getData(API_BASE)
       const list = res.data || []
       setAccounts(list)
-      if (selectedAcc) {
-        const updated = list.find(a => a.id === selectedAcc.id)
-        if (updated) {
-          setSelectedAcc(updated)
-          // Importante: NO actualizar accStatus automáticamente aquí para no simular conexión
-          // Mantener el estado actual (idle/disconnected/connecting/connected) controlado por acciones del usuario
-        }
-      }
+      return list
     } catch (e) {
       console.error('fetchAccounts error', e)
     }
+    return []
   }
 
   useEffect(() => { fetchAccounts() }, [])
@@ -326,20 +320,22 @@ export default function UploadAssetPage() {
 
   const testSelectedAccount = async () => {
     if (!selectedAcc) return
+    const id = selectedAcc.id
+    const prevAcc = selectedAcc
     try {
       setAccStatus('connecting')
       setAccReason(undefined)
-      await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
-      await fetchAccounts()
-      const acc = accounts.find(a => a.id === selectedAcc.id) || selectedAcc
+      await http.postData(`${API_BASE}/${id}/test`, {})
+      const list = await fetchAccounts()
+      const acc = (list || []).find(a => a.id === id) || prevAcc
       console.log('testSelectedAccount acc:', acc)
       setSelectedAcc(acc)
       setAccStatus(mapBackendToUiStatus(acc.status))
       setAccReason(acc.statusMessage || undefined)
     } catch (e) {
       console.error(e)
-      await fetchAccounts()
-      const acc = accounts.find(a => a.id === selectedAcc.id) || selectedAcc
+      const list = await fetchAccounts()
+      const acc = (list || []).find(a => a.id === id) || prevAcc
       setSelectedAcc(acc)
       setAccStatus('failed')
       setAccReason('Falló la verificación')
@@ -853,6 +849,7 @@ export default function UploadAssetPage() {
     if (elapsedTimerRef.current) { clearInterval(elapsedTimerRef.current); elapsedTimerRef.current = null }
     startTimeRef.current = null
     setElapsedMs(0)
+    setActiveStage({ stage: 'idle', percent: 0, alias: '' })
     resetForm()
   }
 
@@ -866,12 +863,25 @@ export default function UploadAssetPage() {
     setAccStatus('disconnected')
     setAccReason(undefined)
     setModalOpen(false)
+
+    // Refrescar inmediatamente desde backend para evitar backups/estado stale
+    const id = acc?.id
+    if (id) {
+      ;(async () => {
+        const list = await fetchAccounts()
+        const updated = (list || []).find(a => a.id === id)
+        if (updated) {
+          setSelectedAcc(prev => (prev && prev.id === id ? updated : prev))
+        }
+      })()
+    }
+
     if (pct >= 80) {
       setTimeout(() => {
         window.alert('Esta cuenta ha superado el 80% de su almacenamiento. Considera usar otra cuenta o liberar espacio.')
       }, 0)
     }
-  }, [])
+  }, [fetchAccounts])
 
   // Bloqueo de navegación/recarga si hay cola o subida activa
   useEffect(() => {
@@ -1273,8 +1283,14 @@ export default function UploadAssetPage() {
                 setUploadFinished(true)
                 try {
                   if (selectedAcc?.id) {
-                    await http.postData(`${API_BASE}/${selectedAcc.id}/test`, {})
-                    await fetchAccounts()
+                    const id = selectedAcc.id
+                    const prevAcc = selectedAcc
+                    await http.postData(`${API_BASE}/${id}/test`, {})
+                    const list = await fetchAccounts()
+                    const acc = (list || []).find(a => a.id === id) || prevAcc
+                    setSelectedAcc(acc)
+                    setAccStatus(mapBackendToUiStatus(acc.status))
+                    setAccReason(acc.statusMessage || undefined)
                   }
                 } catch (e) {
                   console.error('refresh account after upload failed', e)
