@@ -49,6 +49,29 @@ const mockRow = (seed, n = 10) =>
     downloadUrl: '#',
   }));
 
+const shuffleArray = (arr) => {
+  const a = Array.isArray(arr) ? [...arr] : []
+  if (a.length <= 1) return a
+
+  // Fisher–Yates; usa crypto si está disponible
+  const getRand = (max) => {
+    try {
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const buf = new Uint32Array(1)
+        crypto.getRandomValues(buf)
+        return buf[0] % max
+      }
+    } catch {}
+    return Math.floor(Math.random() * max)
+  }
+
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = getRand(i + 1)
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 const Home = () => {
   const http = new HttpService();
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
@@ -67,8 +90,10 @@ const Home = () => {
   const [freeData, setFreeData] = useState([]);
   // Categorías y sliders
   const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
+  const [catsLoadOrder, setCatsLoadOrder] = useState([]); // mismo shape, pero barajado para carga
   const [catPage, setCatPage] = useState(0);
   const BATCH_SIZE = 6;
+  const CAT_SLIDER_LIMIT = 50;
   const [catMap, setCatMap] = useState({}); // slug -> raw items
   const [catOrder, setCatOrder] = useState([]); // slugs con resultados en orden de carga
   const [loadingMoreCats, setLoadingMoreCats] = useState(false);
@@ -149,11 +174,23 @@ const Home = () => {
         const resCats = await http.getData('/categories');
         const catItems = (resCats.data?.items || []).map(c => ({ id: c.id, name: c.name, nameEn: c.nameEn || c.name, slug: c.slug, slugEn: c.slugEn || c.slug }));
         setCats(catItems);
+        // Barajar el orden para que cada visita muestre categorías distintas primero
+        setCatsLoadOrder(shuffleArray(catItems));
+        // Reiniciar estado de sliders/carga
+        setCatPage(0);
+        setCatMap({});
+        setCatOrder([]);
+        setCatsLoadedAll(false);
       } catch (e) {
         setLatestRaw([]);
         setTopRaw([]);
         setFreeRaw([]);
         setCats([]);
+        setCatsLoadOrder([]);
+        setCatPage(0);
+        setCatMap({});
+        setCatOrder([]);
+        setCatsLoadedAll(false);
       } finally {
         setGlobalLoading(false);
       }
@@ -163,24 +200,24 @@ const Home = () => {
 
   // Cargar primer lote de categorías cuando ya tengamos listado
   useEffect(() => {
-    if (cats.length && catPage === 0 && catOrder.length === 0 && !loadingMoreCats) {
+    if (catsLoadOrder.length && catPage === 0 && catOrder.length === 0 && !loadingMoreCats) {
       // cargar lote inicial
       loadCategoryBatch(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cats.length]);
+  }, [catsLoadOrder.length]);
 
   const loadCategoryBatch = async (pageToLoad) => {
-    if (!cats.length) return;
+    if (!catsLoadOrder.length) return;
     const start = pageToLoad * BATCH_SIZE;
-    if (start >= cats.length) { setCatsLoadedAll(true); return; }
-    const slice = cats.slice(start, start + BATCH_SIZE);
+    if (start >= catsLoadOrder.length) { setCatsLoadedAll(true); return; }
+    const slice = catsLoadOrder.slice(start, start + BATCH_SIZE);
     setLoadingMoreCats(true);
     try {
       // peticiones en paralelo por categoría
-      // Categorías: últimos primero (id desc) y límite 20 por slider
+      // Categorías: últimos primero (id desc) y límite por slider
       const results = await Promise.allSettled(
-        slice.map(cat => http.getData(`/assets/search?categories=${encodeURIComponent(cat.slug)}&pageIndex=0&pageSize=20`))
+        slice.map(cat => http.getData(`/assets/search?categories=${encodeURIComponent(cat.slug)}&pageIndex=0&pageSize=${CAT_SLIDER_LIMIT}`))
       );
       const nextMap = { ...catMap };
       const nextOrder = [...catOrder];
@@ -197,7 +234,7 @@ const Home = () => {
       setCatMap(nextMap);
       setCatOrder(nextOrder);
       setCatPage(pageToLoad + 1);
-      if ((pageToLoad + 1) * BATCH_SIZE >= cats.length) setCatsLoadedAll(true);
+      if ((pageToLoad + 1) * BATCH_SIZE >= catsLoadOrder.length) setCatsLoadedAll(true);
     } catch (e) {
       // noop
     } finally {
@@ -233,14 +270,14 @@ const Home = () => {
   const catSliders = useMemo(() => (
     catOrder.map(slug => {
       const cat = cats.find(c => c.slug === slug);
-      const items = (catMap[slug] || []).slice(0,20).map(a => toCardItem(a, language));
+      const items = (catMap[slug] || []).slice(0, CAT_SLIDER_LIMIT).map(a => toCardItem(a, language));
       return {
         slug,
         title: language === 'en' ? (cat?.nameEn || cat?.name || slug) : (cat?.name || cat?.nameEn || slug),
         items,
       };
     })
-  ), [catOrder, catMap, cats, language]);
+  ), [catOrder, catMap, cats, language, CAT_SLIDER_LIMIT]);
 
   const handleOpen = (asset) => { setModalAsset(asset); setModalOpen(true); };
   const handleClose = () => { setModalOpen(false); setModalAsset(null); };
