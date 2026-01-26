@@ -1292,7 +1292,10 @@ export default function UploadAssetPage() {
         <DialogContent dividers>
           <ProfilesBar
             profiles={profiles}
-            onApply={applyProfile}
+            onApply={(p) => {
+              applyProfile?.(p)
+              setProfilesModalOpen(false)
+            }}
             onDelete={(name) => removeProfile(name)}
             onImport={importProfiles}
             onExport={exportProfiles}
