@@ -56,7 +56,14 @@ export default function UploadAssetPage() {
   const router = useRouter()
   const RIGHT_SIDEBAR_WIDTH = 340
 
-  const ACTION_BTN_STYLES = { height: '32px', padding: '0 10px', fontSize: 12, fontWeight: 800 }
+  const ACTION_BTN_STYLES = {
+    height: '32px',
+    padding: '0 10px',
+    fontSize: 12,
+    fontWeight: 800,
+    width: 'auto',
+    margin: 0,
+  }
 
   // ==== Similaridad (no bloqueante) por ítem de cola ==== 
   const [similarityMap, setSimilarityMap] = useState({}) // { [queueItemId]: { status, query, base, tokens, items, error } }
@@ -510,7 +517,7 @@ export default function UploadAssetPage() {
   const missingReasons = useMemo(() => {
     const list = []
     if (accStatus !== 'connected' || !selectedAcc) list.push('Conecta una cuenta MEGA')
-    if (!archiveFile) list.push('Selecciona el archivo principal (.zip/.rar)')
+    if (!archiveFile) list.push('Selecciona (.zip/.rar)')
     if (imageFiles.length < 1) list.push('Añade al menos 1 imagen')
     if (fieldErrors.title) list.push('Nombre (ES) requerido')
     if (fieldErrors.titleEn) list.push('Nombre (EN) requerido')
@@ -1158,6 +1165,16 @@ export default function UploadAssetPage() {
 
   const sidebarSimilarity = sidebarQueueItem ? similarityMap?.[sidebarQueueItem.id] : null
 
+  // Informar a la ConsoleBar global que este dashboard tiene un sidebar derecho fijo
+  useEffect(() => {
+    try {
+      document.documentElement.style.setProperty('--dash-right-offset', `${RIGHT_SIDEBAR_WIDTH}px`)
+    } catch {}
+    return () => {
+      try { document.documentElement.style.setProperty('--dash-right-offset', '0px') } catch {}
+    }
+  }, [RIGHT_SIDEBAR_WIDTH])
+
   // Thumbs para el ítem en cola (File -> objectURL). Se regeneran por cambio de ítem.
   useEffect(() => {
     const files = Array.isArray(sidebarQueueItem?.images) ? sidebarQueueItem.images : []
@@ -1201,7 +1218,7 @@ export default function UploadAssetPage() {
         .scroll-x { overflow-x: auto; white-space: nowrap; }
         .img-thumb { display:inline-block; margin-right:8px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
         .img-thumb img { display:block; height:120px; }
-        .floating-overlay-btn { position:fixed; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
+        .floating-overlay-btn { position:fixed; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:5px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
         .floating-overlay-btn:hover { background:#927dff; }
         .floating-overlay-btn:active { transform:scale(.94); }
         .floating-overlay-btn:focus-visible { outline:3px solid #fff; outline-offset:3px; }
@@ -1313,15 +1330,11 @@ export default function UploadAssetPage() {
       <Card className="glass" sx={{ mt: 2, mb: 2 }}>
         <CardContent
           sx={{
-            display: 'grid',
-            gap: 1,
+            display: 'flex',
+            flexWrap: 'wrap',
             alignItems: 'center',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(3, minmax(0, 1fr))',
-              lg: 'repeat(4, minmax(0, 1fr))',
-            },
+            justifyContent: 'flex-start',
+            gap: 1,
           }}
         >
           {/* Botón para alternar modo HTTP/SCP */}
@@ -1343,7 +1356,6 @@ export default function UploadAssetPage() {
               }
             }}
             variant={queueMode === 'scp' ? 'purple' : 'cyan'}
-            width="100%"
             styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={queueActive || isUploading}
           >
@@ -1354,7 +1366,6 @@ export default function UploadAssetPage() {
             type="button"
             onClick={handleAddToQueue}
             variant={canEnqueue ? 'cyan' : 'dangerOutline'}
-            width="100%"
             styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={!canEnqueue || isUploading}
           >
@@ -1384,7 +1395,6 @@ export default function UploadAssetPage() {
               type="button"
               onClick={handleResetQueue}
               variant={'cyan'}
-              width="100%"
               styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={queueActive || isUploading}
             >
@@ -1395,7 +1405,6 @@ export default function UploadAssetPage() {
               type="button"
               onClick={handleStartQueue}
               variant={uploadQueue.length > 0 && hasQueuedItems && !queueActive && !isUploading && accStatus === 'connected' && selectedAcc ? 'cyan' : 'dangerOutline'}
-              width="100%"
               styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={uploadQueue.length === 0 || !hasQueuedItems || queueActive || isUploading || accStatus !== 'connected' || !selectedAcc}
             >
@@ -1406,7 +1415,6 @@ export default function UploadAssetPage() {
             type="button"
             onClick={handleRestartFromCurrent}
             variant={accStatus === 'connected' && selectedAcc && (isProcessingQueue || isUploading) ? 'cyan' : 'dangerOutline'}
-            width="100%"
             styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
             disabled={accStatus !== 'connected' || !selectedAcc || (!isProcessingQueue && !isUploading)}
           >
@@ -1429,7 +1437,6 @@ export default function UploadAssetPage() {
                 setScpModalOpen(true)
               }}
               variant={'cyan'}
-              width="100%"
               styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
               disabled={isUploading}
             >
@@ -1454,7 +1461,6 @@ export default function UploadAssetPage() {
               }
             }}
             variant={canUpload ? 'purple' : 'dangerOutline'}
-            width="100%"
             styles={{ ...(canUpload ? { color: '#fff' } : undefined), ...ACTION_BTN_STYLES }}
             aria-label={canUpload ? 'Subir' : 'No permitido'}
             disabled={!canUpload || isUploading || queueActive}
@@ -1477,7 +1483,11 @@ export default function UploadAssetPage() {
                 mb: 1,
                 px: 2,
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                },
                 columnGap: 2,
                 rowGap: 0.25,
               }}
@@ -1648,7 +1658,7 @@ export default function UploadAssetPage() {
         </Card>
 
         {/* Listado de la cola */}
-        <Card className="glass" sx={{ mt: 2 }}>
+        <Card className="glass" sx={{ mt: 2, mb: 3 }}>
           <CardHeader
             title="Cola de subidas"
             subheader={

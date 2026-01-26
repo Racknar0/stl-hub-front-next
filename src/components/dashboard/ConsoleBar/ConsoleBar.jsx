@@ -7,7 +7,6 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
-import LinearProgress from '@mui/material/LinearProgress';
 import Button from '@mui/material/Button';
 import CloseIcon from '@mui/icons-material/Close';
 import TerminalIcon from '@mui/icons-material/Terminal';
@@ -25,16 +24,23 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const Root = styled('div')(({ theme }) => ({
   position: 'fixed',
-  zIndex: 1300,
+  // Por encima de RightSidebar (9998) pero por debajo de overlays/modals (>=10000)
+  zIndex: 9999,
   left: 0,
-  right: 0,
+  right: 'var(--dash-right-offset, 0px)',
   bottom: 0,
   pointerEvents: 'none',
+  // Alinear con el layout del dashboard (evita quedar debajo del sidenav en desktop)
+  paddingLeft: 16,
+  paddingRight: 16,
+  boxSizing: 'border-box',
+  [theme.breakpoints.up('lg')]: {
+    left: 240,
+  },
 }));
 
 const ConsoleContainer = styled(Paper)(({ theme }) => ({
-  margin: '0 auto',
-  maxWidth: '1400px',
+  width: '100%',
   borderTopLeftRadius: 8,
   borderTopRightRadius: 8,
   backgroundColor: theme.palette.mode === 'dark' ? '#111' : '#1e1e1e',
@@ -72,10 +78,13 @@ export default function ConsoleBar() {
   const [lines, setLines] = useState([]);
   const [live, setLive] = useState(true);
   const [levelsEnabled, setLevelsEnabled] = useState({ log: true, info: true, warn: true, error: true });
-  const [simulating, setSimulating] = useState(false);
-  const [progress, setProgress] = useState(null); // {value,label}
   const logsRef = useRef(null);
-  const simTimer = useRef(null);
+
+  const scrollLogsToBottom = useCallback(() => {
+    const el = logsRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
 
   const toggle = () => setOpen(o => !o);
 
@@ -104,10 +113,26 @@ export default function ConsoleBar() {
   const clear = () => setLines([]);
 
   useEffect(() => {
-    if (logsRef.current) {
-      logsRef.current.scrollTop = logsRef.current.scrollHeight;
-    }
-  }, [lines]);
+    scrollLogsToBottom();
+  }, [lines, scrollLogsToBottom]);
+
+  // Al abrir/expandir: forzar scroll al final aunque no entren logs nuevos.
+  useEffect(() => {
+    if (!open) return;
+    // Esperar a que el DOM pinte y el contenedor tenga altura.
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
+        scrollLogsToBottom();
+      });
+      // backup extra por si MUI/transitions retrasan layout
+      const t = window.setTimeout(() => scrollLogsToBottom(), 50);
+      return () => {
+        cancelAnimationFrame(raf2);
+        window.clearTimeout(t);
+      };
+    });
+    return () => cancelAnimationFrame(raf1);
+  }, [open, logHeight, scrollLogsToBottom]);
 
   // Conexión SSE
   useEffect(() => {
@@ -132,34 +157,6 @@ export default function ConsoleBar() {
     return () => { cancelled = true; evtSource.close(); };
   }, [live, addLine, levelsEnabled]);
 
-  // Simulación de logs (opcional para probar)
-  const startSim = () => {
-    if (simulating) return;
-    setSimulating(true);
-    setProgress({ value: 0, label: 'Simulando...' });
-    let pct = 0;
-    simTimer.current = setInterval(() => {
-      pct += Math.random() * 15;
-      if (pct >= 100) pct = 100;
-      addLine(`[SIM] Progreso ${pct.toFixed(1)}%`);
-      setProgress({ value: pct, label: `Progreso ${pct.toFixed(1)}%` });
-      if (pct === 100) {
-        addLine('[SIM] Tarea completada');
-        clearInterval(simTimer.current);
-        setTimeout(() => setSimulating(false), 1000);
-      }
-    }, 800);
-  };
-
-  const stopSim = () => {
-    if (simTimer.current) clearInterval(simTimer.current);
-    setSimulating(false);
-    setProgress(null);
-    addLine('[SIM] Simulación detenida');
-  };
-
-  useEffect(() => () => { if (simTimer.current) clearInterval(simTimer.current); }, []);
-
   return (
     <Root>
       <ConsoleContainer style={{ height: open ? expandedHeight : (toolbarRef.current?.getBoundingClientRect().height || 40) }}>
@@ -168,17 +165,7 @@ export default function ConsoleBar() {
           <Typography variant="caption" sx={{ flex: 1, userSelect: 'none' }}>
             Consola del Dashboard
           </Typography>
-          {progress && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 160 }}>
-              <Box sx={{ flex: 1 }}>
-                <LinearProgress variant="determinate" value={progress.value} sx={{ height: 6, borderRadius: 1 }} />
-              </Box>
-              <Typography variant="caption" sx={{ color: '#ccc', minWidth: 70, textAlign: 'right' }}>{progress.label}</Typography>
-            </Box>
-          )}
           <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#444' }} />
-          {!simulating && <Tooltip title="Simular"><span><Button size="small" variant="outlined" color="inherit" onClick={startSim}>Sim</Button></span></Tooltip>}
-          {simulating && <Tooltip title="Detener simulación"><span><Button size="small" variant="outlined" color="warning" onClick={stopSim}>Stop</Button></span></Tooltip>}
           <Tooltip title={live ? 'Pausar live' : 'Reanudar live'}>
             <span><Button size="small" variant="outlined" color={live ? 'success' : 'inherit'} onClick={() => setLive(v => !v)}>{live ? 'Live' : 'Off'}</Button></span>
           </Tooltip>

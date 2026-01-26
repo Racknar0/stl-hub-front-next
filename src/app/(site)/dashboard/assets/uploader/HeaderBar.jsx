@@ -14,7 +14,7 @@ export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, used
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
             <FormControl fullWidth size="small">
-              <Box sx={{ p: 1.5, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 1, minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ p: 0, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 1, minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">Cuenta MEGA</Typography>
                   <Typography variant="body2">{selectedAcc ? selectedAcc.alias : 'Ninguna seleccionada'}</Typography>
