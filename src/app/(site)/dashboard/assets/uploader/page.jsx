@@ -140,6 +140,9 @@ export default function UploadAssetPage() {
   // Overlay oscuro manual (switch flotante)
   const [darkOverlay, setDarkOverlay] = useState(false)
 
+  // Evitar doble click/ejecuciones paralelas al encolar
+  const addToQueueLockRef = React.useRef(false)
+
   // Hold de uploads-active para sesiones largas en modo SCP (evita que el cron toque MEGAcmd)
   const [scpHoldId, setScpHoldId] = useState('')
   const [scpHoldUntilMs, setScpHoldUntilMs] = useState(0)
@@ -526,25 +529,46 @@ export default function UploadAssetPage() {
     : undefined
 
   const handleAddToQueue = async () => {
+    if (addToQueueLockRef.current) return
+    addToQueueLockRef.current = true
+
     // snapshot rápido del formulario y archivos
-    if (!archiveFile || imageFiles.length < 1) return;
-    if (accStatus !== 'connected' || !selectedAcc) return;
-    if (!Array.isArray(selectedCategories) || selectedCategories.length < 1) return;
-    if (!(tagsCleanCount >= 2)) return;
-    const unique = await ensureUniqueSlugOrSetError()
-    if (!unique) return
-    const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
-    const item = {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-      archiveFile,
-      images: imageFiles.map((f) => f.file || f),
-      meta: { title, titleEn, categories: selectedCategories, tags, isPremium, accountId: selectedAcc?.id || null, },
-      sizeBytes,
-      status: 'queued', // queued | running | success | error
+    try {
+      if (!archiveFile || imageFiles.length < 1) return;
+      if (accStatus !== 'connected' || !selectedAcc) return;
+      if (!Array.isArray(selectedCategories) || selectedCategories.length < 1) return;
+      if (!(tagsCleanCount >= 2)) return;
+
+      // Evitar duplicados por nombre de archivo principal en la cola actual
+      const normalizeName = (n) => String(n || '').trim().toLowerCase();
+      const incomingName = normalizeName(archiveFile?.name);
+      if (incomingName) {
+        const dup = uploadQueue.some(
+          (it) => normalizeName(it?.archiveFile?.name) === incomingName && (it?.status === 'queued' || it?.status === 'running')
+        );
+        if (dup) {
+          window.alert(`Ya hay un archivo en la cola con el mismo nombre: ${archiveFile.name}`);
+          return;
+        }
+      }
+
+      const unique = await ensureUniqueSlugOrSetError()
+      if (!unique) return
+      const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
+      const item = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        archiveFile,
+        images: imageFiles.map((f) => f.file || f),
+        meta: { title, titleEn, categories: selectedCategories, tags, isPremium, accountId: selectedAcc?.id || null, },
+        sizeBytes,
+        status: 'queued', // queued | running | success | error
+      }
+      setUploadQueue((q) => [...q, item])
+      // limpiar el formulario para permitir agregar otro
+      resetForm()
+    } finally {
+      addToQueueLockRef.current = false
     }
-    setUploadQueue((q) => [...q, item])
-    // limpiar el formulario para permitir agregar otro
-    resetForm()
   }
 
   const populateFormFromQueueItem = (item) => {
