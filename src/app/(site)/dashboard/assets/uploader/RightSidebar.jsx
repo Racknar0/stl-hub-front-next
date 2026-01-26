@@ -22,13 +22,15 @@ export default function RightSidebar({
     <Box
       sx={{
         position: inFlow ? 'sticky' : 'fixed',
-        top: 0,
+        top: inFlow ? 16 : 0,
         right: inFlow ? 'auto' : (isLeft ? 'auto' : 0),
         left: inFlow ? 'auto' : (isLeft ? 0 : 'auto'),
-        height: '100%',
+        height: inFlow ? 'auto' : '100%',
+        maxHeight: inFlow ? 'calc(100vh - 16px)' : '100%',
         width: inFlow ? '100%' : w,
         zIndex: inFlow ? 1 : 9998,
         transition: inFlow ? 'none' : 'width 180ms ease',
+        alignSelf: 'start',
         borderLeft: isLeft ? 'none' : '1px solid rgba(255,255,255,0.14)',
         borderRight: isLeft ? '1px solid rgba(255,255,255,0.14)' : 'none',
         background: 'rgba(16, 16, 22, 0.95)',
@@ -84,7 +86,7 @@ export default function RightSidebar({
 
       <Box
         sx={{
-          height: 'calc(100vh - 56px)',
+          height: 'calc(100% - 56px)',
           display: effectiveOpen ? 'block' : 'none',
           px: 1,
           pb: 2,

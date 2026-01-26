@@ -586,6 +586,7 @@ export default function UploadAssetPage() {
   const startSimilarityCheck = useCallback((queueItem) => {
     const id = queueItem?.id
     const filename = queueItem?.archiveFile?.name
+    const sizeB = Number(queueItem?.sizeBytes || 0)
     if (!id || !filename) return
 
     setSimilarityMap((m) => {
@@ -607,7 +608,8 @@ export default function UploadAssetPage() {
 
     ;(async () => {
       try {
-        const r = await http.getData(`/assets/similar?filename=${encodeURIComponent(filename)}&limit=8`)
+        const qsSize = Number.isFinite(sizeB) && sizeB > 0 ? `&sizeB=${encodeURIComponent(String(Math.floor(sizeB)))}` : ''
+        const r = await http.getData(`/assets/similar?filename=${encodeURIComponent(filename)}&limit=8${qsSize}`)
         const data = r?.data || {}
         const items = Array.isArray(data?.items) ? data.items : []
         setSimilarityMap((m) => ({
@@ -1180,7 +1182,7 @@ export default function UploadAssetPage() {
 
   return (
     <div
-      className="dashboard-content p-3"
+      className="p-3"
       style={{
         display: 'grid',
         gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
@@ -1194,7 +1196,7 @@ export default function UploadAssetPage() {
         .scroll-x { overflow-x: auto; white-space: nowrap; }
         .img-thumb { display:inline-block; margin-right:8px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
         .img-thumb img { display:block; height:120px; }
-        .floating-overlay-btn { position:fixed; right:24px; bottom:24px; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
+        .floating-overlay-btn { position:fixed; right:20px; bottom:10px; z-index:9999; background:#7b61ff; color:#fff; border:none; padding:12px 18px; border-radius:32px; font-weight:600; box-shadow:0 6px 18px -4px rgba(0,0,0,0.5); cursor:pointer; transition:background .25s, transform .15s; }
         .floating-overlay-btn:hover { background:#927dff; }
         .floating-overlay-btn:active { transform:scale(.94); }
         .floating-overlay-btn:focus-visible { outline:3px solid #fff; outline-offset:3px; }
@@ -1423,14 +1425,14 @@ export default function UploadAssetPage() {
             {queueMode === 'scp' ? (canUpload ? 'Registrar desde SCP' : 'Completa los campos') : (canUpload ? 'Subir' : 'Completa los campos')}
           </AppButton>
         </CardContent>
-        {queueMode === 'scp' && batchId && (
+        {/* {queueMode === 'scp' && batchId && (
           <Box sx={{ mt: 1, mb: 1, px: 2 }}>
             <Typography variant="caption" sx={{ color: 'info.light', display: 'block', lineHeight: 1.6 }}>
               Modo SCP activo: Copia el archivo principal de cada ítem al servidor en la ruta <b>uploads/tmp/{batchId}/&lt;NOMBRE_DEL_ARCHIVO&gt;</b>.
               Puedes usar WinSCP/SFTP o scp. Una vez esté completo, pulsa "Registrar desde SCP" para crear el asset y encolarlo a MEGA.
             </Typography>
           </Box>
-        )}
+        )} */}
           {(!canUpload || slugConflict.conflict) && (
           <Box sx={{ mt: 1, mb: 1, px: 2 }}>
             {missingReasons.map((m, idx) => (
@@ -1839,7 +1841,7 @@ export default function UploadAssetPage() {
       <RightSidebar
         side="right"
         collapsible={false}
-        inFlow
+        inFlow={false}
         open
         width={RIGHT_SIDEBAR_WIDTH}
         title="Búsqueda"
@@ -2018,6 +2020,12 @@ export default function UploadAssetPage() {
           onClose={() => setImgPreviewOpen(false)}
           maxWidth="lg"
           fullWidth
+          sx={{ zIndex: 22000 }}
+          slotProps={{
+            backdrop: {
+              sx: { zIndex: 21999 },
+            },
+          }}
         >
           <DialogTitle>Vista previa</DialogTitle>
           <DialogContent>

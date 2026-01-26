@@ -50,7 +50,8 @@
   .dashboard-content{ 
     margin-left: 0; /* el grid ya separa */
     min-width: 0;   /* clave para que la columna pueda encoger y no empuje el grid */
-    overflow: hidden; /* evita scroll horizontal del main; los hijos manejan su overflow */
+    overflow-x: hidden; /* evita scroll horizontal del main */
+    overflow-y: visible; /* necesario para que `position: sticky` funcione en descendientes */
   }
 }
 
