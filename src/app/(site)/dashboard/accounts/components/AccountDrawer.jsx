@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Drawer,
     Box,
@@ -11,6 +11,7 @@ import {
 import StatusChip from './StatusChip';
 import AppButton from '@/components/layout/Buttons/Button';
 import accountService from '@/services/AccountService';
+import { confirmAlert, errorAlert, timerAlert } from '@/helpers/alerts';
 
 function formatMB(bytes) {
     const n = Number(bytes);
@@ -33,13 +34,115 @@ export default function AccountDrawer({
     addBackup,
     addingBackup,
     removeBackup,
+    onUpdateAccount,
+    onDeleteAccount,
 }) {
     const [syncLoading, setSyncLoading] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
     const [restoreLoading, setRestoreLoading] = useState(false);
     const [restoreResult, setRestoreResult] = useState(null);
 
-    console.log('backupCandidates', backupCandidates);
+    const [editAlias, setEditAlias] = useState('');
+    const [editType, setEditType] = useState('main');
+    const [editLoading, setEditLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    useEffect(() => {
+        if (!selected) return;
+        setEditAlias(selected.alias || '');
+        setEditType(selected.type || 'main');
+    }, [selected?.id]);
+
+    const canDelete = useMemo(() => {
+        if (!selected) return false;
+        if (selected.type === 'main' && (selected.backups || []).length > 0)
+            return false;
+        return true;
+    }, [selected]);
+
+    const deleteDisabledReason = useMemo(() => {
+        if (!selected) return null;
+        if (selected.type === 'main' && (selected.backups || []).length > 0) {
+            return 'No se puede eliminar una main con backups asignados.';
+        }
+        return null;
+    }, [selected]);
+
+    const canChangeType = useMemo(() => {
+        if (!selected) return false;
+        if (selected.type === 'main' && (selected.backups || []).length > 0)
+            return false;
+        if (selected.type === 'backup' && (selected.mains || []).length > 0)
+            return false;
+        return true;
+    }, [selected]);
+
+    const typeDisabledReason = useMemo(() => {
+        if (!selected) return null;
+        if (selected.type === 'main' && (selected.backups || []).length > 0)
+            return 'Quita backups antes de cambiar el tipo.';
+        if (selected.type === 'backup' && (selected.mains || []).length > 0)
+            return 'Desasigna esta cuenta como backup antes de cambiar el tipo.';
+        return null;
+    }, [selected]);
+
+    const hasChanges = useMemo(() => {
+        if (!selected) return false;
+        return (
+            String(editAlias || '').trim() !== String(selected.alias || '').trim() ||
+            String(editType || '') !== String(selected.type || '')
+        );
+    }, [selected, editAlias, editType]);
+
+    async function handleSaveEdit() {
+        if (!selected) return;
+        const nextAlias = String(editAlias || '').trim();
+        const nextType = String(editType || '').trim();
+        if (!nextAlias) {
+            await errorAlert('Faltan datos', 'El alias es obligatorio');
+            return;
+        }
+        if (!hasChanges) return;
+
+        setEditLoading(true);
+        try {
+            await onUpdateAccount?.(selected.id, { alias: nextAlias, type: nextType });
+            await timerAlert('OK', 'Cuenta actualizada', 900);
+        } catch (e) {
+            console.error('update account error', e);
+            await errorAlert('Error', e?.response?.data?.message || 'No se pudo actualizar la cuenta');
+        } finally {
+            setEditLoading(false);
+        }
+    }
+
+    async function handleDelete() {
+        if (!selected) return;
+        if (!canDelete) {
+            await errorAlert('No permitido', deleteDisabledReason || 'No se puede eliminar esta cuenta');
+            return;
+        }
+        const ok = await confirmAlert(
+            'Eliminar cuenta',
+            `Se eliminará la cuenta "${selected.alias}". ¿Deseas continuar?`,
+            'Eliminar',
+            'Cancelar',
+            'warning'
+        );
+        if (!ok) return;
+
+        setDeleteLoading(true);
+        try {
+            await onDeleteAccount?.(selected.id);
+            await timerAlert('OK', 'Cuenta eliminada', 900);
+            onClose?.();
+        } catch (e) {
+            console.error('delete account error', e);
+            await errorAlert('Error', e?.response?.data?.message || 'No se pudo eliminar la cuenta');
+        } finally {
+            setDeleteLoading(false);
+        }
+    }
 
     async function handleSyncMainBackups() {
         if (!selected) return;
@@ -96,6 +199,66 @@ export default function AccountDrawer({
                             {selected.email}
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
+
+                        <Typography className="fw-bold" variant="subtitle2" sx={{ mb: 1 }}>
+                            Editar
+                        </Typography>
+                        <Stack spacing={1.25} sx={{ mb: 2 }}>
+                            <TextField
+                                size="small"
+                                label="Alias"
+                                value={editAlias}
+                                onChange={(e) => setEditAlias(e.target.value)}
+                                disabled={editLoading || deleteLoading}
+                            />
+                            <TextField
+                                select
+                                size="small"
+                                label="Tipo"
+                                value={editType}
+                                onChange={(e) => setEditType(e.target.value)}
+                                SelectProps={{ native: true }}
+                                InputLabelProps={{ shrink: true }}
+                                disabled={!canChangeType || editLoading || deleteLoading}
+                                helperText={!canChangeType ? typeDisabledReason : ''}
+                            >
+                                <option value="main">main</option>
+                                <option value="backup">backup</option>
+                            </TextField>
+                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                <AppButton
+                                    variant="purple"
+                                    width="140px"
+                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem', position: 'relative' }}
+                                    onClick={handleSaveEdit}
+                                    disabled={!hasChanges || editLoading || deleteLoading}
+                                >
+                                    {editLoading ? 'Guardando…' : 'Guardar'}
+                                    {editLoading && (
+                                        <CircularProgress size={16} color="inherit" sx={{ position: 'absolute', right: 8 }} />
+                                    )}
+                                </AppButton>
+                                <AppButton
+                                    variant="cyan"
+                                    width="160px"
+                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem', position: 'relative', background: '#b71c1c' }}
+                                    onClick={handleDelete}
+                                    disabled={!canDelete || editLoading || deleteLoading}
+                                >
+                                    {deleteLoading ? 'Eliminando…' : 'Eliminar'}
+                                    {deleteLoading && (
+                                        <CircularProgress size={16} color="inherit" sx={{ position: 'absolute', right: 8 }} />
+                                    )}
+                                </AppButton>
+                            </Stack>
+                            {!canDelete && deleteDisabledReason && (
+                                <Typography variant="caption" color="text.secondary">
+                                    {deleteDisabledReason}
+                                </Typography>
+                            )}
+                        </Stack>
+
+                        <Divider sx={{ my: 2 }} />
                         <Typography className="fw-bold" variant="subtitle2">
                             Carpeta base
                         </Typography>

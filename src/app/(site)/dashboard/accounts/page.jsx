@@ -234,6 +234,26 @@ export default function AccountsOverviewPage() {
     const refresh = async () => {
         await fetchAccounts();
     };
+
+    const patchAccount = async (id, data) => {
+        const resp = await http.patchData(`${API_BASE}`, id, data);
+        const updated = resp.data;
+        // Actualizar lista
+        setAccounts((prev) => (prev || []).map((a) => (a.id === id ? { ...a, ...updated } : a)));
+        // Actualizar seleccionado si corresponde
+        setSelected((prev) => (prev && prev.id === id ? { ...prev, ...updated } : prev));
+        // Refrescar para traer includes (backups/mains) si cambiaron
+        await fetchAccounts();
+        return updated;
+    };
+
+    const deleteAccount = async (id) => {
+        await http.deleteData(`${API_BASE}`, id);
+        setAccounts((prev) => (prev || []).filter((a) => a.id !== id));
+        setSelected((prev) => (prev && prev.id === id ? null : prev));
+        setOpen((prev) => (selected && selected.id === id ? false : prev));
+        await fetchAccounts();
+    };
     const disconnect = async () => {
         try {
             await http.postData(`${API_BASE}/logout`, {});
@@ -354,6 +374,8 @@ export default function AccountsOverviewPage() {
               addBackup={addBackup}
               addingBackup={addingBackup}
               removeBackup={removeBackup}
+                            onUpdateAccount={patchAccount}
+                            onDeleteAccount={deleteAccount}
             />
         </div>
     );
