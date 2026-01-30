@@ -419,6 +419,8 @@ export default function AssetsAdminPage() {
         onBuscarCuenta={() => { setSearchTerm(''); setPageIndex(0); setShowFreeOnly(false); setRefreshTick(n=>n+1) }}
         assetIdQ={assetIdQ}
         setAssetIdQ={setAssetIdQ}
+        showFreeOnly={showFreeOnly}
+        onToggleFreeOnly={() => { setShowFreeOnly(v => !v); setPageIndex(0) }}
         onBuscarId={async () => {
           const idNum = Number(assetIdQ)
           if (!Number.isFinite(idNum) || idNum <= 0) return

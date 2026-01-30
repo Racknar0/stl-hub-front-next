@@ -2,7 +2,7 @@
 import React from 'react'
 import { Box, TextField, Button, Typography } from '@mui/material'
 
-export default function ToolbarBusqueda({ q, setQ, onBuscar, accountQ, setAccountQ, onBuscarCuenta, assetIdQ, setAssetIdQ, onBuscarId, onDropManyFiles }) {
+export default function ToolbarBusqueda({ q, setQ, onBuscar, accountQ, setAccountQ, onBuscarCuenta, assetIdQ, setAssetIdQ, onBuscarId, onDropManyFiles, showFreeOnly, onToggleFreeOnly }) {
   const normalizeFilenameToQuery = (name) => {
     const raw = String(name || '').trim()
     if (!raw) return ''
@@ -42,6 +42,16 @@ export default function ToolbarBusqueda({ q, setQ, onBuscar, accountQ, setAccoun
       {/* Buscar por ID exacto */}
       <TextField size="small" placeholder="Asset ID" type="number" value={assetIdQ} onChange={(e)=>setAssetIdQ(e.target.value)} sx={{ width: 140 }} onKeyDown={(e)=>{ if(e.key==='Enter'){ onBuscarId() } }} />
       <Button variant="outlined" onClick={onBuscarId}>Por ID</Button>
+
+      {/* Filtro rápido: solo freebies */}
+      <Button
+        variant={showFreeOnly ? 'contained' : 'outlined'}
+        color={showFreeOnly ? 'success' : 'inherit'}
+        onClick={() => onToggleFreeOnly?.()}
+        sx={{ ml: 1 }}
+      >
+        {showFreeOnly ? 'Mostrando FREE' : 'Solo FREE'}
+      </Button>
       <Box sx={{ flex: 1 }} />
 
       {/* Cajita separada: arrastrar varios archivos para listar coincidencias */}
