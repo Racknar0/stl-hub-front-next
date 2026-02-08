@@ -12,6 +12,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   // Estado principal MEGA
   const [megaStatus, setMegaStatus] = useState('idle') // idle | processing | published | failed
   const [megaProgress, setMegaProgress] = useState(0)
+  const [batchInfo, setBatchInfo] = useState(null)
   // Réplicas
   const [replicas, setReplicas] = useState([]) // [{id, accountId, alias, status, progress}]
   const [overallProgress, setOverallProgress] = useState(0)
@@ -34,6 +35,8 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
         const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
         const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
         const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
+        const batch = r.data?.batch || null
+        setBatchInfo(batch)
         let merged = repArr
         if (expected.length) {
           merged = expected.map(exp => {
@@ -371,14 +374,15 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   useEffect(() => () => { clearPoll() }, [])
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {
-    const isIndeterminate = status === 'processing' && value === 0
-    const color = status === 'failed' ? 'error' : (status === 'published' || status === 'completed' || status === 'success' ? 'success' : 'primary')
+    const s = String(status || '').toLowerCase()
+    const isIndeterminate = (s === 'processing' || s === 'pending' || s === 'queued') && value === 0
+    const color = s === 'failed' ? 'error' : (s === 'published' || s === 'completed' || s === 'success' ? 'success' : 'primary')
     return (
       <Box sx={{ mt: 1 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
           <Typography variant="subtitle2" sx={{ opacity: 0.85 }}>{label}</Typography>
-          {status === 'failed' && <Typography variant="caption" color="error.main">Fallo</Typography>}
-          {(status === 'published' || status === 'completed') && <Typography variant="caption" color="success.main">OK</Typography>}
+          {s === 'failed' && <Typography variant="caption" color="error.main">Fallo</Typography>}
+          {(s === 'published' || s === 'completed') && <Typography variant="caption" color="success.main">OK</Typography>}
         </Stack>
         <Box sx={{ position: 'relative', width: '100%', borderRadius: 999, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.08)' }}>
           <LinearProgress
@@ -399,14 +403,26 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   const serverColor = serverDone ? 'success' : 'primary'
 
+  const mainStage = String(batchInfo?.asset?.stage || '')
+  const mainQueued = mainStage === 'main-queued'
+  const mainUploading = mainStage === 'main-uploading'
+  const backupQueued = mainStage === 'backup-queued'
+  const backupUploading = mainStage === 'backup-uploading'
+  const pos = batchInfo?.asset?.position
+  const tot = batchInfo?.asset?.total
+  const queueSuffix = (mainQueued || backupQueued) && pos && tot ? ` (en cola ${pos}/${tot})` : (mainQueued || backupQueued ? ' (en cola)' : '')
+  const runningSuffix = (mainUploading || backupUploading) && pos && tot ? ` (${pos}/${tot})` : ''
+  const megaMainLabel = `MEGA principal${queueSuffix || runningSuffix}`
+  const replicaSuffix = (mainQueued || mainUploading) ? ' (esperando principal)' : (backupQueued ? ' (en cola)' : '')
+
   return (
     <Box>
       <ProgressRow label="Subida al servidor" value={serverProgress} status={serverDone ? 'completed' : 'processing'} height={30} />
-      <ProgressRow label="MEGA principal" value={megaProgress} status={megaStatus} height={30} />
+      <ProgressRow label={megaMainLabel} value={megaProgress} status={megaStatus} height={30} />
       {replicas.length > 0 && replicas.map(r => (
         <ProgressRow
           key={r.id}
-            label={`Replica ${r.alias || r.accountId}`}
+            label={`Replica ${r.alias || r.accountId}${replicaSuffix}`}
             value={r.progress || 0}
             status={(r.status || '').toLowerCase()}
             height={24}
