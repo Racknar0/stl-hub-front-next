@@ -114,9 +114,34 @@ export default function UploadAssetPage() {
   const [importProfilesOpen, setImportProfilesOpen] = useState(false)
   const [importProfilesText, setImportProfilesText] = useState('')
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
+  const [profilesSearch, setProfilesSearch] = useState('')
   const sortProfilesByName = useCallback((arr=[]) => {
     return [...(arr||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity: 'base' }))
   }, [])
+
+  const normSearch = useCallback((value = '') => {
+    try {
+      return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+    } catch {
+      return String(value || '').toLowerCase().trim()
+    }
+  }, [])
+
+  const filteredProfiles = useMemo(() => {
+    const q = normSearch(profilesSearch)
+    if (!q) return profiles
+    const terms = q.split(/\s+/).filter(Boolean)
+    if (terms.length === 0) return profiles
+
+    return (profiles || []).filter((p) => {
+      const hay = normSearch(`${p?.name || ''} ${(p?.categories || []).join(' ')} ${(p?.tags || []).join(' ')}`)
+      return terms.every(t => hay.includes(t))
+    })
+  }, [profiles, profilesSearch, normSearch])
 
   const readLegacyProfilesFromLocalStorage = useCallback(() => {
     try { return JSON.parse(localStorage.getItem(LS_PROFILES_KEY)) || [] } catch { return [] }
@@ -728,6 +753,7 @@ export default function UploadAssetPage() {
       const sizeBytes = (archiveFile?.size || 0) + imageFiles.reduce((s, f) => s + (f.file?.size || f.size || 0), 0)
       const item = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        createdAssetId: null,
         archiveFile,
         images: imageFiles.map((f) => f.file || f),
         meta: { title, titleEn, categories: selectedCategories, tags, isPremium, accountId: selectedAcc?.id || null, },
@@ -798,6 +824,11 @@ export default function UploadAssetPage() {
     // Selección del siguiente
     let chosenIndex = null
     if (queueMode === 'scp') {
+      // Si el ítem ya fue creado en backend (assetId), no depende de staging; elegirlo primero
+      const ready = pendingIdxs.find((i) => Number.isFinite(q[i]?.createdAssetId) && q[i]?.createdAssetId)
+      if (typeof ready === 'number') {
+        chosenIndex = ready
+      } else {
       // En SCP elegimos el que más avanzado esté en staging (siempre reevaluando)
       try {
         const id = batchId || `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
@@ -837,6 +868,7 @@ export default function UploadAssetPage() {
         // Fallback: el primero pendiente
         chosenIndex = pendingIdxs[0]
       }
+      }
     } else {
       // HTTP: respetar orden, buscar primero >= startAt, si no hay, el primero pendiente
       const after = pendingIdxs.find((i) => i >= startAt)
@@ -850,24 +882,26 @@ export default function UploadAssetPage() {
 
     setQueueIndex(chosenIndex)
     const item = q[chosenIndex]
-    // Pre-flight: validar unicidad del slug del título del item
-    const base = String(item?.meta?.title || '').toLowerCase().trim().replace(/[^a-z0-9-\s_]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)
-    if (!base) {
-      // sin título válido -> marcar error y continuar
-      setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'error' } : it))
-      handleItemFinished(false)
-      return
-    }
-    try {
-      const res = await http.getData(`/assets/check-unique?slug=${encodeURIComponent(base)}`)
-      if (res?.data?.conflict) {
-        // conflicto -> marcar error y continuar
+    // Pre-flight: validar unicidad del slug SOLO si aún no se creó el asset
+    if (!(Number.isFinite(item?.createdAssetId) && item?.createdAssetId)) {
+      const base = String(item?.meta?.title || '').toLowerCase().trim().replace(/[^a-z0-9-\s_]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)
+      if (!base) {
+        // sin título válido -> marcar error y continuar
         setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'error' } : it))
         handleItemFinished(false)
         return
       }
-    } catch (e) {
-      // si el check falla, por seguridad seguimos y dejamos que el backend decida
+      try {
+        const res = await http.getData(`/assets/check-unique?slug=${encodeURIComponent(base)}`)
+        if (res?.data?.conflict) {
+          // conflicto -> marcar error y continuar
+          setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'error' } : it))
+          handleItemFinished(false)
+          return
+        }
+      } catch (e) {
+        // si el check falla, por seguridad seguimos y dejamos que el backend decida
+      }
     }
     // marcar running y poblar el formulario
     setUploadQueue(arr => arr.map((it, idx) => idx === chosenIndex ? { ...it, status: 'running' } : it))
@@ -875,6 +909,11 @@ export default function UploadAssetPage() {
     // pequeña espera para que React pinte el formulario antes de subir
     setTimeout(() => {
       if (queueMode === 'scp') {
+        const existingId = item?.createdAssetId
+        if (Number.isFinite(existingId) && existingId) {
+          statusRef.current?.resumeExistingAsset?.(existingId)
+          return
+        }
         let id = batchId
         if (!id) {
           id = `batch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
@@ -1290,8 +1329,18 @@ export default function UploadAssetPage() {
           </Box>
         </DialogTitle>
         <DialogContent dividers>
+            <Box sx={{ mb: 1 }}>
+              <TextField
+                value={profilesSearch}
+                onChange={(e) => setProfilesSearch(e.target.value)}
+                fullWidth
+                size="small"
+                label="Buscar perfiles"
+                placeholder="Nombre, categorías o tags..."
+              />
+            </Box>
           <ProfilesBar
-            profiles={profiles}
+              profiles={filteredProfiles}
             onApply={(p) => {
               applyProfile?.(p)
               setProfilesModalOpen(false)
@@ -1441,7 +1490,6 @@ export default function UploadAssetPage() {
               }}
               variant={'cyan'}
               styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
-              disabled={isUploading}
             >
               Ver comando SCP
             </AppButton>
@@ -1616,6 +1664,12 @@ export default function UploadAssetPage() {
               })}
               onUploadingChange={setIsUploading}
               onProgressUpdate={(p) => setActiveStage(p)}
+              onAssetCreated={(created) => {
+                const id = Number(created?.id || 0)
+                if (!id || !Number.isFinite(id)) return
+                // Guardar en el ítem actual para poder reanudar sin depender del staging SCP
+                setUploadQueue(arr => arr.map((it, i) => (i === queueIndex ? { ...it, createdAssetId: id } : it)))
+              }}
               onDone={async () => {
                 setUploadFinished(true)
                 try {

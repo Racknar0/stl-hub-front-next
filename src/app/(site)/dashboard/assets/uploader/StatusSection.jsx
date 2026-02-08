@@ -24,6 +24,60 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   const clearPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
 
+  const startPollingFullProgress = (assetId, createdObj) => {
+    if (!assetId) return
+    clearPoll()
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await http.getData(`/assets/${assetId}/full-progress`)
+        const main = r.data?.main || { status: 'PROCESSING', progress: 0 }
+        const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
+        const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
+        const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
+        let merged = repArr
+        if (expected.length) {
+          merged = expected.map(exp => {
+            const found = repArr.find(rp => rp.accountId === exp.accountId)
+            return found || { id: `expected-${exp.accountId}`, accountId: exp.accountId, alias: exp.alias, status: 'PENDING', progress: 0 }
+          })
+        }
+        setMegaProgress(main.progress ?? 0)
+        setReplicas(merged)
+        const mainStatus = (main.status || '').toLowerCase()
+        if (mainStatus === 'published') setMegaStatus('published')
+        else if (mainStatus === 'failed') setMegaStatus('failed')
+        else setMegaStatus('processing')
+        setMegaDone(mainStatus === 'published')
+        const overall = r.data?.overallPercent ?? main.progress ?? 0
+        setOverallProgress(overall)
+        const doneFlag = !!r.data?.allDone
+
+        try {
+          if (mainStatus === 'processing' && (main.progress ?? 0) < 100) {
+            onProgressUpdate?.({ stage: 'mega', percent: Math.max(0, Math.min(100, Math.round(main.progress ?? 0))) })
+          } else {
+            const activeReplica = merged.find(rp => (rp.status || '').toLowerCase() === 'processing')
+            if (activeReplica) {
+              onProgressUpdate?.({ stage: 'backup', percent: Math.max(0, Math.min(100, Math.round(activeReplica.progress || 0))), alias: activeReplica.alias || String(activeReplica.accountId || '') })
+            } else if (doneFlag) {
+              onProgressUpdate?.({ stage: 'idle', percent: 100 })
+            }
+          }
+        } catch {}
+
+        setAllDone(doneFlag)
+        if (doneFlag) {
+          clearPoll()
+          setUploading(false)
+          onUploadingChange?.(false)
+          onDone?.(createdObj || { id: assetId })
+        }
+      } catch (e) {
+        console.warn('[UPLOAD][poll][RESUME] error', e?.message)
+      }
+    }, 1200)
+  }
+
   // Helper: esperar a que un archivo aparezca en uploads/tmp y alcance expectedSize
   // Poll staging usando batch cuando se proveen scpBatchPaths; cae a single si no
   const waitForStagedFile = async ({ pathRel, expectedSize, signal, onTick }) => {
@@ -171,66 +225,10 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       setServerDone(true)
   try { onProgressUpdate?.({ stage: 'server', percent: 100 }) } catch {}
       const created = resp.data
+      try { props.onAssetCreated?.(created) } catch {}
       setMegaStatus('processing')
 
-      // Polling de progreso completo (main + réplicas)
-      clearPoll()
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await http.getData(`/assets/${created.id}/full-progress`)
-          // main
-          const main = r.data?.main || { status: 'PROCESSING', progress: 0 }
-          // DEBUG opcional (se puede retirar luego)
-          // console.log('[FULL-PROGRESS]', r.data)
-          const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
-          const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
-          // expected replicas (from main account backups) to create placeholders
-          const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
-          let merged = repArr
-          if (expected.length) {
-            merged = expected.map(exp => {
-              const found = repArr.find(rp => rp.accountId === exp.accountId)
-              return found || { id: `expected-${exp.accountId}`, accountId: exp.accountId, alias: exp.alias, status: 'PENDING', progress: 0 }
-            })
-          }
-          setMegaProgress(main.progress ?? 0)
-          setReplicas(merged)
-          const mainStatus = (main.status || '').toLowerCase()
-          if (mainStatus === 'published') setMegaStatus('published')
-          else if (mainStatus === 'failed') setMegaStatus('failed')
-          else setMegaStatus('processing')
-          setMegaDone(mainStatus === 'published')
-          const overall = r.data?.overallPercent ?? main.progress ?? 0
-          setOverallProgress(overall)
-          const doneFlag = !!r.data?.allDone
-
-          // Notificar etapa activa: mega principal o primer backup en PROCESO
-          try {
-            const mainStatus = (main.status || '').toLowerCase()
-            if (mainStatus === 'processing' && (main.progress ?? 0) < 100) {
-              onProgressUpdate?.({ stage: 'mega', percent: Math.max(0, Math.min(100, Math.round(main.progress ?? 0))) })
-            } else {
-              const activeReplica = merged.find(rp => (rp.status || '').toLowerCase() === 'processing')
-              if (activeReplica) {
-                onProgressUpdate?.({ stage: 'backup', percent: Math.max(0, Math.min(100, Math.round(activeReplica.progress || 0))), alias: activeReplica.alias || String(activeReplica.accountId || '') })
-              } else if (doneFlag) {
-                onProgressUpdate?.({ stage: 'idle', percent: 100 })
-              }
-            }
-          } catch {}
-          
-          setAllDone(doneFlag)
-          if (doneFlag) {
-            clearPoll()
-            setUploading(false)
-            onUploadingChange?.(false)
-            onDone?.(created)
-          }
-        } catch (e) {
-          // mantener último estado y seguir intentando unos ciclos
-          console.warn('[UPLOAD][poll] error', e?.message)
-        }
-      }, 1200)
+      startPollingFullProgress(created.id, created)
     } catch (e) {
       const errorTime = Date.now()
       if (e?.name === 'CanceledError' || e?.message?.toLowerCase?.().includes('canceled') || e?.message?.toLowerCase?.().includes('aborted')) {
@@ -315,6 +313,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       }
       const createdResp = await http.postData('/assets', payload)
       const created = createdResp.data
+      try { props.onAssetCreated?.(created) } catch {}
 
       // Subir imágenes (HTTP), luego encolar MEGA
       if (Array.isArray(images) && images.length) {
@@ -326,56 +325,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       await http.postData(`/assets/${created.id}/enqueue`, {})
       setMegaStatus('processing')
 
-      // Polling de progreso completo (main + réplicas)
-      clearPoll()
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await http.getData(`/assets/${created.id}/full-progress`)
-          const main = r.data?.main || { status: 'PROCESSING', progress: 0 }
-          const repArrRaw = Array.isArray(r.data?.replicas) ? r.data.replicas : []
-          const repArr = repArrRaw.map(it => ({ ...it, progress: Math.min(100, Math.max(0, it.progress || 0)) }))
-          const expected = Array.isArray(r.data?.expectedReplicas) ? r.data.expectedReplicas : []
-          let merged = repArr
-          if (expected.length) {
-            merged = expected.map(exp => {
-              const found = repArr.find(rp => rp.accountId === exp.accountId)
-              return found || { id: `expected-${exp.accountId}`, accountId: exp.accountId, alias: exp.alias, status: 'PENDING', progress: 0 }
-            })
-          }
-          setMegaProgress(main.progress ?? 0)
-          setReplicas(merged)
-          const mainStatus = (main.status || '').toLowerCase()
-          if (mainStatus === 'published') setMegaStatus('published')
-          else if (mainStatus === 'failed') setMegaStatus('failed')
-          else setMegaStatus('processing')
-          setMegaDone(mainStatus === 'published')
-          const overall = r.data?.overallPercent ?? main.progress ?? 0
-          setOverallProgress(overall)
-          const doneFlag = !!r.data?.allDone
-
-          try {
-            if (mainStatus === 'processing' && (main.progress ?? 0) < 100) {
-              onProgressUpdate?.({ stage: 'mega', percent: Math.max(0, Math.min(100, Math.round(main.progress ?? 0))) })
-            } else {
-              const activeReplica = merged.find(rp => (rp.status || '').toLowerCase() === 'processing')
-              if (activeReplica) {
-                onProgressUpdate?.({ stage: 'backup', percent: Math.max(0, Math.min(100, Math.round(activeReplica.progress || 0))), alias: activeReplica.alias || String(activeReplica.accountId || '') })
-              } else if (doneFlag) {
-                onProgressUpdate?.({ stage: 'idle', percent: 100 })
-              }
-            }
-          } catch {}
-          setAllDone(doneFlag)
-          if (doneFlag) {
-            clearPoll()
-            setUploading(false)
-            onUploadingChange?.(false)
-            onDone?.(created)
-          }
-        } catch (e) {
-          console.warn('[UPLOAD][poll][SCP] error', e?.message)
-        }
-      }, 1200)
+      startPollingFullProgress(created.id, created)
     } catch (e) {
       const errorTime = Date.now()
       console.error('❌ [UPLOAD METRICS][SCP] Error:', {
@@ -401,7 +351,23 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
     onUploadingChange?.(false)
   }
 
-  useImperativeHandle(ref, () => ({ startUpload, startUploadScp, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
+  const resumeExistingAsset = (assetId) => {
+    if (!assetId) return
+    setUploading(true)
+    onUploadingChange?.(true)
+    setServerProgress(100)
+    setServerDone(true)
+    setMegaStatus('processing')
+    setMegaProgress(0)
+    setReplicas([])
+    setOverallProgress(0)
+    setAllDone(false)
+    setMegaDone(false)
+    try { onProgressUpdate?.({ stage: 'mega', percent: 0 }) } catch {}
+    startPollingFullProgress(assetId, { id: assetId })
+  }
+
+  useImperativeHandle(ref, () => ({ startUpload, startUploadScp, resumeExistingAsset, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
   useEffect(() => () => { clearPoll() }, [])
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {
