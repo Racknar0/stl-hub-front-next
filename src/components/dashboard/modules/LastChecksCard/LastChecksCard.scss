@@ -1,0 +1,93 @@
+.last-checks-card{
+  padding: 10px 12px;
+}
+
+.last-checks-card .lc-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 8px;
+}
+
+.last-checks-card .lc-title{
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.last-checks-card .lc-refresh{
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #111827;
+}
+
+.last-checks-card .lc-refresh:disabled{
+  opacity: 0.6;
+}
+
+.last-checks-card .lc-tabs{
+  margin-top: 8px;
+  display:flex;
+  align-items:center;
+  gap: 6px;
+}
+
+.last-checks-card .lc-tab{
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.last-checks-card .lc-tab.active{
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.last-checks-card .lc-count{
+  margin-left: auto;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.last-checks-card .lc-list{
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #eef2ff;
+}
+
+.last-checks-card .lc-item{
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5ff;
+}
+
+.last-checks-card .lc-alias{
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.last-checks-card .lc-meta{
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.last-checks-card .lc-empty{
+  padding: 10px 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.last-checks-card .lc-footer{
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
