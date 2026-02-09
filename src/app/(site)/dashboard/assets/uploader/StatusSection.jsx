@@ -5,7 +5,7 @@ import HttpService from '@/services/HttpService'
 const http = new HttpService()
 
 const StatusSection = forwardRef(function StatusSection(props, ref) {
-  const { getFormData, onDone, onUploadingChange, onProgressUpdate } = props
+  const { getFormData, onDone, onUploadingChange, onProgressUpdate, onEnqueued, finishOnEnqueued } = props
   const [serverProgress, setServerProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
 
@@ -229,7 +229,14 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   try { onProgressUpdate?.({ stage: 'server', percent: 100 }) } catch {}
       const created = resp.data
       try { props.onAssetCreated?.(created) } catch {}
+      try { onEnqueued?.(created) } catch {}
       setMegaStatus('processing')
+
+      if (finishOnEnqueued) {
+        setUploading(false)
+        onUploadingChange?.(false)
+        return
+      }
 
       startPollingFullProgress(created.id, created)
     } catch (e) {
@@ -317,6 +324,7 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
       const createdResp = await http.postData('/assets', payload)
       const created = createdResp.data
       try { props.onAssetCreated?.(created) } catch {}
+      try { onEnqueued?.(created) } catch {}
 
       // Subir imágenes (HTTP), luego encolar MEGA
       if (Array.isArray(images) && images.length) {
@@ -327,6 +335,12 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
       await http.postData(`/assets/${created.id}/enqueue`, {})
       setMegaStatus('processing')
+
+      if (finishOnEnqueued) {
+        setUploading(false)
+        onUploadingChange?.(false)
+        return
+      }
 
       startPollingFullProgress(created.id, created)
     } catch (e) {
@@ -371,7 +385,10 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   }
 
   useImperativeHandle(ref, () => ({ startUpload, startUploadScp, resumeExistingAsset, cancelUpload, isAllDone: () => allDone, isUploading: () => uploading }))
-  useEffect(() => () => { clearPoll() }, [])
+  useEffect(() => () => {
+    try { abortRef.current?.abort?.() } catch {}
+    try { clearPoll() } catch {}
+  }, [])
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {
     const s = String(status || '').toLowerCase()

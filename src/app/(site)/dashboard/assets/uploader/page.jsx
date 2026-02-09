@@ -245,8 +245,10 @@ export default function UploadAssetPage() {
 
   // ==== Cola de subidas (solo frontend) ====
   const [uploadQueue, setUploadQueue] = useState([]) // [{id, archiveFile, images:File[], meta:{...}, sizeBytes, status}]
+  const uploadQueueRef = React.useRef([])
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
   const [queueIndex, setQueueIndex] = useState(-1)
+  const queueIndexRef = React.useRef(-1)
   const [cooldown, setCooldown] = useState(0)
   const cooldownTimerRef = React.useRef(null)
   // Cronómetro de subida/cola
@@ -700,6 +702,8 @@ export default function UploadAssetPage() {
     switch(String(s)){
       case 'success':
         return { ...base, color:'#2e7d32', background:'rgba(46,125,50,0.15)', border:'1px solid rgba(46,125,50,0.25)', textTransform:'none' }
+      case 'enqueued':
+        return { ...base, color:'#6a5acd', background:'rgba(106,90,205,0.16)', border:'1px solid rgba(106,90,205,0.35)', textTransform:'none' }
       case 'queued':
         return { ...base, color:'#8d6e00', background:'rgba(255,193,7,0.18)', border:'1px solid rgba(255,193,7,0.35)', textTransform:'none' }
       case 'running':
@@ -710,6 +714,23 @@ export default function UploadAssetPage() {
         return { ...base, color:'#9aa4c7', background:'rgba(154,164,199,0.15)', border:'1px solid rgba(154,164,199,0.3)', textTransform:'none' }
     }
   }
+
+  const statusLabel = (it) => {
+    const s = String(it?.status || '')
+    if (s === 'enqueued') {
+      const pct = it?.backend?.overallPercent
+      const extra = Number.isFinite(pct) ? ` ${Math.round(pct)}%` : ''
+      return `EN BACKEND${extra}`
+    }
+    if (s === 'running') return 'SUBIENDO SERVIDOR'
+    if (s === 'queued') return 'EN COLA'
+    if (s === 'success') return 'OK'
+    if (s === 'error') return 'ERROR'
+    return s || '-'
+  }
+
+  useEffect(() => { uploadQueueRef.current = uploadQueue }, [uploadQueue])
+  useEffect(() => { queueIndexRef.current = queueIndex }, [queueIndex])
 
   const canEnqueue = (
     accStatus === 'connected' &&
@@ -812,7 +833,7 @@ export default function UploadAssetPage() {
   }, [newProfileName, selectedCategories, tags, addProfile])
 
   const startNextFromQueue = async (startAt = 0) => {
-    const q = uploadQueue
+    const q = uploadQueueRef.current || []
     // Construir lista de pendientes (solo 'queued')
     const pendingIdxs = q.map((it, idx) => (it?.status === 'queued' ? idx : null)).filter((v) => v !== null)
     if (!pendingIdxs.length) {
@@ -1030,6 +1051,90 @@ export default function UploadAssetPage() {
       }
     }, 1000)
   }
+
+  const handleItemEnqueued = (created) => {
+    const id = Number(created?.id || 0)
+    if (!id || !Number.isFinite(id)) return
+    const idx = queueIndexRef.current
+    if (!(Number.isFinite(idx) && idx >= 0)) return
+
+    setUploadQueue(prev => {
+      const next = (prev || []).map((it, i) => (i === idx ? { ...it, createdAssetId: id, status: 'enqueued' } : it))
+      uploadQueueRef.current = next
+      return next
+    })
+
+    // pasar al siguiente rápidamente (sin esperar MAIN/BACKUP)
+    const nextStartAt = queueMode === 'scp' ? 0 : (idx + 1)
+    setTimeout(() => { void startNextFromQueue(nextStartAt) }, 150)
+  }
+
+  // Polling liviano de progreso por ítem (para la tabla) usando /assets/:id/full-progress
+  const backendPollInFlightRef = React.useRef(false)
+  useEffect(() => {
+    let cancelled = false
+
+    const tick = async () => {
+      if (backendPollInFlightRef.current) return
+      backendPollInFlightRef.current = true
+      try {
+        const q = uploadQueueRef.current || []
+        const toPoll = q
+          .filter(it => Number.isFinite(it?.createdAssetId) && it?.createdAssetId && it.status !== 'success' && it.status !== 'error')
+          .slice(0, 12)
+
+        if (!toPoll.length) return
+
+        const updatesByItemId = {}
+
+        for (const it of toPoll) {
+          if (cancelled) return
+          const assetId = it.createdAssetId
+          try {
+            const r = await http.getData(`/assets/${assetId}/full-progress`)
+            const main = r?.data?.main || {}
+            const mainStatus = String(main.status || '').toLowerCase()
+            const overallPercentRaw = Number(r?.data?.overallPercent)
+            const overallPercent = Number.isFinite(overallPercentRaw) ? Math.max(0, Math.min(100, overallPercentRaw)) : undefined
+            const allDone = !!r?.data?.allDone
+            const batch = r?.data?.batch || null
+
+            let nextStatus = it.status
+            if (mainStatus === 'failed') nextStatus = 'error'
+            else if (allDone) nextStatus = 'success'
+            else if (nextStatus === 'queued' || nextStatus === 'running') nextStatus = 'enqueued'
+
+            updatesByItemId[it.id] = {
+              status: nextStatus,
+              backend: {
+                mainStatus: mainStatus || undefined,
+                mainProgress: Number.isFinite(Number(main.progress)) ? Math.max(0, Math.min(100, Number(main.progress))) : undefined,
+                overallPercent,
+                allDone,
+                batch,
+              },
+            }
+          } catch {
+            // ignorar fallos transitorios de polling
+          }
+        }
+
+        const keys = Object.keys(updatesByItemId)
+        if (keys.length) {
+          setUploadQueue(prev => prev.map(it => {
+            const upd = updatesByItemId[it.id]
+            return upd ? { ...it, ...upd } : it
+          }))
+        }
+      } finally {
+        backendPollInFlightRef.current = false
+      }
+    }
+
+    const h = setInterval(() => { void tick() }, 2500)
+    void tick()
+    return () => { cancelled = true; clearInterval(h) }
+  }, [])
 
   // Cancelar la subida actual y reiniciar desde el índice en curso
   const handleRestartFromCurrent = () => {
@@ -1649,6 +1754,7 @@ export default function UploadAssetPage() {
             <StatusSection
               key={statusKey}
               ref={statusRef}
+              finishOnEnqueued={isProcessingQueue}
               getFormData={() => ({
                 archiveFile,
                 title,
@@ -1669,6 +1775,9 @@ export default function UploadAssetPage() {
                 if (!id || !Number.isFinite(id)) return
                 // Guardar en el ítem actual para poder reanudar sin depender del staging SCP
                 setUploadQueue(arr => arr.map((it, i) => (i === queueIndex ? { ...it, createdAssetId: id } : it)))
+              }}
+              onEnqueued={(created) => {
+                if (isProcessingQueue) handleItemEnqueued(created)
               }}
               onDone={async () => {
                 setUploadFinished(true)
@@ -1805,7 +1914,12 @@ export default function UploadAssetPage() {
                         </td>
                         <td style={{ padding:'8px' }}>{formatBytes(it.sizeBytes)}</td>
                         <td style={{ padding:'8px' }}>
-                          <span style={statusPillStyle(it.status)}>{it.status}</span>
+                          <span style={statusPillStyle(it.status)}>{statusLabel(it)}</span>
+                          {it.status === 'enqueued' && it?.backend?.batch?.asset?.stage && (
+                            <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.85, color: '#b8a7ff' }}>
+                              {String(it.backend.batch.asset.stage).replace(/-/g, ' ')}
+                            </span>
+                          )}
                           {queueMode === 'scp' && scpActiveIndex === idx && (
                             <span style={{
                               marginLeft: 8,
