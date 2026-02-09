@@ -505,7 +505,7 @@ export default function UploadAssetPage() {
   const queueActive = isProcessingQueue || cooldown > 0
   const hasQueuedItems = uploadQueue.some(it => it.status === 'queued')
   const allCompleted = uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')
-  const hasActiveQueued = uploadQueue.some(it => it.status === 'queued' || it.status === 'running')
+  const hasActiveQueued = uploadQueue.some(it => it.status === 'queued' || it.status === 'running' || it.status === 'enqueued')
   const shouldBlockNav = isUploading || queueActive || hasActiveQueued
   const navBypassRef = React.useRef(false)
 
@@ -1062,6 +1062,12 @@ export default function UploadAssetPage() {
     // Construir lista de pendientes (solo 'queued')
     const pendingIdxs = q.map((it, idx) => (it?.status === 'queued' ? idx : null)).filter((v) => v !== null)
     if (!pendingIdxs.length) {
+      // Si ya no hay queued pero hay enqueued, la cola sigue activa (MEGA procesa en backend)
+      const hasEnqueued = q.some(it => it?.status === 'enqueued')
+      if (hasEnqueued) {
+        setQueueIndex(-1)
+        return
+      }
       setIsProcessingQueue(false)
       setQueueIndex(-1)
       return
@@ -1400,6 +1406,15 @@ export default function UploadAssetPage() {
     setActiveStage({ stage: 'idle', percent: 0, alias: '' })
     resetForm()
   }
+
+  // Cuando la cola está activa, finalizarla automáticamente cuando todo esté success/error
+  useEffect(() => {
+    if (!isProcessingQueue) return
+    if (uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')) {
+      setIsProcessingQueue(false)
+      setQueueIndex(-1)
+    }
+  }, [isProcessingQueue, uploadQueue])
 
   const usedMB = selectedAcc ? Math.max(0, selectedAcc.storageUsedMB || 0) : 0
   const totalMB = selectedAcc ? (selectedAcc.storageTotalMB > 0 ? selectedAcc.storageTotalMB : FREE_QUOTA_MB) : FREE_QUOTA_MB
