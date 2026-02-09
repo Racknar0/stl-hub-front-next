@@ -392,7 +392,9 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
 
   const ProgressRow = ({ label, value, status, height = 26 }) => {
     const s = String(status || '').toLowerCase()
-    const isIndeterminate = (s === 'processing' || s === 'pending' || s === 'queued') && value === 0
+    const numeric = Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 0
+    const rounded = Math.round(numeric)
+    const isIndeterminate = (s === 'processing' || s === 'pending' || s === 'queued') && rounded === 0
     const color = s === 'failed' ? 'error' : (s === 'published' || s === 'completed' || s === 'success' ? 'success' : 'primary')
     return (
       <Box sx={{ mt: 1 }}>
@@ -405,12 +407,12 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
           <LinearProgress
             color={color}
             variant={isIndeterminate ? 'indeterminate' : 'determinate'}
-            value={isIndeterminate ? undefined : value}
+            value={isIndeterminate ? undefined : rounded}
             sx={{ height, borderRadius: 999, [`& .MuiLinearProgress-bar`]: { borderRadius: 999 } }}
           />
           {!isIndeterminate && (
             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <Typography variant="caption" sx={{ opacity: 0.9, color: '#fff', fontSize: '0.9rem' }}>{value}%</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.9, color: '#fff', fontSize: '0.9rem' }}>{rounded}%</Typography>
             </Box>
           )}
         </Box>
