@@ -58,6 +58,7 @@ export default function UploadAssetPage() {
   const RIGHT_SIDEBAR_WIDTH = 340
 
   const queueFinishedNotifiedRef = useRef(false)
+  const queueEverStartedRef = useRef(false)
 
   const ACTION_BTN_STYLES = {
     height: '32px',
@@ -1413,17 +1414,27 @@ export default function UploadAssetPage() {
   // Resetear notificación al iniciar una nueva cola
   useEffect(() => {
     if (!isProcessingQueue) return
+    queueEverStartedRef.current = true
     queueFinishedNotifiedRef.current = false
   }, [isProcessingQueue])
+
+  // Mostrar aviso al finalizar la cola incluso si isProcessingQueue ya es false
+  useEffect(() => {
+    if (!queueEverStartedRef.current) return
+    if (queueFinishedNotifiedRef.current) return
+    if (uploadQueue.length <= 0) return
+
+    const allTerminal = uploadQueue.every(it => it.status === 'success' || it.status === 'error')
+    if (!allTerminal) return
+
+    queueFinishedNotifiedRef.current = true
+    void successAlert('Cola finalizada', 'La cola de subidas ha finalizado.')
+  }, [uploadQueue])
 
   // Cuando la cola está activa, finalizarla automáticamente cuando todo esté success/error
   useEffect(() => {
     if (!isProcessingQueue) return
     if (uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')) {
-      if (!queueFinishedNotifiedRef.current) {
-        queueFinishedNotifiedRef.current = true
-        void successAlert('Cola finalizada', 'La cola de subidas ha finalizado.')
-      }
       setIsProcessingQueue(false)
       setQueueIndex(-1)
     }
