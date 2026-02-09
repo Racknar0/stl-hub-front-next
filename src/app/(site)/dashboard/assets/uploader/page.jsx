@@ -276,11 +276,56 @@ export default function UploadAssetPage() {
   const [scpHoldUntilMs, setScpHoldUntilMs] = useState(0)
   const scpHoldStartRef = React.useRef(0)
   const scpHoldCreatedAtRef = React.useRef(0)
+  const LS_SCP_HOLD_KEY = 'uploader_scp_hold_v1'
+
+  const readScpHoldFromLs = useCallback(() => {
+    try {
+      if (typeof window === 'undefined') return null
+      const raw = window.localStorage.getItem(LS_SCP_HOLD_KEY)
+      if (!raw) return null
+      const obj = JSON.parse(raw)
+      const holdId = String(obj?.holdId || '').trim()
+      const untilMs = Number(obj?.untilMs || 0)
+      if (!holdId || !Number.isFinite(untilMs) || untilMs <= 0) return null
+      return { holdId, untilMs }
+    } catch {
+      return null
+    }
+  }, [])
+
+  const writeScpHoldToLs = useCallback((holdId, untilMs) => {
+    try {
+      if (typeof window === 'undefined') return
+      if (!holdId) {
+        window.localStorage.removeItem(LS_SCP_HOLD_KEY)
+        return
+      }
+      window.localStorage.setItem(LS_SCP_HOLD_KEY, JSON.stringify({ holdId, untilMs }))
+    } catch {}
+  }, [])
+
+  // Rehidratar hold tras refresh (evita que quede huérfano 6h sin forma de liberarlo)
+  useEffect(() => {
+    try {
+      const saved = readScpHoldFromLs()
+      if (!saved) return
+      const now = Date.now()
+      if (saved.untilMs < now - 60_000) {
+        writeScpHoldToLs('', 0)
+        return
+      }
+      setScpHoldId(saved.holdId)
+      setScpHoldUntilMs(saved.untilMs)
+    } catch {}
+  }, [readScpHoldFromLs, writeScpHoldToLs])
 
   const startScpHold = useCallback(async (minutes = 360) => {
     try {
       // si ya tenemos hold, no duplicar
-      if (scpHoldId) return scpHoldId
+      if (scpHoldId) {
+        writeScpHoldToLs(scpHoldId, scpHoldUntilMs || 0)
+        return scpHoldId
+      }
       const r = await http.postData('/assets/hold-uploads-active', {
         minutes,
         label: 'scp-session',
@@ -291,13 +336,14 @@ export default function UploadAssetPage() {
         setScpHoldUntilMs(Number(r?.data?.untilMs || 0))
         scpHoldStartRef.current = Date.now()
         scpHoldCreatedAtRef.current = Date.now()
+        writeScpHoldToLs(String(id), Number(r?.data?.untilMs || 0))
         return id
       }
     } catch (e) {
       console.warn('[SCP][HOLD] no pude iniciar hold:', e?.message)
     }
     return null
-  }, [scpHoldId])
+  }, [scpHoldId, scpHoldUntilMs, writeScpHoldToLs])
 
   const releaseScpHold = useCallback(async () => {
     try {
@@ -311,8 +357,9 @@ export default function UploadAssetPage() {
       setScpHoldUntilMs(0)
       scpHoldStartRef.current = 0
       scpHoldCreatedAtRef.current = 0
+      writeScpHoldToLs('', 0)
     }
-  }, [scpHoldId])
+  }, [scpHoldId, writeScpHoldToLs])
 
   const scpHoldLabel = useMemo(() => {
     if (!scpHoldId) return ''
@@ -1546,6 +1593,18 @@ export default function UploadAssetPage() {
             >
               {scpHoldLabel}
             </Box>
+          )}
+          {queueMode === 'scp' && scpHoldId && (
+            <AppButton
+              type="button"
+              onClick={releaseScpHold}
+              variant={'dangerOutline'}
+              styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
+              disabled={queueActive || isUploading}
+              title="Libera la protección anti-cron. Útil si ya terminaste (o quieres testear cuentas) y no vas a seguir haciendo SCP ahora mismo."
+            >
+              Liberar protección
+            </AppButton>
           )}
           {allCompleted ? (
             <AppButton
