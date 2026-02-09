@@ -277,6 +277,7 @@ export default function UploadAssetPage() {
   const scpHoldStartRef = React.useRef(0)
   const scpHoldCreatedAtRef = React.useRef(0)
   const LS_SCP_HOLD_KEY = 'uploader_scp_hold_v1'
+  const LS_BATCH_QUIET_HOLD_KEY = 'uploader_batch_quiet_hold_v1'
 
   const readScpHoldFromLs = useCallback(() => {
     try {
@@ -304,6 +305,33 @@ export default function UploadAssetPage() {
     } catch {}
   }, [])
 
+  const readBatchQuietHoldFromLs = useCallback(() => {
+    try {
+      if (typeof window === 'undefined') return null
+      const raw = window.localStorage.getItem(LS_BATCH_QUIET_HOLD_KEY)
+      if (!raw) return null
+      const obj = JSON.parse(raw)
+      const mainAccountId = Number(obj?.mainAccountId || 0)
+      const untilMs = Number(obj?.untilMs || 0)
+      if (!Number.isFinite(mainAccountId) || mainAccountId <= 0) return null
+      if (!Number.isFinite(untilMs) || untilMs <= 0) return null
+      return { mainAccountId, untilMs }
+    } catch {
+      return null
+    }
+  }, [])
+
+  const writeBatchQuietHoldToLs = useCallback((mainAccountId, untilMs) => {
+    try {
+      if (typeof window === 'undefined') return
+      if (!mainAccountId) {
+        window.localStorage.removeItem(LS_BATCH_QUIET_HOLD_KEY)
+        return
+      }
+      window.localStorage.setItem(LS_BATCH_QUIET_HOLD_KEY, JSON.stringify({ mainAccountId, untilMs }))
+    } catch {}
+  }, [])
+
   // Rehidratar hold tras refresh (evita que quede huérfano 6h sin forma de liberarlo)
   useEffect(() => {
     try {
@@ -318,6 +346,104 @@ export default function UploadAssetPage() {
       setScpHoldUntilMs(saved.untilMs)
     } catch {}
   }, [readScpHoldFromLs, writeScpHoldToLs])
+
+  // ==== Hold batch-quiet (MEGA): evita pasar a BACKUP mientras sigues encolando por SCP ====
+  const [batchQuietHoldUntilMs, setBatchQuietHoldUntilMs] = useState(0)
+  const batchQuietHoldMainIdRef = React.useRef(0)
+  const batchQuietRenewTimerRef = React.useRef(null)
+
+  const startBatchQuietHold = useCallback(async (mainAccountId, minutes = 20) => {
+    const id = Number(mainAccountId || 0)
+    if (!Number.isFinite(id) || id <= 0) return 0
+    try {
+      const r = await http.postData('/assets/hold-mega-batch-quiet', {
+        action: 'start',
+        mainAccountId: id,
+        minutes,
+        label: 'uploader-scp',
+      })
+      const untilMs = Number(r?.data?.untilMs || 0)
+      if (Number.isFinite(untilMs) && untilMs > 0) {
+        batchQuietHoldMainIdRef.current = id
+        setBatchQuietHoldUntilMs(untilMs)
+        writeBatchQuietHoldToLs(id, untilMs)
+        return untilMs
+      }
+    } catch (e) {
+      console.warn('[BATCH-QUIET][HOLD] no pude iniciar/renovar:', e?.message)
+    }
+    return 0
+  }, [writeBatchQuietHoldToLs])
+
+  const releaseBatchQuietHold = useCallback(async (mainAccountId) => {
+    const id = Number(mainAccountId || batchQuietHoldMainIdRef.current || 0)
+    if (!Number.isFinite(id) || id <= 0) return
+    try {
+      await http.postData('/assets/hold-mega-batch-quiet', {
+        action: 'release',
+        mainAccountId: id,
+      })
+    } catch (e) {
+      console.warn('[BATCH-QUIET][HOLD] no pude liberar:', e?.message)
+    } finally {
+      if (batchQuietHoldMainIdRef.current === id) batchQuietHoldMainIdRef.current = 0
+      setBatchQuietHoldUntilMs(0)
+      writeBatchQuietHoldToLs(0, 0)
+    }
+  }, [writeBatchQuietHoldToLs])
+
+  // Rehidratar hold batch-quiet tras refresh (TTL corto, pero evita que arranquen backups si refrescas a mitad)
+  useEffect(() => {
+    try {
+      const saved = readBatchQuietHoldFromLs()
+      if (!saved) return
+      const now = Date.now()
+      if (saved.untilMs < now - 60_000) {
+        writeBatchQuietHoldToLs(0, 0)
+        return
+      }
+      batchQuietHoldMainIdRef.current = saved.mainAccountId
+      setBatchQuietHoldUntilMs(saved.untilMs)
+    } catch {}
+  }, [readBatchQuietHoldFromLs, writeBatchQuietHoldToLs])
+
+  // Renovación automática: mientras estés en SCP y haya ítems por stagear (queued/running), mantener hold.
+  useEffect(() => {
+    const mainId = Number(selectedAcc?.id || 0)
+    const hasStaging = uploadQueue.some(it => it.status === 'queued' || it.status === 'running')
+    const shouldHold = queueMode === 'scp' && mainId > 0 && (scpModalOpen || hasStaging)
+
+    // Si cambió la cuenta, liberar hold anterior
+    const prevMainId = Number(batchQuietHoldMainIdRef.current || 0)
+    if (prevMainId && mainId && prevMainId !== mainId) {
+      void releaseBatchQuietHold(prevMainId)
+    }
+
+    if (!shouldHold) {
+      if (prevMainId) void releaseBatchQuietHold(prevMainId)
+      if (batchQuietRenewTimerRef.current) {
+        try { clearInterval(batchQuietRenewTimerRef.current) } catch {}
+        batchQuietRenewTimerRef.current = null
+      }
+      return
+    }
+
+    // Iniciar/renovar ahora y luego cada 5 min. TTL=20 min (si cierras ventana, expira solo).
+    void startBatchQuietHold(mainId, 20)
+    if (!batchQuietRenewTimerRef.current) {
+      batchQuietRenewTimerRef.current = setInterval(() => {
+        void startBatchQuietHold(mainId, 20)
+      }, 5 * 60 * 1000)
+    }
+
+    return () => {
+      // no liberar aquí: sólo detener timer si cambia deps
+      if (batchQuietRenewTimerRef.current) {
+        try { clearInterval(batchQuietRenewTimerRef.current) } catch {}
+        batchQuietRenewTimerRef.current = null
+      }
+    }
+  }, [queueMode, selectedAcc?.id, scpModalOpen, uploadQueue, startBatchQuietHold, releaseBatchQuietHold])
 
   const startScpHold = useCallback(async (minutes = 360) => {
     try {
