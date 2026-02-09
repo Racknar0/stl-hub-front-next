@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -33,6 +33,7 @@ import AssetsUploadedWidget from './AssetsUploadedWidget'
 import SelectMegaAccountModal from './SelectMegaAccountModal'
 import ProfilesBar from './ProfilesBar'
 import RightSidebar from './RightSidebar'
+import { successAlert } from '@/helpers/alerts'
 
 const http = new HttpService()
 const API_BASE = '/accounts'
@@ -55,6 +56,8 @@ const mapBackendToUiStatus = (s) => {
 export default function UploadAssetPage() {
   const router = useRouter()
   const RIGHT_SIDEBAR_WIDTH = 340
+
+  const queueFinishedNotifiedRef = useRef(false)
 
   const ACTION_BTN_STYLES = {
     height: '32px',
@@ -1407,10 +1410,20 @@ export default function UploadAssetPage() {
     resetForm()
   }
 
+  // Resetear notificación al iniciar una nueva cola
+  useEffect(() => {
+    if (!isProcessingQueue) return
+    queueFinishedNotifiedRef.current = false
+  }, [isProcessingQueue])
+
   // Cuando la cola está activa, finalizarla automáticamente cuando todo esté success/error
   useEffect(() => {
     if (!isProcessingQueue) return
     if (uploadQueue.length > 0 && uploadQueue.every(it => it.status === 'success' || it.status === 'error')) {
+      if (!queueFinishedNotifiedRef.current) {
+        queueFinishedNotifiedRef.current = true
+        void successAlert('Cola finalizada', 'La cola de subidas ha finalizado.')
+      }
       setIsProcessingQueue(false)
       setQueueIndex(-1)
     }
