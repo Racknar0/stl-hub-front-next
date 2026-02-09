@@ -531,6 +531,33 @@ export default function UploadAssetPage() {
 
   useEffect(() => { fetchAccounts() }, [])
 
+  // Cuando termina la cola, refrescar cuentas para actualizar espacio usado/disponible.
+  const didRefreshAccountsAfterQueueRef = React.useRef(false)
+  useEffect(() => {
+    const queueBusy = isUploading || isProcessingQueue || queueActive || hasActiveQueued
+    if (queueBusy) {
+      didRefreshAccountsAfterQueueRef.current = false
+      return
+    }
+
+    if (!allCompleted) return
+    if (didRefreshAccountsAfterQueueRef.current) return
+    didRefreshAccountsAfterQueueRef.current = true
+
+    ;(async () => {
+      try {
+        const list = await fetchAccounts()
+        const id = selectedAcc?.id
+        if (id && Array.isArray(list) && list.length) {
+          const next = list.find(a => a.id === id)
+          if (next) setSelectedAcc(next)
+        }
+      } catch (e) {
+        // no-op
+      }
+    })()
+  }, [allCompleted, isUploading, isProcessingQueue, queueActive, hasActiveQueued, fetchAccounts, selectedAcc?.id])
+
   // Guardar título original al montar y restaurar al desmontar
   useEffect(() => {
     if (typeof document !== 'undefined') {
