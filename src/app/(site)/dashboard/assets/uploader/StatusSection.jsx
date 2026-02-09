@@ -5,7 +5,7 @@ import HttpService from '@/services/HttpService'
 const http = new HttpService()
 
 const StatusSection = forwardRef(function StatusSection(props, ref) {
-  const { getFormData, onDone, onUploadingChange, onProgressUpdate, onEnqueued, finishOnEnqueued } = props
+  const { getFormData, onDone, onUploadingChange, onProgressUpdate, onEnqueued, finishOnEnqueued, queueProgress } = props
   const [serverProgress, setServerProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
 
@@ -431,6 +431,27 @@ const StatusSection = forwardRef(function StatusSection(props, ref) {
   const runningSuffix = (mainUploading || backupUploading) && pos && tot ? ` (${pos}/${tot})` : ''
   const megaMainLabel = `MEGA principal${queueSuffix || runningSuffix}`
   const replicaSuffix = (mainQueued || mainUploading) ? ' (esperando principal)' : (backupQueued ? ' (en cola)' : '')
+
+  const qp = queueProgress && typeof queueProgress === 'object' ? queueProgress : null
+
+  if (qp?.enabled) {
+    const srv = Number.isFinite(Number(qp.serverPercent)) ? Math.max(0, Math.min(100, Number(qp.serverPercent))) : 0
+    const main = Number.isFinite(Number(qp.mainPercent)) ? Math.max(0, Math.min(100, Number(qp.mainPercent))) : 0
+    const bkp = Number.isFinite(Number(qp.backupPercent)) ? Math.max(0, Math.min(100, Number(qp.backupPercent))) : 0
+
+    return (
+      <Box>
+        <ProgressRow label={qp.serverLabel || 'Servidor (cola)'} value={srv} status={srv >= 100 ? 'completed' : 'processing'} height={30} />
+        <ProgressRow label={qp.mainLabel || 'MEGA principal (cola)'} value={main} status={main >= 100 ? 'completed' : 'processing'} height={26} />
+        <ProgressRow label={qp.backupLabel || 'Backups (cola)'} value={bkp} status={bkp >= 100 ? 'completed' : 'processing'} height={26} />
+        {qp.hint ? (
+          <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.8 }}>
+            {qp.hint}
+          </Typography>
+        ) : null}
+      </Box>
+    )
+  }
 
   return (
     <Box>

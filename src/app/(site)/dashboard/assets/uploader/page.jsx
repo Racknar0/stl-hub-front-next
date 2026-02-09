@@ -428,6 +428,58 @@ export default function UploadAssetPage() {
 
   // Actualizar título del tab con el progreso de la cola (x/y completo)
   const [activeStage, setActiveStage] = useState({ stage: 'idle', percent: 0, alias: '' })
+
+  const queueProgress = useMemo(() => {
+    const total = uploadQueue.length
+    if (!isProcessingQueue || total <= 0) return { enabled: false }
+
+    const clamp = (n) => Math.max(0, Math.min(100, Number(n || 0)))
+    const q = uploadQueue
+
+    // 1) Servidor: contamos ítems ya "encolados" (server completo) + el progreso del ítem actual (server/staging)
+    const serverDoneCount = q.filter(it => it.status === 'enqueued' || it.status === 'success' || it.status === 'error').length
+    const serverRunningPct = activeStage?.stage === 'server' ? clamp(activeStage.percent) : 0
+    const serverPercent = clamp((serverDoneCount * 100 + serverRunningPct) / total)
+
+    // 2) MAIN: usamos estado/pista del backend (main published o ya está en backup)
+    const isMainDone = (it) => {
+      if (it.status === 'success') return true
+      const ms = String(it?.backend?.mainStatus || '')
+      if (ms === 'published') return true
+      const st = String(it?.backend?.batch?.asset?.stage || '')
+      if (st.startsWith('backup-') || st === 'completed') return true
+      return false
+    }
+    const mainDoneCount = q.filter(isMainDone).length
+    const mainPartialSum = q.reduce((sum, it) => {
+      if (isMainDone(it)) return sum
+      const st = String(it?.backend?.batch?.asset?.stage || '')
+      if (st === 'main-uploading') {
+        const mp = Number(it?.backend?.mainProgress)
+        return sum + (Number.isFinite(mp) ? clamp(mp) : 0)
+      }
+      return sum
+    }, 0)
+    const mainPercent = clamp((mainDoneCount * 100 + mainPartialSum) / total)
+
+    // 3) BACKUP: consideramos allDone como backup completado. Si está en backup, usamos overallPercent para animar.
+    const backupPoints = q.reduce((sum, it) => {
+      if (it.status === 'success') return sum + 100
+      if (it.status === 'error') return sum + 100
+      const st = String(it?.backend?.batch?.asset?.stage || '')
+      const op = Number(it?.backend?.overallPercent)
+      if (st.startsWith('backup-') && Number.isFinite(op)) return sum + clamp(op)
+      return sum
+    }, 0)
+    const backupPercent = clamp(backupPoints / total)
+
+    const serverLabel = queueMode === 'scp' ? `Staging SCP (cola)` : `Subida HTTP (cola)`
+    const mainLabel = `MEGA principal (cola)`
+    const backupLabel = `Backups (cola)`
+    const hint = 'En modo cola, el servidor sigue encolando mientras MEGA procesa en segundo plano.'
+
+    return { enabled: true, total, serverPercent, mainPercent, backupPercent, serverLabel, mainLabel, backupLabel, hint }
+  }, [uploadQueue, isProcessingQueue, activeStage, queueMode])
   // Batch status map para uso interno (incluye percent y size por path) - solo SCP
   const scpStatusMapRef = React.useRef({})
   const scpBatchPaths = React.useMemo(() => {
@@ -1814,6 +1866,7 @@ export default function UploadAssetPage() {
               key={statusKey}
               ref={statusRef}
               finishOnEnqueued={isProcessingQueue}
+              queueProgress={queueProgress}
               getFormData={() => ({
                 archiveFile,
                 title,
