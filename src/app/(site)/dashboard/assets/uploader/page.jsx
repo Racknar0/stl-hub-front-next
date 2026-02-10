@@ -59,6 +59,8 @@ export default function UploadAssetPage() {
 
   const queueFinishedNotifiedRef = useRef(false)
   const queueEverStartedRef = useRef(false)
+  const didRefreshAccountsAfterMainRef = useRef(false)
+  const lastAccountsRefreshAtRef = useRef(0)
 
   const ACTION_BTN_STYLES = {
     height: '32px',
@@ -78,6 +80,7 @@ export default function UploadAssetPage() {
 
   const [accounts, setAccounts] = useState([])
   const [selectedAcc, setSelectedAcc] = useState(null)
+  const selectedAccIdRef = useRef(0)
   const [accStatus, setAccStatus] = useState('idle')
   const [accReason, setAccReason] = useState(undefined)
   const [modalOpen, setModalOpen] = useState(false)
@@ -546,7 +549,11 @@ export default function UploadAssetPage() {
 
   // Eliminado: formatMB y fetchAccountAssets aquí
 
-  const fetchAccounts = async () => {
+  useEffect(() => {
+    selectedAccIdRef.current = Number(selectedAcc?.id || 0)
+  }, [selectedAcc?.id])
+
+  const fetchAccounts = useCallback(async () => {
     try {
       const res = await http.getData(API_BASE)
       const list = res.data || []
@@ -556,9 +563,26 @@ export default function UploadAssetPage() {
       console.error('fetchAccounts error', e)
     }
     return []
-  }
+  }, [])
 
-  useEffect(() => { fetchAccounts() }, [])
+  const refreshAccountsAndSelectedAcc = useCallback(async ({ force = false, minIntervalMs = 15000 } = {}) => {
+    const now = Date.now()
+    if (!force) {
+      const last = Number(lastAccountsRefreshAtRef.current || 0)
+      if (now - last < minIntervalMs) return null
+    }
+    lastAccountsRefreshAtRef.current = now
+
+    const list = await fetchAccounts()
+    const id = Number(selectedAccIdRef.current || 0)
+    if (id > 0 && Array.isArray(list) && list.length) {
+      const next = list.find(a => Number(a?.id || 0) === id)
+      if (next) setSelectedAcc(next)
+    }
+    return list
+  }, [fetchAccounts])
+
+  useEffect(() => { void fetchAccounts() }, [fetchAccounts])
 
   // Cuando termina la cola, refrescar cuentas para actualizar espacio usado/disponible.
   const didRefreshAccountsAfterQueueRef = React.useRef(false)
@@ -573,19 +597,8 @@ export default function UploadAssetPage() {
     if (didRefreshAccountsAfterQueueRef.current) return
     didRefreshAccountsAfterQueueRef.current = true
 
-    ;(async () => {
-      try {
-        const list = await fetchAccounts()
-        const id = selectedAcc?.id
-        if (id && Array.isArray(list) && list.length) {
-          const next = list.find(a => a.id === id)
-          if (next) setSelectedAcc(next)
-        }
-      } catch (e) {
-        // no-op
-      }
-    })()
-  }, [allCompleted, isUploading, isProcessingQueue, queueActive, hasActiveQueued, fetchAccounts, selectedAcc?.id])
+    void refreshAccountsAndSelectedAcc({ force: true, minIntervalMs: 0 })
+  }, [allCompleted, isUploading, isProcessingQueue, queueActive, hasActiveQueued, refreshAccountsAndSelectedAcc])
 
   // Guardar título original al montar y restaurar al desmontar
   useEffect(() => {
@@ -736,19 +749,20 @@ export default function UploadAssetPage() {
     const id = selectedAcc.id
     const prevAcc = selectedAcc
     try {
+      selectedAccIdRef.current = Number(id || 0)
       setAccStatus('connecting')
       setAccReason(undefined)
       await http.postData(`${API_BASE}/${id}/test`, {})
-      const list = await fetchAccounts()
-      const acc = (list || []).find(a => a.id === id) || prevAcc
+      const list = await refreshAccountsAndSelectedAcc({ force: true, minIntervalMs: 0 })
+      const acc = (list || []).find(a => Number(a?.id || 0) === Number(id || 0)) || prevAcc
       console.log('testSelectedAccount acc:', acc)
       setSelectedAcc(acc)
       setAccStatus(mapBackendToUiStatus(acc.status))
       setAccReason(acc.statusMessage || undefined)
     } catch (e) {
       console.error(e)
-      const list = await fetchAccounts()
-      const acc = (list || []).find(a => a.id === id) || prevAcc
+      const list = await refreshAccountsAndSelectedAcc({ force: true, minIntervalMs: 0 })
+      const acc = (list || []).find(a => Number(a?.id || 0) === Number(id || 0)) || prevAcc
       setSelectedAcc(acc)
       setAccStatus('failed')
       setAccReason('Falló la verificación')
@@ -1377,6 +1391,7 @@ export default function UploadAssetPage() {
         if (!toPoll.length) return
 
         const updatesByItemId = {}
+        let sawMainCompleted = false
 
         for (const it of toPoll) {
           if (cancelled) return
@@ -1405,6 +1420,12 @@ export default function UploadAssetPage() {
                 batch,
               },
             }
+
+            try {
+              const stage = String(batch?.asset?.stage || '')
+              if (mainStatus === 'published') sawMainCompleted = true
+              if (stage === 'completed' || stage.startsWith('backup-')) sawMainCompleted = true
+            } catch {}
           } catch {
             // ignorar fallos transitorios de polling
           }
@@ -1416,6 +1437,11 @@ export default function UploadAssetPage() {
             const upd = updatesByItemId[it.id]
             return upd ? { ...it, ...upd } : it
           }))
+        }
+
+        if (sawMainCompleted && !didRefreshAccountsAfterMainRef.current) {
+          didRefreshAccountsAfterMainRef.current = true
+          void refreshAccountsAndSelectedAcc({ force: false, minIntervalMs: 15000 })
         }
       } finally {
         backendPollInFlightRef.current = false
@@ -1472,6 +1498,7 @@ export default function UploadAssetPage() {
     if (!isProcessingQueue) return
     queueEverStartedRef.current = true
     queueFinishedNotifiedRef.current = false
+    didRefreshAccountsAfterMainRef.current = false
   }, [isProcessingQueue])
 
   // Mostrar aviso al finalizar la cola incluso si isProcessingQueue ya es false
@@ -1503,18 +1530,19 @@ export default function UploadAssetPage() {
   // Selección de cuenta desde el modal
   const handleSelectAccount = useCallback((acc, pct) => {
     setSelectedAcc(acc)
+    selectedAccIdRef.current = Number(acc?.id || 0)
     setAccStatus('disconnected')
     setAccReason(undefined)
     setModalOpen(false)
 
     // Refrescar inmediatamente desde backend para evitar backups/estado stale
-    const id = acc?.id
-    if (id) {
+    const id = Number(acc?.id || 0)
+    if (id > 0) {
       ;(async () => {
-        const list = await fetchAccounts()
-        const updated = (list || []).find(a => a.id === id)
+        const list = await refreshAccountsAndSelectedAcc({ force: true, minIntervalMs: 0 })
+        const updated = (list || []).find(a => Number(a?.id || 0) === id)
         if (updated) {
-          setSelectedAcc(prev => (prev && prev.id === id ? updated : prev))
+          setSelectedAcc(prev => (Number(prev?.id || 0) === id ? updated : prev))
         }
       })()
     }
@@ -1524,7 +1552,7 @@ export default function UploadAssetPage() {
         window.alert('Esta cuenta ha superado el 80% de su almacenamiento. Considera usar otra cuenta o liberar espacio.')
       }, 0)
     }
-  }, [fetchAccounts])
+  }, [refreshAccountsAndSelectedAcc])
 
   // Bloqueo de navegación/recarga si hay cola o subida activa
   useEffect(() => {
