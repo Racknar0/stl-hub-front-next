@@ -513,6 +513,35 @@ export default function UploadAssetPage() {
   const shouldBlockNav = isUploading || queueActive || hasActiveQueued
   const navBypassRef = React.useRef(false)
 
+  const [isCuttingBatch, setIsCuttingBatch] = useState(false)
+
+  const handleCutQueueToBackups = useCallback(async () => {
+    const mainId = Number(selectedAcc?.id || 0)
+    if (!Number.isFinite(mainId) || mainId <= 0) {
+      window.alert('Selecciona una cuenta MAIN primero')
+      return
+    }
+
+    const ok = window.confirm(
+      'Cortar cola: se terminará el MAIN actual, se descartarán los MAIN pendientes y se pasará a BACKUP con lo ya subido. ¿Continuar?'
+    )
+    if (!ok) return
+
+    setIsCuttingBatch(true)
+    try {
+      // Si hay hold batch-quiet activo, liberarlo para permitir pasar a BACKUP.
+      try { await releaseBatchQuietHold(mainId) } catch {}
+
+      await http.postData('/assets/cut-mega-batch-to-backups', { mainAccountId: mainId })
+      void successAlert('Corte solicitado', 'El servidor terminará el MAIN actual y pasará a BACKUP. Los MAIN pendientes quedan en ERROR para reintentar.')
+    } catch (e) {
+      console.warn('[CUT-QUEUE] error:', e?.message)
+      window.alert(`No pude cortar la cola: ${e?.message || e}`)
+    } finally {
+      setIsCuttingBatch(false)
+    }
+  }, [selectedAcc?.id, releaseBatchQuietHold])
+
   const remotePath = '/STLHUB/assets/slug-demo/'
 
   // Eliminado: formatMB y fetchAccountAssets aquí
@@ -1879,6 +1908,17 @@ export default function UploadAssetPage() {
             disabled={accStatus !== 'connected' || !selectedAcc || (!isProcessingQueue && !isUploading)}
           >
             Reiniciar cola desde este punto
+          </AppButton>
+
+          <AppButton
+            type="button"
+            onClick={handleCutQueueToBackups}
+            variant={selectedAcc && (isProcessingQueue || queueActive || hasActiveQueued) ? 'dangerOutline' : 'dangerOutline'}
+            styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
+            disabled={!selectedAcc || isCuttingBatch}
+            title="Corta la fase MAIN del batch y fuerza pasar a BACKUP con lo ya subido. Los MAIN pendientes se marcan como ERROR para reintentar."
+          >
+            {isCuttingBatch ? 'Cortando…' : 'Cortar cola (pasar a backups)'}
           </AppButton>
           {queueMode === 'scp' && (
             <AppButton
