@@ -10,6 +10,27 @@ function formatDateTime(value) {
   return d.toLocaleString()
 }
 
+function formatRelativeFromNow(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  const t = d.getTime()
+  if (Number.isNaN(t)) return ''
+
+  const now = Date.now()
+  let diffMs = now - t
+  if (!Number.isFinite(diffMs)) return ''
+  if (diffMs < 0) diffMs = 0
+
+  const sec = Math.floor(diffMs / 1000)
+  if (sec < 60) return `hace ${sec}s`
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `hace ${min} ${min === 1 ? 'minuto' : 'minutos'}`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `hace ${hr} ${hr === 1 ? 'hora' : 'horas'}`
+  const day = Math.floor(hr / 24)
+  return `hace ${day} ${day === 1 ? 'día' : 'días'}`
+}
+
 function sortByLastCheckDesc(list) {
   const safe = Array.isArray(list) ? list : []
   return [...safe].sort((a, b) => {
@@ -111,7 +132,12 @@ export default function LastChecksCard({ refreshMs = 60000, maxHeight = 260 }) {
           filtered.map((a) => (
             <li key={a.id} className="lc-item">
               <div className="lc-alias">{a.alias || `Cuenta #${a.id}`}</div>
-              <div className="lc-meta">Última validación: {formatDateTime(a.lastCheckAt)}</div>
+              <div className="lc-meta">
+                <div className="lc-meta-date">Última validación: {formatDateTime(a.lastCheckAt)}</div>
+                {a.lastCheckAt ? (
+                  <div className="lc-meta-rel">{formatRelativeFromNow(a.lastCheckAt)}</div>
+                ) : null}
+              </div>
             </li>
           ))
         )}
