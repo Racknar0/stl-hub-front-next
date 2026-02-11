@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, LinearProgress, Stack } from '@mui/material';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
-import { timerAlert, errorAlert } from '@/helpers/alerts';
+import { timerAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
 import AddAccountForm from './components/AddAccountForm';
 import StorageSummaryCard from './components/StorageSummaryCard';
 import AccountsTabs from './components/AccountsTabs';
@@ -80,7 +80,27 @@ export default function AccountsOverviewPage() {
         try {
             setTesting(true);
             startPending(id);
-            await http.postData(`${API_BASE}/${id}/test`, {});
+
+            const first = await http.postData(`${API_BASE}/${id}/test`, {
+                source: 'dashboard-accounts',
+            });
+
+            if (first?.data?.busy) {
+                const ok = await confirmAlert(
+                    'Subidas activas',
+                    'Hay subidas activas. Si fuerzas el test puede interferir con el proceso en curso. ¿Deseas forzar la actualización de esta cuenta?',
+                    'Sí, forzar',
+                    'Cancelar',
+                    'warning'
+                );
+                if (!ok) return;
+
+                await http.postData(
+                    `${API_BASE}/${id}/test?force=1&source=dashboard-accounts`,
+                    { force: true, source: 'dashboard-accounts' }
+                );
+            }
+
             await timerAlert('OK', 'Conexión verificada', 1200);
             await fetchAccounts();
         } catch (e) {
