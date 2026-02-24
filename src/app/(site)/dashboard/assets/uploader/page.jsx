@@ -1493,6 +1493,82 @@ export default function UploadAssetPage() {
     resetForm()
   }
 
+  // Eliminar un ítem de la cola en cualquier estado.
+  // - Si está SUBIENDO SERVIDOR (running) y es el actual: cancela el upload y pasa al siguiente.
+  // - Si ya está EN BACKEND (enqueued) con createdAssetId: pide al backend sacarlo del batch (sin perder orden).
+  const handleRemoveQueueItem = useCallback(async (queueItem) => {
+    if (!queueItem?.id) return
+
+    const q = uploadQueueRef.current || []
+    const idx = q.findIndex(x => x.id === queueItem.id)
+    const isCurrent = idx >= 0 && idx === queueIndexRef.current
+
+    const statusNow = String(queueItem.status || '')
+    const needsConfirm = statusNow === 'running' || statusNow === 'enqueued'
+    if (needsConfirm) {
+      const ok = window.confirm(
+        statusNow === 'running'
+          ? 'Este ítem está subiendo al servidor. ¿Cancelar y eliminar de la cola?'
+          : 'Este ítem ya está en backend/MEGA. ¿Eliminarlo del batch para desatascar?'
+      )
+      if (!ok) return
+    }
+
+    // Cancelar upload actual si aplica
+    if (isCurrent && statusNow === 'running') {
+      try { statusRef.current?.cancelUpload?.() } catch {}
+    }
+
+    // Best-effort: si ya existe en backend, pedir que lo saquen del batch
+    try {
+      const assetId = Number(queueItem?.createdAssetId || 0)
+      const mainAccountId = Number(queueItem?.meta?.accountId || 0)
+      if (assetId > 0 && mainAccountId > 0) {
+        await http.postData('/assets/remove-from-mega-batch', { mainAccountId, assetId })
+      }
+    } catch (e) {
+      console.warn('remove-from-mega-batch warn', e?.message || e)
+    }
+
+    // Quitar de UI
+    setUploadQueue(arr => arr.filter(x => x.id !== queueItem.id))
+    setSimilarityMap(m => {
+      const next = { ...(m || {}) }
+      delete next[queueItem.id]
+      return next
+    })
+    setSimilaritySelectedId(prev => (prev === queueItem.id ? null : prev))
+
+    // Ajustar índice actual
+    setQueueIndex(prev => {
+      if (!(Number.isFinite(idx) && idx >= 0)) return prev
+      if (prev < 0) return prev
+      if (prev === idx) return -1
+      if (idx < prev) return Math.max(-1, prev - 1)
+      return prev
+    })
+
+    // Si estábamos procesando la cola y eliminamos el actual, arrancar el siguiente.
+    if (isProcessingQueue && isCurrent) {
+      setTimeout(() => { void startNextFromQueue(Math.max(0, idx)) }, 120)
+    }
+  }, [isProcessingQueue, setUploadQueue])
+
+  // Botón "Desatascar": fuerza logout + cambia proxy en el batch activo (sin perder el orden).
+  const handleUnstickMegaBatch = useCallback(async () => {
+    const mainAccountId = Number(selectedAcc?.id || 0)
+    if (!mainAccountId) {
+      window.alert('Selecciona una cuenta primero')
+      return
+    }
+    try {
+      await http.postData('/assets/unstick-mega-batch', { mainAccountId, reason: 'ui-button' })
+      await successAlert('Desatascar enviado', 'He pedido logout + cambio de proxy. El batch reintenta sin perder el orden.')
+    } catch (e) {
+      window.alert(`No pude desatascar: ${e?.message || e}`)
+    }
+  }, [selectedAcc])
+
   // Resetear notificación al iniciar una nueva cola
   useEffect(() => {
     if (!isProcessingQueue) return
@@ -1948,6 +2024,17 @@ export default function UploadAssetPage() {
           >
             {isCuttingBatch ? 'Cortando…' : 'Cortar cola (pasar a backups)'}
           </AppButton>
+
+          <AppButton
+            type="button"
+            onClick={handleUnstickMegaBatch}
+            variant={selectedAcc ? 'dangerOutline' : 'dangerOutline'}
+            styles={{ color: '#fff', ...ACTION_BTN_STYLES }}
+            disabled={!selectedAcc}
+            title="Desatascar: mata el mega-put actual y fuerza logout + cambio de proxy manteniendo el orden."
+          >
+            Desatascar (cambiar proxy)
+          </AppButton>
           {queueMode === 'scp' && (
             <AppButton
               type="button"
@@ -2321,26 +2408,21 @@ export default function UploadAssetPage() {
                               {it.approved ? 'Aprobado' : 'Similares'}
                             </Button>
 
-                            {it.status === 'queued' ? (
+                            <Button
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                              onClick={() => { void handleRemoveQueueItem(it) }}
+                              sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
+                            >
+                              Eliminar
+                            </Button>
+
+                            {it.status === 'error' ? (
                               <Button
                                 size="small"
-                                color="warning"
+                                color="primary"
                                 variant="outlined"
-                                onClick={() => {
-                                  setUploadQueue(arr => arr.filter(x => x.id !== it.id))
-                                  setSimilarityMap(m => {
-                                    const next = { ...(m || {}) }
-                                    delete next[it.id]
-                                    return next
-                                  })
-                                  setSimilaritySelectedId(prev => (prev === it.id ? null : prev))
-                                }}
-                                sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
-                              >
-                                Eliminar
-                              </Button>
-                            ) : it.status === 'error' ? (
-                              <Button size="small" color="primary" variant="outlined" 
                                 onClick={() => handleRetrySingle(idx)}
                                 disabled={accStatus !== 'connected' || !selectedAcc}
                               >
@@ -2546,18 +2628,8 @@ export default function UploadAssetPage() {
                 size="small"
                 variant="outlined"
                 color="warning"
-                onClick={() => {
-                  if (!sidebarQueueItem?.id) return
-                  if (sidebarQueueItem?.status !== 'queued') return
-                  setUploadQueue(arr => arr.filter(x => x.id !== sidebarQueueItem.id))
-                  setSimilarityMap(m => {
-                    const next = { ...(m || {}) }
-                    delete next[sidebarQueueItem.id]
-                    return next
-                  })
-                  setSimilaritySelectedId(prev => (prev === sidebarQueueItem.id ? null : prev))
-                }}
-                disabled={sidebarQueueItem?.status !== 'queued' || sidebarSimilarity?.status === 'loading'}
+                onClick={() => { if (sidebarQueueItem) void handleRemoveQueueItem(sidebarQueueItem) }}
+                disabled={!sidebarQueueItem?.id}
                 sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
               >
                 Eliminar
