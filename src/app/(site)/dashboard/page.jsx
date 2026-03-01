@@ -17,6 +17,7 @@ import ReportsCard from '@/components/dashboard/modules/ReportsCard/ReportsCard'
 import TotalVentas from '@/components/dashboard/modules/TotalVentas/TotalVentas';
 import LastChecksCard from '@/components/dashboard/modules/LastChecksCard/LastChecksCard';
 import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCard/TaxonomyCountsCard';
+import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
 
 export default function Page() {
   const router = useRouter();
@@ -83,6 +84,7 @@ export default function Page() {
 
           <div className='d-flex justify-content-start' style={{gap:12,width:'100%', flexWrap:'wrap'}}>
             <TaxonomyCountsCard />
+            <SearchInsightsCard />
             <TopDownloadsCard />
               <ReportsCard />
             <LastChecksCard />
