@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { HOME_CARD_IMAGE_SLIDER_ENABLED } from '../../../helpers/featureFlags';
 import './CardImageSlider.scss';
+
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
 
 const MIN_MS = 4000;
 const MAX_MS = 6000;
@@ -71,6 +76,7 @@ const CardImageSlider = ({
   sizes,
   className = 'card-image-slider-img',
 }) => {
+  const instanceId = useId().replace(/:/g, '');
   const prefersReducedMotion = usePrefersReducedMotion();
   const isEnabled = (enabled ?? HOME_CARD_IMAGE_SLIDER_ENABLED) && !prefersReducedMotion;
 
@@ -80,6 +86,7 @@ const CardImageSlider = ({
 
   const timerRef = useRef(null);
   const didInitRef = useRef(false);
+  const autoplayDelayRef = useRef(getRandInt(MIN_MS, MAX_MS));
 
   // Prefetch: cuando el slider está activo, precargar TODAS las imágenes del card
   useEffect(() => {
@@ -125,39 +132,96 @@ const CardImageSlider = ({
   }, [isEnabled, list.length]);
 
   useEffect(() => {
-    if (!isEnabled) return;
-    if (list.length <= 1) return;
-
-    const schedule = () => {
-      const delay = getRandInt(MIN_MS, MAX_MS);
-      timerRef.current = window.setTimeout(() => {
-        setIndex((prev) => (prev + 1) % list.length);
-        schedule();
-      }, delay);
-    };
-
-    schedule();
-
-    return () => {
-      if (timerRef.current) {
-        window.clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+    // Mantener compatibilidad: limpiar timers anteriores (ya no usamos setTimeout para avanzar)
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    return undefined;
   }, [isEnabled, list.length]);
 
   const src = list[index] || list[0];
   const safeSrc = typeof src === 'string' && src ? encodeURI(src) : '/vite.svg';
 
+  if (!isEnabled || list.length <= 1) {
+    return (
+      <Image
+        src={safeSrc}
+        alt={alt}
+        fill
+        sizes={sizes}
+        className={`${className} card-image-slider-img`}
+        priority={false}
+      />
+    );
+  }
+
+  const prevClass = `card-image-slider__prev-${instanceId}`;
+  const nextClass = `card-image-slider__next-${instanceId}`;
+  const onNavPointerDown = (e) => {
+    // Evita que el click de las flechas dispare el onClick del card.
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
-    <Image
-      src={safeSrc}
-      alt={alt}
-      fill
-      sizes={sizes}
-      className={`${className} card-image-slider ${isEnabled ? 'card-image-slider--enabled' : ''}`}
-      priority={false}
-    />
+    <div className="card-image-slider-root" aria-label="Galería de imágenes">
+      <Swiper
+        className="card-image-slider-swiper"
+        modules={[Navigation, Autoplay]}
+        navigation={{
+          prevEl: `.${prevClass}`,
+          nextEl: `.${nextClass}`,
+        }}
+        autoplay={{
+          delay: autoplayDelayRef.current,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,
+        }}
+        loop
+        nested
+        speed={520}
+        initialSlide={index}
+        onSlideChange={(swiper) => setIndex(swiper.realIndex ?? 0)}
+      >
+        {list.map((imgSrc, idx) => {
+          const safe = typeof imgSrc === 'string' && imgSrc ? encodeURI(imgSrc) : safeSrc;
+          return (
+            <SwiperSlide key={`${idx}-${safe}`}>
+              <div className="card-image-slider-slide">
+                <Image
+                  src={safe}
+                  alt={alt}
+                  fill
+                  sizes={sizes}
+                  className={`${className} card-image-slider-img`}
+                  priority={false}
+                />
+              </div>
+            </SwiperSlide>
+          );
+        })}
+
+        <button
+          type="button"
+          className={`card-image-slider-nav card-image-slider-nav--prev ${prevClass}`}
+          aria-label="Imagen anterior"
+          onPointerDown={onNavPointerDown}
+          onClick={(e) => e.stopPropagation()}
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          className={`card-image-slider-nav card-image-slider-nav--next ${nextClass}`}
+          aria-label="Imagen siguiente"
+          onPointerDown={onNavPointerDown}
+          onClick={(e) => e.stopPropagation()}
+        >
+          ›
+        </button>
+      </Swiper>
+    </div>
   );
 };
 
