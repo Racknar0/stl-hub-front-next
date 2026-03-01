@@ -3,6 +3,7 @@
 import React from 'react';
 import './SectionRow.scss';
 import Button from '../../layout/Buttons/Button';
+import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -74,10 +75,15 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
               return (
                 <SwiperSlide key={it.id}>
                   <article className="card-item" onClick={() => onItemClick?.(it)}>
-                    <div
-                      className="thumb"
-                      style={{ backgroundImage: `url(${it.thumb})` }}
-                    />
+                    <div className="thumb">
+                      <CardImageSlider
+                        images={it.images}
+                        fallback={it.thumb}
+                        alt={it.title || 'asset'}
+                        sizes="220px"
+                        className="thumb-img"
+                      />
+                    </div>
                     <div className="info">
                       {/* it.title ya viene en el idioma derivado por Home */}
                       <div className="title">{it.title || '-'}</div>

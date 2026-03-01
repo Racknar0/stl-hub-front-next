@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Button from '../../layout/Buttons/Button';
 import './FeatureSection.scss';
 // Reutilizamos el spinner del loader global (estilos)
 import '../../common/GlobalLoader/GlobalLoader.scss';
+import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
 // Slider
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -98,13 +98,12 @@ const FeatureSection = ({
                                       <SwiperSlide key={it.id}>
                                           <article className="fcard" onClick={() => onItemClick?.(it)}>
                                               <div className="thumb">
-                                                  <Image
-                                                      src={safeThumb}
+                                                  <CardImageSlider
+                                                      images={it.images}
+                                                      fallback={safeThumb}
                                                       alt={it.title || 'asset'}
-                                                      fill
                                                       sizes="(max-width: 992px) 88vw, 240px"
                                                       className="thumb-img"
-                                                      priority={false}
                                                   />
                                               </div>
                                               <div className="finfo">

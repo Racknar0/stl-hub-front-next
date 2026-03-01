@@ -33,7 +33,16 @@
 }
 .card-item:hover { border-color: rgba(255,255,255,.15); }
 
-.thumb { height: 180px; background-size: cover; background-position: center; }
+.thumb {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.thumb .thumb-img {
+  object-fit: cover;
+}
 .info { padding: 0.8rem; }
 .title { font-weight: 800; margin-bottom: .35rem; }
 .chips { display:flex; gap: .35rem; flex-wrap: wrap; }
