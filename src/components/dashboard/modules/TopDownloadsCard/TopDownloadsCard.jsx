@@ -35,8 +35,8 @@ const TopDownloadsCard = () => {
   const total = items.reduce((s, it) => s + (it.count || 0), 0)
 
   return (
-    <div style={{display:'flex',gap:12,alignItems:'flex-start', width:'100%' , maxWidth: '320px'}}>
-      <div style={{width: '100%'}}>
+    <div style={{ width: '100%', height: '100%' }}>
+      <div style={{ width: '100%', height: '100%' }}>
 
         <div className={`top-downloads-card ${open ? 'open' : 'collapsed'}`}>
           <div className="card-header">

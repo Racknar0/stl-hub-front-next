@@ -5,6 +5,9 @@
   padding:8px;
   box-shadow:0 1px 2px rgba(0,0,0,0.03);
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   transition: all 220ms ease;
 }
 
@@ -45,20 +48,26 @@
 .top-downloads-card .card-header .collapse-btn svg{ transition: transform 220ms ease; }
 .top-downloads-card .card-header .collapse-btn svg.rot-180{ transform: rotate(180deg); }
 
-.top-downloads-card.open .card-body{ max-height:320px; overflow:auto; }
+.top-downloads-card.open .card-body{ max-height:none; overflow:auto; }
 .top-downloads-card.collapsed .card-body{ max-height:80px; overflow:hidden; }
 
 .top-downloads-card .card-body{
-  max-height:260px;
   overflow:auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding-right:6px;
   transition: max-height 260ms ease;
+  display:flex;
+  flex-direction:column;
 }
 
 .top-downloads-card .downloads-list{
   list-style:none;
   padding:0;
   margin:0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow:auto;
 }
 
 .top-downloads-card .download-item{

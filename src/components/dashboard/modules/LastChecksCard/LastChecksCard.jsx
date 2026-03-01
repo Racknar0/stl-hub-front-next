@@ -55,7 +55,7 @@ function sortByOldestFirst(list) {
 
 export default function LastChecksCard({
   refreshMs = 60000,
-  maxHeight = 260,
+  maxHeight,
   // Parametrizable (para pruebas: 50). También se puede setear por env.
   staleDays = Number(process.env.NEXT_PUBLIC_LASTCHECKS_STALE_DAYS) || 50,
 }) {
@@ -196,7 +196,15 @@ export default function LastChecksCard({
         <div className="lc-count">{filtered.length.toLocaleString()}</div>
       </div>
 
-      <ul className="lc-list" style={{ maxHeight, overflow: 'auto' }}>
+      <ul
+        className="lc-list"
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          overflow: 'auto',
+          ...(maxHeight ? { maxHeight } : {}),
+        }}
+      >
         {filtered.length === 0 ? (
           <li className="lc-empty">{loading ? 'Cargando…' : 'Sin datos'}</li>
         ) : (

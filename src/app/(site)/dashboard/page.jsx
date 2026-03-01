@@ -18,6 +18,7 @@ import TotalVentas from '@/components/dashboard/modules/TotalVentas/TotalVentas'
 import LastChecksCard from '@/components/dashboard/modules/LastChecksCard/LastChecksCard';
 import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCard/TaxonomyCountsCard';
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
+import './dashboard.scss';
 
 export default function Page() {
   const router = useRouter();
@@ -82,13 +83,13 @@ export default function Page() {
           <TotalRegistros value={4321} />
         </div>
 
-          <div className='d-flex justify-content-start' style={{gap:12,width:'100%', flexWrap:'wrap'}}>
-            <TaxonomyCountsCard />
-            <SearchInsightsCard />
-            <TopDownloadsCard />
-              <ReportsCard />
-            <LastChecksCard />
-              <TotalVentas />
+        <div className="dashboard-cards-wrap">
+          <div className="dashboard-card-cell"><TaxonomyCountsCard /></div>
+          <div className="dashboard-card-cell"><SearchInsightsCard /></div>
+          <div className="dashboard-card-cell"><LastChecksCard /></div>
+          <div className="dashboard-card-cell"><TopDownloadsCard /></div>
+          <div className="dashboard-card-cell"><ReportsCard /></div>
+          <div className="dashboard-card-cell"><TotalVentas /></div>
         </div>
 
       </div>

@@ -52,8 +52,8 @@ const SearchInsightsCard = () => {
       : Number(bucket?.totals?.searches || 0).toLocaleString())
 
   return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%', maxWidth: '360px' }}>
-      <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: '100%' }}>
+      <div style={{ width: '100%', height: '100%' }}>
         <div className={`search-insights-card ${open ? 'open' : 'collapsed'}`}>
           <div className="card-header">
             <h6>Búsquedas</h6>

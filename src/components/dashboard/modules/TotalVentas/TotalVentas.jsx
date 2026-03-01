@@ -31,7 +31,7 @@ export default function TotalVentas() {
   const totalAmount = items.reduce((s, it) => s + (it.amount || 0), 0)
 
   return (
-    <div className={`top-downloads-card ${open ? 'open' : 'collapsed'}`} style={{width:'100%', maxWidth: '300px'}}>
+    <div className={`top-downloads-card ${open ? 'open' : 'collapsed'}`} style={{ width: '100%', height: '100%' }}>
       <div className="card-header">
         <h6>Total ventas</h6>
         <div style={{display:'flex',alignItems:'center',gap:8}}>

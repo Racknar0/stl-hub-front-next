@@ -57,8 +57,8 @@ const TaxonomyCountsCard = () => {
   const summary = loading ? '...' : items.length.toLocaleString()
 
   return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%', maxWidth: '320px' }}>
-      <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: '100%' }}>
+      <div style={{ width: '100%', height: '100%' }}>
         <div className={`taxonomy-counts-card ${open ? 'open' : 'collapsed'}`}>
           <div className="card-header">
             <h6>{tab === 'tags' ? 'Tags (conteo)' : 'Categorías (conteo)'}</h6>
