@@ -13,6 +13,12 @@ import TerminalIcon from '@mui/icons-material/Terminal';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+
+import axiosInstance from '../../../services/AxiosInterceptor';
+import useStore from '../../../store/useStore';
 
 /*
   ConsoleBar: barra flotante tipo consola para el dashboard.
@@ -77,8 +83,10 @@ export default function ConsoleBar() {
   const [logHeight, setLogHeight] = useState(0);
   const [lines, setLines] = useState([]);
   const [live, setLive] = useState(true);
+  const [restartLoading, setRestartLoading] = useState(false);
   const [levelsEnabled, setLevelsEnabled] = useState({ log: true, info: true, warn: true, error: true });
   const logsRef = useRef(null);
+  const roleId = useStore((s) => s.roleId);
 
   const scrollLogsToBottom = useCallback(() => {
     const el = logsRef.current;
@@ -109,6 +117,24 @@ export default function ConsoleBar() {
   const addLine = useCallback((text, extra={}) => {
     setLines(l => [...l.slice(-999), { id: Date.now() + Math.random(), text, ...extra }]);
   }, []);
+
+  const requestRestart = useCallback(async () => {
+    if (restartLoading) return;
+    const ok = window.confirm('¿Reiniciar el backend ahora? Esto cortará conexiones activas por unos segundos.');
+    if (!ok) return;
+
+    setRestartLoading(true);
+    addLine('Solicitando reinicio del backend...', { level: 'warn' });
+    try {
+      const res = await axiosInstance.post('/admin/ops/restart', { confirm: true });
+      addLine(res?.data?.message || 'Reinicio solicitado. Esperando reconexión...', { level: 'info' });
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || 'Error solicitando reinicio';
+      addLine(`Restart error: ${msg}`, { level: 'error' });
+    } finally {
+      setRestartLoading(false);
+    }
+  }, [restartLoading, addLine]);
 
   const clear = () => setLines([]);
 
@@ -167,8 +193,26 @@ export default function ConsoleBar() {
           </Typography>
           <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#444' }} />
           <Tooltip title={live ? 'Pausar live' : 'Reanudar live'}>
-            <span><Button size="small" variant="outlined" color={live ? 'success' : 'inherit'} onClick={() => setLive(v => !v)}>{live ? 'Live' : 'Off'}</Button></span>
+            <IconButton size="small" color="inherit" onClick={() => setLive(v => !v)}>
+              {live ? <PauseCircleOutlineIcon fontSize="small" /> : <PlayCircleOutlineIcon fontSize="small" />}
+            </IconButton>
           </Tooltip>
+          {Number(roleId) === 2 && (
+            <Tooltip title="Reiniciar backend (PM2)">
+              <span>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="warning"
+                  startIcon={<RestartAltIcon fontSize="small" />}
+                  disabled={restartLoading}
+                  onClick={requestRestart}
+                >
+                  {restartLoading ? 'Restarting' : 'Restart'}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
           <Tooltip title="Filtrar niveles">
             <IconButton size="small" color="inherit" onClick={() => {
               // ciclo rápido: all -> sólo warn+error -> sólo error -> all
