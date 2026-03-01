@@ -1,7 +1,8 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import './LastChecksCard.scss'
 import HttpService from '@/services/HttpService'
+import { fireAlert } from '@/helpers/alerts'
 
 function formatDateTime(value) {
   if (!value) return 'Nunca'
@@ -40,10 +41,28 @@ function sortByLastCheckDesc(list) {
   })
 }
 
-export default function LastChecksCard({ refreshMs = 60000, maxHeight = 260 }) {
+function sortByOldestFirst(list) {
+  const safe = Array.isArray(list) ? list : []
+  return [...safe].sort((a, b) => {
+    const ta = a?.lastCheckAt ? new Date(a.lastCheckAt).getTime() : 0
+    const tb = b?.lastCheckAt ? new Date(b.lastCheckAt).getTime() : 0
+    // primero los que nunca se revisaron
+    if (!a?.lastCheckAt && b?.lastCheckAt) return -1
+    if (a?.lastCheckAt && !b?.lastCheckAt) return 1
+    return ta - tb
+  })
+}
+
+export default function LastChecksCard({
+  refreshMs = 60000,
+  maxHeight = 260,
+  // Parametrizable (para pruebas: 50). También se puede setear por env.
+  staleDays = Number(process.env.NEXT_PUBLIC_LASTCHECKS_STALE_DAYS) || 50,
+}) {
   const [tab, setTab] = useState('main')
   const [loading, setLoading] = useState(false)
   const [accounts, setAccounts] = useState([])
+  const prevStaleCountRef = useRef(0)
 
   const http = new HttpService()
 
@@ -86,10 +105,50 @@ export default function LastChecksCard({ refreshMs = 60000, maxHeight = 260 }) {
     }
   }, [refreshMs])
 
+  const staleAccounts = useMemo(() => {
+    const days = Math.max(1, Number(staleDays) || 50)
+    const now = Date.now()
+    const dayMs = 24 * 60 * 60 * 1000
+
+    const isStale = (a) => {
+      const v = a?.lastCheckAt
+      if (!v) return true
+      const t = new Date(v).getTime()
+      if (Number.isNaN(t)) return true
+      const diffDays = Math.floor((now - t) / dayMs)
+      return diffDays > days
+    }
+
+    return sortByOldestFirst((accounts || []).filter(isStale))
+  }, [accounts, staleDays])
+
+  const staleCount = staleAccounts.length
+
+  useEffect(() => {
+    const days = Math.max(1, Number(staleDays) || 50)
+    // Dispara la alerta solo cuando pasa de 0 -> >0
+    if (staleCount > 0 && prevStaleCountRef.current === 0) {
+      void fireAlert({
+        title: 'Alerta!',
+        text: `hay cuentas con mas de ${days} dias sin verificarse`,
+        icon: 'warning',
+        confirmButtonText: 'Ok',
+        zIndex: 2000,
+      })
+    }
+    prevStaleCountRef.current = staleCount
+  }, [staleCount, staleDays])
+
   const filtered = useMemo(() => {
+    if (tab === 'alert') return staleAccounts
     const type = tab === 'backup' ? 'backup' : 'main'
     return sortByLastCheckDesc((accounts || []).filter(a => a?.type === type))
-  }, [accounts, tab])
+  }, [accounts, tab, staleAccounts])
+
+  useEffect(() => {
+    // Si el tab de alerta desaparece (ya no hay stale), volvemos a main
+    if (tab === 'alert' && staleCount === 0) setTab('main')
+  }, [tab, staleCount])
 
   return (
     <div className="stat-card last-checks-card" style={{ width: '100%', maxWidth: '420px' }}>
@@ -122,6 +181,18 @@ export default function LastChecksCard({ refreshMs = 60000, maxHeight = 260 }) {
         >
           BACKUP
         </button>
+        {staleCount > 0 ? (
+          <button
+            type="button"
+            className={`lc-tab lc-tab-alert ${tab === 'alert' ? 'active' : ''}`}
+            onClick={() => setTab('alert')}
+            aria-label={`Alerta: ${staleCount} cuentas sin revisar`}
+            title={`Alerta: ${staleCount} cuentas sin revisar`}
+          >
+            <span className="lc-alert-dot" aria-hidden="true" />
+            ALERTA
+          </button>
+        ) : null}
         <div className="lc-count">{filtered.length.toLocaleString()}</div>
       </div>
 
@@ -136,6 +207,9 @@ export default function LastChecksCard({ refreshMs = 60000, maxHeight = 260 }) {
                 <div className="lc-meta-date">Última validación: {formatDateTime(a.lastCheckAt)}</div>
                 {a.lastCheckAt ? (
                   <div className="lc-meta-rel">{formatRelativeFromNow(a.lastCheckAt)}</div>
+                ) : null}
+                {tab === 'alert' ? (
+                  <div className="lc-meta-type">tipo: {String(a?.type || '—').toUpperCase()}</div>
                 ) : null}
               </div>
             </li>

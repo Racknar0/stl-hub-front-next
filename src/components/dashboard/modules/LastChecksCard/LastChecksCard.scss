@@ -50,6 +50,28 @@
   border-color: #4f46e5;
 }
 
+.last-checks-card .lc-tab.lc-tab-alert{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: rgba(239,68,68,0.35);
+  color: #ef4444;
+}
+
+.last-checks-card .lc-tab.lc-tab-alert.active{
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
+.last-checks-card .lc-alert-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.18);
+}
+
 .last-checks-card .lc-count{
   margin-left: auto;
   font-size: 12px;
@@ -85,6 +107,12 @@
   font-size: 12px;
   color: #4f46e5;
   font-weight: 600;
+}
+
+.last-checks-card .lc-meta-type{
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .last-checks-card .lc-empty{

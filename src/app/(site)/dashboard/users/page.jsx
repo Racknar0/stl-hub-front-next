@@ -5,8 +5,8 @@ import {
     successAlert,
     errorAlert,
     confirmAlert,
+    fireAlert,
 } from '../../../../helpers/alerts';
-import Swal from 'sweetalert2';
 import {
     MaterialReactTable,
     useMaterialReactTable,
@@ -135,7 +135,7 @@ export default function UsersPage() {
 
     const onUpdate = async (row) => {
         const u = row.original;
-        const result = await Swal.fire({
+        const result = await fireAlert({
             title: 'Extender suscripción',
             text: `Ingresa los días a agregar para ${u.email}`,
             input: 'number',

@@ -362,10 +362,18 @@ export default function AssetsAdminPage() {
       { header: 'Cuenta', accessorFn: (row) => row.account?.alias || row.accountId, size: 140,
         Cell: ({ row }) => <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.original.account?.alias || row.original.accountId}</Typography>
       },
-      // {
-      //   header: 'Creado', accessorKey: 'createdAt', size: 160,
-      //   Cell: ({ cell }) => <Typography variant="body2">{cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '-'}</Typography>,
-      // },
+      {
+        header: 'Subido',
+        accessorKey: 'createdAt',
+        size: 150,
+        Cell: ({ cell }) => {
+          const v = cell.getValue()
+          if (!v) return <Typography variant="body2" color="text.secondary">-</Typography>
+          const d = new Date(v)
+          const text = Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString('es-ES')
+          return <Typography variant="body2">{text}</Typography>
+        },
+      },
       {
         header: 'MEGA', accessorKey: 'megaLink', size: 160,
         Cell: ({ cell }) => cell.getValue() ? (

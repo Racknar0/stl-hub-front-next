@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card, CardContent, Grid, FormControl, Box, Typography, Button, Stack, LinearProgress } from '@mui/material'
 
-export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, usedPct, usedMB, totalMB, onOpenModal, onTest }) {
+export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, usedPct, usedMB, totalMB, queueSummaryText, onOpenModal, onTest }) {
   const backups = Array.isArray(selectedAcc?.backups) ? selectedAcc.backups : []
   const firstBackup = backups[0]
   const backupLabel = firstBackup?.alias
@@ -49,6 +49,21 @@ export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, used
                 <LinearProgress variant="determinate" value={usedPct} sx={{ mt: 0.5 }} />
                 <Typography variant="caption">{usedMB} MB / {totalMB} MB</Typography>
               </Box>
+              {queueSummaryText ? (
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      opacity: 0.85,
+                      whiteSpace: 'nowrap',
+                      fontWeight: 800,
+                      color: 'text.secondary',
+                    }}
+                  >
+                    {queueSummaryText}
+                  </Typography>
+                </Box>
+              ) : null}
             </Stack>
           </Grid>
         </Grid>

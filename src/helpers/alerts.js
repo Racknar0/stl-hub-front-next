@@ -1,7 +1,69 @@
 import Swal from 'sweetalert2'
 
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+const getScrollPosition = () => {
+  if (!isBrowser) return { x: 0, y: 0 };
+  return {
+    x: window.pageXOffset ?? window.scrollX ?? 0,
+    y: window.pageYOffset ?? window.scrollY ?? 0,
+  };
+};
+
+const restoreScrollPosition = (pos) => {
+  if (!isBrowser) return;
+  window.scrollTo(pos.x, pos.y);
+};
+
+const fireNoScroll = async (options = {}) => {
+  // En SSR o entornos sin window/document, no tocamos nada.
+  if (!isBrowser) return Swal.fire(options);
+
+  const initialPos = getScrollPosition();
+  const restore = () => {
+    // Doble RAF para evitar saltos por focus/layout.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => restoreScrollPosition(initialPos));
+    });
+  };
+
+  const userDidOpen = options.didOpen;
+  const userWillClose = options.willClose;
+  const userDidClose = options.didClose;
+
+  // `heightAuto: false` y `returnFocus: false` evitan varios saltos de scroll conocidos.
+  const mergedOptions = {
+    ...options,
+    heightAuto: false,
+    returnFocus: false,
+    didOpen: (popup) => {
+      restore();
+      if (typeof userDidOpen === 'function') userDidOpen(popup);
+    },
+    willClose: (popup) => {
+      restore();
+      if (typeof userWillClose === 'function') userWillClose(popup);
+    },
+    didClose: () => {
+      restore();
+      if (typeof userDidClose === 'function') userDidClose();
+    },
+  };
+
+  try {
+    const result = await Swal.fire(mergedOptions);
+    restore();
+    return result;
+  } finally {
+    restore();
+  }
+};
+
+// Helper genérico para casos que no cubren success/error/confirm/select.
+export const fireAlert = async (options) => fireNoScroll(options);
+
 export const successAlert = async (title = 'Success!', message = 'La operación se ha realizado con éxito') => {
-  await Swal.fire({
+  await fireNoScroll({
     title: title,
     text: message,
     icon: 'success',
@@ -11,7 +73,7 @@ export const successAlert = async (title = 'Success!', message = 'La operación 
 }
 
 export const errorAlert = async (title = 'Error!', message = 'Un error ha ocurrido') => {
-  await Swal.fire({
+  await fireNoScroll({
     title: title,
     text: message,
     icon: 'error',
@@ -21,7 +83,7 @@ export const errorAlert = async (title = 'Error!', message = 'Un error ha ocurri
 }
 
 export const warningAlert = async (title = 'Warning!', message = 'Advertencia') => {
-    await Swal.fire({
+  await fireNoScroll({
         title: title,
         text: message,
         icon: 'warning',
@@ -31,7 +93,7 @@ export const warningAlert = async (title = 'Warning!', message = 'Advertencia') 
     }
 
 export const timerAlert = async (title = 'Success!', message = 'La operación se ha realizado con éxito', timer = 2000) => {
-  await Swal.fire({
+  await fireNoScroll({
     title: title,
     text: message,
     icon: 'success',
@@ -49,7 +111,7 @@ export const confirmAlert = async (
   cancelText = 'Cancelar',
   icon = 'question'
 ) => {
-  const result = await Swal.fire({
+  const result = await fireNoScroll({
     title,
     text: message,
     icon,
@@ -71,7 +133,7 @@ export const selectAlert = async (
   confirmText = 'Aceptar',
   cancelText = 'Cancelar'
 ) => {
-  const result = await Swal.fire({
+  const result = await fireNoScroll({
     title,
     text: message,
     input: 'select',

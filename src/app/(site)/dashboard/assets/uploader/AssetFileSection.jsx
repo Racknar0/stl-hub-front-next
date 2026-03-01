@@ -8,7 +8,7 @@ import {
     Typography,
 } from '@mui/material';
 
-export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false }) {
+export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false, queueSummaryText = '' }) {
     const [selectedFile, setSelectedFile] = React.useState(null);
     const [error, setError] = React.useState('');
     const fileInputRef = React.useRef(null);
@@ -77,7 +77,25 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
 
     return (
         <Card className="glass mb-3" >
-            <CardHeader title="Archivo del stl" />
+            <CardHeader
+                title="Archivo"
+                action={
+                    queueSummaryText ? (
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                opacity: 0.85,
+                                mt: 0.75,
+                                whiteSpace: 'nowrap',
+                                fontWeight: 800,
+                                color: 'text.secondary',
+                            }}
+                        >
+                            {queueSummaryText}
+                        </Typography>
+                    ) : null
+                }
+            />
             <CardContent>
                 {/* Dropzone para arrastrar y soltar */}
                 <Box

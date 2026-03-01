@@ -272,8 +272,23 @@ export default function UploadAssetPage() {
   const [scpPort, setScpPort] = useState('22')
   const [scpRemoteBase, setScpRemoteBase] = useState('')
   const [copiedNameMap, setCopiedNameMap] = useState({}) // feedback de copiado por item
+  const queueThumbUrlMapRef = React.useRef(new Map()) // { [queueItemId]: { url, file } }
   // Overlay oscuro manual (switch flotante)
   const [darkOverlay, setDarkOverlay] = useState(false)
+
+  const queueTotalBytes = useMemo(() => {
+    return (uploadQueue || []).reduce((sum, it) => sum + (it?.sizeBytes || 0), 0)
+  }, [uploadQueue])
+
+  const queueTotalMB = useMemo(() => {
+    const mb = queueTotalBytes / (1024 * 1024)
+    return Number.isFinite(mb) && mb > 0 ? mb : 0
+  }, [queueTotalBytes])
+
+  const queueSummaryText = useMemo(() => {
+    const count = (uploadQueue || []).length
+    return `${count} en cola - ${queueTotalMB.toFixed(1)}MB`
+  }, [uploadQueue, queueTotalMB])
 
   // Evitar doble click/ejecuciones paralelas al encolar
   const addToQueueLockRef = React.useRef(false)
@@ -1030,6 +1045,52 @@ export default function UploadAssetPage() {
 
   useEffect(() => { uploadQueueRef.current = uploadQueue }, [uploadQueue])
   useEffect(() => { queueIndexRef.current = queueIndex }, [queueIndex])
+
+  const getQueueItemThumbSrc = (queueItem) => {
+    if (typeof window === 'undefined') return null
+    const id = queueItem?.id
+    const firstFile = Array.isArray(queueItem?.images) ? queueItem.images[0] : null
+    if (!id || !firstFile) return null
+
+    const map = queueThumbUrlMapRef.current
+    const existing = map.get(id)
+    if (existing?.url && existing?.file === firstFile) return existing.url
+
+    if (existing?.url) {
+      try { URL.revokeObjectURL(existing.url) } catch {}
+    }
+    const url = URL.createObjectURL(firstFile)
+    map.set(id, { url, file: firstFile })
+    return url
+  }
+
+  useEffect(() => {
+    // Limpieza de URLs cuando se retiran ítems de la cola
+    const ids = new Set((uploadQueue || []).map((it) => it?.id).filter(Boolean))
+    const map = queueThumbUrlMapRef.current
+    Array.from(map.keys()).forEach((id) => {
+      if (!ids.has(id)) {
+        const entry = map.get(id)
+        if (entry?.url) {
+          try { URL.revokeObjectURL(entry.url) } catch {}
+        }
+        map.delete(id)
+      }
+    })
+  }, [uploadQueue])
+
+  useEffect(() => {
+    // Limpieza total al desmontar
+    return () => {
+      const map = queueThumbUrlMapRef.current
+      Array.from(map.values()).forEach((entry) => {
+        if (entry?.url) {
+          try { URL.revokeObjectURL(entry.url) } catch {}
+        }
+      })
+      map.clear()
+    }
+  }, [])
 
   const canEnqueue = (
     accStatus === 'connected' &&
@@ -1836,6 +1897,7 @@ export default function UploadAssetPage() {
         usedPct={usedPct}
         usedMB={usedMB}
         totalMB={totalMB}
+        queueSummaryText={queueSummaryText}
         onOpenModal={() => setModalOpen(true)}
         onTest={testSelectedAccount}
       />
@@ -2154,6 +2216,7 @@ export default function UploadAssetPage() {
                 setTitleEn={setTitleEn}
                 onFileSelected={setArchiveFile}
                 disabled={isUploading}
+                queueSummaryText={queueSummaryText}
               />
 
               <MetadataSection
@@ -2294,12 +2357,10 @@ export default function UploadAssetPage() {
                     : (uploadQueue.length ? `${uploadQueue.length} en cola` : 'Vacía'))
             }
             action={(() => {
-              const totalBytes = (uploadQueue||[]).reduce((s, it) => s + (it.sizeBytes || 0), 0)
-              const totalMB = totalBytes / (1024 * 1024)
               const showTime = (isUploading || queueActive) || elapsedMs > 0
               return (
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                  {`Total: ${totalMB.toFixed(1)} MB`}
+                  {`Total: ${queueTotalMB.toFixed(1)} MB`}
                   {showTime ? ` • Tiempo: ${formatDuration(elapsedMs)}` : ''}
                 </Typography>
               )
@@ -2332,6 +2393,38 @@ export default function UploadAssetPage() {
                         <td style={{ padding:'8px', maxWidth:300 }}>
                           {it?.archiveFile?.name ? (
                             <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:380 }}>
+                              {(() => {
+                                const src = getQueueItemThumbSrc(it)
+                                if (!src) return null
+                                return (
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    title="Vista previa"
+                                    onClick={() => openImgPreview(src)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openImgPreview(src) }}
+                                    style={{
+                                      flex: '0 0 auto',
+                                      width: 52,
+                                      height: 52,
+                                      borderRadius: 8,
+                                      overflow: 'hidden',
+                                      border: '1px solid rgba(255,255,255,0.18)',
+                                      background: 'rgba(0,0,0,0.18)',
+                                      cursor: 'pointer',
+                                      outline: 'none',
+                                    }}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={src}
+                                      alt=""
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                      loading="lazy"
+                                    />
+                                  </div>
+                                )
+                              })()}
                               <div
                                 role="button"
                                 title="Click para copiar"
@@ -2346,8 +2439,11 @@ export default function UploadAssetPage() {
                                   cursor:'pointer',
                                   maxWidth:320,
                                   overflow:'hidden',
-                                  textOverflow:'ellipsis',
-                                  whiteSpace:'nowrap',
+                                  whiteSpace:'normal',
+                                  wordBreak:'break-word',
+                                  display:'-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient:'vertical',
                                   padding:'2px 6px',
                                   borderRadius:6,
                                   border:'1px solid rgba(255,255,255,0.15)',
@@ -2550,7 +2646,21 @@ export default function UploadAssetPage() {
             </Typography>
 
             {queueItemThumbs.length > 0 && (
-              <Box sx={{ display: 'flex', gap: 1, mt: 0.9, flexWrap: 'wrap' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1,
+                  mt: 0.9,
+                  flexWrap: 'nowrap',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  pb: 0.5,
+                  scrollbarWidth: 'thin',
+                  '&::-webkit-scrollbar': { height: 8 },
+                  '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.18)', borderRadius: 999 },
+                  '&::-webkit-scrollbar-track': { background: 'transparent' },
+                }}
+              >
                 {queueItemThumbs.slice(0, 12).map((t, i) => (
                   <Box
                     key={`${sidebarQueueItem?.id}_qimg_${i}`}
@@ -2559,8 +2669,9 @@ export default function UploadAssetPage() {
                     onClick={() => openImgPreview(t.src)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openImgPreview(t.src) }}
                     sx={{
-                      width: 48,
-                      height: 48,
+                      flex: '0 0 auto',
+                      width: 150,
+                      height: 150,
                       borderRadius: 1,
                       overflow: 'hidden',
                       border: '1px solid rgba(255,255,255,0.12)',
@@ -2679,7 +2790,21 @@ export default function UploadAssetPage() {
                       {formatBytes(size)} • {imgs.length} imágenes
                     </Typography>
                     {imgs.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 1, mt: 0.75, flexWrap: 'wrap' }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          gap: 1,
+                          mt: 0.75,
+                          flexWrap: 'nowrap',
+                          overflowX: 'auto',
+                          overflowY: 'hidden',
+                          pb: 0.5,
+                          scrollbarWidth: 'thin',
+                          '&::-webkit-scrollbar': { height: 8 },
+                          '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.18)', borderRadius: 999 },
+                          '&::-webkit-scrollbar-track': { background: 'transparent' },
+                        }}
+                      >
                         {imgs.slice(0, 6).map((rel, i) => {
                           const src = makeUploadsUrl(rel)
                           if (!src) return null
@@ -2691,8 +2816,9 @@ export default function UploadAssetPage() {
                               onClick={() => openImgPreview(src)}
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openImgPreview(src) }}
                               sx={{
-                                width: 48,
-                                height: 48,
+                                flex: '0 0 auto',
+                                width: 150,
+                                height: 150,
                                 borderRadius: 1,
                                 overflow: 'hidden',
                                 border: '1px solid rgba(255,255,255,0.12)',
