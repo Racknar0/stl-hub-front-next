@@ -325,9 +325,9 @@ export default function SearchClient({ initialParams }) {
 
   return (
     <section className="search-page">
-      <div className="container-narrow">
+      <div className="container-narrow" style={{ maxWidth: '100%' }}>
         {/* Breadcrumb + filtros activos */}
-        <div className="search-breadcrumb">
+        <div className="search-breadcrumb" style={{ maxWidth: '1200px', margin: '0 auto 24px' }}>
           <Button href="/" variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>Inicio</Button>
           <span className="sep">/</span>
           <h1 className="title">{t('search.title')}</h1>

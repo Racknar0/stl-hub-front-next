@@ -35,7 +35,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
   return (
     <section className="section-row">
       <div className="container-narrow" style={{
-                maxWidth: "90%"
+                maxWidth: "98%"
             }}>
         <div className="header">
           <h3>{title}</h3>

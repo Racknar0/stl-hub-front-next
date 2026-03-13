@@ -49,7 +49,7 @@ const en = {
     feature: {
       title: 'EXCLUSIVE RELEASES',
       subtitle: 'Design your reality',
-      cta: 'See more'
+      cta: 'See all'
     },
     row: {
       more: 'See all'
@@ -66,16 +66,16 @@ const en = {
     latest: {
       title: 'Latest updates & releases',
       subtitle: 'Discover the latest links',
-      cta: 'See more'
+      cta: 'See all'
     },
     top: {
       title: 'Most downloaded',
-      more: 'See more'
+      more: 'See all'
     },
     // New: Free
     free: {
       title: 'Freebies: free STL files every day',
-      more: 'See more'
+      more: 'See all'
     },
     // New: categories
     categories: {

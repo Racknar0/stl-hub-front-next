@@ -66,16 +66,16 @@ const es = {
     latest: {
       title: 'Últimas novedades',
       subtitle: 'Descubre los últimos enlaces',
-      cta: 'Ver más'
+      cta: 'Ver todo'
     },
     top: {
       title: 'Lo más descargado',
-      more: 'Ver más'
+      more: 'Ver todo'
     },
     // Nuevo: Free
     free: {
       title: 'Freebies: descar STL gratis cada día se renueva diariamente',
-      more: 'Ver más'
+      more: 'Ver todo'
     },
     // Nuevo: categorías
     categories: {
