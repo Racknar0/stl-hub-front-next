@@ -27,6 +27,7 @@ export default function ImagesSection({
     onSelectPreview,
     onReorder, // nuevo: (fromIndex, toIndex) => void
     disabled = false,
+    isDraggingGlobal = false,
 }) {
     const dragFromRef = React.useRef(null)
 
@@ -58,17 +59,18 @@ export default function ImagesSection({
                     onDrop={onDrop}
                     onDragOver={onDragOver}
                     onClick={onOpenFilePicker}
-                    sx={{
-                        width: '100%',
-                        maxWidth: 1600,
-                        mx: 'auto',
-                        p: 3,
-                        border: '2px dotted rgba(0,0,0,0.6)',
-                        borderRadius: 2,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        mb: 2,
-                    }}
+                        sx={{
+                            width: '100%',
+                            maxWidth: 1600,
+                            mx: 'auto',
+                            p: 3,
+                            border: `2px dotted ${isDraggingGlobal ? 'rgba(124,77,255,0.9)' : 'rgba(0,0,0,0.6)'}`,
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            mb: 2,
+                            backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
+                        }}
                 >
                     <input
                         ref={fileInputRef}

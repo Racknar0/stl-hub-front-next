@@ -106,6 +106,7 @@ export default function UploadAssetPage() {
   const [uploadFinished, setUploadFinished] = useState(false)
   const [statusKey, setStatusKey] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDraggingGlobal, setIsDraggingGlobal] = useState(false)
   // Error de unicidad de slug
   const [slugConflict, setSlugConflict] = useState({ conflict: false, suggestion: '', checking: false })
   // Título original de la pestaña para restaurar al finalizar
@@ -795,8 +796,23 @@ export default function UploadAssetPage() {
       return arr
     })
   }
-  const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); handleFiles(e.dataTransfer.files) }
-  const onDragOver = (e) => { e.preventDefault(); e.stopPropagation() }
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingGlobal(false);
+    const files = Array.from(e.dataTransfer?.files || [])
+    // imágenes
+    handleFiles(files)
+    // detectar archivo de archivo (.zip/.rar/.7z) y asignarlo también
+    const archive = files.find((f) => {
+      const m = String(f?.name || '').toLowerCase().match(/\.([0-9a-z]+)$/)
+      const ext = m ? m[1] : ''
+      return ['zip', 'rar', '7z'].includes(ext)
+    })
+    if (archive) setArchiveFile(archive)
+  }
+  const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(true) }
+  const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(false) }
   const fileInputRef = React.useRef(null)
   const openFilePicker = () => fileInputRef.current?.click()
   const onSelectFiles = (e) => handleFiles(e.target.files)
@@ -1834,11 +1850,17 @@ export default function UploadAssetPage() {
   return (
     <div
       className="p-3"
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragEnter={onDragOver}
+      onDragLeave={onDragLeave}
       style={{
         display: 'grid',
         gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
         gap: 0,
         alignItems: 'start',
+        outline: isDraggingGlobal ? '3px dashed rgba(124,77,255,0.85)' : undefined,
+        outlineOffset: isDraggingGlobal ? '4px' : undefined,
       }}
     >
       <style jsx global>{`
@@ -2215,6 +2237,8 @@ export default function UploadAssetPage() {
                 setTitle={setTitle}
                 setTitleEn={setTitleEn}
                 onFileSelected={setArchiveFile}
+                archiveFile={archiveFile}
+                isDraggingGlobal={isDraggingGlobal}
                 disabled={isUploading}
                 queueSummaryText={queueSummaryText}
               />
@@ -2256,6 +2280,7 @@ export default function UploadAssetPage() {
                 onNext={nextSlide}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                isDraggingGlobal={isDraggingGlobal}
                 onOpenFilePicker={openFilePicker}
                 fileInputRef={fileInputRef}
                 onSelectFiles={onSelectFiles}

@@ -8,7 +8,7 @@ import {
     Typography,
 } from '@mui/material';
 
-export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false, queueSummaryText = '' }) {
+export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false, queueSummaryText = '', isDraggingGlobal = false, archiveFile = null }) {
     const [selectedFile, setSelectedFile] = React.useState(null);
     const [error, setError] = React.useState('');
     const fileInputRef = React.useRef(null);
@@ -72,6 +72,19 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
     };
     const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
 
+    // Sincronizar selección local cuando el padre actualiza `archiveFile`
+    React.useEffect(() => {
+        try {
+            if (archiveFile) {
+                if (!selectedFile || selectedFile?.name !== archiveFile?.name) {
+                    setSelectedFile(archiveFile)
+                }
+            } else {
+                if (selectedFile) setSelectedFile(null)
+            }
+        } catch {}
+    }, [archiveFile]);
+
     const shownName = selectedFile?.name || '—';
     const shownSize = selectedFile ? formatBytes(selectedFile.size) : '';
 
@@ -102,16 +115,17 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
                     onDrop={onDrop}
                     onDragOver={onDragOver}
                     onClick={openPicker}
-                    sx={{
-                        width: '100%',
-                        p: 3,
-                        border: '2px dotted rgba(0,0,0,0.6)',
-                        borderRadius: 2,
-                        textAlign: 'center',
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        opacity: disabled ? 0.6 : 1,
-                        mb: 2,
-                    }}
+                        sx={{
+                            width: '100%',
+                            p: 3,
+                            border: `2px dotted ${isDraggingGlobal ? 'rgba(124,77,255,0.9)' : 'rgba(0,0,0,0.6)'}`,
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            opacity: disabled ? 0.6 : 1,
+                            mb: 2,
+                            backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
+                        }}
                 >
                     <input
                         ref={fileInputRef}
