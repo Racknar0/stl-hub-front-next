@@ -798,6 +798,16 @@ export default function UploadAssetPage() {
       return arr
     })
   }
+
+  const normalizeArchiveNameToTitle = (name = '') => {
+    return String(name || '')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[-_.]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+  }
+
   const onDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -811,7 +821,14 @@ export default function UploadAssetPage() {
       const ext = m ? m[1] : ''
       return ['zip', 'rar', '7z'].includes(ext)
     })
-    if (archive) setArchiveFile(archive)
+    if (archive) {
+      setArchiveFile(archive)
+      const autoTitle = normalizeArchiveNameToTitle(archive.name || '')
+      if (autoTitle) {
+        setTitle(autoTitle)
+        setTitleEn(autoTitle)
+      }
+    }
   }
   const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(true) }
   const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(false) }
