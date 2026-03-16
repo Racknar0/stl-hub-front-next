@@ -39,7 +39,8 @@ import { successAlert } from '@/helpers/alerts'
 const http = new HttpService()
 const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
-const ACCOUNT_QUEUE_SOFT_LIMIT_MB = 19.3 * 1024
+const ACCOUNT_QUEUE_SOFT_LIMIT_GB = 19.3
+const ACCOUNT_QUEUE_SOFT_LIMIT_BYTES = Math.floor(ACCOUNT_QUEUE_SOFT_LIMIT_GB * 1_000_000_000)
 
 // Mapea estado del backend (CONNECTED/ERROR/SUSPENDED/EXPIRED) a estados de UI (connected/failed)
 const mapBackendToUiStatus = (s) => {
@@ -815,12 +816,18 @@ export default function UploadAssetPage() {
     const files = Array.from(e.dataTransfer?.files || [])
     // imágenes
     handleFiles(files)
-    // detectar archivo de archivo (.zip/.rar/.7z) y asignarlo también
-    const archive = files.find((f) => {
+    // detectar comprimidos y elegir el de mayor peso (.zip/.rar/.7z)
+    const archiveCandidates = files.filter((f) => {
       const m = String(f?.name || '').toLowerCase().match(/\.([0-9a-z]+)$/)
       const ext = m ? m[1] : ''
       return ['zip', 'rar', '7z'].includes(ext)
     })
+    const archive = archiveCandidates.reduce((best, curr) => {
+      if (!best) return curr
+      const a = Number(best?.size || 0)
+      const b = Number(curr?.size || 0)
+      return b > a ? curr : best
+    }, null)
     if (archive) {
       setArchiveFile(archive)
       const autoTitle = normalizeArchiveNameToTitle(archive.name || '')
@@ -892,6 +899,7 @@ export default function UploadAssetPage() {
 
   const selectedAccountIdForQueue = Number(selectedAcc?.id || 0)
   const selectedAccountUsedMBForQueue = Math.max(0, Number(selectedAcc?.storageUsedMB || 0))
+  const selectedAccountUsedBytesForQueue = selectedAccountUsedMBForQueue * 1024 * 1024
 
   const draftItemBytes = useMemo(() => {
     const archiveBytes = Number(archiveFile?.size || 0)
@@ -900,20 +908,22 @@ export default function UploadAssetPage() {
   }, [archiveFile, imageFiles])
 
   const queuedBytesForSelectedAccount = useMemo(() => {
-    if (!selectedAccountIdForQueue) return 0
     return (uploadQueue || []).reduce((sum, it) => {
       const accountId = Number(it?.meta?.accountId || 0)
-      if (accountId !== selectedAccountIdForQueue) return sum
+      if (selectedAccountIdForQueue > 0 && accountId !== selectedAccountIdForQueue) return sum
       const st = String(it?.status || '')
-      if (!['queued', 'running', 'enqueued'].includes(st)) return sum
+      // Contar también success para cubrir desfase hasta que `usedMB` refresque desde backend.
+      if (!['queued', 'running', 'enqueued', 'success'].includes(st)) return sum
       return sum + Number(it?.sizeBytes || 0)
     }, 0)
   }, [uploadQueue, selectedAccountIdForQueue])
 
   const queuedMBForSelectedAccount = queuedBytesForSelectedAccount / (1024 * 1024)
   const draftMB = draftItemBytes / (1024 * 1024)
-  const projectedMBIfEnqueue = selectedAccountUsedMBForQueue + queuedMBForSelectedAccount + draftMB
-  const wouldExceedAccountQueueLimit = selectedAccountIdForQueue > 0 && projectedMBIfEnqueue > ACCOUNT_QUEUE_SOFT_LIMIT_MB
+  const projectedBytesIfEnqueue = selectedAccountUsedBytesForQueue + queuedBytesForSelectedAccount + draftItemBytes
+  const projectedMBIfEnqueue = projectedBytesIfEnqueue / (1024 * 1024)
+  const projectedGBIfEnqueue = projectedBytesIfEnqueue / 1_000_000_000
+  const wouldExceedAccountQueueLimit = projectedBytesIfEnqueue >= ACCOUNT_QUEUE_SOFT_LIMIT_BYTES
 
   const missingReasons = useMemo(() => {
     const list = []
@@ -925,7 +935,7 @@ export default function UploadAssetPage() {
     if (fieldErrors.categories) list.push('Selecciona al menos 1 categoría')
     if (fieldErrors.tags) list.push('Agrega al menos 2 tags')
     if (wouldExceedAccountQueueLimit) {
-      list.push(`Supera 19.3 GB (${(selectedAccountUsedMBForQueue / 1024).toFixed(2)} GB usados + ${(queuedMBForSelectedAccount / 1024).toFixed(2)} GB en cola + ${(draftMB / 1024).toFixed(2)} GB nuevo)`)
+      list.push(`Supera ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB (${(selectedAccountUsedBytesForQueue / 1_000_000_000).toFixed(2)} GB usados + ${(queuedBytesForSelectedAccount / 1_000_000_000).toFixed(2)} GB en cola + ${(draftItemBytes / 1_000_000_000).toFixed(2)} GB nuevo)`) 
     }
     if (slugConflict.conflict) list.push(`Ya existe un asset con esta carpeta. Prueba con: ${slugConflict.suggestion}`)
     return list
@@ -938,9 +948,9 @@ export default function UploadAssetPage() {
     slugConflict.conflict,
     slugConflict.suggestion,
     wouldExceedAccountQueueLimit,
-    selectedAccountUsedMBForQueue,
-    queuedMBForSelectedAccount,
-    draftMB,
+    selectedAccountUsedBytesForQueue,
+    queuedBytesForSelectedAccount,
+    draftItemBytes,
   ])
 
   // Limpiar error de conflicto al cambiar el título (sin llamadas en vivo)
@@ -1193,11 +1203,11 @@ export default function UploadAssetPage() {
       if (!(tagsCleanCount >= 2)) return;
       if (wouldExceedAccountQueueLimit) {
         window.alert(
-          `No se puede añadir a la cola: superarías 19.3 GB en esta cuenta.\n` +
-          `Usado: ${(selectedAccountUsedMBForQueue / 1024).toFixed(2)} GB\n` +
-          `En cola: ${(queuedMBForSelectedAccount / 1024).toFixed(2)} GB\n` +
-          `Nuevo: ${(draftMB / 1024).toFixed(2)} GB\n` +
-          `Total proyectado: ${(projectedMBIfEnqueue / 1024).toFixed(2)} GB`
+          `No se puede añadir a la cola: superarías ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB en esta cuenta.\n` +
+          `Usado: ${(selectedAccountUsedBytesForQueue / 1_000_000_000).toFixed(2)} GB\n` +
+          `En cola: ${(queuedBytesForSelectedAccount / 1_000_000_000).toFixed(2)} GB\n` +
+          `Nuevo: ${(draftItemBytes / 1_000_000_000).toFixed(2)} GB\n` +
+          `Total proyectado: ${projectedGBIfEnqueue.toFixed(2)} GB`
         );
         return;
       }

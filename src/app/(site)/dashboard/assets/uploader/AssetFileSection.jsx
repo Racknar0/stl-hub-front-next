@@ -67,7 +67,22 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
         e.preventDefault();
         e.stopPropagation();
         if (disabled) return;
-        const file = e.dataTransfer?.files?.[0];
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (!files.length) return;
+
+        const archiveCandidates = files.filter((f) => {
+            const m = String(f?.name || '').toLowerCase().match(/\.([0-9a-z]+)$/);
+            const ext = m ? m[1] : '';
+            return ['zip', 'rar', '7z'].includes(ext);
+        });
+
+        const file = archiveCandidates.reduce((best, curr) => {
+            if (!best) return curr;
+            const a = Number(best?.size || 0);
+            const b = Number(curr?.size || 0);
+            return b > a ? curr : best;
+        }, null) || files[0];
+
         handlePick(file);
     };
     const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
