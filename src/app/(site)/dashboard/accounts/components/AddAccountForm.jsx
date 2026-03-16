@@ -1,7 +1,20 @@
-import React from 'react';
-import { Card, CardHeader, CardContent, Grid, TextField, Stack, Button as MUIButton } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Grid,
+  TextField,
+  Stack,
+  Button as MUIButton,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 export default function AddAccountForm({ form, setForm, onSubmit, disabled }) {
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <Card className="glass" sx={{ mb: 2 }}>
       <CardHeader title="Añadir cuenta MEGA" />
@@ -26,7 +39,27 @@ export default function AddAccountForm({ form, setForm, onSubmit, disabled }) {
             <TextField label="Usuario (MEGA email)" fullWidth value={form.username} onChange={(e)=>setForm(f=>({...f, username:e.target.value}))} />
           </Grid>
           <Grid item xs={12} md={2}>
-            <TextField type="password" label="Contraseña" fullWidth value={form.password} onChange={(e)=>setForm(f=>({...f, password:e.target.value}))} />
+            <TextField
+              type={showPassword ? 'text' : 'password'}
+              label="Contraseña"
+              fullWidth
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      onClick={() => setShowPassword((s) => !s)}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
           </Grid>
           <Grid item xs={12}>
             <Stack direction="row" spacing={1} justifyContent="flex-end">
