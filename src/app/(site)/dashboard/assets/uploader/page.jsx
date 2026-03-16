@@ -39,6 +39,7 @@ import { successAlert } from '@/helpers/alerts'
 const http = new HttpService()
 const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
+const ACCOUNT_QUEUE_SOFT_LIMIT_MB = 19.3 * 1024
 
 // Mapea estado del backend (CONNECTED/ERROR/SUSPENDED/EXPIRED) a estados de UI (connected/failed)
 const mapBackendToUiStatus = (s) => {
@@ -872,6 +873,31 @@ export default function UploadAssetPage() {
     tags: !(tagsCleanCount >= 2),
   }), [title, titleEn, selectedCategories, tagsCleanCount])
 
+  const selectedAccountIdForQueue = Number(selectedAcc?.id || 0)
+  const selectedAccountUsedMBForQueue = Math.max(0, Number(selectedAcc?.storageUsedMB || 0))
+
+  const draftItemBytes = useMemo(() => {
+    const archiveBytes = Number(archiveFile?.size || 0)
+    const imagesBytes = (imageFiles || []).reduce((sum, f) => sum + Number(f?.file?.size || f?.size || 0), 0)
+    return archiveBytes + imagesBytes
+  }, [archiveFile, imageFiles])
+
+  const queuedBytesForSelectedAccount = useMemo(() => {
+    if (!selectedAccountIdForQueue) return 0
+    return (uploadQueue || []).reduce((sum, it) => {
+      const accountId = Number(it?.meta?.accountId || 0)
+      if (accountId !== selectedAccountIdForQueue) return sum
+      const st = String(it?.status || '')
+      if (!['queued', 'running', 'enqueued'].includes(st)) return sum
+      return sum + Number(it?.sizeBytes || 0)
+    }, 0)
+  }, [uploadQueue, selectedAccountIdForQueue])
+
+  const queuedMBForSelectedAccount = queuedBytesForSelectedAccount / (1024 * 1024)
+  const draftMB = draftItemBytes / (1024 * 1024)
+  const projectedMBIfEnqueue = selectedAccountUsedMBForQueue + queuedMBForSelectedAccount + draftMB
+  const wouldExceedAccountQueueLimit = selectedAccountIdForQueue > 0 && projectedMBIfEnqueue > ACCOUNT_QUEUE_SOFT_LIMIT_MB
+
   const missingReasons = useMemo(() => {
     const list = []
     if (accStatus !== 'connected' || !selectedAcc) list.push('Conecta una cuenta MEGA')
@@ -881,9 +907,24 @@ export default function UploadAssetPage() {
     if (fieldErrors.titleEn) list.push('Nombre (EN) requerido')
     if (fieldErrors.categories) list.push('Selecciona al menos 1 categoría')
     if (fieldErrors.tags) list.push('Agrega al menos 2 tags')
+    if (wouldExceedAccountQueueLimit) {
+      list.push(`Supera 19.3 GB (${(selectedAccountUsedMBForQueue / 1024).toFixed(2)} GB usados + ${(queuedMBForSelectedAccount / 1024).toFixed(2)} GB en cola + ${(draftMB / 1024).toFixed(2)} GB nuevo)`)
+    }
     if (slugConflict.conflict) list.push(`Ya existe un asset con esta carpeta. Prueba con: ${slugConflict.suggestion}`)
     return list
-  }, [accStatus, selectedAcc, archiveFile, imageFiles.length, fieldErrors, slugConflict.conflict, slugConflict.suggestion])
+  }, [
+    accStatus,
+    selectedAcc,
+    archiveFile,
+    imageFiles.length,
+    fieldErrors,
+    slugConflict.conflict,
+    slugConflict.suggestion,
+    wouldExceedAccountQueueLimit,
+    selectedAccountUsedMBForQueue,
+    queuedMBForSelectedAccount,
+    draftMB,
+  ])
 
   // Limpiar error de conflicto al cambiar el título (sin llamadas en vivo)
   useEffect(() => { setSlugConflict({ conflict:false, suggestion:'', checking:false }) }, [title])
@@ -1115,7 +1156,8 @@ export default function UploadAssetPage() {
     !!archiveFile && 
     imageFiles.length >= 1 &&
     Array.isArray(selectedCategories) && selectedCategories.length >= 1 &&
-    tagsCleanCount >= 2
+    tagsCleanCount >= 2 &&
+    !wouldExceedAccountQueueLimit
   )
 
   const titleErrorMessage = slugConflict.conflict
@@ -1132,6 +1174,16 @@ export default function UploadAssetPage() {
       if (accStatus !== 'connected' || !selectedAcc) return;
       if (!Array.isArray(selectedCategories) || selectedCategories.length < 1) return;
       if (!(tagsCleanCount >= 2)) return;
+      if (wouldExceedAccountQueueLimit) {
+        window.alert(
+          `No se puede añadir a la cola: superarías 19.3 GB en esta cuenta.\n` +
+          `Usado: ${(selectedAccountUsedMBForQueue / 1024).toFixed(2)} GB\n` +
+          `En cola: ${(queuedMBForSelectedAccount / 1024).toFixed(2)} GB\n` +
+          `Nuevo: ${(draftMB / 1024).toFixed(2)} GB\n` +
+          `Total proyectado: ${(projectedMBIfEnqueue / 1024).toFixed(2)} GB`
+        );
+        return;
+      }
 
       // Evitar duplicados por nombre de archivo principal en la cola actual
       const normalizeName = (n) => String(n || '').trim().toLowerCase();

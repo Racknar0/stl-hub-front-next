@@ -150,18 +150,20 @@ export default function HeaderBar({ selectedAcc, megaStatusNode, accStatus, used
                 sx={{
                   border: '2px dashed #4a90e2',
                   borderRadius: 0,
-                  padding: '14px',
+                  padding: '20px 80px',
                   textAlign: 'center',
                   color: '#4a90e2',
                   backgroundColor: dragging ? 'rgba(74, 144, 226, 0.2)' : 'rgba(74, 144, 226, 0.1)',
                   transition: 'background-color 0.3s ease',
+                  marginLeft: 'auto',
+                  cursor: 'pointer',
                 }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={openFilePicker}
               >
-                <Typography variant="caption">Arrastra tus archivos aquí</Typography>
+                <Typography variant="caption">Validar Archivos en Cola</Typography>
                 <input ref={fileInputRef} type="file" multiple onChange={handleFilePick} style={{ display: 'none' }} />
               </Box>
             </Stack>
