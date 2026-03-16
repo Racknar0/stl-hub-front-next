@@ -1954,7 +1954,11 @@ export default function UploadAssetPage() {
               applyProfile?.(p)
               setProfilesModalOpen(false)
             }}
-            onDelete={(name) => removeProfile(name)}
+            onDelete={(name) => {
+              const ok = window.confirm(`¿Seguro que deseas eliminar el perfil "${name}"?`)
+              if (!ok) return
+              removeProfile(name)
+            }}
             onImport={importProfiles}
             onExport={exportProfiles}
             addProfileOpen={addProfileOpen}
