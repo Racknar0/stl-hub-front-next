@@ -60,6 +60,21 @@
 .rowStrong .count { font-size: 12.5px; }
 .rowStrong .size { font-size: 12.5px; }
 
+.dropzone {
+  border: 2px dashed #4a90e2;
+  border-radius: 0; /* Cuadrada */
+  padding: 30px; /* Mantener tamaño grande */
+  text-align: center;
+  color: #4a90e2;
+  background-color: rgba(74, 144, 226, 0.1);
+  margin-bottom: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.dropzone.dragging {
+  background-color: rgba(74, 144, 226, 0.2);
+}
+
 @media (max-width: 900px) {
   .widget { display:none; }
 }

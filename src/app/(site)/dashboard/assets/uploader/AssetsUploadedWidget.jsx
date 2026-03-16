@@ -3,11 +3,22 @@
 import React, { useEffect, useState } from 'react'
 import styles from './AssetsUploadedWidget.module.scss'
 import HttpService from '@/services/HttpService'
+import Chip from '@mui/material/Chip';
+
+const validateFiles = (files) => {
+  // Lógica de validación de archivos
+  const maxFiles = 10; // Ejemplo: máximo 10 archivos
+  const extraFiles = files.length > maxFiles ? files.slice(maxFiles) : [];
+  const missingFiles = files.length < maxFiles ? maxFiles - files.length : 0;
+  return { extraFiles, missingFiles };
+};
 
 const AssetsUploadedWidget = ({ counts: initialCounts }) => {
   const [counts, setCounts] = useState(initialCounts || null)
   const [loading, setLoading] = useState(false)
   const http = new HttpService()
+  const [dragging, setDragging] = useState(false)
+  const [dragFeedback, setDragFeedback] = useState(null)
 
   const formatCount = (count) => {
     const n = Number(count || 0)
@@ -75,6 +86,27 @@ const AssetsUploadedWidget = ({ counts: initialCounts }) => {
     window.addEventListener('assets:uploaded', onUploaded)
     return () => { mounted = false; window.removeEventListener('assets:uploaded', onUploaded) }
   }, [])
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const maxFiles = 10; // Ejemplo: máximo 10 archivos
+    const extraFiles = files.length > maxFiles ? files.slice(maxFiles) : [];
+    const missingFiles = files.length < maxFiles ? maxFiles - files.length : 0;
+
+    setDragFeedback({ extraFiles, missingFiles });
+  };
 
   return (
     <div className={styles.widget} role="status" aria-label="Assets subidos resumen">

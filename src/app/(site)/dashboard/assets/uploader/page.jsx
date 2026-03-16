@@ -21,6 +21,7 @@ import {
   TextField,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import HttpService from '@/services/HttpService'
 import HeaderBar from './HeaderBar'
 import ImagesSection from './ImagesSection'
@@ -1850,17 +1851,11 @@ export default function UploadAssetPage() {
   return (
     <div
       className="p-3"
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragEnter={onDragOver}
-      onDragLeave={onDragLeave}
       style={{
         display: 'grid',
         gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
         gap: 0,
         alignItems: 'start',
-        outline: isDraggingGlobal ? '3px dashed rgba(124,77,255,0.85)' : undefined,
-        outlineOffset: isDraggingGlobal ? '4px' : undefined,
       }}
     >
       <style jsx global>{`
@@ -1920,6 +1915,7 @@ export default function UploadAssetPage() {
         usedMB={usedMB}
         totalMB={totalMB}
         queueSummaryText={queueSummaryText}
+        uploadQueue={uploadQueue}
         onOpenModal={() => setModalOpen(true)}
         onTest={testSelectedAccount}
       />
@@ -2205,7 +2201,37 @@ export default function UploadAssetPage() {
       
 
       {/* 2) Layout de carga */}
-      <Box sx={{ ms: 'auto' }}>
+      <Box
+        sx={{ ms: 'auto', position: 'relative', outline: isDraggingGlobal ? '3px dashed rgba(124,77,255,0.85)' : undefined, outlineOffset: isDraggingGlobal ? '4px' : undefined }}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragEnter={onDragOver}
+        onDragLeave={onDragLeave}
+      >
+        {isDraggingGlobal && (
+          <Box
+            role="presentation"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1200,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.55)',
+              color: '#fff',
+              pointerEvents: 'none',
+              borderRadius: 1,
+            }}
+          >
+            <Stack alignItems="center" spacing={1}>
+              <CloudUploadIcon sx={{ fontSize: 56, opacity: 0.98 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                Suelte archivos
+              </Typography>
+            </Stack>
+          </Box>
+        )}
   <Grid
     container
     spacing={0}
