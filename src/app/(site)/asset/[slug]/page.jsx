@@ -83,6 +83,11 @@ export default async function AssetPage({ params }) {
     const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
+    const priceValidUntil = (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 365);
+        return d.toISOString().slice(0, 10);
+    })();
     // CreativeWork base + Product/Offer enriquecido para distinguir premium/free
     const productLd = {
         '@context': 'https://schema.org',
@@ -110,6 +115,7 @@ export default async function AssetPage({ params }) {
                     '@type': 'Offer',
                     price: asset.isPremium ? '4.99' : '0', // Ajusta precio real si existe
                     priceCurrency: 'USD',
+                    priceValidUntil,
                     availability: 'https://schema.org/InStock',
                     url: `${site}/asset/${asset.slug}`,
                     itemCondition: 'https://schema.org/NewCondition',
