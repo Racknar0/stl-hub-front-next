@@ -26,8 +26,21 @@ async function fetchAsset(slug) {
 
 export async function generateMetadata({ params }) {
     const asset = await fetchAsset(params.slug);
-    if (!asset || asset.__error) {
+    if (!asset || (asset.__error && asset.status === 404)) {
         return { title: 'Modelo no encontrado', robots: { index: false, follow: false } };
+    }
+    // No indexar contenido no publicado aunque exista en la BD.
+    if (asset?.unpublished) {
+        return { title: 'Modelo no disponible', robots: { index: false, follow: false } };
+    }
+    // Para errores transitorios (500/red), evitar noindex para no desindexar por fallos puntuales.
+    if (asset?.__error) {
+        const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
+        return {
+            title: 'STL HUB',
+            description: 'Catálogo de modelos STL para impresión 3D.',
+            alternates: { canonical: `${site}/asset/${params.slug}` },
+        };
     }
     const isPremium = !!asset.isPremium;
     const baseTitle =
@@ -64,6 +77,9 @@ export default async function AssetPage({ params }) {
       // Para otros errores mostrar fallback simple (sin notFound para diferenciar 500)
       return <div style={{padding:'2rem'}}><h1>Error</h1><p>No pudimos cargar el asset.</p></div>;
     }
+        if (asset?.unpublished) {
+            notFound();
+        }
     const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);

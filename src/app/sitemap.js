@@ -28,12 +28,6 @@ export default async function sitemap() {
       changeFrequency: 'weekly',
       priority: 0.5,
     },
-    {
-      url: `${base}/search`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 0.6,
-    },
   ];
 
   // Fetch published slugs (server-side; this runs at build or on-demand)
