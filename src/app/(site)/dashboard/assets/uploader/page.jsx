@@ -2739,6 +2739,20 @@ export default function UploadAssetPage() {
                 </div>
               )
             })()} 
+            <br />
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Sincronización continua con WinSCP (recomendada mientras anexas archivos)</div>
+            {(() => {
+              const cmd = `Set-Location g:\\STLHUB; powershell -ExecutionPolicy Bypass -File .\\tools\\winscp-keepup.ps1 -BatchFolderName \"batch_${batchId || '<batchId>'}\"`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div>{cmd}</div>
+                  <Button size="small" onClick={() => navigator.clipboard?.writeText(cmd)}>Copiar</Button>
+                </div>
+              )
+            })()}
+            <div style={{ marginTop: 6, opacity: 0.8 }}>
+              Déjalo corriendo mientras anexas archivos; se detiene con Ctrl+C.
+            </div>
           </Box>
           {/* Tip de PowerShell eliminado a pedido */}
         </DialogContent>
