@@ -39,7 +39,7 @@ import { successAlert } from '@/helpers/alerts'
 const http = new HttpService()
 const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
-const ACCOUNT_QUEUE_SOFT_LIMIT_GB = 19.3
+const ACCOUNT_QUEUE_SOFT_LIMIT_GB = 19.6
 const ACCOUNT_QUEUE_SOFT_LIMIT_BYTES = Math.floor(ACCOUNT_QUEUE_SOFT_LIMIT_GB * 1_000_000_000)
 
 // Mapea estado del backend (CONNECTED/ERROR/SUSPENDED/EXPIRED) a estados de UI (connected/failed)
@@ -59,6 +59,25 @@ const mapBackendToUiStatus = (s) => {
 export default function UploadAssetPage() {
   const router = useRouter()
   const RIGHT_SIDEBAR_WIDTH = 340
+  const SIDEBAR_SIDE_LS_KEY = 'uploader_search_sidebar_side_v1'
+  const [searchSidebarSide, setSearchSidebarSide] = useState('right')
+
+  useEffect(() => {
+    try {
+      const saved = String(window.localStorage.getItem(SIDEBAR_SIDE_LS_KEY) || '').toLowerCase()
+      if (saved === 'left' || saved === 'right') setSearchSidebarSide(saved)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_SIDE_LS_KEY, searchSidebarSide)
+    } catch {}
+  }, [searchSidebarSide])
+
+  const toggleSearchSidebarSide = useCallback(() => {
+    setSearchSidebarSide((prev) => (prev === 'right' ? 'left' : 'right'))
+  }, [])
 
   const queueFinishedNotifiedRef = useRef(false)
   const queueEverStartedRef = useRef(false)
@@ -126,6 +145,8 @@ export default function UploadAssetPage() {
   const [importProfilesText, setImportProfilesText] = useState('')
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const [profilesSearch, setProfilesSearch] = useState('')
+  const [queueLimitModalOpen, setQueueLimitModalOpen] = useState(false)
+  const [queueLimitModalText, setQueueLimitModalText] = useState('')
   const sortProfilesByName = useCallback((arr=[]) => {
     return [...(arr||[])].sort((a,b)=> String(a?.name||'').localeCompare(String(b?.name||''), 'es', { sensitivity: 'base' }))
   }, [])
@@ -792,6 +813,26 @@ export default function UploadAssetPage() {
     const files = Array.from(filesLike || [])
     const imgs = files.filter(f => f.type?.startsWith('image/'))
     if (!imgs.length) return
+
+    const incomingImagesBytes = imgs.reduce((sum, f) => sum + Number(f?.size || 0), 0)
+    const currentArchiveBytes = Number(archiveFile?.size || 0)
+    const currentImagesBytes = (imageFiles || []).reduce((sum, it) => sum + Number(it?.file?.size || it?.size || 0), 0)
+    const nextDraftBytes = currentArchiveBytes + currentImagesBytes + incomingImagesBytes
+    const projectedBytes = selectedAccountUsedBytesForQueue + queuedBytesForSelectedAccount + nextDraftBytes
+
+    if (projectedBytes >= ACCOUNT_QUEUE_SOFT_LIMIT_BYTES) {
+      const newBytes = nextDraftBytes
+      setQueueLimitModalText(
+        `El tamaño del archivo supera el máximo permitido de ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB.\n\n` +
+        `Usado: ${(selectedAccountUsedBytesForQueue / 1_000_000_000).toFixed(2)} GB\n` +
+        `En cola: ${(queuedBytesForSelectedAccount / 1_000_000_000).toFixed(2)} GB\n` +
+        `Nuevo borrador: ${(newBytes / 1_000_000_000).toFixed(2)} GB\n` +
+        `Total proyectado: ${(projectedBytes / 1_000_000_000).toFixed(2)} GB`
+      )
+      setQueueLimitModalOpen(true)
+      return
+    }
+
     const mapped = imgs.map((f, i) => ({ id: `${Date.now()}_${i}`, file: f, name: f.name, url: URL.createObjectURL(f) }))
     setImageFiles(prev => {
       const arr = [...prev, ...mapped]
@@ -829,6 +870,25 @@ export default function UploadAssetPage() {
       return b > a ? curr : best
     }, null)
     if (archive) {
+      const currentImagesBytes = (imageFiles || []).reduce((sum, it) => sum + Number(it?.file?.size || it?.size || 0), 0)
+      const droppedImagesBytes = files
+        .filter(f => f.type?.startsWith('image/'))
+        .reduce((sum, f) => sum + Number(f?.size || 0), 0)
+      const nextDraftBytes = Number(archive?.size || 0) + currentImagesBytes + droppedImagesBytes
+      const projectedBytes = selectedAccountUsedBytesForQueue + queuedBytesForSelectedAccount + nextDraftBytes
+
+      if (projectedBytes >= ACCOUNT_QUEUE_SOFT_LIMIT_BYTES) {
+        setQueueLimitModalText(
+          `El tamaño del archivo supera el máximo permitido de ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB.\n\n` +
+          `Usado: ${(selectedAccountUsedBytesForQueue / 1_000_000_000).toFixed(2)} GB\n` +
+          `En cola: ${(queuedBytesForSelectedAccount / 1_000_000_000).toFixed(2)} GB\n` +
+          `Nuevo borrador: ${(nextDraftBytes / 1_000_000_000).toFixed(2)} GB\n` +
+          `Total proyectado: ${(projectedBytes / 1_000_000_000).toFixed(2)} GB`
+        )
+        setQueueLimitModalOpen(true)
+        return
+      }
+
       setArchiveFile(archive)
       const autoTitle = normalizeArchiveNameToTitle(archive.name || '')
       if (autoTitle) {
@@ -836,6 +896,30 @@ export default function UploadAssetPage() {
         setTitleEn(autoTitle)
       }
     }
+  }
+
+  const handleArchiveSelected = (file) => {
+    if (!file) {
+      setArchiveFile(null)
+      return
+    }
+    const currentImagesBytes = (imageFiles || []).reduce((sum, it) => sum + Number(it?.file?.size || it?.size || 0), 0)
+    const nextDraftBytes = Number(file?.size || 0) + currentImagesBytes
+    const projectedBytes = selectedAccountUsedBytesForQueue + queuedBytesForSelectedAccount + nextDraftBytes
+
+    if (projectedBytes >= ACCOUNT_QUEUE_SOFT_LIMIT_BYTES) {
+      setQueueLimitModalText(
+        `El tamaño del archivo supera el máximo permitido de ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB.\n\n` +
+        `Usado: ${(selectedAccountUsedBytesForQueue / 1_000_000_000).toFixed(2)} GB\n` +
+        `En cola: ${(queuedBytesForSelectedAccount / 1_000_000_000).toFixed(2)} GB\n` +
+        `Nuevo borrador: ${(nextDraftBytes / 1_000_000_000).toFixed(2)} GB\n` +
+        `Total proyectado: ${(projectedBytes / 1_000_000_000).toFixed(2)} GB`
+      )
+      setQueueLimitModalOpen(true)
+      return
+    }
+
+    setArchiveFile(file)
   }
   const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(true) }
   const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingGlobal(false) }
@@ -1890,15 +1974,27 @@ export default function UploadAssetPage() {
 
   const sidebarSimilarity = sidebarQueueItem ? similarityMap?.[sidebarQueueItem.id] : null
 
-  // Informar a la ConsoleBar global que este dashboard tiene un sidebar derecho fijo
+  // Informar a la ConsoleBar global el offset derecho cuando el panel de búsqueda está a la derecha
   useEffect(() => {
     try {
-      document.documentElement.style.setProperty('--dash-right-offset', `${RIGHT_SIDEBAR_WIDTH}px`)
+      const rightOffset = searchSidebarSide === 'right' ? `${RIGHT_SIDEBAR_WIDTH}px` : '0px'
+      document.documentElement.style.setProperty('--dash-right-offset', rightOffset)
     } catch {}
     return () => {
       try { document.documentElement.style.setProperty('--dash-right-offset', '0px') } catch {}
     }
-  }, [RIGHT_SIDEBAR_WIDTH])
+  }, [RIGHT_SIDEBAR_WIDTH, searchSidebarSide])
+
+  // Cuando búsqueda está a la izquierda, ampliar columna del sidebar del dashboard al mismo ancho.
+  useEffect(() => {
+    try {
+      const nextSidebarWidth = searchSidebarSide === 'left' ? `${RIGHT_SIDEBAR_WIDTH}px` : '240px'
+      document.documentElement.style.setProperty('--dash-sidebar-width', nextSidebarWidth)
+    } catch {}
+    return () => {
+      try { document.documentElement.style.setProperty('--dash-sidebar-width', '240px') } catch {}
+    }
+  }, [RIGHT_SIDEBAR_WIDTH, searchSidebarSide])
 
   // Thumbs para el ítem en cola (File -> objectURL). Se regeneran por cambio de ítem.
   useEffect(() => {
@@ -1929,15 +2025,68 @@ export default function UploadAssetPage() {
 
   return (
     <div
-      className="p-3"
+      className="p-3 uploader-dark"
       style={{
-        display: 'grid',
-        gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_SIDEBAR_WIDTH}px`,
-        gap: 0,
-        alignItems: 'start',
+        position: 'relative',
+        paddingRight: searchSidebarSide === 'right' ? `${RIGHT_SIDEBAR_WIDTH + 16}px` : 0,
+        paddingLeft: 0,
       }}
     >
       <style jsx global>{`
+        .uploader-dark {
+          color: #adafb8;
+        }
+        .uploader-dark .glass,
+        .uploader-dark .MuiCard-root {
+          background: #1d1e26 !important;
+          color: #adafb8 !important;
+          border: 1px solid rgba(173, 175, 184, 0.18);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+        }
+        .uploader-dark .MuiTypography-root,
+        .uploader-dark .MuiTableCell-root,
+        .uploader-dark th,
+        .uploader-dark td,
+        .uploader-dark label,
+        .uploader-dark small,
+        .uploader-dark p,
+        .uploader-dark span,
+        .uploader-dark div {
+          color: #adafb8;
+        }
+        .uploader-dark .MuiInputLabel-root {
+          color: rgba(173, 175, 184, 0.78) !important;
+        }
+        .uploader-dark .MuiInputBase-root,
+        .uploader-dark .MuiOutlinedInput-root {
+          color: #adafb8 !important;
+          background: rgba(29, 30, 38, 0.92);
+        }
+        .uploader-dark .MuiOutlinedInput-notchedOutline {
+          border-color: rgba(173, 175, 184, 0.28) !important;
+        }
+        .uploader-dark .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+          border-color: rgba(173, 175, 184, 0.45) !important;
+        }
+        .uploader-dark .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+          border-color: #adafb8 !important;
+        }
+        .uploader-dark .MuiButton-outlined {
+          color: #adafb8;
+          border-color: rgba(173, 175, 184, 0.35);
+        }
+        .uploader-dark .MuiChip-root {
+          background: rgba(173, 175, 184, 0.13);
+          color: #adafb8;
+          border: 1px solid rgba(173, 175, 184, 0.24);
+        }
+        .uploader-dark .MuiTableCell-root {
+          border-bottom-color: rgba(173, 175, 184, 0.15);
+        }
+        .uploader-dark input::placeholder,
+        .uploader-dark textarea::placeholder {
+          color: rgba(173, 175, 184, 0.6);
+        }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .scroll-x { overflow-x: auto; white-space: nowrap; }
@@ -1984,7 +2133,13 @@ export default function UploadAssetPage() {
         </div>
       )}
 
-      <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          minWidth: 0,
+          width: '100%',
+          marginRight: 0,
+        }}
+      >
       {/* 1) Cabecera */}
       <HeaderBar
         selectedAcc={selectedAcc}
@@ -2006,6 +2161,27 @@ export default function UploadAssetPage() {
         maxWidth="md"
         sx={{
           zIndex: 22500,
+          '& .MuiDialog-paper': {
+            background: '#1d1e26',
+            color: '#adafb8',
+            border: '1px solid rgba(173,175,184,0.20)',
+          },
+          '& .MuiInputBase-root': {
+            color: '#adafb8',
+            background: 'rgba(23,24,31,0.9)',
+          },
+          '& .MuiDialogContent-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiDialogTitle-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiDialogActions-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(173,175,184,0.28)',
+          },
         }}
       >
         <DialogTitle sx={{ pr: 1 }}>
@@ -2049,7 +2225,35 @@ export default function UploadAssetPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importProfilesOpen} onClose={() => setImportProfilesOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={importProfilesOpen}
+        onClose={() => setImportProfilesOpen(false)}
+        fullWidth
+        maxWidth="md"
+        sx={{
+          '& .MuiDialog-paper': {
+            background: '#1d1e26',
+            color: '#adafb8',
+            border: '1px solid rgba(173,175,184,0.20)',
+          },
+          '& .MuiInputBase-root': {
+            color: '#adafb8',
+            background: 'rgba(23,24,31,0.9)',
+          },
+          '& .MuiDialogContent-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiDialogTitle-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiDialogActions-root': {
+            background: '#1d1e26',
+          },
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(173,175,184,0.28)',
+          },
+        }}
+      >
         <DialogTitle>Importar perfiles (JSON)</DialogTitle>
         <DialogContent>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
@@ -2345,7 +2549,7 @@ export default function UploadAssetPage() {
               <AssetFileSection
                 setTitle={setTitle}
                 setTitleEn={setTitleEn}
-                onFileSelected={setArchiveFile}
+                onFileSelected={handleArchiveSelected}
                 archiveFile={archiveFile}
                 isDraggingGlobal={isDraggingGlobal}
                 disabled={isUploading}
@@ -2761,6 +2965,30 @@ export default function UploadAssetPage() {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={queueLimitModalOpen}
+        onClose={() => setQueueLimitModalOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        sx={{
+          '& .MuiDialog-paper': {
+            background: '#1d1e26',
+            color: '#adafb8',
+            border: '1px solid rgba(173,175,184,0.20)',
+          },
+        }}
+      >
+        <DialogTitle>Límite de tamaño superado</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+            {queueLimitModalText || `El tamaño del archivo supera el máximo permitido de ${ACCOUNT_QUEUE_SOFT_LIMIT_GB} GB.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setQueueLimitModalOpen(false)}>Entendido</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Modal de selección de cuenta extraído */}
       <SelectMegaAccountModal
         open={modalOpen}
@@ -2772,12 +3000,31 @@ export default function UploadAssetPage() {
       </div>
 
       <RightSidebar
-        side="right"
+        side={searchSidebarSide}
         collapsible={false}
         inFlow={false}
         open
         width={RIGHT_SIDEBAR_WIDTH}
         title="Búsqueda"
+        headerAction={
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={toggleSearchSidebarSide}
+            sx={{
+              minWidth: 'auto',
+              px: 1,
+              py: 0.25,
+              fontSize: 12,
+              lineHeight: 1.1,
+              color: '#adafb8',
+              borderColor: 'rgba(173,175,184,0.35)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {searchSidebarSide === 'right' ? 'Mover a izquierda' : 'Mover a derecha'}
+          </Button>
+        }
       >
         {!sidebarQueueItem ? (
           <Typography variant="body2" sx={{ opacity: 0.8, px: 1 }}>

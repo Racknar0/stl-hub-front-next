@@ -41,7 +41,7 @@ const Root = styled('div')(({ theme }) => ({
   paddingRight: 16,
   boxSizing: 'border-box',
   [theme.breakpoints.up('lg')]: {
-    left: 240,
+    left: 'var(--dash-sidebar-width, 240px)',
   },
 }));
 

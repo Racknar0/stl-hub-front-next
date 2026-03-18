@@ -35,12 +35,13 @@
 @media (min-width: 1200px){
   .dashboard-page{
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: var(--dash-sidebar-width, 240px) minmax(0, 1fr);
     min-height: 100vh;
     width: 100%;
     // padding-bottom: 40px;
   }
   .dash-sidebar{
+    width: var(--dash-sidebar-width, 240px);
     position: sticky; /* ocupa espacio en el flujo */
     top: 0;
     height: 100dvh;

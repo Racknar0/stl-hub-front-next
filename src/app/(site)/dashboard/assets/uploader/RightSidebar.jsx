@@ -12,6 +12,7 @@ export default function RightSidebar({
   collapsible = true,
   inFlow = false,
   title = 'Panel',
+  headerAction = null,
   children,
 }) {
   const isLeft = String(side || 'right').toLowerCase() === 'left'
@@ -33,7 +34,8 @@ export default function RightSidebar({
         alignSelf: 'start',
         borderLeft: isLeft ? 'none' : '1px solid rgba(255,255,255,0.14)',
         borderRight: isLeft ? '1px solid rgba(255,255,255,0.14)' : 'none',
-        background: 'rgba(16, 16, 22, 0.95)',
+        background: '#1d1e26',
+        color: '#adafb8',
         backdropFilter: 'blur(10px)',
         boxShadow: isLeft
           ? '0 0 0 1px rgba(0,0,0,0.25), 8px 0 24px rgba(0,0,0,0.35)'
@@ -53,35 +55,37 @@ export default function RightSidebar({
         }}
       >
         {effectiveOpen ? (
-          <Typography variant="subtitle2" sx={{ px: 1, opacity: 0.9, whiteSpace: 'nowrap' }}>
+          <Typography variant="subtitle2" sx={{ px: 1, opacity: 0.95, whiteSpace: 'nowrap', color: '#adafb8' }}>
             {title}
           </Typography>
         ) : (
           <Box />
         )}
 
-        {collapsible ? (
-          <IconButton
-            size="small"
-            onClick={onToggle}
-            aria-label={effectiveOpen ? 'Contraer panel' : 'Expandir panel'}
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: 2,
-              border: '1px solid rgba(255,255,255,0.14)',
-              background: 'rgba(255,255,255,0.06)',
-              '&:hover': { background: 'rgba(255,255,255,0.10)' },
-            }}
-          >
-            {effectiveOpen
-              ? (isLeft ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />)
-              : (isLeft ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />)
-            }
-          </IconButton>
-        ) : (
-          <Box />
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          {headerAction}
+          {collapsible ? (
+            <IconButton
+              size="small"
+              onClick={onToggle}
+              aria-label={effectiveOpen ? 'Contraer panel' : 'Expandir panel'}
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 2,
+                border: '1px solid rgba(173,175,184,0.25)',
+                background: 'rgba(255,255,255,0.04)',
+                color: '#adafb8',
+                '&:hover': { background: 'rgba(255,255,255,0.10)' },
+              }}
+            >
+              {effectiveOpen
+                ? (isLeft ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />)
+                : (isLeft ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />)
+              }
+            </IconButton>
+          ) : null}
+        </Box>
       </Box>
 
       <Box

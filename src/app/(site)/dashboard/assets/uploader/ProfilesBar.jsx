@@ -14,7 +14,32 @@ export default function ProfilesBar({
   onSaveCurrent,
 }) {
   return (
-    <Card className="glass" sx={{ mt: 2 }}>
+    <Card
+      className="glass"
+      sx={{
+        mt: 2,
+        background: '#1d1e26 !important',
+        color: '#adafb8 !important',
+        border: '1px solid rgba(173,175,184,0.2)',
+        '& .MuiTypography-root': { color: '#adafb8 !important' },
+        '& .MuiChip-root': {
+          background: 'rgba(173,175,184,0.13)',
+          color: '#adafb8',
+          border: '1px solid rgba(173,175,184,0.24)',
+        },
+        '& .MuiButton-outlined': {
+          color: '#adafb8',
+          borderColor: 'rgba(173,175,184,0.35)',
+        },
+        '& .MuiInputBase-root': {
+          color: '#adafb8',
+          background: 'rgba(23,24,31,0.92)',
+        },
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: 'rgba(173,175,184,0.3)',
+        },
+      }}
+    >
       <CardContent sx={{ display:'flex', flexWrap:'wrap', gap: 1, alignItems:'center' }}>
         <Typography variant="subtitle2" sx={{ mr: 1, opacity: 0.9 }}>Perfiles:</Typography>
         {profiles.length === 0 && (
