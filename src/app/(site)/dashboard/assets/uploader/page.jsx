@@ -41,6 +41,7 @@ const API_BASE = '/accounts'
 const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480
 const ACCOUNT_QUEUE_SOFT_LIMIT_GB = 19.6
 const ACCOUNT_QUEUE_SOFT_LIMIT_BYTES = Math.floor(ACCOUNT_QUEUE_SOFT_LIMIT_GB * 1_000_000_000)
+const MAX_SIMILARITY_HASH_IMAGES = 8
 
 // Mapea estado del backend (CONNECTED/ERROR/SUSPENDED/EXPIRED) a estados de UI (connected/failed)
 const mapBackendToUiStatus = (s) => {
@@ -1105,6 +1106,75 @@ export default function UploadAssetPage() {
     return `${uploadsBase}/${s.replace(/\\/g,'/').replace(/^\/+/, '')}`
   }
 
+  const normalizeAHashHex = useCallback((value) => {
+    const cleaned = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
+    if (!cleaned) return ''
+    if (cleaned.length >= 16) return cleaned.slice(0, 16)
+    return cleaned.padStart(16, '0')
+  }, [])
+
+  const computeImageAHashFromFile = useCallback(async (file) => {
+    if (!(file instanceof File)) return ''
+    if (!String(file.type || '').toLowerCase().startsWith('image/')) return ''
+
+    let objectUrl = ''
+    try {
+      objectUrl = URL.createObjectURL(file)
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = () => reject(new Error('No se pudo leer imagen'))
+        img.src = objectUrl
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 8
+      canvas.height = 8
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return ''
+
+      ctx.clearRect(0, 0, 8, 8)
+      ctx.drawImage(image, 0, 0, 8, 8)
+      const { data } = ctx.getImageData(0, 0, 8, 8)
+      if (!data || data.length < 64 * 4) return ''
+
+      const grays = []
+      for (let i = 0; i < data.length; i += 4) {
+        const r = Number(data[i] || 0)
+        const g = Number(data[i + 1] || 0)
+        const b = Number(data[i + 2] || 0)
+        const y = Math.round(r * 0.299 + g * 0.587 + b * 0.114)
+        grays.push(y)
+      }
+
+      const avg = grays.reduce((sum, v) => sum + v, 0) / Math.max(1, grays.length)
+      const bits = grays.map((v) => (v >= avg ? '1' : '0')).join('').slice(0, 64).padEnd(64, '0')
+      const hex = BigInt(`0b${bits}`).toString(16).padStart(16, '0')
+      return normalizeAHashHex(hex)
+    } catch {
+      return ''
+    } finally {
+      try { if (objectUrl) URL.revokeObjectURL(objectUrl) } catch {}
+    }
+  }, [normalizeAHashHex])
+
+  const buildQueueItemImageHashes = useCallback(async (queueItem) => {
+    const existing = Array.isArray(queueItem?.imageHashes)
+      ? queueItem.imageHashes.map((h) => normalizeAHashHex(h)).filter(Boolean)
+      : []
+    if (existing.length) return existing.slice(0, MAX_SIMILARITY_HASH_IMAGES)
+
+    const files = Array.isArray(queueItem?.images) ? queueItem.images : []
+    if (!files.length) return []
+
+    const hashes = []
+    for (const f of files.slice(0, MAX_SIMILARITY_HASH_IMAGES)) {
+      const hx = await computeImageAHashFromFile(f)
+      if (hx) hashes.push(hx)
+    }
+    return Array.from(new Set(hashes)).slice(0, MAX_SIMILARITY_HASH_IMAGES)
+  }, [computeImageAHashFromFile, normalizeAHashHex])
+
   const startSimilarityCheck = useCallback((queueItem) => {
     const id = queueItem?.id
     const filename = queueItem?.archiveFile?.name
@@ -1123,6 +1193,8 @@ export default function UploadAssetPage() {
           tokens: [],
           items: [],
           error: '',
+          imageHashCount: 0,
+          phase: 'Preparando análisis…',
           startedAt: Date.now(),
         },
       }
@@ -1130,8 +1202,65 @@ export default function UploadAssetPage() {
 
     ;(async () => {
       try {
-        const qsSize = Number.isFinite(sizeB) && sizeB > 0 ? `&sizeB=${encodeURIComponent(String(Math.floor(sizeB)))}` : ''
-        const r = await http.getData(`/assets/similar?filename=${encodeURIComponent(filename)}&limit=8${qsSize}`)
+        setSimilarityMap((m) => ({
+          ...(m || {}),
+          [id]: {
+            ...(m?.[id] || {}),
+            status: 'loading',
+            phase: 'Analizando imágenes del item…',
+          },
+        }))
+
+        const imageHashes = await buildQueueItemImageHashes(queueItem)
+        if (imageHashes.length > 0) {
+          setUploadQueue((arr) => arr.map((it) => (
+            it.id === id
+              ? { ...it, imageHashes }
+              : it
+          )))
+        }
+
+        const categoryIds = Array.isArray(queueItem?.meta?.categories)
+          ? queueItem.meta.categories
+            .map((c) => Number(c?.id || 0))
+            .filter((n) => Number.isFinite(n) && n > 0)
+          : []
+
+        const categorySlugs = Array.isArray(queueItem?.meta?.categories)
+          ? queueItem.meta.categories
+            .flatMap((c) => [String(c?.slug || '').trim(), String(c?.slugEn || '').trim()])
+            .filter(Boolean)
+          : []
+
+        const tags = Array.isArray(queueItem?.meta?.tags)
+          ? queueItem.meta.tags.map((t) => String(t || '').trim()).filter(Boolean)
+          : []
+
+        const titleValue = String(queueItem?.meta?.title || '').trim()
+        const titleEnValue = String(queueItem?.meta?.titleEn || '').trim()
+
+        setSimilarityMap((m) => ({
+          ...(m || {}),
+          [id]: {
+            ...(m?.[id] || {}),
+            status: 'loading',
+            imageHashCount: imageHashes.length,
+            phase: 'Buscando coincidencias por nombre + imagen…',
+          },
+        }))
+
+        const payload = {
+          filename,
+          limit: 8,
+          sizeB: Number.isFinite(sizeB) && sizeB > 0 ? Math.floor(sizeB) : undefined,
+          imageHashes,
+          categoryIds,
+          categorySlugs,
+          tags,
+          title: titleValue,
+          titleEn: titleEnValue,
+        }
+        const r = await http.postData('/assets/similar', payload)
         const data = r?.data || {}
         const items = Array.isArray(data?.items) ? data.items : []
         setSimilarityMap((m) => ({
@@ -1143,6 +1272,8 @@ export default function UploadAssetPage() {
             tokens: Array.isArray(data?.tokens) ? data.tokens : [],
             items,
             error: '',
+            imageHashCount: Number(data?.imageHashCount || imageHashes.length || 0),
+            phase: 'Completado',
             finishedAt: Date.now(),
           },
         }))
@@ -1157,12 +1288,14 @@ export default function UploadAssetPage() {
             tokens: [],
             items: [],
             error: 'No se pudo buscar similares',
+            imageHashCount: 0,
+            phase: 'Error',
             finishedAt: Date.now(),
           },
         }))
       }
     })()
-  }, [http])
+  }, [buildQueueItemImageHashes, http])
 
   const openImgPreview = useCallback((src) => {
     const s = String(src || '').trim()
@@ -1317,6 +1450,7 @@ export default function UploadAssetPage() {
         createdAssetId: null,
         archiveFile,
         images: imageFiles.map((f) => f.file || f),
+        imageHashes: [],
         meta: { title, titleEn, categories: selectedCategories, tags, isPremium, accountId: selectedAcc?.id || null, },
         sizeBytes,
         status: 'queued', // queued | running | success | error
@@ -3150,7 +3284,13 @@ export default function UploadAssetPage() {
 
             {sidebarSimilarity?.status === 'done' && (
               <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
-                {(sidebarSimilarity?.items || []).length} encontrados
+                {(sidebarSimilarity?.items || []).length} encontrados · hashes usados: {Number(sidebarSimilarity?.imageHashCount || 0)}
+              </Typography>
+            )}
+
+            {sidebarSimilarity?.status === 'loading' && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
+                {sidebarSimilarity?.phase || 'Buscando similares…'}
               </Typography>
             )}
 
@@ -3165,13 +3305,21 @@ export default function UploadAssetPage() {
                 const imgs = Array.isArray(a?.images) ? a.images : []
                 const size = a?.fileSizeB ?? a?.archiveSizeB ?? 0
                 const titleText = a?.title || a?.titleEn || a?.slug || `#${a?.id}`
+                const sim = a?._similarity || {}
+                const scoreTotal = Number(sim?.score || 0)
+                const scoreName = Number(sim?.name || 0)
+                const scoreImage = Number(sim?.image || 0)
+                const scoreCategory = Number(sim?.category || 0)
+                const scoreTags = Number(sim?.tags || 0)
+                const scoreImgCount = Number(sim?.imageMatchCount || 0)
+                const strongVisualMatch = scoreImage >= 120 || (scoreImage >= 90 && scoreImgCount >= 2)
                 return (
                   <Box
                     key={a?.id || a?.slug || Math.random()}
                     sx={{
                       p: 1,
                       borderRadius: 2,
-                      border: '1px solid rgba(255,255,255,0.14)',
+                      border: strongVisualMatch ? '1px solid rgba(88, 214, 141, 0.65)' : '1px solid rgba(255,255,255,0.14)',
                       background: 'rgba(255,255,255,0.05)',
                     }}
                   >
@@ -3184,6 +3332,28 @@ export default function UploadAssetPage() {
                     <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.25 }}>
                       {formatBytes(size)} • {imgs.length} imágenes
                     </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.35 }}>
+                      Score total: {scoreTotal} · nombre: {scoreName} · imagen: {scoreImage} · cat: {scoreCategory} · tags: {scoreTags}
+                      {scoreImgCount > 0 ? ` · matches img: ${scoreImgCount}` : ''}
+                    </Typography>
+                    {strongVisualMatch && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'inline-block',
+                          mt: 0.55,
+                          px: 0.8,
+                          py: 0.2,
+                          borderRadius: 999,
+                          border: '1px solid rgba(88, 214, 141, 0.55)',
+                          background: 'rgba(88, 214, 141, 0.14)',
+                          color: '#d7ffe7',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Coincidencia visual alta
+                      </Typography>
+                    )}
                     {imgs.length > 0 && (
                       <Box
                         sx={{

@@ -3,9 +3,9 @@ import {
     Card,
     CardHeader,
     CardContent,
-    Stack,
     Box,
     Typography,
+    Button,
 } from '@mui/material';
 
 export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected, disabled = false, queueSummaryText = '', isDraggingGlobal = false, archiveFile = null }) {
@@ -125,22 +125,23 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
                 }
             />
             <CardContent>
-                {/* Dropzone para arrastrar y soltar */}
                 <Box
                     onDrop={onDrop}
                     onDragOver={onDragOver}
-                    onClick={openPicker}
-                        sx={{
-                            width: '100%',
-                            p: 3,
-                            border: `2px dotted ${isDraggingGlobal ? 'rgba(124,77,255,0.9)' : 'rgba(0,0,0,0.6)'}`,
-                            borderRadius: 2,
-                            textAlign: 'center',
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            opacity: disabled ? 0.6 : 1,
-                            mb: 2,
-                            backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
-                        }}
+                    sx={{
+                        width: '100%',
+                        p: 1.5,
+                        border: '1px solid rgba(255,255,255,0.18)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        opacity: disabled ? 0.6 : 1,
+                        mb: 2,
+                        backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
+                    }}
                 >
                     <input
                         ref={fileInputRef}
@@ -151,10 +152,12 @@ export default function AssetFileSection({ setTitle, setTitleEn, onFileSelected,
                         onChange={onInputChange}
                         disabled={disabled}
                     />
-                    <Stack alignItems="center" spacing={0.5}>
-                        <Typography variant="body2">Arrastra y suelta el archivo aquí</Typography>
-                        <Typography variant="caption" color="text.secondary">o haz clic para seleccionar</Typography>
-                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                        Archivo principal del asset
+                    </Typography>
+                    <Button variant="outlined" size="small" onClick={openPicker} disabled={disabled}>
+                        Elegir archivo
+                    </Button>
                 </Box>
 
                 <Typography variant="body2" gutterBottom>

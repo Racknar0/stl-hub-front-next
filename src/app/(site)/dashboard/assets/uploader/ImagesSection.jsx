@@ -7,6 +7,7 @@ import {
     Stack,
     Typography,
     IconButton,
+    Button,
 } from '@mui/material';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -53,44 +54,11 @@ export default function ImagesSection({
     return (
         <Card className="glass" sx={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%' , maxHeight: '930px'}}>
             <CardHeader title="Imágenes" />
-            <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
- {/* Dropzone clickeable */}
-                <Box
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    onClick={onOpenFilePicker}
-                        sx={{
-                            width: '100%',
-                            maxWidth: 1600,
-                            mx: 'auto',
-                            p: 3,
-                            border: `2px dotted ${isDraggingGlobal ? 'rgba(124,77,255,0.9)' : 'rgba(0,0,0,0.6)'}`,
-                            borderRadius: 2,
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            mb: 2,
-                            backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
-                        }}
-                >
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={onSelectFiles}
-                        disabled={disabled}
-                    />
-                    <Stack alignItems="center" spacing={0.5}>
-                        <Typography variant="body2">
-                            Arrastra y suelta imágenes aquí
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            o haz clic para seleccionar
-                        </Typography>
-                    </Stack>
-                </Box>
-
+            <CardContent
+                sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
+            >
                 {/* Slider de vista previa */}
                 <Box
                     sx={{
@@ -169,6 +137,40 @@ export default function ImagesSection({
                             </Box>
                         </>
                     )}
+                </Box>
+
+                <Box
+                    sx={{
+                        width: '100%',
+                        maxWidth: 1600,
+                        mx: 'auto',
+                        mb: 2,
+                        p: 1.5,
+                        border: '1px solid rgba(255,255,255,0.18)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        backgroundColor: isDraggingGlobal ? 'rgba(124,77,255,0.03)' : undefined,
+                    }}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={onSelectFiles}
+                        disabled={disabled}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                        {imageFiles.length > 0 ? `${imageFiles.length} imagen(es) seleccionada(s)` : 'Sin imágenes seleccionadas'}
+                    </Typography>
+                    <Button variant="outlined" size="small" onClick={onOpenFilePicker} disabled={disabled}>
+                        Agregar imágenes
+                    </Button>
                 </Box>
 
                
