@@ -116,6 +116,22 @@ export default function AssetsAdminPage() {
     failed: 0,
     currentAssetId: null,
   })
+  const [nameSimilarThreshold, setNameSimilarThreshold] = useState(86)
+  const [nameSimilarLoading, setNameSimilarLoading] = useState(false)
+  const [nameSimilarError, setNameSimilarError] = useState('')
+  const [nameSimilarProgress, setNameSimilarProgress] = useState({ done: 0, total: 0 })
+  const [nameSimilarGroups, setNameSimilarGroups] = useState([])
+  const [nameSimilarVisibleCount, setNameSimilarVisibleCount] = useState(SIMILAR_GROUPS_PAGE_SIZE)
+  const [nameSimilarSelectedMap, setNameSimilarSelectedMap] = useState({})
+  const [nameSimilarPrimaryMap, setNameSimilarPrimaryMap] = useState({})
+  const [nameSimilarDeleteProgress, setNameSimilarDeleteProgress] = useState({
+    running: false,
+    total: 0,
+    processed: 0,
+    success: 0,
+    failed: 0,
+    currentAssetId: null,
+  })
   const [similarViewer, setSimilarViewer] = useState({
     open: false,
     image: '',
@@ -127,6 +143,7 @@ export default function AssetsAdminPage() {
   const fileInputRef = useRef(null)
   const hashBackfillPollRef = useRef(null)
   const similarLoadMoreRef = useRef(null)
+  const nameSimilarLoadMoreRef = useRef(null)
 
   // (Randomizar freebies se movió a otra pantalla del dashboard)
 
@@ -254,6 +271,126 @@ export default function AssetsAdminPage() {
     return groups.sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
   }
 
+  const buildNameSimilarGroups = (items, threshold) => {
+    const getNameText = (item) => String(item?.title || item?.archiveName || item?.slug || '').trim()
+    const candidates = Array.from(items || []).filter((item) => getNameText(item).length >= 3)
+    const buckets = new Map()
+
+    candidates.forEach((item) => {
+      const raw = getNameText(item)
+      const normalized = slugify(raw)
+      if (!normalized) return
+
+      const tokens = normalized.split('-').filter(Boolean)
+      const head = tokens.slice(0, 3).join('-')
+      const compact = normalized.replace(/\d+/g, '')
+      const key = (head || compact || normalized).slice(0, 36)
+      if (!key) return
+
+      if (!buckets.has(key)) buckets.set(key, [])
+      buckets.get(key).push(item)
+    })
+
+    const groups = []
+    let idx = 1
+
+    buckets.forEach((bucket, key) => {
+      if (!Array.isArray(bucket) || bucket.length < 2) return
+
+      const limited = bucket
+        .slice()
+        .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+        .slice(0, 220)
+
+      const byId = new Map()
+      limited.forEach((item) => {
+        const id = Number(item?.id)
+        if (Number.isFinite(id) && id > 0) byId.set(id, item)
+      })
+
+      const adjacency = new Map()
+      byId.forEach((_, id) => adjacency.set(id, new Set()))
+      const similarityCache = new Map()
+      const pairKey = (a, b) => {
+        const x = Number(a)
+        const y = Number(b)
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x <= 0 || y <= 0 || x === y) return ''
+        return x < y ? `${x}:${y}` : `${y}:${x}`
+      }
+
+      const entries = Array.from(byId.entries())
+      for (let i = 0; i < entries.length; i += 1) {
+        for (let j = i + 1; j < entries.length; j += 1) {
+          const [idA, assetA] = entries[i]
+          const [idB, assetB] = entries[j]
+          const similarity = Number((titleSimilarity(getNameText(assetA), getNameText(assetB)) * 100).toFixed(2))
+          if (similarity < threshold) continue
+
+          const keyPair = pairKey(idA, idB)
+          if (keyPair) similarityCache.set(keyPair, similarity)
+          adjacency.get(idA)?.add(idB)
+          adjacency.get(idB)?.add(idA)
+        }
+      }
+
+      const visited = new Set()
+      const ids = Array.from(byId.keys())
+      ids.forEach((seedId) => {
+        if (visited.has(seedId)) return
+
+        const stack = [seedId]
+        const componentIds = []
+        while (stack.length) {
+          const current = stack.pop()
+          if (!Number.isFinite(current) || visited.has(current)) continue
+          visited.add(current)
+          componentIds.push(current)
+          const nexts = adjacency.get(current) || new Set()
+          nexts.forEach((nextId) => {
+            if (!visited.has(nextId)) stack.push(nextId)
+          })
+        }
+
+        if (componentIds.length < 2) return
+        const componentAssets = componentIds
+          .map((id) => byId.get(id))
+          .filter(Boolean)
+          .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+        if (componentAssets.length < 2) return
+
+        const primary = componentAssets[0]
+        const primaryId = Number(primary?.id)
+        const groupItems = componentAssets.map((asset) => {
+          const id = Number(asset?.id)
+          let similarity = 100
+          if (id !== primaryId) {
+            const k = pairKey(id, primaryId)
+            similarity = Number(similarityCache.get(k))
+            if (!Number.isFinite(similarity)) {
+              similarity = Number((titleSimilarity(getNameText(primary), getNameText(asset)) * 100).toFixed(2))
+            }
+          }
+          const distance = Math.max(0, Math.round(((100 - similarity) / 100) * 64))
+          return { asset, similarity, distance }
+        })
+
+        const confidence = Number((groupItems.reduce((acc, entry) => acc + Number(entry.similarity || 0), 0) / groupItems.length).toFixed(2))
+        groups.push({
+          id: `name-similar-${idx}`,
+          signature: `${key}-${primaryId}-${groupItems.length}`,
+          confidence,
+          items: groupItems.sort((a, b) => Number(b.similarity || 0) - Number(a.similarity || 0)),
+        })
+        idx += 1
+      })
+    })
+
+    return groups.sort((a, b) => {
+      if (Number(b.confidence || 0) !== Number(a.confidence || 0)) return Number(b.confidence || 0) - Number(a.confidence || 0)
+      return (Number(b.items?.length || 0) - Number(a.items?.length || 0))
+    })
+  }
+
   const similarAssetIndex = useMemo(() => {
     const map = new Map()
     similarGroups.forEach((group) => {
@@ -293,6 +430,46 @@ export default function AssetsAdminPage() {
   const selectedSimilarBytes = useMemo(() => {
     return selectedSimilarAssets.reduce((acc, item) => acc + Number(item?.fileSizeB ?? item?.archiveSizeB ?? 0), 0)
   }, [selectedSimilarAssets])
+
+  const nameSimilarAssetIndex = useMemo(() => {
+    const map = new Map()
+    nameSimilarGroups.forEach((group) => {
+      group.items.forEach((entry) => {
+        if (entry?.asset?.id) map.set(Number(entry.asset.id), entry.asset)
+      })
+    })
+    return map
+  }, [nameSimilarGroups])
+
+  const visibleNameSimilarGroups = useMemo(() => {
+    return nameSimilarGroups.slice(0, Math.max(0, Number(nameSimilarVisibleCount) || 0))
+  }, [nameSimilarGroups, nameSimilarVisibleCount])
+
+  const hasMoreNameSimilarGroups = useMemo(() => {
+    return visibleNameSimilarGroups.length < nameSimilarGroups.length
+  }, [visibleNameSimilarGroups.length, nameSimilarGroups.length])
+
+  const loadMoreNameSimilarGroups = useCallback(() => {
+    setNameSimilarVisibleCount((prev) => {
+      const next = Number(prev || 0) + SIMILAR_GROUPS_PAGE_SIZE
+      return Math.min(next, nameSimilarGroups.length)
+    })
+  }, [nameSimilarGroups.length])
+
+  const selectedNameSimilarIds = useMemo(() => {
+    return Object.entries(nameSimilarSelectedMap)
+      .filter(([, value]) => !!value)
+      .map(([id]) => Number(id))
+      .filter((id) => Number.isFinite(id))
+  }, [nameSimilarSelectedMap])
+
+  const selectedNameSimilarAssets = useMemo(() => {
+    return selectedNameSimilarIds.map((id) => nameSimilarAssetIndex.get(id)).filter(Boolean)
+  }, [selectedNameSimilarIds, nameSimilarAssetIndex])
+
+  const selectedNameSimilarBytes = useMemo(() => {
+    return selectedNameSimilarAssets.reduce((acc, item) => acc + Number(item?.fileSizeB ?? item?.archiveSizeB ?? 0), 0)
+  }, [selectedNameSimilarAssets])
 
   const buildPairKey = (a, b) => {
     const x = Number(a)
@@ -556,6 +733,262 @@ export default function AssetsAdminPage() {
     await analyzeSimilarAssets({ ignoreDismissed: true })
   }
 
+  const analyzeNameSimilarAssets = async (options = {}) => {
+    const ignoreDismissed = !!options?.ignoreDismissed
+    try {
+      setNameSimilarLoading(true)
+      setNameSimilarError('')
+      setNameSimilarGroups([])
+      setNameSimilarVisibleCount(SIMILAR_GROUPS_PAGE_SIZE)
+      setNameSimilarSelectedMap({})
+      setNameSimilarPrimaryMap({})
+      setNameSimilarProgress({ done: 0, total: 0 })
+
+      const pageSize = 1000
+      const allItems = []
+      let pageIndexScan = 0
+      let totalScan = 0
+
+      while (true) {
+        const res = await http.getData(`/assets?pageIndex=${pageIndexScan}&pageSize=${pageSize}`)
+        const payload = res.data
+
+        if (payload && Array.isArray(payload.items)) {
+          const chunk = payload.items
+          if (!Number(totalScan)) {
+            totalScan = Number(payload.total) || chunk.length
+          }
+
+          allItems.push(...chunk)
+          setNameSimilarProgress({ done: allItems.length, total: totalScan || allItems.length })
+
+          if (!chunk.length || allItems.length >= totalScan) break
+          pageIndexScan += 1
+          if (pageIndexScan > 500) break
+          continue
+        }
+
+        if (Array.isArray(payload)) {
+          allItems.push(...payload)
+          setNameSimilarProgress({ done: allItems.length, total: allItems.length })
+        }
+        break
+      }
+
+      const allGroups = buildNameSimilarGroups(allItems, nameSimilarThreshold)
+      const ignoredMap = ignoreDismissed
+        ? {}
+        : await loadIgnoredPairs()
+
+      const groups = allGroups.filter((group) => {
+        const ids = Array.isArray(group?.items)
+          ? group.items
+              .map((entry) => Number(entry?.asset?.id))
+              .filter((n) => Number.isFinite(n) && n > 0)
+          : []
+        if (ids.length < 2) return false
+
+        let hasVisiblePair = false
+        for (let i = 0; i < ids.length; i += 1) {
+          for (let j = i + 1; j < ids.length; j += 1) {
+            const key = buildPairKey(ids[i], ids[j])
+            if (key && !ignoredMap[key]) {
+              hasVisiblePair = true
+              break
+            }
+          }
+          if (hasVisiblePair) break
+        }
+        return hasVisiblePair
+      })
+
+      setNameSimilarGroups(groups)
+      setNameSimilarVisibleCount(Math.min(SIMILAR_GROUPS_PAGE_SIZE, groups.length || 0))
+
+      const primaries = {}
+      groups.forEach((group) => {
+        if (group?.items?.[0]?.asset?.id) primaries[group.id] = Number(group.items[0].asset.id)
+      })
+      setNameSimilarPrimaryMap(primaries)
+    } catch (e) {
+      console.error('Error analizando nombres similares', e)
+      setNameSimilarError(e?.response?.data?.message || 'No se pudieron analizar los assets por nombre.')
+    } finally {
+      setNameSimilarLoading(false)
+    }
+  }
+
+  const toggleNameSimilarSelection = (assetId) => {
+    const id = Number(assetId)
+    if (!Number.isFinite(id)) return
+    setNameSimilarSelectedMap((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const setNamePrimaryInGroup = (groupId, assetId) => {
+    const id = Number(assetId)
+    if (!groupId || !Number.isFinite(id)) return
+    setNameSimilarPrimaryMap((prev) => ({ ...prev, [groupId]: id }))
+    setNameSimilarSelectedMap((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  const selectNameGroupDuplicates = (group) => {
+    if (!group?.id || !Array.isArray(group?.items)) return
+    const primaryId = Number(nameSimilarPrimaryMap[group.id] || group.items?.[0]?.asset?.id)
+    setNameSimilarSelectedMap((prev) => {
+      const next = { ...prev }
+      group.items.forEach((entry) => {
+        const id = Number(entry?.asset?.id)
+        if (!Number.isFinite(id)) return
+        if (id === primaryId) delete next[id]
+        else next[id] = true
+      })
+      return next
+    })
+  }
+
+  const clearNameSimilarSelection = () => setNameSimilarSelectedMap({})
+
+  const dismissNameSimilarGroup = async (group) => {
+    if (!group?.id) return
+
+    const assetIds = Array.isArray(group?.items)
+      ? group.items
+          .map((entry) => Number(entry?.asset?.id))
+          .filter((n) => Number.isFinite(n) && n > 0)
+      : []
+
+    const pairs = []
+    for (let i = 0; i < assetIds.length; i += 1) {
+      for (let j = i + 1; j < assetIds.length; j += 1) {
+        const a = assetIds[i]
+        const b = assetIds[j]
+        if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
+          const key = buildPairKey(a, b)
+          if (key) pairs.push({ assetAId: Math.min(a, b), assetBId: Math.max(a, b), key })
+        }
+      }
+    }
+    if (!pairs.length) return
+
+    setSimilarIgnoredPairMap((prev) => {
+      const next = { ...prev }
+      pairs.forEach((p) => {
+        next[p.key] = true
+      })
+      return next
+    })
+
+    setNameSimilarGroups((prev) => prev.filter((g) => g.id !== group.id))
+    setNameSimilarPrimaryMap((prev) => {
+      const next = { ...prev }
+      delete next[group.id]
+      return next
+    })
+    setNameSimilarSelectedMap((prev) => {
+      const next = { ...prev }
+      ;(group?.items || []).forEach((entry) => {
+        const id = Number(entry?.asset?.id)
+        if (Number.isFinite(id)) delete next[id]
+      })
+      return next
+    })
+
+    try {
+      await http.postData('/assets/similar/ignored-pairs', {
+        pairs: pairs.map((p) => ({ assetAId: p.assetAId, assetBId: p.assetBId })),
+      })
+    } catch (e) {
+      await errorAlert('Error', e?.response?.data?.message || 'No se pudo guardar el descarte en base de datos')
+    }
+  }
+
+  const reactivateNameDismissedGroups = async () => {
+    try {
+      await http.deleteRaw('/assets/similar/ignored-pairs')
+    } catch (e) {
+      await errorAlert('Error', e?.response?.data?.message || 'No se pudieron reactivar los descartes')
+      return
+    }
+    setSimilarIgnoredPairMap({})
+    await analyzeNameSimilarAssets({ ignoreDismissed: true })
+  }
+
+  const handleDeleteSelectedNameSimilar = async () => {
+    if (!selectedNameSimilarIds.length) return
+
+    const ok = await confirmAlert(
+      'Eliminar seleccionados',
+      `Se eliminarán ${selectedNameSimilarIds.length} assets seleccionados del resultado por nombre.`,
+      'Sí, eliminar',
+      'Cancelar',
+      'warning'
+    )
+    if (!ok) return
+
+    let successCount = 0
+    let failedCount = 0
+    const idsToDelete = [...selectedNameSimilarIds]
+    setNameSimilarLoading(true)
+    setNameSimilarDeleteProgress({
+      running: true,
+      total: idsToDelete.length,
+      processed: 0,
+      success: 0,
+      failed: 0,
+      currentAssetId: null,
+    })
+
+    for (const id of idsToDelete) {
+      setNameSimilarDeleteProgress((prev) => ({ ...prev, currentAssetId: id }))
+      try {
+        await http.deleteData('/assets', id)
+        successCount += 1
+        setNameSimilarDeleteProgress((prev) => ({
+          ...prev,
+          processed: prev.processed + 1,
+          success: prev.success + 1,
+        }))
+      } catch (e) {
+        failedCount += 1
+        setNameSimilarDeleteProgress((prev) => ({
+          ...prev,
+          processed: prev.processed + 1,
+          failed: prev.failed + 1,
+        }))
+      }
+    }
+
+    const deletedSet = new Set(idsToDelete)
+    setNameSimilarGroups((prev) => {
+      return prev
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((entry) => !deletedSet.has(Number(entry?.asset?.id))),
+        }))
+        .filter((group) => group.items.length > 1)
+    })
+    setNameSimilarSelectedMap({})
+    setRefreshTick((n) => n + 1)
+    setNameSimilarLoading(false)
+    setNameSimilarDeleteProgress((prev) => ({
+      ...prev,
+      running: false,
+      currentAssetId: null,
+    }))
+
+    if (successCount > 0) {
+      await successAlert('Eliminados', `Se eliminaron ${successCount} assets correctamente.`)
+    }
+    if (failedCount > 0) {
+      await errorAlert('Parcial', `No se pudieron eliminar ${failedCount} assets.`)
+    }
+  }
+
   useEffect(() => {
     if (tab !== 1) return
     if (!hasMoreSimilarGroups) return
@@ -576,11 +1009,37 @@ export default function AssetsAdminPage() {
   }, [tab, hasMoreSimilarGroups, loadMoreSimilarGroups, visibleSimilarGroups.length])
 
   useEffect(() => {
+    if (tab !== 2) return
+    if (!hasMoreNameSimilarGroups) return
+    const target = nameSimilarLoadMoreRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMoreNameSimilarGroups()
+        }
+      },
+      { root: null, rootMargin: '300px 0px' }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [tab, hasMoreNameSimilarGroups, loadMoreNameSimilarGroups, visibleNameSimilarGroups.length])
+
+  useEffect(() => {
     if (tab !== 1) return
     ;(async () => {
       await Promise.all([loadIgnoredPairs(), loadHashStats()])
       const state = await loadBackfillStatus()
       if (state?.running) startBackfillPolling()
+    })()
+  }, [tab])
+
+  useEffect(() => {
+    if (tab !== 2) return
+    ;(async () => {
+      await loadIgnoredPairs()
     })()
   }, [tab])
 
@@ -1164,6 +1623,7 @@ export default function AssetsAdminPage() {
       >
         <Tab label="STL-LIST" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
         <Tab label="SIMILAR-IMAGES" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
+        <Tab label="SIMILAR-NAMES" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
       </Tabs>
       {tab === 0 && (
         <>
@@ -1384,7 +1844,7 @@ export default function AssetsAdminPage() {
                                 sx={{
                                   width: '100%',
                                   display: 'grid',
-                                  gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
+                                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
                                   gap: 0.6,
                                   mb: 1,
                                 }}
@@ -1614,6 +2074,339 @@ export default function AssetsAdminPage() {
               </Box>
             </DialogContent>
           </Dialog>
+        </Stack>
+      )}
+      {tab === 2 && (
+        <Stack spacing={2}>
+          <Paper sx={{ p: 2, borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(22,22,22,0.9)' : 'background.paper' }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between">
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>SIMILAR-NAMES</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Agrupa assets por similitud de nombre para detectar repetidos y depurar duplicados con más facilidad.
+                </Typography>
+              </Box>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button variant="contained" onClick={analyzeNameSimilarAssets} disabled={nameSimilarLoading}>
+                  Analizar por nombre
+                </Button>
+                <Button variant="outlined" onClick={analyzeNameSimilarAssets} disabled={nameSimilarLoading}>
+                  Reanalizar
+                </Button>
+              </Stack>
+            </Stack>
+
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mt: 2 }}>
+              <Box sx={{ minWidth: { xs: '100%', md: 280 } }}>
+                <Typography variant="caption" color="text.secondary">
+                  Umbral de similitud de nombre: {nameSimilarThreshold}%
+                </Typography>
+                <Slider
+                  value={nameSimilarThreshold}
+                  onChange={(_, value) => setNameSimilarThreshold(Number(value))}
+                  min={70}
+                  max={100}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  disabled={nameSimilarLoading}
+                />
+              </Box>
+
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip label={`Grupos: ${nameSimilarGroups.length}`} />
+                <Chip label={`Mostrando: ${visibleNameSimilarGroups.length}/${nameSimilarGroups.length}`} />
+                <Chip label={`Pares descartados: ${ignoredPairsCount}`} color={ignoredPairsCount ? 'default' : 'default'} />
+                <Chip label={`Seleccionados: ${selectedNameSimilarIds.length}`} color={selectedNameSimilarIds.length ? 'warning' : 'default'} />
+                <Chip label={`Espacio estimado: ${formatMBfromB(selectedNameSimilarBytes)}`} color="info" />
+              </Stack>
+
+              {ignoredPairsCount > 0 && (
+                <Button variant="text" size="small" onClick={reactivateNameDismissedGroups} disabled={nameSimilarLoading}>
+                  Reactivar descartes
+                </Button>
+              )}
+            </Stack>
+
+            {nameSimilarLoading && <LinearProgress sx={{ mt: 2 }} />}
+            {!!nameSimilarProgress.total && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Procesados: {nameSimilarProgress.done} / {nameSimilarProgress.total}
+              </Typography>
+            )}
+            {nameSimilarError && (
+              <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                {nameSimilarError}
+              </Typography>
+            )}
+          </Paper>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 320px' },
+              gap: 2,
+              alignItems: 'start',
+            }}
+          >
+            <Stack spacing={2}>
+              {!nameSimilarGroups.length && !nameSimilarLoading && (
+                <Paper sx={{ p: 3, borderRadius: 2 }}>
+                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    No hay grupos para mostrar todavía
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Ejecuta Analizar por nombre para construir grupos de similitud textual.
+                  </Typography>
+                </Paper>
+              )}
+
+              {visibleNameSimilarGroups.map((group, groupIndex) => {
+                const primaryId = Number(nameSimilarPrimaryMap[group.id] || group.items?.[0]?.asset?.id)
+                return (
+                  <Paper key={group.id} sx={{ p: 2, borderRadius: 2 }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          Grupo #{groupIndex + 1}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Firma: {group.signature}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" spacing={1}>
+                        <Chip size="small" label={`${group.items.length} assets`} />
+                        <Chip size="small" color="success" label={`Confianza ${group.confidence}%`} />
+                        <Button size="small" variant="outlined" onClick={() => selectNameGroupDuplicates(group)}>
+                          Sugerir duplicados
+                        </Button>
+                        <Button size="small" variant="outlined" color="inherit" onClick={() => dismissNameSimilarGroup(group)}>
+                          No son duplicados
+                        </Button>
+                      </Stack>
+                    </Stack>
+
+                    <Divider sx={{ my: 1.5 }} />
+
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: 'repeat(2, minmax(0, 1fr))',
+                          xl: 'repeat(3, minmax(0, 1fr))',
+                        },
+                        gap: 1.5,
+                      }}
+                    >
+                      {group.items.map((entry) => {
+                        const asset = entry.asset || {}
+                        const id = Number(asset.id)
+                        const isPrimary = id === primaryId
+                        const isSelected = !!nameSimilarSelectedMap[id]
+                        const assetImages = Array.isArray(asset.images) ? asset.images : []
+
+                        return (
+                          <Paper
+                            key={`${group.id}-${id}`}
+                            sx={{
+                              p: 1.25,
+                              borderRadius: 2,
+                              border: isPrimary
+                                ? '2px solid #66bb6a'
+                                : isSelected
+                                  ? '2px solid #ff9800'
+                                  : '1px solid rgba(127,127,127,0.25)',
+                              bgcolor: isPrimary ? 'rgba(102, 187, 106, 0.12)' : 'transparent',
+                            }}
+                          >
+                            {assetImages.length ? (
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                  gap: 0.6,
+                                  mb: 1,
+                                }}
+                              >
+                                {assetImages.slice(0, 8).map((img, imgIdx) => {
+                                  const thumbSrc = imgUrl(img)
+                                  return (
+                                    <Box
+                                      key={`${group.id}-${id}-name-img-${imgIdx}`}
+                                      component="img"
+                                      src={thumbSrc}
+                                      alt={`${asset.title || `asset-${id}`} - ${imgIdx + 1}`}
+                                      onClick={() => openSimilarViewer(asset, imgIdx)}
+                                      sx={{
+                                        width: '100%',
+                                        aspectRatio: '1 / 1',
+                                        objectFit: 'cover',
+                                        borderRadius: 1,
+                                        cursor: 'zoom-in',
+                                        border: '1px solid rgba(127,127,127,0.35)',
+                                        transition: 'transform 120ms ease',
+                                        '&:hover': {
+                                          transform: 'scale(1.03)',
+                                        },
+                                      }}
+                                    />
+                                  )
+                                })}
+                              </Box>
+                            ) : (
+                              <Box sx={{ width: '100%', height: 96, borderRadius: 1, mb: 1, bgcolor: 'rgba(120,120,120,0.2)', display: 'grid', placeItems: 'center' }}>
+                                <Typography variant="caption" color="text.secondary">Sin imagen</Typography>
+                              </Box>
+                            )}
+
+                            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                              {asset.title || asset.archiveName || `Asset #${id}`}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              Archivo: {asset.archiveName || '-'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              ID: {id} • Similitud: {entry.similarity}% • Dist: {entry.distance}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8 }}>
+                              Cuenta: {asset.account?.alias || asset.accountId || '-'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8 }}>
+                              Imágenes: {assetImages.length}
+                            </Typography>
+
+                            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                              <Button
+                                size="small"
+                                variant={isPrimary ? 'contained' : 'outlined'}
+                                onClick={() => setNamePrimaryInGroup(group.id, id)}
+                              >
+                                {isPrimary ? 'Principal' : 'Marcar principal'}
+                              </Button>
+
+                              <FormControlLabel
+                                sx={{ mr: 0 }}
+                                control={
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onChange={() => toggleNameSimilarSelection(id)}
+                                    disabled={isPrimary}
+                                  />
+                                }
+                                label="Eliminar"
+                              />
+                            </Stack>
+                          </Paper>
+                        )
+                      })}
+                    </Box>
+                  </Paper>
+                )
+              })}
+
+              {hasMoreNameSimilarGroups && (
+                <Box
+                  ref={nameSimilarLoadMoreRef}
+                  sx={{
+                    py: 2,
+                    textAlign: 'center',
+                    color: 'text.secondary',
+                  }}
+                >
+                  <Typography variant="caption">
+                    Cargando más grupos...
+                  </Typography>
+                </Box>
+              )}
+
+              {hasMoreNameSimilarGroups && (
+                <Button variant="text" onClick={loadMoreNameSimilarGroups} sx={{ alignSelf: 'center' }}>
+                  Cargar más
+                </Button>
+              )}
+            </Stack>
+
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                position: { xs: 'static', lg: 'sticky' },
+                top: { lg: 16 },
+                maxHeight: { lg: 'calc(100vh - 120px)' },
+                overflow: 'auto',
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                Seleccionados para eliminar
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}>
+                {selectedNameSimilarIds.length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                Espacio estimado: {formatMBfromB(selectedNameSimilarBytes)}
+              </Typography>
+
+              {(nameSimilarDeleteProgress.running || nameSimilarDeleteProgress.total > 0) && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {nameSimilarDeleteProgress.running
+                      ? `Eliminando ${nameSimilarDeleteProgress.processed}/${nameSimilarDeleteProgress.total}`
+                      : `Proceso finalizado ${nameSimilarDeleteProgress.processed}/${nameSimilarDeleteProgress.total}`}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8 }}>
+                    OK: {nameSimilarDeleteProgress.success} · Fallidos: {nameSimilarDeleteProgress.failed}
+                    {nameSimilarDeleteProgress.currentAssetId ? ` · Asset #${nameSimilarDeleteProgress.currentAssetId}` : ''}
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={nameSimilarDeleteProgress.total
+                      ? Math.min(100, Math.round((nameSimilarDeleteProgress.processed / nameSimilarDeleteProgress.total) * 100))
+                      : 0}
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ mb: 1.5 }} />
+
+              <Stack spacing={0.7} sx={{ mb: 1.5 }}>
+                {selectedNameSimilarAssets.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    Aún no seleccionas assets.
+                  </Typography>
+                )}
+                {selectedNameSimilarAssets.map((asset) => (
+                  <Box key={`name-selected-${asset.id}`} sx={{ p: 1, borderRadius: 1, bgcolor: 'rgba(127,127,127,0.12)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                      #{asset.id} {asset.title || asset.archiveName || 'Sin nombre'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {asset.account?.alias || asset.accountId || '-'}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+
+              <Stack spacing={1}>
+                <Button
+                  variant="contained"
+                  color="error"
+                  disabled={!selectedNameSimilarIds.length || nameSimilarLoading}
+                  onClick={handleDeleteSelectedNameSimilar}
+                >
+                  Eliminar seleccionados
+                </Button>
+                <Button
+                  variant="outlined"
+                  disabled={!selectedNameSimilarIds.length || nameSimilarLoading}
+                  onClick={clearNameSimilarSelection}
+                >
+                  Limpiar selección
+                </Button>
+              </Stack>
+            </Paper>
+          </Box>
         </Stack>
       )}
     </div>
