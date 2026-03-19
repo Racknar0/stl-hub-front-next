@@ -121,37 +121,91 @@ export default function ProfilesModal({ open = false, onClose = () => {}, select
     setImportProfilesOpen(false)
   }, [importProfilesText, saveProfilesToDb, sortProfilesByName])
 
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Perfiles rápidos</DialogTitle>
-      <DialogContent>
-        <Box sx={{ mb: 2 }}>
-          <TextField
-            label="Buscar perfil"
-            value={profilesSearch}
-            onChange={e => setProfilesSearch(e.target.value)}
-            size="small"
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {profiles.length === 0 && <Typography variant="caption" sx={{ opacity: 0.6 }}>No hay perfiles. Crea uno con tus categorías y tags frecuentes.</Typography>}
-            {sortProfilesByName(profiles).filter(p => {
-              const q = String(profilesSearch || '').toLowerCase().trim()
-              if (!q) return true
-              return (p.name || '').toLowerCase().includes(q) || (p.categories || []).join(' ').toLowerCase().includes(q) || (p.tags || []).join(' ').toLowerCase().includes(q)
-            }).map(p => (
-              <Chip
-                key={p.name}
-                label={p.name}
-                size="small"
-                onClick={() => { onApply?.(p) }}
-                onDelete={() => removeProfile(p.name)}
-                sx={{ cursor:'pointer', mb: 1 }}
-              />
-            ))}
-          </Stack>
-        </Box>
+    const getCleanCount = (value) => {
+      if (Array.isArray(value)) return value.map(v => typeof v === 'string' ? v : (v?.slug || v?.name || '')).filter(Boolean).length;
+      if (typeof value === 'string') return value.split(',').filter(Boolean).length;
+      return 0;
+    }
+
+    return (
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          className: "glass",
+          sx: {
+            background: '#1d1e26 !important',
+            color: '#adafb8 !important',
+            border: '1px solid rgba(173,175,184,0.2)',
+            '& .MuiTypography-root': { color: '#adafb8 !important' },
+            '& .MuiChip-root': {
+              background: 'rgba(173,175,184,0.13)',
+              color: '#adafb8',
+              border: '1px solid rgba(173,175,184,0.24)',
+            },
+            '& .MuiChip-root.profile-chip-single': {
+              background: 'rgba(0, 200, 120, 0.12)',
+              border: '1px solid rgba(0, 200, 120, 0.34)',
+              color: '#c8f5e3',
+              height: 25,
+              transform: 'scale(1.01)',
+            },
+            '& .MuiChip-root.profile-chip-single:hover': {
+              background: 'rgba(0, 200, 120, 0.16)',
+              borderColor: 'rgba(0, 200, 120, 0.46)',
+            },
+            '& .MuiButton-outlined': {
+              color: '#adafb8',
+              borderColor: 'rgba(173,175,184,0.35)',
+            },
+            '& .MuiInputBase-root': {
+              color: '#adafb8',
+              background: 'rgba(23,24,31,0.92)',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(173,175,184,0.3)',
+            },
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff !important' }}>Perfiles Rápidos</DialogTitle>
+        <DialogContent sx={{ py: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              placeholder="Buscar perfil..."
+              value={profilesSearch}
+              onChange={e => setProfilesSearch(e.target.value)}
+              size="small"
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {profiles.length === 0 && <Typography variant="caption" sx={{ opacity: 0.6 }}>No hay perfiles. Crea uno con tus categorías y tags frecuentes.</Typography>}
+              {sortProfilesByName(profiles).filter(p => {
+                const q = String(profilesSearch || '').toLowerCase().trim()
+                if (!q) return true
+                return (p.name || '').toLowerCase().includes(q) || (p.categories || []).join(' ').toLowerCase().includes(q) || (p.tags || []).join(' ').toLowerCase().includes(q)
+              }).map(p => {
+                const hasSingleCategory = getCleanCount(p?.categories) === 1
+                const hasSingleTag = getCleanCount(p?.tags) === 1
+                const isSingleCatSingleTag = hasSingleCategory && hasSingleTag
+
+                return (
+                  <Chip
+                    key={p.name}
+                    label={p.name}
+                    className={isSingleCatSingleTag ? 'profile-chip-single' : undefined}
+                    size="small"
+                    onClick={() => { onApply?.(p) }}
+                    onDelete={() => removeProfile(p.name)}
+                    sx={{ cursor:'pointer', transition: 'background-color .15s ease, border-color .15s ease, transform .15s ease' }}
+                  />
+                )
+              })}
+            </Box>
+          </Box>
         <Box sx={{ display:'flex', gap:1, flexWrap:'wrap', mb:2 }}>
           <Button size="small" variant="outlined" onClick={exportProfiles} disabled={profiles.length === 0}>Exportar JSON</Button>
           <Button size="small" variant="outlined" onClick={importProfiles}>Importar JSON</Button>
@@ -173,12 +227,22 @@ export default function ProfilesModal({ open = false, onClose = () => {}, select
             </>
           )}
         </Box>
-        {/* Import dialog */}
-        <Dialog open={importProfilesOpen} onClose={()=>setImportProfilesOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Importar perfiles JSON</DialogTitle>
-          <DialogContent>
+        <Dialog open={importProfilesOpen} onClose={()=>setImportProfilesOpen(false)} maxWidth="sm" fullWidth
+          PaperProps={{
+            className: "glass",
+            sx: {
+              background: '#1d1e26 !important',
+              color: '#adafb8 !important',
+              border: '1px solid rgba(173,175,184,0.2)',
+              '& .MuiInputBase-root': { color: '#adafb8', background: 'rgba(23,24,31,0.92)' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(173,175,184,0.3)' },
+            }
+          }}
+        >
+          <DialogTitle sx={{ color: '#fff !important' }}>Importar perfiles JSON</DialogTitle>
+          <DialogContent sx={{ py: 2 }}>
             <TextField
-              label="Perfiles JSON"
+              placeholder="Pega aquí el JSON..."
               value={importProfilesText}
               onChange={e=>setImportProfilesText(e.target.value)}
               multiline
@@ -186,14 +250,14 @@ export default function ProfilesModal({ open = false, onClose = () => {}, select
               fullWidth
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={()=>setImportProfilesOpen(false)}>Cancelar</Button>
-            <Button variant="contained" onClick={applyImportedProfiles}>Aplicar</Button>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={()=>setImportProfilesOpen(false)} sx={{ color: '#adafb8' }}>Cancelar</Button>
+            <Button variant="contained" onClick={applyImportedProfiles} sx={{ background: '#00C853', color: '#fff' }}>Aplicar</Button>
           </DialogActions>
         </Dialog>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
+      <DialogActions sx={{ px: 3, pb: 2, borderTop: '1px solid rgba(173,175,184,0.1)' }}>
+        <Button onClick={onClose} sx={{ color: '#adafb8' }}>Cerrar</Button>
       </DialogActions>
     </Dialog>
   )
