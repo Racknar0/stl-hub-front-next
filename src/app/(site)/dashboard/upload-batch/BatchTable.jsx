@@ -11,18 +11,8 @@ import MetaCreateDialog from './MetaCreateDialog';
 import ProfilesModal from './ProfilesModal';
 import RightSidebar from '../assets/uploader/RightSidebar';
 
-// DUMMY ASSETS SCANNED FROM DIRECTORY
-const dummyData = [
-  { id: 101, nombre: 'Orco Guerrero', categorias: [], tags: [{ slug: 'warhammer', iaSuggested: true }], imagenes: ['https://picsum.photos/seed/1/800/800', 'https://picsum.photos/seed/1a/800/800', 'https://picsum.photos/seed/1b/800/800'], cuenta: '', estado: 'borrador', pesoMB: 850 },
-  { id: 102, nombre: 'Nave Espacial', categorias: [{ slug: 'sci-fi', iaSuggested: true }], tags: [], imagenes: ['https://picsum.photos/seed/2/800/800', 'https://picsum.photos/seed/2a/800/800'], cuenta: '', estado: 'borrador', pesoMB: 1200 },
-  { id: 103, nombre: 'Castillo Medieval Pack', categorias: [], tags: [], imagenes: ['https://picsum.photos/seed/3/800/800'], cuenta: '', estado: 'borrador', pesoMB: 14000 },
-  { id: 104, nombre: 'Espada Legendaria', categorias: [], tags: [], imagenes: ['https://picsum.photos/seed/4/800/800', 'https://picsum.photos/seed/4a/800/800', 'https://picsum.photos/seed/4b/800/800', 'https://picsum.photos/seed/4c/800/800'], cuenta: '', estado: 'borrador', pesoMB: 100 },
-  { id: 105, nombre: 'Dragón de Fuego', categorias: [], tags: [{ slug: 'dragon', iaSuggested: true }, {slug: 'fantasy', iaSuggested: true}], imagenes: ['https://picsum.photos/seed/5/800/800'], cuenta: '', estado: 'borrador', pesoMB: 4800 },
-  { id: 106, nombre: 'Escudo Base', categorias: [], tags: [], imagenes: ['https://picsum.photos/seed/6/800/800'], cuenta: '', estado: 'borrador', pesoMB: 50 },
-];
-
 export default function BatchTable() {
-  const [rows, setRows] = useState(dummyData)
+  const [rows, setRows] = useState([])
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isScanning, setIsScanning] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
@@ -124,32 +114,60 @@ export default function BatchTable() {
     fetchCatalogs()
   }, [])
 
+  const mapEstado = (status) => {
+    const s = (status || '').toLowerCase()
+    if (s === 'draft' || s === 'pending') return 'borrador'
+    if (s === 'queued' || s === 'processing') return 'procesando'
+    if (s === 'done') return 'completado'
+    if (s === 'error') return 'error'
+    return s
+  }
+
   const fetchQueue = async () => {
      try {
        const res = await http.getData('/batch-imports')
        if (res.data?.success && res.data?.items) {
-          setRows(res.data.items.map(item => ({
-            id: item.id,
-            batchId: item.batchId,
-            nombre: item.title || item.folderName,
-            categorias: item.categories || [],
-            tags: item.tags || [],
-            imagenes: item.images || [],
-            cuenta: item.targetAccount || '',
-            estado: item.status.toLowerCase() === 'pending' ? 'borrador' : item.status.toLowerCase(),
-            pesoMB: item.pesoMB || 0,
-            perfiles: item.profiles || '',
-            mainStatus: item.mainStatus || 'PENDING',
-            backupStatus: item.backupStatus || 'PENDING',
-            mainProgress: item.mainProgress || 0,
-          })))
+          setRows(prevRows => {
+             return res.data.items.map(item => {
+               const existing = prevRows.find(r => r.id === item.id)
+               const estadoDB = mapEstado(item.status)
+               
+               // Preservar ediciones locales si sigue en borrador
+               if (existing && existing.estado === 'borrador' && estadoDB === 'borrador') {
+                 return { ...existing }
+               }
+               
+               return {
+                 id: item.id,
+                 batchId: item.batchId,
+                 nombre: item.title || item.folderName,
+                 categorias: item.categories || [],
+                 tags: item.tags || [],
+                 imagenes: item.images || [],
+                 cuenta: item.targetAccount || '',
+                 estado: estadoDB,
+                 pesoMB: item.pesoMB || 0,
+                 perfiles: item.profiles || '',
+                 mainStatus: item.mainStatus || 'PENDING',
+                 backupStatus: item.backupStatus || 'PENDING',
+                 mainProgress: item.mainProgress || 0,
+               }
+             })
+          })
        }
      } catch(e) { console.error('Error fetching queue', e) }
   }
 
   useEffect(() => {
      fetchQueue()
-     const iv = setInterval(fetchQueue, 3000)
+     // Solo poll rápido si hay items procesando
+     const iv = setInterval(() => {
+       setRows(prevRows => {
+         const hasProcessing = prevRows.some(r => r.estado === 'procesando')
+         if (hasProcessing) fetchQueue()
+         return prevRows
+       })
+     }, 3000)
      return () => clearInterval(iv)
   }, [])
 
@@ -223,10 +241,24 @@ export default function BatchTable() {
     setRows(updated)
   }
 
-  const handleRemoverFila = (idx) => {
-    const updated = [...rows]
-    updated.splice(idx, 1)
-    setRows(updated)
+  const handleRemoverFila = async (idx) => {
+    const row = rows[idx]
+    if (!row || !row.id) return
+
+    try {
+      const res = await http.deleteData('/batch-imports/items', row.id)
+      if (res.data?.success) {
+        setToast({ open: true, msg: 'Asset eliminado correctamente', type: 'success' })
+        const updated = [...rows]
+        updated.splice(idx, 1)
+        setRows(updated)
+      } else {
+        setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
+      }
+    } catch (e) {
+      console.error(e)
+      setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
+    }
   }
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
@@ -289,24 +321,49 @@ export default function BatchTable() {
     setSelectedRowIdxPerfil(null)
   }
 
-  const handleProcessBatch = () => {
+  const handleProcessBatch = async () => {
     const invalidRows = rows.filter(r => r.estado === 'borrador').some(r => !r.cuenta)
     if (invalidRows) {
        setToast({ open: true, msg: 'Error: Hay assets sin cuenta asignada. Usa Distribuir Automáticamente.', type: 'error' })
        return
     }
 
-    // Mocking the progress update
-    const updated = rows.map(r => r.estado === 'borrador' ? { ...r, estado: 'procesando' } : r)
-    setRows(updated)
+    const unassignedCount = rows.filter(r => r.estado === 'borrador').length
+    if (unassignedCount === 0) return
 
-    setTimeout(() => {
-       setRows(prev => prev.map((r, i) => r.estado === 'procesando' ? { 
-         ...r, 
-         estado: i % 5 === 0 ? 'error' : 'completado' // Simulate an occasional error
-       } : r))
-       setToast({ open: true, msg: '✅ ¡Batch Procesado! Subida delegada al Worker en background.', type: 'success' })
-    }, 3000)
+    setIsProcessing(true)
+    setToast({ open: true, msg: 'Guardando datos e iniciando subida...', type: 'info' })
+
+    try {
+      // 1. Guardar cambios (nombre, cuenta, categorias, tags)
+      const pendingRows = rows.filter(r => r.estado === 'borrador' && r.cuenta)
+      
+      const savePromises = pendingRows.map(row => 
+        http.patchData('/batch-imports/items', row.id, {
+          title: row.nombre,
+          targetAccount: row.cuenta,
+          categories: row.categorias,
+          tags: row.tags
+        })
+      )
+      await Promise.all(savePromises)
+
+      // 2. Confirmar items para pasarlos a PENDING en el Worker
+      const itemIds = pendingRows.map(r => r.id)
+      const res = await http.postData('/batch-imports/confirm', { itemIds })
+      
+      if (res.data?.success) {
+         setToast({ open: true, msg: `¡${itemIds.length} assets enviados a la cola de subida!`, type: 'success' })
+         fetchQueue() // Refrescar del backend
+      } else {
+         setToast({ open: true, msg: `Error: ${res.data?.message || 'Fallo inesperado'}`, type: 'error' })
+      }
+    } catch (e) {
+      console.error(e)
+      setToast({ open: true, msg: 'Error de red al procesar', type: 'error' })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
 
@@ -345,6 +402,27 @@ export default function BatchTable() {
             sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#b388ff', color: '#b388ff', '&:hover': { borderColor: '#d1c4e9', color: '#d1c4e9' } }}
          >
            Distribuir Automáticamente
+         </Button>
+         <Button 
+            variant="outlined" 
+            onClick={async () => {
+              if (!confirm('¿Estás seguro? Esto eliminará TODOS los items del batch, las carpetas y los registros de la BD.')) return
+              try {
+                const res = await http.deleteRaw('/batch-imports/purge-all')
+                if (res.data?.success) {
+                  setRows([])
+                  setToast({ open: true, msg: res.data.message, type: 'success' })
+                } else {
+                  setToast({ open: true, msg: 'Error al purgar', type: 'error' })
+                }
+              } catch (e) {
+                console.error(e)
+                setToast({ open: true, msg: 'Error de red al purgar', type: 'error' })
+              }
+            }}
+            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#ff5252', color: '#ff5252', '&:hover': { borderColor: '#ff8a80', color: '#ff8a80', background: 'rgba(255,82,82,0.08)' } }}
+         >
+           🗑️ Eliminar Todo
          </Button>
        </Stack>
 

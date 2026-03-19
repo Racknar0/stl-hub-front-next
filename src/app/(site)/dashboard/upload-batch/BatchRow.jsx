@@ -60,20 +60,23 @@ export default function BatchRow({
       <TableCell sx={{ minWidth: 250, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Stack direction="row" spacing={-1.5} sx={{ mr: 1, '&:hover .MuiAvatar-root': { zIndex: 1 } }}>
-             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? row.imagenes.slice(0, 3).map((img, i) => (
-               <Avatar 
-                 key={i} 
-                 src={img} 
-                 sx={{ 
-                   width: 44, height: 44, 
-                   border: '2px solid rgba(255,255,255,0.15)', 
-                   cursor: 'pointer',
-                   transition: 'transform 0.2s',
-                   '&:hover': { transform: 'scale(1.15)', zIndex: 10 }
-                 }} 
-                 onClick={() => onOpenImagePreview?.(img)}
-               />
-             )) : (
+             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? row.imagenes.slice(0, 3).map((img, i) => {
+               const srcUrl = img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`
+               return (
+                 <Avatar 
+                   key={i} 
+                   src={srcUrl} 
+                   sx={{ 
+                     width: 44, height: 44, 
+                     border: '2px solid rgba(255,255,255,0.15)', 
+                     cursor: 'pointer',
+                     transition: 'transform 0.2s',
+                     '&:hover': { transform: 'scale(1.15)', zIndex: 10 }
+                   }} 
+                   onClick={() => onOpenImagePreview?.(srcUrl)}
+                 />
+               )
+             }) : (
                 <Avatar sx={{ width: 44, height: 44, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
              )}
           </Stack>
