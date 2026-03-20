@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -11,10 +11,13 @@ import MetaCreateDialog from './MetaCreateDialog';
 import ProfilesModal from './ProfilesModal';
 import RightSidebar from '../assets/uploader/RightSidebar';
 
+const MAX_SIMILARITY_HASH_IMAGES = 8
+
 export default function BatchTable() {
   const [rows, setRows] = useState([])
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isScanning, setIsScanning] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
   const [tagsCatalog, setTagsCatalog] = useState([])
 
@@ -34,36 +37,181 @@ export default function BatchTable() {
   const [searchSidebarSide, setSearchSidebarSide] = useState('right')
   const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
   const [similarityMap, setSimilarityMap] = useState({})
+  const http = useMemo(() => new HttpService(), [])
+
+  const uploadsBase = useMemo(() => {
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+  }, [])
   
   const sidebarQueueItem = rows.find(r => r.id === similaritySelectedId)
   const sidebarSimilarity = similarityMap[similaritySelectedId]
   const toggleSearchSidebarSide = () => setSearchSidebarSide(p => p==='right' ? 'left' : 'right')
 
-  const handleOpenSimilar = (row) => {
-    setSimilaritySelectedId(row.id)
-    if (!similarityMap[row.id] || similarityMap[row.id].status !== 'done') {
-       setSimilarityMap(prev => ({ ...prev, [row.id]: { status: 'loading', phase: 'Buscando similares mockeados...' } }))
-       setTimeout(() => {
-          setSimilarityMap(prev => ({
-            ...prev,
-            [row.id]: {
-              status: 'done',
-              imageHashCount: 1,
-              items: [
-                {
-                  id: 9999 + row.id,
-                  title: `${row.nombre} (Copia Encontrada)`,
-                  archiveName: `${(row.nombre||'').toLowerCase().replace(/ /g,'-')}.zip`,
-                  fileSizeB: row.pesoMB * 1024 * 1024,
-                  _similarity: { score: 105, image: 95, name: 10 },
-                  images: Array.isArray(row.imagenes) && row.imagenes.length ? [row.imagenes[0]] : []
-                }
-              ]
-            }
-          }))
-       }, 1500)
+  const normalizeAHashHex = useCallback((value) => {
+    const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
+    if (h.length === 16) return h
+    if (h.length > 16) return h.slice(0, 16)
+    return h.padStart(16, '0')
+  }, [])
+
+  const makeUploadsUrl = useCallback((relativeOrUrl) => {
+    const value = String(relativeOrUrl || '').trim()
+    if (!value) return ''
+    if (/^https?:\/\//i.test(value)) return value
+    const rel = value.replace(/^\/+/, '')
+    return `${uploadsBase}/uploads/${rel}`
+  }, [uploadsBase])
+
+  const computeImageAHashFromUrl = useCallback(async (src) => {
+    let objectUrl = ''
+    try {
+      const response = await fetch(src)
+      if (!response.ok) return ''
+      const blob = await response.blob()
+      objectUrl = URL.createObjectURL(blob)
+
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = () => reject(new Error('No se pudo leer imagen'))
+        img.src = objectUrl
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 8
+      canvas.height = 8
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return ''
+
+      ctx.clearRect(0, 0, 8, 8)
+      ctx.drawImage(image, 0, 0, 8, 8)
+      const { data } = ctx.getImageData(0, 0, 8, 8)
+      if (!data || data.length < 64 * 4) return ''
+
+      const grays = []
+      for (let i = 0; i < data.length; i += 4) {
+        const r = Number(data[i] || 0)
+        const g = Number(data[i + 1] || 0)
+        const b = Number(data[i + 2] || 0)
+        const y = Math.round(r * 0.299 + g * 0.587 + b * 0.114)
+        grays.push(y)
+      }
+
+      const avg = grays.reduce((sum, v) => sum + v, 0) / Math.max(1, grays.length)
+      const bits = grays.map((v) => (v >= avg ? '1' : '0')).join('').slice(0, 64).padEnd(64, '0')
+      const hex = BigInt(`0b${bits}`).toString(16).padStart(16, '0')
+      return normalizeAHashHex(hex)
+    } catch {
+      return ''
+    } finally {
+      try { if (objectUrl) URL.revokeObjectURL(objectUrl) } catch {}
     }
-  }
+  }, [normalizeAHashHex])
+
+  const buildRowImageHashes = useCallback(async (row) => {
+    const imgs = Array.isArray(row?.imagenes) ? row.imagenes : []
+    const out = []
+    for (const rel of imgs.slice(0, MAX_SIMILARITY_HASH_IMAGES)) {
+      const src = makeUploadsUrl(rel)
+      if (!src) continue
+      const hx = await computeImageAHashFromUrl(src)
+      if (hx) out.push(hx)
+    }
+    return Array.from(new Set(out)).slice(0, MAX_SIMILARITY_HASH_IMAGES)
+  }, [computeImageAHashFromUrl, makeUploadsUrl])
+
+  const startSimilarityCheck = useCallback(async (row) => {
+    const id = Number(row?.id || 0)
+    if (!id) return
+
+    const titleValue = String(row?.nombre || '').trim()
+    const archiveName = `${titleValue || `batch-${id}`}.rar`
+    const sizeB = Math.max(0, Math.floor(Number(row?.pesoMB || 0) * 1024 * 1024))
+
+    setSimilarityMap((m) => ({
+      ...(m || {}),
+      [id]: {
+        ...(m?.[id] || {}),
+        status: 'loading',
+        phase: 'Analizando imágenes del item…',
+        items: [],
+        error: '',
+        imageHashCount: 0,
+      },
+    }))
+
+    try {
+      const imageHashes = await buildRowImageHashes(row)
+
+      const categoryIds = Array.isArray(row?.categorias)
+        ? row.categorias.map((c) => Number(c?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
+        : []
+      const categorySlugs = Array.isArray(row?.categorias)
+        ? row.categorias
+            .flatMap((c) => [String(c?.slug || '').trim(), String(c?.slugEn || '').trim()])
+            .filter(Boolean)
+        : []
+      const tags = Array.isArray(row?.tags)
+        ? row.tags.map((t) => String(t?.slug || t?.name || t || '').trim()).filter(Boolean)
+        : []
+
+      setSimilarityMap((m) => ({
+        ...(m || {}),
+        [id]: {
+          ...(m?.[id] || {}),
+          status: 'loading',
+          imageHashCount: imageHashes.length,
+          phase: 'Buscando coincidencias por nombre + imagen…',
+        },
+      }))
+
+      const payload = {
+        filename: archiveName,
+        limit: 8,
+        sizeB,
+        imageHashes,
+        categoryIds,
+        categorySlugs,
+        tags,
+        title: titleValue,
+        titleEn: titleValue,
+      }
+
+      const r = await http.postData('/assets/similar', payload)
+      const data = r?.data || {}
+      const items = Array.isArray(data?.items) ? data.items : []
+
+      setSimilarityMap((m) => ({
+        ...(m || {}),
+        [id]: {
+          status: 'done',
+          items,
+          error: '',
+          phase: 'Completado',
+          query: String(data?.query || archiveName),
+          imageHashCount: Number(data?.imageHashCount || imageHashes.length || 0),
+        },
+      }))
+    } catch (e) {
+      console.error('batch similarity check error', e)
+      setSimilarityMap((m) => ({
+        ...(m || {}),
+        [id]: {
+          status: 'error',
+          items: [],
+          error: 'No se pudo buscar similares',
+          phase: 'Error',
+          imageHashCount: 0,
+        },
+      }))
+    }
+  }, [buildRowImageHashes, http])
+
+  const handleOpenSimilar = useCallback((row) => {
+    if (!row?.id) return
+    setSimilaritySelectedId(row.id)
+    void startSimilarityCheck(row)
+  }, [startSimilarityCheck])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -83,8 +231,6 @@ export default function BatchTable() {
   const [createModalRowIdx, setCreateModalRowIdx] = useState(null)
 
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
-
-  const http = new HttpService()
 
   useEffect(() => {
     async function fetchCatalogs() {
@@ -118,8 +264,8 @@ export default function BatchTable() {
     const s = (status || '').toLowerCase()
     if (s === 'draft' || s === 'pending') return 'borrador'
     if (s === 'queued' || s === 'processing') return 'procesando'
-    if (s === 'done') return 'completado'
-    if (s === 'error') return 'error'
+    if (s === 'done' || s === 'completed') return 'completado'
+    if (s === 'error' || s === 'failed') return 'error'
     return s
   }
 
@@ -322,13 +468,14 @@ export default function BatchTable() {
   }
 
   const handleProcessBatch = async () => {
-    const invalidRows = rows.filter(r => r.estado === 'borrador').some(r => !r.cuenta)
+    const retryableRows = rows.filter(r => r.estado === 'borrador' || r.estado === 'error')
+    const invalidRows = retryableRows.some(r => !r.cuenta)
     if (invalidRows) {
        setToast({ open: true, msg: 'Error: Hay assets sin cuenta asignada. Usa Distribuir Automáticamente.', type: 'error' })
        return
     }
 
-    const unassignedCount = rows.filter(r => r.estado === 'borrador').length
+    const unassignedCount = retryableRows.length
     if (unassignedCount === 0) return
 
     setIsProcessing(true)
@@ -336,7 +483,7 @@ export default function BatchTable() {
 
     try {
       // 1. Guardar cambios (nombre, cuenta, categorias, tags)
-      const pendingRows = rows.filter(r => r.estado === 'borrador' && r.cuenta)
+      const pendingRows = retryableRows.filter(r => r.cuenta)
       
       const savePromises = pendingRows.map(row => 
         http.patchData('/batch-imports/items', row.id, {
@@ -348,12 +495,14 @@ export default function BatchTable() {
       )
       await Promise.all(savePromises)
 
-      // 2. Confirmar items para pasarlos a PENDING en el Worker
+      // 2. Confirmar items para pasarlos a QUEUED en el Worker
       const itemIds = pendingRows.map(r => r.id)
       const res = await http.postData('/batch-imports/confirm', { itemIds })
       
       if (res.data?.success) {
-         setToast({ open: true, msg: `¡${itemIds.length} assets enviados a la cola de subida!`, type: 'success' })
+        const renamedCount = Array.isArray(res.data?.renamed) ? res.data.renamed.length : 0
+        const renameMsg = renamedCount > 0 ? ` · renombrados por duplicado: ${renamedCount}` : ''
+        setToast({ open: true, msg: `¡${itemIds.length} assets enviados a la cola de subida!${renameMsg}`, type: 'success' })
          fetchQueue() // Refrescar del backend
       } else {
          setToast({ open: true, msg: `Error: ${res.data?.message || 'Fallo inesperado'}`, type: 'error' })
@@ -541,7 +690,7 @@ export default function BatchTable() {
             size="large"
             startIcon={<CloudUploadIcon />}
             onClick={handleProcessBatch}
-            disabled={rows.filter(r => r.estado === 'borrador').length === 0}
+          disabled={isProcessing || rows.filter(r => r.estado === 'borrador' || r.estado === 'error').length === 0}
             sx={{ 
                borderRadius: 8, 
                textTransform: 'none', 
@@ -556,7 +705,7 @@ export default function BatchTable() {
                }
             }}
          >
-           Confirmar y Subir al Worker
+           {isProcessing ? 'Enviando al Worker...' : 'Confirmar y Subir al Worker'}
          </Button>
       </Box>
 
@@ -642,11 +791,33 @@ export default function BatchTable() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Assets similares</Typography>
               {sidebarSimilarity?.status === 'loading' && <CircularProgress size={14} />}
+              <Box sx={{ flex: 1 }} />
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => { if (sidebarQueueItem) void startSimilarityCheck(sidebarQueueItem) }}
+                disabled={!sidebarQueueItem || sidebarSimilarity?.status === 'loading'}
+                sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
+              >
+                Revalidar
+              </Button>
             </Box>
 
             {sidebarSimilarity?.status === 'loading' && (
               <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
                 {sidebarSimilarity?.phase || 'Buscando similares…'}
+              </Typography>
+            )}
+
+            {sidebarSimilarity?.status === 'done' && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
+                {(sidebarSimilarity?.items || []).length} encontrados · hashes usados: {Number(sidebarSimilarity?.imageHashCount || 0)}
+              </Typography>
+            )}
+
+            {sidebarSimilarity?.status === 'error' && (
+              <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.5 }}>
+                {sidebarSimilarity?.error || 'No se pudo buscar similares'}
               </Typography>
             )}
 
@@ -657,24 +828,34 @@ export default function BatchTable() {
                     <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.25 }}>{a.title}</Typography>
                     <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.25, wordBreak: 'break-word' }}>{a.archiveName}</Typography>
                     <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.25 }}>
-                      {(a.fileSizeB / (1024*1024)).toFixed(2)} MB • {a.images.length} imágenes
+                      {((Number(a.fileSizeB || a.archiveSizeB || 0)) / (1024*1024)).toFixed(2)} MB • {(a.images || []).length} imágenes
                     </Typography>
                     <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.35 }}>
-                      Score total: {a._similarity.score} · nombre: {a._similarity.name} · imagen: {a._similarity.image}
+                      Score total: {Number(a?._similarity?.score || 0)} · nombre: {Number(a?._similarity?.name || 0)} · imagen: {Number(a?._similarity?.image || 0)}
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'inline-block', mt: 0.55, px: 0.8, py: 0.2, borderRadius: 999, border: '1px solid rgba(88, 214, 141, 0.55)', background: 'rgba(88, 214, 141, 0.14)', color: '#d7ffe7', fontWeight: 700 }}>
                       Coincidencia visual alta
                     </Typography>
-                    {a.images.length > 0 && (
+                    {(a.images || []).length > 0 && (
                        <Box sx={{ display: 'flex', gap: 1, mt: 0.75, overflowX: 'auto' }}>
-                         {a.images.map((src, i) => (
-                           <img key={i} src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => setPreviewImage(src)} />
-                         ))}
+                         {(a.images || []).map((src, i) => {
+                           const safeSrc = makeUploadsUrl(src)
+                           if (!safeSrc) return null
+                           return (
+                             <img key={i} src={safeSrc} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => setPreviewImage(safeSrc)} />
+                           )
+                         })}
                        </Box>
                     )}
                   </Box>
                 ))}
               </Box>
+            )}
+
+            {sidebarSimilarity?.status === 'done' && (sidebarSimilarity?.items || []).length === 0 && (
+              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
+                No se encontraron coincidencias.
+              </Typography>
             )}
           </Box>
         )}
