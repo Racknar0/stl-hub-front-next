@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloseIcon from '@mui/icons-material/Close';
@@ -22,6 +23,7 @@ export default function BatchTable() {
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
+  const [isApplyingAiMetadata, setIsApplyingAiMetadata] = useState(false)
   const [isRetryingAi, setIsRetryingAi] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
@@ -67,6 +69,16 @@ export default function BatchTable() {
   const sidebarQueueItem = rows.find(r => r.id === similaritySelectedId)
   const sidebarSimilarity = similarityMap[similaritySelectedId]
   const toggleSearchSidebarSide = () => setSearchSidebarSide(p => p==='right' ? 'left' : 'right')
+  const compactActionBtnSx = {
+    borderRadius: 2,
+    textTransform: 'none',
+    fontWeight: 700,
+    fontSize: 13,
+    px: 1.4,
+    py: 0.55,
+    minHeight: 34,
+    whiteSpace: 'nowrap',
+  }
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -569,39 +581,18 @@ export default function BatchTable() {
   const handleScanLocal = async () => {
     try {
       setIsScanning(true)
-      setToast({ open: true, msg: `Escaneando carpeta local uploads/batch_imports...`, type: 'info' })
+      setToast({ open: true, msg: 'Escaneando carpeta local uploads/batch_imports...', type: 'info' })
       const res = await http.postData('/batch-imports/scan', {}, { timeout: 0 });
       if (res.data?.success) {
-        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
-        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
-        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
-        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
-          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
-          : []
-        setAiRetryCandidateIds(aiFailedItemIds)
-
-        const aiNotes = []
-        if (res.data?.aiTimedOut) aiNotes.push('IA tardó demasiado y quedó en proceso diferido.')
-        if (aiRetryAttempts > 0) aiNotes.push(`Reintentos IA ejecutados: ${aiRetryAttempts}.`)
-        if (aiFailedItems > 0) {
-          aiNotes.push(
-            aiRateLimitedItems > 0
-              ? `IA no pudo clasificar ${aiFailedItems} item(s), ${aiRateLimitedItems} por rate limit. Quedan en borrador para reintentar luego.`
-              : `IA no pudo clasificar ${aiFailedItems} item(s). Quedan en borrador para reintentar luego.`
-          )
-        }
-
-        const baseMsg = res.data.message || 'Carpetas escaneadas exitosamente'
-        const finalMsg = aiNotes.length > 0 ? `${baseMsg} ${aiNotes.join(' ')}` : baseMsg
-        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
-
-        setToast({ open: true, msg: finalMsg, type: finalType })
+        setAiRetryCandidateIds([])
+        const scannedCount = Number(res.data?.scannedItemsCount || 0)
+        const queuedCount = Number(res.data?.newlyQueuedCount || 0)
+        setToast({
+          open: true,
+          msg: res.data.message || `Escaneo completo: ${scannedCount} detectados, ${queuedCount} nuevos.`,
+          type: 'success'
+        })
         fetchQueue()
-        if (res.data?.aiApplyDeferred) {
-          setTimeout(() => { void fetchQueue() }, 2500)
-          setTimeout(() => { void fetchQueue() }, 6000)
-          setTimeout(() => { void fetchQueue() }, 10000)
-        }
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message}`, type: 'error' })
       }
@@ -623,6 +614,66 @@ export default function BatchTable() {
       }
     } finally {
       setIsScanning(false)
+    }
+  }
+
+  const handleApplyAiMetadata = async () => {
+    const ids = rows
+      .filter((r) => r.estado === 'borrador' || r.estado === 'error')
+      .map((r) => Number(r.id))
+      .filter((n) => Number.isFinite(n) && n > 0)
+
+    const uniqueIds = Array.from(new Set(ids))
+    if (!uniqueIds.length) {
+      setToast({ open: true, msg: 'No hay items borrador/error para generar metadatos IA.', type: 'info' })
+      return
+    }
+
+    try {
+      setIsApplyingAiMetadata(true)
+      setToast({ open: true, msg: `Generando metadatos IA para ${uniqueIds.length} item(s)...`, type: 'info' })
+      const res = await http.postData('/batch-imports/ai-metadata', { itemIds: uniqueIds }, { timeout: 0 })
+
+      if (res.data?.success) {
+        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
+        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
+        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
+        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
+          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
+          : []
+
+        if (!res.data?.aiTimedOut) {
+          setAiRetryCandidateIds(aiFailedItemIds)
+        }
+
+        const note = []
+        if (aiRetryAttempts > 0) note.push(`reintentos IA: ${aiRetryAttempts}`)
+        if (aiFailedItems > 0) {
+          note.push(
+            aiRateLimitedItems > 0
+              ? `fallidos: ${aiFailedItems} (${aiRateLimitedItems} por rate limit)`
+              : `fallidos: ${aiFailedItems}`
+          )
+        }
+
+        const baseMsg = res.data?.message || 'Metadatos IA finalizados.'
+        const finalMsg = note.length ? `${baseMsg} ${note.join(' · ')}` : baseMsg
+        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
+        setToast({ open: true, msg: finalMsg, type: finalType })
+
+        fetchQueue()
+        if (res.data?.aiApplyDeferred) {
+          setTimeout(() => { void fetchQueue() }, 2500)
+          setTimeout(() => { void fetchQueue() }, 6000)
+          setTimeout(() => { void fetchQueue() }, 10000)
+        }
+      } else {
+        setToast({ open: true, msg: res.data?.message || 'No se pudo generar metadatos IA.', type: 'error' })
+      }
+    } catch (e) {
+      setToast({ open: true, msg: `Error generando metadatos IA: ${e.response?.data?.message || e.message}`, type: 'error' })
+    } finally {
+      setIsApplyingAiMetadata(false)
     }
   }
 
@@ -1157,40 +1208,60 @@ export default function BatchTable() {
          <Button 
             variant="outlined" 
             color="primary"
+            size="small"
             onClick={handleScanLocal}
-            disabled={isScanning}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+            disabled={isScanning || isApplyingAiMetadata || isRetryingAi}
+            sx={compactActionBtnSx}
          >
-           {isScanning ? 'Escaneando + IA...' : 'Escanear Carpetas'}
+           {isScanning ? 'Escaneando...' : 'Escanear Carpetas'}
          </Button>
          <Button
             variant="outlined"
+            size="small"
+            startIcon={<AutoFixHighIcon />}
+            onClick={handleApplyAiMetadata}
+            disabled={isApplyingAiMetadata || isScanning || isRetryingAi}
+            sx={{
+              ...compactActionBtnSx,
+              borderColor: '#5eead4',
+              color: '#5eead4',
+              '&:hover': { borderColor: '#99f6e4', color: '#99f6e4', background: 'rgba(45,212,191,0.12)' }
+            }}
+         >
+           {isApplyingAiMetadata ? 'Metadatos IA...' : 'Metadatos IA'}
+         </Button>
+         <Button
+            variant="outlined"
+            size="small"
             startIcon={<ReplayIcon />}
             onClick={handleRetryFailedAi}
-            disabled={isRetryingAi || isScanning || aiRetryCandidateIds.length === 0}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+            disabled={isRetryingAi || isScanning || isApplyingAiMetadata || aiRetryCandidateIds.length === 0}
+            sx={compactActionBtnSx}
          >
            {isRetryingAi ? 'Reintentando IA...' : `Reintentar IA fallidos (${aiRetryCandidateIds.length})`}
          </Button>
          <Button 
             variant="outlined" 
+            size="small"
             startIcon={<AutoAwesomeIcon />} 
             onClick={handleAutoDistribute}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#b388ff', color: '#b388ff', '&:hover': { borderColor: '#d1c4e9', color: '#d1c4e9' } }}
+            sx={{ ...compactActionBtnSx, borderColor: '#b388ff', color: '#b388ff', '&:hover': { borderColor: '#d1c4e9', color: '#d1c4e9' } }}
          >
            Distribuir Automáticamente
          </Button>
         <Button
           variant="outlined"
           color="warning"
+          size="small"
           onClick={handleRotateProxyGlobal}
           disabled={!activeUploadingRow}
-          sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+          sx={compactActionBtnSx}
         >
           Rotar Proxy
         </Button>
          <Button 
             variant="outlined" 
+            size="small"
             onClick={async () => {
               if (!confirm('¿Eliminar todos los items COMPLETADOS del batch?')) return
               try {
@@ -1206,12 +1277,13 @@ export default function BatchTable() {
                 setToast({ open: true, msg: 'Error de red al eliminar completados', type: 'error' })
               }
             }}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#fbbf24', color: '#fbbf24', background: 'rgba(245,158,11,0.08)' } }}
+            sx={{ ...compactActionBtnSx, borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#fbbf24', color: '#fbbf24', background: 'rgba(245,158,11,0.08)' } }}
          >
            ✅ Eliminar Completados
          </Button>
          <Button 
             variant="outlined" 
+            size="small"
             onClick={async () => {
               if (!confirm('¿Estás seguro? Esto eliminará TODOS los items del batch, las carpetas y los registros de la BD.')) return
               try {
@@ -1227,7 +1299,7 @@ export default function BatchTable() {
                 setToast({ open: true, msg: 'Error de red al purgar', type: 'error' })
               }
             }}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#ff5252', color: '#ff5252', '&:hover': { borderColor: '#ff8a80', color: '#ff8a80', background: 'rgba(255,82,82,0.08)' } }}
+            sx={{ ...compactActionBtnSx, borderColor: '#ff5252', color: '#ff5252', '&:hover': { borderColor: '#ff8a80', color: '#ff8a80', background: 'rgba(255,82,82,0.08)' } }}
          >
            🗑️ Eliminar Todo
          </Button>
@@ -1237,7 +1309,7 @@ export default function BatchTable() {
          <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2, px: 0.5 }}>
            <CircularProgress size={18} thickness={5} />
            <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.92)', fontWeight: 600 }}>
-             Procesando escaneo e IA, espera a que finalice...
+             Procesando escaneo de carpetas, espera a que finalice...
            </Typography>
          </Stack>
        )}
