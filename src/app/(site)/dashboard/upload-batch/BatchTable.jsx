@@ -521,6 +521,11 @@ export default function BatchTable() {
         const aiWarn = res.data?.aiTimedOut ? ' IA tardó demasiado y se omitió en esta corrida.' : ''
         setToast({ open: true, msg: `${res.data.message || `Carpetas escaneadas exitosamente`}${aiWarn}`, type: 'success' })
         fetchQueue()
+        if (res.data?.aiApplyDeferred) {
+          setTimeout(() => { void fetchQueue() }, 2500)
+          setTimeout(() => { void fetchQueue() }, 6000)
+          setTimeout(() => { void fetchQueue() }, 10000)
+        }
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message}`, type: 'error' })
       }
