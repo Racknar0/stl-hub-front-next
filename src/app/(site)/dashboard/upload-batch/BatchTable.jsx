@@ -407,6 +407,22 @@ export default function BatchTable() {
     }
   }
 
+  const handleRetryWithOtherProxy = async (row) => {
+    const id = Number(row?.id || 0)
+    if (!id) return
+    try {
+      const res = await http.postData(`/batch-imports/items/${id}/retry-proxy`, {})
+      if (res.data?.success) {
+        setToast({ open: true, msg: 'Cancelando subida actual y cambiando a otro proxy...', type: 'warning' })
+        fetchQueue()
+      } else {
+        setToast({ open: true, msg: res.data?.message || 'No se pudo forzar cambio de proxy', type: 'error' })
+      }
+    } catch (e) {
+      setToast({ open: true, msg: `Error al cambiar proxy: ${e.message}`, type: 'error' })
+    }
+  }
+
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = () => {
     const LIMIT_GB = 18.5
@@ -675,6 +691,7 @@ export default function BatchTable() {
                 onOpenImagePreview={setPreviewImage}
                 onOpenSimilar={handleOpenSimilar}
                 onRemoverFila={handleRemoverFila}
+                onRetryWithOtherProxy={handleRetryWithOtherProxy}
               />
             ))}
           </TableBody>

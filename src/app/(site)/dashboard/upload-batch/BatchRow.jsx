@@ -23,7 +23,8 @@ export default function BatchRow({
   onOpenProfiles = () => {},
   onOpenImagePreview = () => {},
   onOpenSimilar = () => {},
-  onRemoverFila = () => {}
+  onRemoverFila = () => {},
+  onRetryWithOtherProxy = () => {}
 }) {
   const isProcesso = row.estado === 'procesando';
   const isOk = row.estado === 'completado';
@@ -53,6 +54,20 @@ export default function BatchRow({
                 <DeleteIcon fontSize="small" />
              </IconButton>
           </Tooltip>
+          {(String(row.mainStatus || '').toUpperCase() === 'UPLOADING' || String(row.backupStatus || '').toUpperCase() === 'UPLOADING') && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="warning"
+              onClick={() => onRetryWithOtherProxy?.(row)}
+              sx={{
+                minWidth: 'auto', px: 1.2, py: 0.35, fontSize: 11, lineHeight: 1.1,
+                whiteSpace: 'nowrap', borderRadius: 6, textTransform: 'none', fontWeight: 700,
+              }}
+            >
+              Otro proxy
+            </Button>
+          )}
         </Stack>
       </TableCell>
 
