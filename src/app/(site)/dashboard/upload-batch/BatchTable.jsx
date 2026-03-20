@@ -467,6 +467,93 @@ export default function BatchTable() {
     }
   }
 
+  const activeUploadingRow = useMemo(() => {
+    return rows.find((r) => {
+      const main = String(r?.mainStatus || '').toUpperCase()
+      const backup = String(r?.backupStatus || '').toUpperCase()
+      return main === 'UPLOADING' || backup === 'UPLOADING'
+    }) || null
+  }, [rows])
+
+  const handleRotateProxyGlobal = async () => {
+    if (!activeUploadingRow) {
+      setToast({ open: true, msg: 'No hay ninguna subida activa para rotar proxy.', type: 'warning' })
+      return
+    }
+    await handleRetryWithOtherProxy(activeUploadingRow)
+  }
+
+  const mainProgressStats = useMemo(() => {
+    const eligible = rows.filter((r) => String(r.estado || '').toLowerCase() !== 'borrador')
+    const total = eligible.length
+    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0 }
+
+    let units = 0
+    let ok = 0
+    let error = 0
+    let uploading = 0
+
+    for (const r of eligible) {
+      const st = String(r.mainStatus || 'PENDING').toUpperCase()
+      if (st === 'OK') {
+        ok += 1
+        units += 1
+      } else if (st === 'ERROR') {
+        error += 1
+        units += 1
+      } else if (st === 'UPLOADING') {
+        uploading += 1
+        const p = Math.max(0, Math.min(100, Number(r.mainProgress || 0)))
+        units += p / 100
+      }
+    }
+
+    return {
+      total,
+      pct: Math.round((units / total) * 100),
+      ok,
+      error,
+      uploading,
+    }
+  }, [rows])
+
+  const backupProgressStats = useMemo(() => {
+    const eligible = rows.filter((r) => {
+      const isDraft = String(r.estado || '').toLowerCase() === 'borrador'
+      const backup = String(r.backupStatus || 'PENDING').toUpperCase()
+      return !isDraft && backup !== 'N/A'
+    })
+    const total = eligible.length
+    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0 }
+
+    let units = 0
+    let ok = 0
+    let error = 0
+    let uploading = 0
+
+    for (const r of eligible) {
+      const st = String(r.backupStatus || 'PENDING').toUpperCase()
+      if (st === 'OK') {
+        ok += 1
+        units += 1
+      } else if (st === 'ERROR') {
+        error += 1
+        units += 1
+      } else if (st === 'UPLOADING') {
+        uploading += 1
+        units += 0.5
+      }
+    }
+
+    return {
+      total,
+      pct: Math.round((units / total) * 100),
+      ok,
+      error,
+      uploading,
+    }
+  }, [rows])
+
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = () => {
     const LIMIT_GB = 19
@@ -653,6 +740,15 @@ export default function BatchTable() {
          >
            Distribuir Automáticamente
          </Button>
+        <Button
+          variant="outlined"
+          color="warning"
+          onClick={handleRotateProxyGlobal}
+          disabled={!activeUploadingRow}
+          sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+        >
+          Rotar Proxy
+        </Button>
          <Button 
             variant="outlined" 
             onClick={async () => {
@@ -675,6 +771,48 @@ export default function BatchTable() {
            🗑️ Eliminar Todo
          </Button>
        </Stack>
+
+       <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+         <Box sx={{ p: 1.5, borderRadius: 2, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(125,211,252,0.35)' }}>
+           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+             <Typography variant="body2" sx={{ fontWeight: 700, color: '#e0f2fe' }}>Progreso Main</Typography>
+             <Typography variant="caption" sx={{ color: '#bae6fd' }}>{mainProgressStats.pct}%</Typography>
+           </Stack>
+           <LinearProgress
+             variant="determinate"
+             value={mainProgressStats.pct}
+             sx={{
+               height: 10,
+               borderRadius: 999,
+               backgroundColor: 'rgba(30,41,59,0.6)',
+               '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' },
+             }}
+           />
+           <Typography variant="caption" sx={{ color: 'rgba(224,242,254,0.85)', mt: 0.75, display: 'block' }}>
+             OK: {mainProgressStats.ok}/{mainProgressStats.total} · Subiendo: {mainProgressStats.uploading} · Error: {mainProgressStats.error}
+           </Typography>
+         </Box>
+
+         <Box sx={{ p: 1.5, borderRadius: 2, background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(216,180,254,0.35)' }}>
+           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+             <Typography variant="body2" sx={{ fontWeight: 700, color: '#f5d0fe' }}>Progreso Backup</Typography>
+             <Typography variant="caption" sx={{ color: '#e9d5ff' }}>{backupProgressStats.pct}%</Typography>
+           </Stack>
+           <LinearProgress
+             variant="determinate"
+             value={backupProgressStats.pct}
+             sx={{
+               height: 10,
+               borderRadius: 999,
+               backgroundColor: 'rgba(30,41,59,0.6)',
+               '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #c084fc, #a855f7)' },
+             }}
+           />
+           <Typography variant="caption" sx={{ color: 'rgba(245,208,254,0.88)', mt: 0.75, display: 'block' }}>
+             OK: {backupProgressStats.ok}/{backupProgressStats.total} · Subiendo: {backupProgressStats.uploading} · Error: {backupProgressStats.error}
+           </Typography>
+         </Box>
+       </Box>
 
        {/* ─── BARRA DE ALMACENAMIENTO POR CUENTA ─── */}
        {(() => {
@@ -736,26 +874,40 @@ export default function BatchTable() {
          )
        })()}
 
-      <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2, background: 'transparent', borderColor: 'rgba(255,255,255,0.1)' }}>
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        variant="outlined"
+        sx={{
+          borderRadius: 2,
+          background: 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(17,24,39,0.78))',
+          borderColor: 'rgba(148,163,184,0.32)',
+          boxShadow: '0 10px 24px rgba(2,6,23,0.35)',
+          '& .MuiTableCell-root': {
+            color: '#edf3ff',
+            borderBottom: '1px solid rgba(148,163,184,0.24)',
+          },
+        }}
+      >
         <Table size="medium">
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Acciones</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Asset (Carpeta Encontrada)</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Categorías</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Tags (IA)</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Perfil Rápido</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Cuenta MEGA Asignada</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Main</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Backup</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Estado</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (Carpeta Encontrada)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags (IA)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta MEGA Asignada</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Main</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Backup</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
-                    <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)' }}>No hay assets en `/uploads/batch_imports/`</Typography>
+                    <Typography variant="h6" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 600 }}>No hay assets en /uploads/batch_imports/</Typography>
                  </TableCell>
               </TableRow>
             )}
@@ -776,7 +928,6 @@ export default function BatchTable() {
                 onOpenImagePreview={setPreviewImage}
                 onOpenSimilar={handleOpenSimilar}
                 onRemoverFila={handleRemoverFila}
-                onRetryWithOtherProxy={handleRetryWithOtherProxy}
               />
             ))}
           </TableBody>
@@ -921,6 +1072,37 @@ export default function BatchTable() {
               {sidebarQueueItem?.pesoMB} MB • {(sidebarQueueItem?.imagenes || []).length} imágenes
             </Typography>
 
+            {(sidebarQueueItem?.imagenes || []).length > 0 && (
+              <Box sx={{ mt: 0.9 }}>
+                <Typography variant="caption" sx={{ opacity: 0.82, display: 'block', mb: 0.55 }}>
+                  Imágenes del ítem actual
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.25 }}>
+                  {(sidebarQueueItem?.imagenes || []).map((src, i) => {
+                    const safeSrc = makeUploadsUrl(src)
+                    if (!safeSrc) return null
+                    return (
+                      <img
+                        key={`current-${i}`}
+                        src={safeSrc}
+                        alt={`current-${i}`}
+                        style={{
+                          width: 144,
+                          height: 144,
+                          objectFit: 'cover',
+                          borderRadius: 6,
+                          border: '1px solid rgba(173, 175, 184, 0.45)',
+                          cursor: 'pointer',
+                          background: 'rgba(255,255,255,0.06)'
+                        }}
+                        onClick={() => setPreviewImage(safeSrc)}
+                      />
+                    )
+                  })}
+                </Box>
+              </Box>
+            )}
+
             <Divider sx={{ my: 1.25, opacity: 0.2 }} />
             
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -977,7 +1159,19 @@ export default function BatchTable() {
                            const safeSrc = makeUploadsUrl(src)
                            if (!safeSrc) return null
                            return (
-                             <img key={i} src={safeSrc} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => setPreviewImage(safeSrc)} />
+                             <img
+                               key={i}
+                               src={safeSrc}
+                               style={{
+                                 width: 154,
+                                 height: 154,
+                                 objectFit: 'cover',
+                                 borderRadius: 6,
+                                 border: '1px solid rgba(148,163,184,0.45)',
+                                 cursor: 'pointer'
+                               }}
+                               onClick={() => setPreviewImage(safeSrc)}
+                             />
                            )
                          })}
                        </Box>

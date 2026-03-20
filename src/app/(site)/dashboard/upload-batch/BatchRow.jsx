@@ -23,8 +23,7 @@ export default function BatchRow({
   onOpenProfiles = () => {},
   onOpenImagePreview = () => {},
   onOpenSimilar = () => {},
-  onRemoverFila = () => {},
-  onRetryWithOtherProxy = () => {}
+  onRemoverFila = () => {}
 }) {
   const isProcesso = row.estado === 'procesando';
   const isOk = row.estado === 'completado';
@@ -32,11 +31,25 @@ export default function BatchRow({
   const mainStatus = String(row.mainStatus || 'PENDING').toUpperCase();
   const backupStatus = String(row.backupStatus || 'PENDING').toUpperCase();
   const rowInFlight = isProcesso || (isOk && ['PENDING', 'UPLOADING'].includes(backupStatus));
+  const primaryText = '#eef4ff';
+  const secondaryText = 'rgba(220,232,255,0.82)';
+  const cellBorder = '1px solid rgba(148,163,184,0.24)';
 
   return (
-    <TableRow key={idx} hover sx={{ backgroundColor: isError ? 'rgba(244, 67, 54, 0.15)' : isOk ? 'rgba(76, 175, 80, 0.15)' : 'transparent', '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}>
+    <TableRow
+      key={idx}
+      hover
+      sx={{
+        backgroundColor: isError
+          ? 'rgba(239, 68, 68, 0.22)'
+          : isOk
+            ? 'rgba(22, 163, 74, 0.18)'
+            : 'rgba(15, 23, 42, 0.38)',
+        '&:hover': { backgroundColor: 'rgba(51, 65, 85, 0.42)' },
+      }}
+    >
       {/* Acciones */}
-      <TableCell sx={{ minWidth: 100, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ minWidth: 100, borderBottom: cellBorder, color: primaryText }}>
         <Stack direction="row" spacing={1} justifyContent="flex-start" alignItems="center">
           <Button
             size="small"
@@ -57,25 +70,11 @@ export default function BatchRow({
                 <DeleteIcon fontSize="small" />
              </IconButton>
           </Tooltip>
-          {(mainStatus === 'UPLOADING' || backupStatus === 'UPLOADING') && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              onClick={() => onRetryWithOtherProxy?.(row)}
-              sx={{
-                minWidth: 'auto', px: 1.2, py: 0.35, fontSize: 11, lineHeight: 1.1,
-                whiteSpace: 'nowrap', borderRadius: 6, textTransform: 'none', fontWeight: 700,
-              }}
-            >
-              Otro proxy
-            </Button>
-          )}
         </Stack>
       </TableCell>
 
       {/* Asset */}
-      <TableCell sx={{ minWidth: 250, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ minWidth: 250, borderBottom: cellBorder, color: primaryText }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Stack direction="row" spacing={-1.5} sx={{ mr: 1, '&:hover .MuiAvatar-root': { zIndex: 1 } }}>
              {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? row.imagenes.slice(0, 3).map((img, i) => {
@@ -106,16 +105,24 @@ export default function BatchRow({
                variant="standard"
                fullWidth
                InputProps={{ disableUnderline: isOk || isProcesso, sx: { color: '#fff' } }}
-               sx={{ '& input': { color: '#fff' }, '& input::placeholder': { color: 'rgba(255,255,255,0.7)', opacity: 1 } }}
+               sx={{
+                 '& input': { color: primaryText, fontWeight: 500 },
+                 '& input::placeholder': { color: secondaryText, opacity: 1 },
+                 '& .MuiInputBase-input.Mui-disabled': {
+                   color: '#f8fbff',
+                   WebkitTextFillColor: '#f8fbff',
+                   opacity: 1,
+                 },
+               }}
                disabled={isOk || isProcesso}
              />
-             <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'rgba(255,255,255,0.6)' }}>
+             <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: secondaryText }}>
                Peso: {(row.pesoMB / 1024).toFixed(2)} GB
              </Typography>
           </Box>
         </Stack>
       </TableCell>
-      <TableCell sx={{ minWidth: 200, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ minWidth: 200, borderBottom: cellBorder, color: primaryText }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Autocomplete
             multiple
@@ -127,7 +134,23 @@ export default function BatchRow({
             renderTags={(value, getTagProps) =>
               value.map((option, index) => {
                 const { key, ...tagProps } = getTagProps({ index })
-                return <Chip key={key} label={option.name || option.slug} size="small" {...tagProps} color="primary" variant={option.iaSuggested ? 'filled' : 'outlined'} />
+                return (
+                  <Chip
+                    key={key}
+                    label={option.name || option.slug}
+                    size="small"
+                    {...tagProps}
+                    sx={{
+                      color: '#ecfeff',
+                      backgroundColor: option.iaSuggested ? 'rgba(6,182,212,0.48)' : 'rgba(14,165,233,0.38)',
+                      border: '1px solid rgba(165,243,252,0.78)',
+                      fontWeight: 700,
+                      '& .MuiChip-label': { px: 0.75 },
+                      '& .MuiChip-deleteIcon': { color: '#ecfeff' },
+                      '&.Mui-disabled': { opacity: 1, color: '#ecfeff' },
+                    }}
+                  />
+                )
               })
             }
             renderInput={params => (
@@ -136,17 +159,30 @@ export default function BatchRow({
                 size="small" 
                 placeholder={row.categorias.length === 0 ? "Categorías..." : ""} 
                 variant="standard" 
-                sx={{ '& input': { color: '#fff' }, '& input::placeholder': { color: 'rgba(255,255,255,0.7)', opacity: 1 } }}
+                sx={{
+                  '& input': { color: primaryText },
+                  '& input::placeholder': { color: secondaryText, opacity: 1 },
+                }}
               />
             )}
-            sx={{ flex: 1, '& .MuiSvgIcon-root': { color: '#fff' } }}
+            sx={{
+              flex: 1,
+              '& .MuiSvgIcon-root': { color: primaryText },
+              '& .MuiChip-root': { opacity: 1 },
+              '&.Mui-disabled': { opacity: 1 },
+              '& .MuiInputBase-input.Mui-disabled': {
+                color: '#e6f4ff',
+                WebkitTextFillColor: '#e6f4ff',
+                opacity: 1,
+              },
+            }}
           />
           {!isOk && !isProcesso && (
              <IconButton size="small" sx={{ ml: 0.5, color: '#4fc3f7' }} onClick={() => onOpenCreateModal('cat', idx)}><AddIcon fontSize="small" /></IconButton>
           )}
         </Box>
       </TableCell>
-      <TableCell sx={{ minWidth: 300, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ minWidth: 300, borderBottom: cellBorder, color: primaryText }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Autocomplete
             multiple
@@ -159,7 +195,23 @@ export default function BatchRow({
             renderTags={(value, getTagProps) =>
               value.map((option, index) => {
                  const { key, ...tagProps } = getTagProps({ index })
-                 return <Chip key={key} size="small" label={option.name || option.slug || option} {...tagProps} variant={option.iaSuggested ? 'filled' : 'outlined'} color="secondary" />
+                 return (
+                   <Chip
+                     key={key}
+                     size="small"
+                     label={option.name || option.slug || option}
+                     {...tagProps}
+                     sx={{
+                       color: '#fff1ff',
+                       backgroundColor: option.iaSuggested ? 'rgba(244,114,182,0.46)' : 'rgba(217,70,239,0.36)',
+                       border: '1px solid rgba(251,207,232,0.78)',
+                       fontWeight: 700,
+                       '& .MuiChip-label': { px: 0.75 },
+                       '& .MuiChip-deleteIcon': { color: '#fff1ff' },
+                       '&.Mui-disabled': { opacity: 1, color: '#fff1ff' },
+                     }}
+                   />
+                 )
               })
             }
             renderInput={params => (
@@ -168,68 +220,125 @@ export default function BatchRow({
                 size="small" 
                 placeholder={row.tags.length === 0 ? "+ Inteligencia Artificial (Tags)" : ""} 
                 variant="standard" 
-                sx={{ '& input': { color: '#fff' }, '& input::placeholder': { color: 'rgba(255,255,255,0.7)', opacity: 1 } }}
+                sx={{
+                  '& input': { color: primaryText },
+                  '& input::placeholder': { color: secondaryText, opacity: 1 },
+                }}
               />
             )}
-            sx={{ flex: 1, '& .MuiSvgIcon-root': { color: '#fff' } }}
+            sx={{
+              flex: 1,
+              '& .MuiSvgIcon-root': { color: primaryText },
+              '& .MuiChip-root': { opacity: 1 },
+              '&.Mui-disabled': { opacity: 1 },
+              '& .MuiInputBase-input.Mui-disabled': {
+                color: '#f8e8ff',
+                WebkitTextFillColor: '#f8e8ff',
+                opacity: 1,
+              },
+            }}
           />
           {!isOk && !isProcesso && (
              <IconButton size="small" sx={{ ml: 0.5, color: '#4fc3f7' }} onClick={() => onOpenCreateModal('tag', idx)}><AddIcon fontSize="small" /></IconButton>
           )}
         </Box>
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ borderBottom: cellBorder, color: primaryText }}>
         <Button 
           variant="outlined" 
           size="small" 
           color="secondary"
           onClick={() => onOpenProfiles(idx)}
           disabled={isOk || isProcesso}
-          sx={{ textTransform: 'none', borderRadius: 4, minWidth: 90, color: '#b388ff', borderColor: '#b388ff', '&:hover': { color: '#d1c4e9', borderColor: '#d1c4e9' } }}
+          sx={{
+            textTransform: 'none',
+            borderRadius: 4,
+            minWidth: 90,
+            color: '#f5e8ff',
+            borderColor: 'rgba(221, 214, 254, 0.7)',
+            backgroundColor: 'rgba(109, 40, 217, 0.28)',
+            fontWeight: 700,
+            '&:hover': {
+              color: '#f5e8ff',
+              borderColor: 'rgba(233, 213, 255, 0.92)',
+              backgroundColor: 'rgba(126, 34, 206, 0.42)',
+            },
+            '&.Mui-disabled': {
+              color: '#f5e8ff',
+              borderColor: 'rgba(221, 214, 254, 0.55)',
+              backgroundColor: 'rgba(109, 40, 217, 0.2)',
+              opacity: 1,
+            },
+          }}
         >
           {row.perfiles || 'Perfiles'}
         </Button>
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell sx={{ borderBottom: cellBorder, color: primaryText }}>
         <Select
           value={row.cuenta || ''}
           displayEmpty
           onChange={e => onCuentaChange(idx, e.target.value)}
           size="small"
           variant="outlined"
-          sx={{ minWidth: 120, bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: 1, '& .MuiSelect-icon': { color: '#fff' } }}
+          sx={{
+            minWidth: 120,
+            bgcolor: 'rgba(51, 65, 85, 0.65)',
+            color: primaryText,
+            borderRadius: 1,
+            '& .MuiSelect-icon': { color: primaryText },
+            '& .MuiSelect-select': {
+              color: '#f8fbff',
+              fontWeight: 700,
+            },
+            '& .MuiSelect-select.Mui-disabled': {
+              color: '#f8fbff',
+              WebkitTextFillColor: '#f8fbff',
+              opacity: 1,
+            },
+            '&.Mui-disabled': {
+              color: '#f8fbff',
+              opacity: 1,
+            },
+            '&.Mui-disabled .MuiSvgIcon-root': {
+              color: '#e2e8f0',
+              opacity: 1,
+            },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(148,163,184,0.42)' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(191,219,254,0.7)' },
+          }}
           disabled={isOk || isProcesso}
         >
-          <MenuItem value="" disabled sx={{ color: 'rgba(255,255,255,0.7)' }}>Selecciona...</MenuItem>
+          <MenuItem value="" disabled sx={{ color: '#94a3b8' }}>Selecciona...</MenuItem>
           {cuentas.map(c => (
-            <MenuItem key={c.id} value={c.id}>{c.alias}</MenuItem>
+            <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', bgcolor: '#0f172a', fontWeight: 700 }}>{c.alias}</MenuItem>
           ))}
         </Select>
       </TableCell>
       {/* ─── Main Status ─── */}
-      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell align="center" sx={{ borderBottom: cellBorder, color: primaryText }}>
         {(() => {
           const s = mainStatus
-          if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(76,175,80,0.25)', color: '#81c784', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'UPLOADING') return <Chip label={`⬆️ ${row.mainProgress || 0}%`} size="small" sx={{ bgcolor: 'rgba(33,150,243,0.25)', color: '#64b5f6', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'EXTRACTING') return <Chip label="🔓 Extrayendo" size="small" sx={{ bgcolor: 'rgba(255,152,0,0.2)', color: '#ffb74d', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'COMPRESSING') return <Chip label="📦 Comprimiendo" size="small" sx={{ bgcolor: 'rgba(255,152,0,0.2)', color: '#ffb74d', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'ERROR') return <Chip label="❌ Error" size="small" sx={{ bgcolor: 'rgba(244,67,54,0.2)', color: '#e57373', fontWeight: 700, fontSize: 11 }} />
-          return <Chip label="⏳" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
+          if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(22,163,74,0.35)', color: '#dcfce7', border: '1px solid rgba(134,239,172,0.7)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'UPLOADING') return <Chip label={`⬆️ ${row.mainProgress || 0}%`} size="small" sx={{ bgcolor: 'rgba(14,165,233,0.35)', color: '#e0f2fe', border: '1px solid rgba(125,211,252,0.72)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'EXTRACTING') return <Chip label="🔓 Extrayendo" size="small" sx={{ bgcolor: 'rgba(245,158,11,0.33)', color: '#fff7ed', border: '1px solid rgba(253,186,116,0.75)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'COMPRESSING') return <Chip label="📦 Comprimiendo" size="small" sx={{ bgcolor: 'rgba(249,115,22,0.33)', color: '#fff7ed', border: '1px solid rgba(251,146,60,0.75)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'ERROR') return <Chip label="❌ Error" size="small" sx={{ bgcolor: 'rgba(239,68,68,0.35)', color: '#fee2e2', border: '1px solid rgba(252,165,165,0.72)', fontWeight: 700, fontSize: 11 }} />
+          return <Chip label="⏳" size="small" sx={{ bgcolor: 'rgba(100,116,139,0.32)', color: '#e2e8f0', border: '1px solid rgba(148,163,184,0.68)', fontSize: 11 }} />
         })()}
       </TableCell>
       {/* ─── Backup Status ─── */}
-      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell align="center" sx={{ borderBottom: cellBorder, color: primaryText }}>
         {(() => {
           const s = backupStatus
-          if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(76,175,80,0.25)', color: '#81c784', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'UPLOADING') return <Chip label="⬆️ Subiendo" size="small" sx={{ bgcolor: 'rgba(33,150,243,0.25)', color: '#64b5f6', fontWeight: 700, fontSize: 11 }} />
-          if (s === 'N/A') return <Chip label="— N/A" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)', fontSize: 11 }} />
-          if (s === 'ERROR') return <Chip label="❌ Error" size="small" sx={{ bgcolor: 'rgba(244,67,54,0.2)', color: '#e57373', fontWeight: 700, fontSize: 11 }} />
-          return <Chip label="⏳" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
+          if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(22,163,74,0.35)', color: '#dcfce7', border: '1px solid rgba(134,239,172,0.7)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'UPLOADING') return <Chip label="⬆️ Subiendo" size="small" sx={{ bgcolor: 'rgba(14,165,233,0.35)', color: '#e0f2fe', border: '1px solid rgba(125,211,252,0.72)', fontWeight: 700, fontSize: 11 }} />
+          if (s === 'N/A') return <Chip label="— N/A" size="small" sx={{ bgcolor: 'rgba(100,116,139,0.32)', color: '#e2e8f0', border: '1px solid rgba(148,163,184,0.68)', fontSize: 11 }} />
+          if (s === 'ERROR') return <Chip label="❌ Error" size="small" sx={{ bgcolor: 'rgba(239,68,68,0.35)', color: '#fee2e2', border: '1px solid rgba(252,165,165,0.72)', fontWeight: 700, fontSize: 11 }} />
+          return <Chip label="⏳" size="small" sx={{ bgcolor: 'rgba(100,116,139,0.32)', color: '#e2e8f0', border: '1px solid rgba(148,163,184,0.68)', fontSize: 11 }} />
         })()}
       </TableCell>
-      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <TableCell align="center" sx={{ borderBottom: cellBorder, color: primaryText }}>
          {rowInFlight && <CircularProgress size={24} />}
          {isOk && <CheckCircleOutlineIcon color="success" />}
          {isError && (
@@ -237,7 +346,7 @@ export default function BatchRow({
              <ErrorOutlineIcon color="error" />
            </Tooltip>
          )}
-         {row.estado === 'borrador' && <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Borrador</Typography>}
+         {row.estado === 'borrador' && <Typography variant="caption" sx={{ color: secondaryText }}>Borrador</Typography>}
       </TableCell>
     </TableRow>
   )
