@@ -293,10 +293,10 @@ export default function UploadAssetPage() {
   const [queueMode, setQueueMode] = useState('http')
   const [batchId, setBatchId] = useState('')
   const [scpModalOpen, setScpModalOpen] = useState(false)
-  const [scpHost, setScpHost] = useState('')
-  const [scpUser, setScpUser] = useState('')
-  const [scpPort, setScpPort] = useState('22')
-  const [scpRemoteBase, setScpRemoteBase] = useState('')
+  const [scpPin, setScpPin] = useState('')
+  const [scpCommandData, setScpCommandData] = useState(null)
+  const [scpCommandError, setScpCommandError] = useState('')
+  const [scpCommandLoading, setScpCommandLoading] = useState(false)
   const [copiedNameMap, setCopiedNameMap] = useState({}) // feedback de copiado por item
   const queueThumbUrlMapRef = React.useRef(new Map()) // { [queueItemId]: { url, file } }
   // Overlay oscuro manual (switch flotante)
@@ -315,6 +315,34 @@ export default function UploadAssetPage() {
     const count = (uploadQueue || []).length
     return `${count} en cola - ${queueTotalMB.toFixed(1)}MB`
   }, [uploadQueue, queueTotalMB])
+
+  const handleUnlockScpCommand = useCallback(async () => {
+    const pin = String(scpPin || '').trim()
+    if (pin.length !== 4) {
+      setScpCommandError('PIN inválido. Debe tener 4 dígitos.')
+      return
+    }
+    setScpCommandLoading(true)
+    setScpCommandError('')
+    try {
+      const res = await http.postData('/assets/scp-command', {
+        pin,
+        mode: 'uploader',
+        batchId,
+      })
+      if (res?.data?.ok && res?.data?.commands) {
+        setScpCommandData(res.data)
+      } else {
+        setScpCommandData(null)
+        setScpCommandError(res?.data?.message || 'No se pudo obtener el comando SCP')
+      }
+    } catch (e) {
+      setScpCommandData(null)
+      setScpCommandError(e?.response?.data?.message || e?.message || 'No se pudo desbloquear el comando SCP')
+    } finally {
+      setScpCommandLoading(false)
+    }
+  }, [batchId, scpPin])
 
   // Evitar doble click/ejecuciones paralelas al encolar
   const addToQueueLockRef = React.useRef(false)
@@ -2542,14 +2570,9 @@ export default function UploadAssetPage() {
               onClick={async () => {
                 // Asegurar hold mientras el usuario copia/usa el comando y hace scp en otra terminal
                 await startScpHold(360)
-                try {
-                  const r = await http.getData('/assets/scp-config')
-                  const cfg = r?.data || {}
-                  if (cfg.host) setScpHost(cfg.host)
-                  if (cfg.user) setScpUser(cfg.user)
-                  if (cfg.port) setScpPort(String(cfg.port))
-                  if (cfg.remoteBase) setScpRemoteBase(cfg.remoteBase)
-                } catch {}
+                setScpPin('')
+                setScpCommandData(null)
+                setScpCommandError('')
                 setScpModalOpen(true)
               }}
               variant={'cyan'}
@@ -3025,18 +3048,39 @@ export default function UploadAssetPage() {
         <DialogTitle>Subida por SCP</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Configura tu destino y copia el comando. Ruta remota calculada: {`${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`}
+            Desbloquea con PIN para obtener el comando SCP generado por backend. Host, usuario, puerto y ruta remota base no son editables.
           </Typography>
           <Stack direction={{ xs:'column', md:'row' }} spacing={2} sx={{ mb: 2 }}>
-            <TextField label="Host" value={scpHost} onChange={e=>setScpHost(e.target.value)} fullWidth />
-            <TextField label="Usuario" value={scpUser} onChange={e=>setScpUser(e.target.value)} fullWidth />
-            <TextField label="Puerto" value={scpPort} onChange={e=>setScpPort(e.target.value)} fullWidth />
+            <TextField
+              label="PIN"
+              value={scpPin}
+              onChange={(e) => setScpPin(String(e.target.value || '').replace(/\D/g, '').slice(0, 4))}
+              fullWidth
+              autoFocus
+              placeholder="1991"
+              inputProps={{ maxLength: 4 }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleUnlockScpCommand}
+              disabled={scpCommandLoading}
+              sx={{ minWidth: 170, textTransform: 'none', fontWeight: 700 }}
+            >
+              {scpCommandLoading ? 'Desbloqueando…' : 'Desbloquear'}
+            </Button>
           </Stack>
-          <TextField label="Ruta remota base" value={scpRemoteBase} onChange={e=>setScpRemoteBase(e.target.value)} fullWidth sx={{ mb:2 }} />
+
+          {scpCommandError ? (
+            <Typography variant="body2" sx={{ mb: 2, color: 'error.main' }}>
+              {scpCommandError}
+            </Typography>
+          ) : null}
+
+          {scpCommandData?.commands ? (
           <Box sx={{ p: 1.5, borderRadius: 1, background: 'rgba(255,255,255,0.06)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 13 }}>
             {/* Nombre de carpeta recomendado (local) */}
             {(() => {
-              const folderName = `batch_${batchId || '<batchId>'}`
+              const folderName = String(scpCommandData?.commands?.recommendedLocalFolder || (batchId || '<batchId>'))
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div><span style={{ fontWeight: 700, fontSize: 15 }}>Nombre de carpeta recomendado (local):</span> {folderName}</div>
@@ -3047,7 +3091,7 @@ export default function UploadAssetPage() {
 
             <div style={{ fontWeight: 700, fontSize: 15 }}>Crear carpeta del batch (una vez)</div>
             {(() => {
-              const cmd = `ssh ${scpUser || 'user'}@${scpHost || 'host'} "mkdir -p ${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}"`
+              const cmd = String(scpCommandData?.commands?.mkdirCmd || '')
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div>{cmd}</div>
@@ -3058,7 +3102,7 @@ export default function UploadAssetPage() {
             <br />
             <div style={{ fontWeight: 700, fontSize: 15 }}>Ejemplo un archivo (adapta la ruta local)</div>
             {(() => {
-              const cmd = `scp -P ${scpPort || 22} "C:\\ruta\\a\\tu\\archivo.zip" ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
+              const cmd = String(scpCommandData?.commands?.singleFileCmd || '')
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div>{cmd}</div>
@@ -3069,7 +3113,7 @@ export default function UploadAssetPage() {
             <br />
             <div style={{ fontWeight: 700, fontSize: 15 }}>Subir SOLO el contenido de una carpeta (evita subir la carpeta raíz)</div>
             {(() => {
-              const cmd = `cd C:\\stl-hub\\batch_${batchId || '<batchId>'}; scp -P ${scpPort || 22} -r .\\* ${scpUser || 'user'}@${scpHost || 'host'}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/tmp/${batchId || '<batchId>'}/`
+              const cmd = String(scpCommandData?.commands?.folderContentCmd || '')
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div>{cmd}</div>
@@ -3080,7 +3124,7 @@ export default function UploadAssetPage() {
             <br />
             <div style={{ fontWeight: 700, fontSize: 15 }}>Sincronización continua con WinSCP (recomendada mientras anexas archivos)</div>
             {(() => {
-              const cmd = `Set-Location g:\\STLHUB; powershell -ExecutionPolicy Bypass -File .\\tools\\winscp-keepup.ps1 -BatchFolderName \"batch_${batchId || '<batchId>'}\"`
+              const cmd = String(scpCommandData?.commands?.winscpKeepupCmd || '')
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div>{cmd}</div>
@@ -3091,7 +3135,11 @@ export default function UploadAssetPage() {
             <div style={{ marginTop: 6, opacity: 0.8 }}>
               Déjalo corriendo mientras anexas archivos; se detiene con Ctrl+C.
             </div>
+            <div style={{ marginTop: 6, opacity: 0.8 }}>
+              Ruta destino fija: {String(scpCommandData?.commands?.remoteTmpDir || '')}
+            </div>
           </Box>
+          ) : null}
           {/* Tip de PowerShell eliminado a pedido */}
         </DialogContent>
         <DialogActions>

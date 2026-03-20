@@ -23,10 +23,10 @@ export default function BatchTable() {
   const [tagsCatalog, setTagsCatalog] = useState([])
 
   const [scpModalOpen, setScpModalOpen] = useState(false)
-  const [scpHost, setScpHost] = useState('127.0.0.1')
-  const [scpUser, setScpUser] = useState('root')
-  const [scpPort, setScpPort] = useState('22')
-  const [scpRemoteBase, setScpRemoteBase] = useState('/root')
+  const [scpPin, setScpPin] = useState('')
+  const [scpCommandData, setScpCommandData] = useState(null)
+  const [scpCommandError, setScpCommandError] = useState('')
+  const [scpCommandLoading, setScpCommandLoading] = useState(false)
 
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
@@ -250,18 +250,34 @@ export default function BatchTable() {
               id: c.id, alias: c.alias || c.email, limitMB: ACCOUNT_LIMIT_MB, usedMB: c.storageUsedMB || 0
            })))
         }
-        
-        const scpCfg = await http.getData('/assets/scp-config')
-        if (scpCfg.data) {
-           if (scpCfg.data.host) setScpHost(scpCfg.data.host)
-           if (scpCfg.data.user) setScpUser(scpCfg.data.user)
-           if (scpCfg.data.port) setScpPort(scpCfg.data.port)
-           if (scpCfg.data.remoteBase) setScpRemoteBase(scpCfg.data.remoteBase)
-        }
       } catch {}
     }
     fetchCatalogs()
   }, [])
+
+  const fetchBatchScpCommand = async () => {
+    const pin = String(scpPin || '').trim()
+    if (pin.length !== 4) {
+      setScpCommandError('PIN inválido. Debe tener 4 dígitos.')
+      return
+    }
+    setScpCommandLoading(true)
+    setScpCommandError('')
+    try {
+      const res = await http.postData('/assets/scp-command', { pin, mode: 'batch' })
+      if (res?.data?.ok && res?.data?.commands) {
+        setScpCommandData(res.data)
+      } else {
+        setScpCommandData(null)
+        setScpCommandError(res?.data?.message || 'No se pudo obtener el comando SCP')
+      }
+    } catch (e) {
+      setScpCommandData(null)
+      setScpCommandError(e?.response?.data?.message || e?.message || 'No se pudo desbloquear el comando SCP')
+    } finally {
+      setScpCommandLoading(false)
+    }
+  }
 
   const mapEstado = (status) => {
     const s = (status || '').toLowerCase()
@@ -753,7 +769,12 @@ export default function BatchTable() {
          <Button 
             variant="contained" 
             color="secondary"
-            onClick={() => setScpModalOpen(true)}
+            onClick={() => {
+              setScpModalOpen(true)
+              setScpPin('')
+              setScpCommandData(null)
+              setScpCommandError('')
+            }}
             sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
          >
            Subida SCP ("El Pesado")
@@ -1046,21 +1067,57 @@ export default function BatchTable() {
         <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Comando para Subida Pesada (SCP)</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
-            Pega este comando en tu terminal para enviar el contenido de tu súper carpeta local al servidor.
+            Desbloquea con PIN para obtener el comando generado por backend. Host, usuario, puerto y ruta remota base no son editables.
           </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+            <TextField
+              label="PIN"
+              value={scpPin}
+              onChange={(e) => setScpPin(String(e.target.value || '').replace(/\D/g, '').slice(0, 4))}
+              fullWidth
+              autoFocus
+              placeholder="1991"
+              inputProps={{ maxLength: 4 }}
+            />
+            <Button
+              variant="contained"
+              onClick={fetchBatchScpCommand}
+              disabled={scpCommandLoading}
+              sx={{ minWidth: 170, textTransform: 'none', fontWeight: 700 }}
+            >
+              {scpCommandLoading ? 'Desbloqueando…' : 'Desbloquear'}
+            </Button>
+          </Stack>
+
+          {scpCommandError ? (
+            <Alert severity="error" sx={{ mb: 2 }}>{scpCommandError}</Alert>
+          ) : null}
+
+          {!scpCommandData?.commands ? null : (
           <Box sx={{ p: 2, borderRadius: 2, background: 'rgba(0,0,0,0.3)', fontFamily: 'monospace', fontSize: 13, border: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#69f0ae' }}>Comando SCP Directo:</div>
-            {(() => {
-              const cmd = `cd C:\\stl-hub\\super-batch; scp -r .\\* ${scpUser}@${scpHost}:${scpRemoteBase.replace(/\\/g,'/').replace(/\/$/, '')}/uploads/batch_imports/`
-              return (
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.5, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>{cmd}</Typography>
-                  <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(cmd)}>Copiar</Button>
-                </Stack>
-              )
-            })()}
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>* Si en algún momento necesitas cambiar la IP del proxy o el usuario, este modal tomará los valores automáticos que configuraste en tu Uploader.</Typography>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.5, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
+                {scpCommandData.commands.folderContentCmd}
+              </Typography>
+              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.folderContentCmd)}>Copiar</Button>
+            </Stack>
+
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mb: 1 }}>
+              Crear carpeta remota (solo si hace falta):
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
+                {scpCommandData.commands.mkdirCmd}
+              </Typography>
+              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.mkdirCmd)}>Copiar</Button>
+            </Stack>
+
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mt: 1.25 }}>
+              Ruta destino fija: {scpCommandData.commands.remoteBatchImportsDir}
+            </Typography>
           </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button variant="contained" onClick={() => setScpModalOpen(false)}>¡Entendido!</Button>
