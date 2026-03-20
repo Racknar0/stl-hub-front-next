@@ -33,7 +33,7 @@ export default function BatchTable() {
 
   const [previewImage, setPreviewImage] = useState(null)
   const [finishModal, setFinishModal] = useState({ open: false, completed: 0, failed: 0, total: 0 })
-  const [watchBatchRun, setWatchBatchRun] = useState(false)
+  const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
 
   // SIMILARS SIDEBAR STATES
   const RIGHT_SIDEBAR_WIDTH = 340
@@ -325,21 +325,40 @@ export default function BatchTable() {
   }, [])
 
   useEffect(() => {
-    if (!watchBatchRun) return
+    if (!watchBatchRun?.active) return
 
-    const hasInFlight = rows.some(r => {
+    const trackedIds = Array.isArray(watchBatchRun.trackedIds)
+      ? watchBatchRun.trackedIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+      : []
+    if (!trackedIds.length) return
+
+    const trackedRows = rows.filter((r) => trackedIds.includes(Number(r.id)))
+    if (trackedRows.length < trackedIds.length) return
+
+    const hasInFlight = trackedRows.some(r => {
       const st = String(r.estado || '').toLowerCase()
       const backup = String(r.backupStatus || '').toUpperCase()
       return st === 'procesando' || (st === 'completado' && (backup === 'PENDING' || backup === 'UPLOADING'))
     })
 
-    if (hasInFlight) return
+    if (hasInFlight) {
+      if (!watchBatchRun.sawInFlight) {
+        setWatchBatchRun((prev) => ({ ...prev, sawInFlight: true }))
+      }
+      return
+    }
 
-    const total = rows.length
-    const completed = rows.filter(r => String(r.estado || '').toLowerCase() === 'completado').length
-    const failed = rows.filter(r => String(r.estado || '').toLowerCase() === 'error').length
+    const allTerminal = trackedRows.every((r) => {
+      const st = String(r.estado || '').toLowerCase()
+      return st === 'completado' || st === 'error'
+    })
+    if (!allTerminal) return
+
+    const total = trackedIds.length
+    const completed = trackedRows.filter(r => String(r.estado || '').toLowerCase() === 'completado').length
+    const failed = trackedRows.filter(r => String(r.estado || '').toLowerCase() === 'error').length
     setFinishModal({ open: true, completed, failed, total })
-    setWatchBatchRun(false)
+    setWatchBatchRun({ active: false, trackedIds: [], sawInFlight: false })
   }, [rows, watchBatchRun])
 
   const handleScanLocal = async () => {
@@ -579,7 +598,12 @@ export default function BatchTable() {
           ? `¡${confirmedCount} assets enviados a la cola de subida!${renameMsg}`
           : 'No se enviaron assets: revisa límites y cuentas asignadas.'
         setToast({ open: true, msg: confirmedMsg, type: confirmedCount > 0 ? 'success' : 'warning' })
-        if (confirmedCount > 0) setWatchBatchRun(true)
+        if (confirmedCount > 0) {
+          const confirmedIds = Array.isArray(res.data?.confirmedIds)
+            ? res.data.confirmedIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+            : []
+          setWatchBatchRun({ active: true, trackedIds: confirmedIds, sawInFlight: false })
+        }
          fetchQueue() // Refrescar del backend
       } else {
          setToast({ open: true, msg: `Error: ${res.data?.message || 'Fallo inesperado'}`, type: 'error' })
