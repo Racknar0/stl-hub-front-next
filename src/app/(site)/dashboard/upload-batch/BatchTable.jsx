@@ -426,7 +426,17 @@ export default function BatchTable() {
                
                // Preservar ediciones locales si sigue en borrador
                if (existing && existing.estado === 'borrador' && estadoDB === 'borrador') {
-                 return { ...existing }
+                 const backendCats = Array.isArray(item.categories) ? item.categories : []
+                 const backendTags = Array.isArray(item.tags) ? item.tags : []
+                 const localCats = Array.isArray(existing.categorias) ? existing.categorias : []
+                 const localTags = Array.isArray(existing.tags) ? existing.tags : []
+
+                 // Mantener edición local, pero no pisar sugerencias IA si local está vacío.
+                 return {
+                   ...existing,
+                   categorias: localCats.length > 0 ? localCats : backendCats,
+                   tags: localTags.length > 0 ? localTags : backendTags,
+                 }
                }
                
                return {
