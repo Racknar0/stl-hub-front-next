@@ -752,6 +752,27 @@ export default function BatchTable() {
          <Button 
             variant="outlined" 
             onClick={async () => {
+              if (!confirm('¿Eliminar todos los items COMPLETADOS del batch?')) return
+              try {
+                const res = await http.deleteRaw('/batch-imports/completed')
+                if (res.data?.success) {
+                  setToast({ open: true, msg: res.data.message || 'Completados eliminados', type: 'success' })
+                  fetchQueue()
+                } else {
+                  setToast({ open: true, msg: 'Error al eliminar completados', type: 'error' })
+                }
+              } catch (e) {
+                console.error(e)
+                setToast({ open: true, msg: 'Error de red al eliminar completados', type: 'error' })
+              }
+            }}
+            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold', borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#fbbf24', color: '#fbbf24', background: 'rgba(245,158,11,0.08)' } }}
+         >
+           ✅ Eliminar Completados
+         </Button>
+         <Button 
+            variant="outlined" 
+            onClick={async () => {
               if (!confirm('¿Estás seguro? Esto eliminará TODOS los items del batch, las carpetas y los registros de la BD.')) return
               try {
                 const res = await http.deleteRaw('/batch-imports/purge-all')
