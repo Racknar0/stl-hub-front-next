@@ -1468,7 +1468,13 @@ export default function BatchTable() {
         )}
       </RightSidebar>
 
-      <Snackbar open={toast.open} autoHideDuration={6000} onClose={()=>setToast({...toast, open:false})} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}>
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={() => setToast({ ...toast, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ mt: 1.5 }}
+      >
         <Alert severity={toast.type} variant="filled" sx={{ width: '100%', borderRadius: 2, fontWeight: 'bold' }}>
           {toast.msg}
         </Alert>
