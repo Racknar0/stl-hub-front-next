@@ -155,7 +155,7 @@ export default function BatchTable() {
             .filter(Boolean)
         : []
       const tags = Array.isArray(row?.tags)
-        ? row.tags.map((t) => String(t?.slug || t?.name || t || '').trim()).filter(Boolean)
+        ? row.tags.map((t) => String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || t || '').trim()).filter(Boolean)
         : []
 
       setSimilarityMap((m) => ({
@@ -177,7 +177,7 @@ export default function BatchTable() {
         categorySlugs,
         tags,
         title: titleValue,
-        titleEn: titleValue,
+        titleEn: String(row?.nombreEn || titleValue || '').trim(),
       }
 
       const r = await http.postData('/assets/similar', payload)
@@ -290,6 +290,7 @@ export default function BatchTable() {
                  id: item.id,
                  batchId: item.batchId,
                  nombre: item.title || item.folderName,
+                 nombreEn: item.titleEn || item.title || item.folderName,
                  categorias: item.categories || [],
                  tags: item.tags || [],
                  imagenes: item.images || [],
@@ -416,6 +417,12 @@ export default function BatchTable() {
   const handleNombreChange = (idx, value) => {
     const updated = [...rows]
     updated[idx].nombre = value
+    setRows(updated)
+  }
+
+  const handleNombreEnChange = (idx, value) => {
+    const updated = [...rows]
+    updated[idx].nombreEn = value
     setRows(updated)
   }
 
@@ -614,19 +621,45 @@ export default function BatchTable() {
     setSelectedRowIdxPerfil(null)
   }
 
+  const hasRowCategories = (row) => {
+    return Array.isArray(row?.categorias) && row.categorias.some((c) => {
+      const id = Number(c?.id || 0)
+      const key = String(c?.slug || c?.name || '').trim()
+      return (Number.isFinite(id) && id > 0) || !!key
+    })
+  }
+
+  const hasRowTags = (row) => {
+    return Array.isArray(row?.tags) && row.tags.some((t) => {
+      if (typeof t === 'string') return !!String(t).trim()
+      const id = Number(t?.id || 0)
+      const key = String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || '').trim()
+      return (Number.isFinite(id) && id > 0) || !!key
+    })
+  }
+
+  const isRowReadyForQueue = (row) => {
+    const accountId = Number(row?.cuenta || 0)
+    return Number.isFinite(accountId) && accountId > 0 && hasRowCategories(row) && hasRowTags(row)
+  }
+
   const handleProcessBatch = async () => {
     const retryableRows = rows.filter(r => r.estado === 'borrador' || r.estado === 'error')
-    const invalidRows = retryableRows.some(r => !r.cuenta)
-    if (invalidRows) {
-       setToast({ open: true, msg: 'Error: Hay assets sin cuenta asignada. Usa Distribuir Automáticamente.', type: 'error' })
-       return
+    if (retryableRows.length === 0) return
+
+    const readyRows = retryableRows.filter(isRowReadyForQueue)
+    const pendingRows = retryableRows.filter((r) => !isRowReadyForQueue(r))
+    if (readyRows.length === 0) {
+      setToast({
+        open: true,
+        msg: 'No hay assets listos. Completa cuenta, categoría y tags para al menos un item.',
+        type: 'warning'
+      })
+      return
     }
 
-    const unassignedCount = retryableRows.length
-    if (unassignedCount === 0) return
-
     const incomingByAccount = new Map()
-    for (const row of retryableRows) {
+    for (const row of readyRows) {
       const accountId = Number(row.cuenta || 0)
       if (!accountId) continue
       const sizeMb = Number(row.pesoMB || 0)
@@ -657,11 +690,10 @@ export default function BatchTable() {
 
     try {
       // 1. Guardar cambios (nombre, cuenta, categorias, tags)
-      const pendingRows = retryableRows.filter(r => r.cuenta)
-      
-      const savePromises = pendingRows.map(row => 
+      const savePromises = readyRows.map(row => 
         http.patchData('/batch-imports/items', row.id, {
           title: row.nombre,
+          titleEn: row.nombreEn,
           targetAccount: row.cuenta,
           categories: row.categorias,
           tags: row.tags
@@ -670,7 +702,7 @@ export default function BatchTable() {
       await Promise.all(savePromises)
 
       // 2. Confirmar items para pasarlos a QUEUED en el Worker
-      const itemIds = pendingRows.map(r => r.id)
+      const itemIds = readyRows.map(r => r.id)
       const res = await http.postData('/batch-imports/confirm', { itemIds })
       
       if (res.data?.success) {
@@ -681,8 +713,11 @@ export default function BatchTable() {
         const renamedCount = Array.isArray(res.data?.renamed) ? res.data.renamed.length : 0
         const renameMsg = renamedCount > 0 ? ` · renombrados por duplicado: ${renamedCount}` : ''
         const confirmedCount = Number(res.data?.confirmed || 0)
+        const pendingMsg = pendingRows.length > 0
+          ? ` · pendientes por completar: ${pendingRows.length}`
+          : ''
         const confirmedMsg = confirmedCount > 0
-          ? `¡${confirmedCount} assets enviados a la cola de subida!${renameMsg}`
+          ? `¡${confirmedCount} assets enviados a la cola de subida!${renameMsg}${pendingMsg}`
           : 'No se enviaron assets: revisa límites y cuentas asignadas.'
         setToast({ open: true, msg: confirmedMsg, type: confirmedCount > 0 ? 'success' : 'warning' })
         if (confirmedCount > 0) {
@@ -730,7 +765,7 @@ export default function BatchTable() {
             disabled={isScanning}
             sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
          >
-           {isScanning ? 'Escaneando...' : 'Escanear Carpetas'}
+           {isScanning ? 'Escaneando + IA...' : 'Escanear Carpetas'}
          </Button>
          <Button 
             variant="outlined" 
@@ -792,6 +827,15 @@ export default function BatchTable() {
            🗑️ Eliminar Todo
          </Button>
        </Stack>
+
+       {isScanning && (
+         <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2, px: 0.5 }}>
+           <CircularProgress size={18} thickness={5} />
+           <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.92)', fontWeight: 600 }}>
+             Procesando escaneo e IA, espera a que finalice...
+           </Typography>
+         </Stack>
+       )}
 
        <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
          <Box sx={{ p: 1.5, borderRadius: 2, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(125,211,252,0.35)' }}>
@@ -914,7 +958,7 @@ export default function BatchTable() {
           <TableHead>
             <TableRow>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (Carpeta Encontrada)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (ES / EN)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags (IA)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
@@ -941,6 +985,7 @@ export default function BatchTable() {
                 tagsCatalog={tagsCatalog}
                 cuentas={cuentas}
                 onNombreChange={handleNombreChange}
+                onNombreEnChange={handleNombreEnChange}
                 onCategoriasChange={handleCategoriasChange}
                 onTagsChange={handleTagsChange}
                 onCuentaChange={handleCuentaChange}

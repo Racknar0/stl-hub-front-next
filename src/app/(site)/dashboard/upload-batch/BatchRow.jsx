@@ -16,6 +16,7 @@ export default function BatchRow({
   tagsCatalog = [],
   cuentas = [],
   onNombreChange = () => {},
+  onNombreEnChange = () => {},
   onCategoriasChange = () => {},
   onTagsChange = () => {},
   onCuentaChange = () => {},
@@ -98,10 +99,34 @@ export default function BatchRow({
              )}
           </Stack>
           <Box flex={1}>
+             <Typography variant="caption" sx={{ display: 'block', color: secondaryText, mb: 0.25 }}>
+               Nombre ES
+             </Typography>
              <TextField
                value={row.nombre}
                size="small"
                onChange={e => onNombreChange(idx, e.target.value)}
+               variant="standard"
+               fullWidth
+               InputProps={{ disableUnderline: isOk || isProcesso, sx: { color: '#fff' } }}
+               sx={{
+                 '& input': { color: primaryText, fontWeight: 500 },
+                 '& input::placeholder': { color: secondaryText, opacity: 1 },
+                 '& .MuiInputBase-input.Mui-disabled': {
+                   color: '#f8fbff',
+                   WebkitTextFillColor: '#f8fbff',
+                   opacity: 1,
+                 },
+               }}
+               disabled={isOk || isProcesso}
+             />
+             <Typography variant="caption" sx={{ display: 'block', color: secondaryText, mt: 0.6, mb: 0.25 }}>
+               Name EN
+             </Typography>
+             <TextField
+               value={row.nombreEn || ''}
+               size="small"
+               onChange={e => onNombreEnChange(idx, e.target.value)}
                variant="standard"
                fullWidth
                InputProps={{ disableUnderline: isOk || isProcesso, sx: { color: '#fff' } }}
@@ -188,7 +213,7 @@ export default function BatchRow({
             multiple
             freeSolo
             options={tagsCatalog}
-            getOptionLabel={o => o.name || o.slug || ''}
+            getOptionLabel={o => o.name || o.es || o.nameEn || o.en || o.slug || ''}
             value={row.tags}
             disabled={isOk || isProcesso}
             onChange={(_, v) => onTagsChange(idx, v)}
@@ -199,7 +224,7 @@ export default function BatchRow({
                    <Chip
                      key={key}
                      size="small"
-                     label={option.name || option.slug || option}
+                     label={option.name || option.es || option.nameEn || option.en || option.slug || option}
                      {...tagProps}
                      sx={{
                        color: '#fff1ff',
