@@ -809,10 +809,6 @@ export default function BatchTable() {
     }
   }
 
-  const handleCuentaSelectOpen = useCallback(() => {
-    void refreshBatchAccounts({ silent: true })
-  }, [refreshBatchAccounts])
-
   const handleOpenPerfilModal = (rowIdx) => {
     setSelectedRowIdxPerfil(rowIdx)
     setProfilesModalOpen(true)
@@ -1322,7 +1318,6 @@ export default function BatchTable() {
                 onCategoriasChange={handleCategoriasChange}
                 onTagsChange={handleTagsChange}
                 onCuentaChange={handleCuentaChange}
-                onCuentaSelectOpen={handleCuentaSelectOpen}
                 onOpenCreateModal={openCreateModal}
                 onOpenProfiles={handleOpenPerfilModal}
                 onOpenImagePreview={setPreviewImage}

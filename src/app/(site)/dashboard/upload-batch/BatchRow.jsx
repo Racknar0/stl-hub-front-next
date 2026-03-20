@@ -21,7 +21,6 @@ export default function BatchRow({
   onCategoriasChange = () => {},
   onTagsChange = () => {},
   onCuentaChange = () => {},
-  onCuentaSelectOpen = () => {},
   onOpenCreateModal = () => {},
   onOpenProfiles = () => {},
   onOpenImagePreview = () => {},
@@ -327,7 +326,6 @@ export default function BatchRow({
         <Select
           value={row.cuenta || ''}
           displayEmpty
-          onOpen={() => onCuentaSelectOpen()}
           onChange={e => onCuentaChange(idx, e.target.value)}
           size="small"
           variant="outlined"
