@@ -1271,6 +1271,7 @@ export default function BatchTable() {
                 key={row.id || idx}
                 row={row}
                 idx={idx}
+                isSimilarityFocused={Number(row?.id || 0) > 0 && Number(row?.id || 0) === Number(similaritySelectedId || 0)}
                 categoriesCatalog={categoriesCatalog}
                 tagsCatalog={tagsCatalog}
                 cuentas={cuentas}

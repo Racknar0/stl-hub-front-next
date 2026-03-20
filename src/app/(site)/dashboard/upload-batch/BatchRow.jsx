@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 export default function BatchRow({
   row,
   idx,
+  isSimilarityFocused = false,
   categoriesCatalog = [],
   tagsCatalog = [],
   cuentas = [],
@@ -35,18 +36,26 @@ export default function BatchRow({
   const primaryText = '#eef4ff';
   const secondaryText = 'rgba(220,232,255,0.82)';
   const cellBorder = '1px solid rgba(148,163,184,0.24)';
+  const baseRowBg = isError
+    ? 'rgba(239, 68, 68, 0.22)'
+    : isOk
+      ? 'rgba(22, 163, 74, 0.18)'
+      : 'rgba(15, 23, 42, 0.38)';
+  const focusedBg = 'rgba(8, 145, 178, 0.26)';
 
   return (
     <TableRow
       key={idx}
       hover
       sx={{
-        backgroundColor: isError
-          ? 'rgba(239, 68, 68, 0.22)'
-          : isOk
-            ? 'rgba(22, 163, 74, 0.18)'
-            : 'rgba(15, 23, 42, 0.38)',
-        '&:hover': { backgroundColor: 'rgba(51, 65, 85, 0.42)' },
+        backgroundColor: isSimilarityFocused ? focusedBg : baseRowBg,
+        boxShadow: isSimilarityFocused
+          ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
+          : 'none',
+        transition: 'background-color 160ms ease, box-shadow 160ms ease',
+        '&:hover': {
+          backgroundColor: isSimilarityFocused ? 'rgba(14, 165, 233, 0.32)' : 'rgba(51, 65, 85, 0.42)'
+        },
       }}
     >
       {/* Acciones */}
@@ -66,6 +75,20 @@ export default function BatchRow({
           >
             Similares
           </Button>
+          {isSimilarityFocused && (
+            <Chip
+              size="small"
+              label="En foco"
+              sx={{
+                height: 22,
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#083344',
+                backgroundColor: 'rgba(165,243,252,0.95)',
+                border: '1px solid rgba(34,211,238,0.9)'
+              }}
+            />
+          )}
           <Tooltip title="Eliminar borrador">
              <IconButton color="error" onClick={() => onRemoverFila(idx)} size="small">
                 <DeleteIcon fontSize="small" />
