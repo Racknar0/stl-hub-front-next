@@ -501,13 +501,22 @@
 
     @media (max-width: 992px) {
         /* cuadrado toma el ancho del viewport en móvil */
-        --sq: min(92vw, 560px);
+        --sq: min(96vw, 620px);
         .modal-dialog {
-            max-width: 96vw;
-            width: calc(100% - 0.8rem);
+            max-width: 98vw;
+            width: calc(100% - 0.4rem);
         }
         .dialog-body {
             grid-template-columns: 1fr;
+            gap: 0.65rem;
+            padding: 0.55rem;
+            max-height: calc(100vh - 72px);
+        }
+
+        .gallery {
+            width: 100%;
+            aspect-ratio: auto;
+            min-height: clamp(360px, 56vh, 700px);
         }
         .brand-logo {
             width: 72px;
