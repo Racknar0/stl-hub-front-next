@@ -42,6 +42,8 @@ export default function BatchTable() {
   })
   const scpPickerRef = React.useRef(null)
   const scpProbeRef = React.useRef({ sizeB: 0, ts: 0 })
+  const cuentasRef = React.useRef([])
+  const isRefreshingAccountsRef = React.useRef(false)
 
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
@@ -249,6 +251,10 @@ export default function BatchTable() {
 
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
 
+  useEffect(() => {
+    cuentasRef.current = Array.isArray(cuentas) ? cuentas : []
+  }, [cuentas])
+
   const formatBytes = useCallback((b) => {
     const n = Number(b || 0)
     if (!Number.isFinite(n) || n <= 0) return '0 B'
@@ -304,10 +310,32 @@ export default function BatchTable() {
     try { e.target.value = '' } catch {}
   }, [pickScpFile])
 
-  const refreshBatchAccounts = useCallback(async ({ silent = false } = {}) => {
-    if (isRefreshingAccounts) return cuentas
+  const refreshBatchAccounts = useCallback(async ({ silent = false, forceMegaSync = false } = {}) => {
+    if (isRefreshingAccountsRef.current) return cuentasRef.current
+    isRefreshingAccountsRef.current = true
     setIsRefreshingAccounts(true)
     try {
+      if (forceMegaSync) {
+        try {
+          const allAccountsRes = await http.getData('/accounts')
+          const allAccounts = Array.isArray(allAccountsRes?.data) ? allAccountsRes.data : []
+          const mainAccounts = allAccounts
+            .filter((a) => String(a?.type || '').toLowerCase() === 'main')
+            .map((a) => Number(a?.id || 0))
+            .filter((n) => Number.isFinite(n) && n > 0)
+
+          for (const accountId of mainAccounts) {
+            try {
+              await http.postData(`/accounts/${accountId}/test`, { source: 'dashboard-batch-upload' })
+            } catch (e) {
+              console.error(`account sync failed id=${accountId}`, e)
+            }
+          }
+        } catch (e) {
+          console.error('forceMegaSync list accounts failed', e)
+        }
+      }
+
       const accs = await http.getData('/accounts?batchUpload=1')
       const list = Array.isArray(accs?.data) ? accs.data : []
       const normalized = list
@@ -328,11 +356,12 @@ export default function BatchTable() {
       if (!silent) {
         setToast({ open: true, msg: 'No se pudo refrescar cuentas ahora.', type: 'warning' })
       }
-      return cuentas
+      return cuentasRef.current
     } finally {
+      isRefreshingAccountsRef.current = false
       setIsRefreshingAccounts(false)
     }
-  }, [cuentas, http, isRefreshingAccounts])
+  }, [http])
 
   useEffect(() => {
     async function fetchCatalogs() {
@@ -341,7 +370,7 @@ export default function BatchTable() {
         setCategoriesCatalog(cats.data?.items || [])
         const tgs = await http.getData('/tags')
         setTagsCatalog(tgs.data?.items || [])
-        await refreshBatchAccounts({ silent: true })
+        await refreshBatchAccounts({ silent: true, forceMegaSync: false })
       } catch {}
     }
     fetchCatalogs()
@@ -760,7 +789,7 @@ export default function BatchTable() {
     const LIMIT_GB = 19
     const LIMIT_MB = LIMIT_GB * 1024  // 18944 MB
 
-    const freshAccounts = await refreshBatchAccounts({ silent: true })
+    const freshAccounts = await refreshBatchAccounts({ silent: true, forceMegaSync: true })
     if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
       setToast({ open: true, msg: 'No hay cuentas disponibles para distribuir.', type: 'warning' })
       return
@@ -802,7 +831,7 @@ export default function BatchTable() {
   }
 
   const handleCuentaSelectOpen = useCallback(() => {
-    void refreshBatchAccounts({ silent: true })
+    void refreshBatchAccounts({ silent: true, forceMegaSync: true })
   }, [refreshBatchAccounts])
 
   const handleOpenPerfilModal = (rowIdx) => {
