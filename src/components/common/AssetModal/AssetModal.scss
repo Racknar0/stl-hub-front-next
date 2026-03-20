@@ -501,9 +501,10 @@
 
     @media (max-width: 992px) {
         /* cuadrado toma el ancho del viewport en móvil */
-        --sq: min(82vw, 520px);
+        --sq: min(92vw, 560px);
         .modal-dialog {
-            max-width: 92vw;
+            max-width: 96vw;
+            width: calc(100% - 0.8rem);
         }
         .dialog-body {
             grid-template-columns: 1fr;
