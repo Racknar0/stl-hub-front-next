@@ -7,7 +7,7 @@ import styles from './VpsMemoryWidget.module.scss'
 const POLL_MS = 15000
 
 function buildWindowsPreviewMemory() {
-  const totalBytes = 16 * 1024 * 1024 * 1024
+  const totalBytes = 240 * 1024 * 1024 * 1024
   const usagePct = 57.4
   const usedBytes = Math.round((usagePct / 100) * totalBytes)
   const availableBytes = Math.max(0, totalBytes - usedBytes)
@@ -82,8 +82,8 @@ export default function VpsMemoryWidget() {
   const freeText = toGB(memory?.availableBytes)
 
   return (
-    <div className={styles.widget} role="status" aria-label="Memoria del VPS">
-      <div className={styles.header}>Memoria VPS</div>
+    <div className={styles.widget} role="status" aria-label="Almacenamiento del VPS">
+      <div className={styles.header}>Almacenamiento VPS</div>
       <div className={styles.meta}>Total: {totalText} GB · Restante: {freeText} GB</div>
       <div className={styles.track}>
         <div className={[styles.fill, danger ? styles.fillDanger : ''].filter(Boolean).join(' ')} style={{ width: `${pct}%` }} />
