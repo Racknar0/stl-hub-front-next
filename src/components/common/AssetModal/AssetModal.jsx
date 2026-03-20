@@ -40,6 +40,35 @@ export default function AssetModal({ open, onClose, asset }) {
     const [showReport, setShowReport] = useState(false);
     const [fullOpen, setFullOpen] = useState(false);
 
+    const formatDateShort = (value) => {
+        if (!value) return 'N/A';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return 'N/A';
+        try {
+            return new Intl.DateTimeFormat(isEn ? 'en-US' : 'es-ES', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            }).format(d);
+        } catch {
+            return d.toISOString().slice(0, 10);
+        }
+    };
+
+    const formatSize = (...values) => {
+        const raw = values.find((v) => Number(v) > 0);
+        const n = Number(raw || 0);
+        if (!Number.isFinite(n) || n <= 0) return 'N/A';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let size = n;
+        let i = 0;
+        while (size >= 1024 && i < units.length - 1) {
+            size /= 1024;
+            i += 1;
+        }
+        return `${size.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+    };
+
     // Modal de acceso (dinámico según /me/profile)
     // kind: 'not-auth' | 'expired' | 'no-sub' | 'error' | null
     const [accessModal, setAccessModal] = useState({
@@ -284,6 +313,8 @@ export default function AssetModal({ open, onClose, asset }) {
         return `/search?categories=${q}`;
     };
 
+    const primaryCategoryLabel = displayCategories[0]?.label || null;
+
     // --- TAGS / CHIPS NORMALIZATION ---
     // Listados (home/buscador) proveen: chipsEs, chipsEn, tagSlugs
     // Página detalle (/asset/[slug]) provee: tags (objetos) + tagsEs + tagsEn
@@ -316,6 +347,39 @@ export default function AssetModal({ open, onClose, asset }) {
         : Array.isArray(data.tags)
         ? data.tags.map((t) => t?.slug).filter(Boolean)
         : derivedTagsEs;
+
+    const technicalFacts = [
+        {
+            key: 'id',
+            label: isEn ? 'ID' : 'ID',
+            value: data?.id || 'N/A',
+        },
+        {
+            key: 'slug',
+            label: 'Slug',
+            value: data?.slug || 'N/A',
+        },
+        {
+            key: 'type',
+            label: isEn ? 'Type' : 'Tipo',
+            value: data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis'),
+        },
+        {
+            key: 'size',
+            label: isEn ? 'Size' : 'Tamaño',
+            value: formatSize(data?.archiveSizeB, data?.fileSizeB),
+        },
+        {
+            key: 'created',
+            label: isEn ? 'Published' : 'Publicado',
+            value: formatDateShort(data?.createdAt),
+        },
+        {
+            key: 'updated',
+            label: isEn ? 'Updated' : 'Actualizado',
+            value: formatDateShort(data?.updatedAt),
+        },
+    ];
 
     // Fallback de descripción (por si el asset viene de listados y aún no pasó por /slug)
     const buildAutoDescription = (lang) => {
@@ -608,34 +672,51 @@ export default function AssetModal({ open, onClose, asset }) {
                             </Box>
                         </Box>
                     </Dialog>
-                                    <Link
-                                        href="/"
-                                        aria-label="Ir al inicio"
-                                        onClick={(e) => e.stopPropagation()}
-                                        style={{ display: 'inline-flex' }}
-                                    >
-                                        <img
-                                            className="brand-logo"
-                                            src="/nuevo_horizontal.png"
-                                            alt="STL Hub"
-                                        />
-                                    </Link>
+                                    <div className="meta-header">
+                                        <Link
+                                            href="/"
+                                            aria-label="Ir al inicio"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="brand-link"
+                                        >
+                                            <img
+                                                className="brand-logo"
+                                                src="/nuevo_horizontal.png"
+                                                alt="STL Hub"
+                                            />
+                                        </Link>
+
+                                        <div className="meta-headlines">
+                                            <div className="title-row">
+                                                <h3
+                                                    id="asset-modal-title"
+                                                    className="title"
+                                                >
+                                                    {displayTitle}
+                                                </h3>
+                                                {data?.slug && (
+                                                    <Link
+                                                        href={`/asset/${data.slug}`}
+                                                        onClick={(e)=> e.stopPropagation()}
+                                                        className="detail-link"
+                                                    >
+                                                        {isEn ? 'open page' : 'ver página'}
+                                                    </Link>
+                                                )}
+                                            </div>
+
+                                            <div className="head-badges">
+                                                <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
+                                                    {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
+                                                </span>
+                                                {primaryCategoryLabel ? (
+                                                    <span className="head-badge is-neutral">{primaryCategoryLabel}</span>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div className="meta-details">
-                                        <h3
-                                            id="asset-modal-title"
-                                            className="title"
-                                            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}
-                                        >
-                                            <span>{displayTitle}</span>
-                                            {data?.slug && (
-                                                <Link
-                                                    href={`/asset/${data.slug}`}
-                                                    onClick={(e)=> e.stopPropagation()}
-                                                    style={{ color: 'inherit', textDecoration: 'underline', fontSize: '.7rem' }}
-                                                >detail</Link>
-                                            )}
-                                        </h3>
                                         {/* Descripción (autogenerada del backend si existe) */}
                                         {(() => {
                                             const rawDesc = isEn
@@ -643,20 +724,24 @@ export default function AssetModal({ open, onClose, asset }) {
                                                 : (data.description || data.descriptionEn);
                                             const baseDesc = rawDesc && rawDesc.trim().length ? rawDesc : buildAutoDescription(isEn ? 'en' : 'es');
                                             if (!baseDesc) return null;
-                                            const short = baseDesc.length > 220 ? baseDesc.slice(0, 217).replace(/[,.;:\s]+$/,'') + '…' : baseDesc;
                                             return (
-                                                <p
-                                                    className="asset-desc"
-                                                    style={{
-                                                        margin: '0 0 .75rem',
-                                                        fontSize: '.78rem',
-                                                        lineHeight: 1.3,
-                                                        color: '#fdc3ff',
-                                                        maxWidth: '640px'
-                                                    }}
-                                                >{short}</p>
+                                                <p className="asset-desc">{baseDesc}</p>
                                             );
                                         })()}
+
+                                        <div className="meta-block compact">
+                                            <div className="block-title">
+                                                {isEn ? 'Technical details' : 'Ficha técnica'}
+                                            </div>
+                                            <div className="facts-grid">
+                                                {technicalFacts.map((f) => (
+                                                    <div className="fact" key={f.key}>
+                                                        <span className="fact-label">{f.label}</span>
+                                                        <span className="fact-value">{String(f.value || 'N/A')}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
 
                                         {/* Categorías */}
                                         <div className="meta-block">
@@ -666,7 +751,7 @@ export default function AssetModal({ open, onClose, asset }) {
                                                     : 'Categorías'}
                                             </div>
                                             {displayCategories.length ? (
-                                                <div className="chips center">
+                                                <div className="chips center chips-compact">
                                                     {displayCategories.map(
                                                         (c) => (
                                                             <Link
@@ -705,7 +790,7 @@ export default function AssetModal({ open, onClose, asset }) {
                                                 {isEn ? 'Tags' : 'Etiquetas'}
                                             </div>
                                             {chips?.length ? (
-                                                <div className="chips center">
+                                                <div className="chips center chips-compact">
                                                     {chips.map((c, i) => (
                                                         <Link
                                                             key={i}

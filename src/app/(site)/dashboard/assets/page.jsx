@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider } from '@mui/material'
+import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination } from '@mui/material'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import LinkIcon from '@mui/icons-material/Link'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -22,6 +22,7 @@ import ToolbarBusqueda from './componentes/ToolbarBusqueda'
 import ModalDetalle from './componentes/ModalDetalle'
 import ModalEditar from './componentes/ModalEditar'
 import ModalResultadosDrop from './componentes/ModalResultadosDrop'
+import ProfilesModal from '../upload-batch/ProfilesModal'
 
 // Mapea estado a color de chip
 const statusColor = (s) => ({
@@ -82,6 +83,11 @@ export default function AssetsAdminPage() {
 
   // Estado: imágenes del editor
   const [tab, setTab] = useState(0)
+  const [metaDraftMap, setMetaDraftMap] = useState({})
+  const [metaSelectedMap, setMetaSelectedMap] = useState({})
+  const [metaBusy, setMetaBusy] = useState(false)
+  const [metaProfilesOpen, setMetaProfilesOpen] = useState(false)
+  const [metaProfileAssetId, setMetaProfileAssetId] = useState(null)
   const [similarThreshold, setSimilarThreshold] = useState(88)
   const [similarLoading, setSimilarLoading] = useState(false)
   const [similarError, setSimilarError] = useState('')
@@ -1606,8 +1612,294 @@ export default function AssetsAdminPage() {
     }
   }
 
+  const normalizeMetaCategory = useCallback((item) => {
+    if (!item || typeof item !== 'object') return null
+    const slug = String(item.slug || item.slugEn || '').trim().toLowerCase()
+    const name = String(item.name || item.nameEn || slug || '').trim()
+    if (!slug && !name) return null
+    return {
+      id: Number(item.id || 0) || undefined,
+      slug: slug || slugify(name),
+      name: name || slug,
+    }
+  }, [])
+
+  const normalizeMetaTag = useCallback((item) => {
+    if (typeof item === 'string') {
+      const value = String(item || '').trim().toLowerCase()
+      if (!value) return null
+      return { slug: slugify(value), name: value }
+    }
+    if (!item || typeof item !== 'object') return null
+    const slug = String(item.slug || item.slugEn || '').trim().toLowerCase()
+    const name = String(item.name || item.nameEn || item.es || item.en || slug || '').trim().toLowerCase()
+    if (!slug && !name) return null
+    return {
+      id: Number(item.id || 0) || undefined,
+      slug: slug || slugify(name),
+      name: name || slug,
+    }
+  }, [])
+
+  const normalizeMetaTagList = useCallback((items) => {
+    const seen = new Set()
+    const out = []
+    ;(Array.isArray(items) ? items : []).forEach((item) => {
+      const normalized = normalizeMetaTag(item)
+      if (!normalized) return
+      const key = String(normalized.slug || normalized.name || '').trim().toLowerCase()
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      out.push(normalized)
+    })
+    return out
+  }, [normalizeMetaTag])
+
+  const normalizeMetaCategoryList = useCallback((items) => {
+    const seen = new Set()
+    const out = []
+    ;(Array.isArray(items) ? items : []).forEach((item) => {
+      const normalized = normalizeMetaCategory(item)
+      if (!normalized) return
+      const key = String(normalized.slug || normalized.name || '').trim().toLowerCase()
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      out.push(normalized)
+    })
+    return out
+  }, [normalizeMetaCategory])
+
+  useEffect(() => {
+    if (tab !== 3) return
+    if (!categories.length || !allTags.length) {
+      void loadMeta()
+    }
+  }, [tab, categories.length, allTags.length])
+
+  useEffect(() => {
+    if (tab !== 3) return
+    setMetaDraftMap((prev) => {
+      const next = { ...prev }
+      ;(Array.isArray(assets) ? assets : []).forEach((asset) => {
+        const id = Number(asset?.id || 0)
+        if (!Number.isFinite(id) || id <= 0) return
+        next[id] = {
+          id,
+          title: String(asset?.title || ''),
+          titleEn: String(asset?.titleEn || ''),
+          description: String(asset?.description || ''),
+          categories: normalizeMetaCategoryList(asset?.categories),
+          tags: normalizeMetaTagList(asset?.tags),
+        }
+      })
+      return next
+    })
+  }, [tab, assets, normalizeMetaCategoryList, normalizeMetaTagList])
+
+  const metaRows = filtered
+
+  const metaSelectedIds = useMemo(() => {
+    return Object.entries(metaSelectedMap)
+      .filter(([, checked]) => !!checked)
+      .map(([id]) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  }, [metaSelectedMap])
+
+  const allVisibleMetaIds = useMemo(() => {
+    return (Array.isArray(metaRows) ? metaRows : [])
+      .map((row) => Number(row?.id || 0))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  }, [metaRows])
+
+  const allVisibleMetaSelected = useMemo(() => {
+    if (!allVisibleMetaIds.length) return false
+    return allVisibleMetaIds.every((id) => !!metaSelectedMap[id])
+  }, [allVisibleMetaIds, metaSelectedMap])
+
+  const toggleMetaSelect = (assetId) => {
+    const id = Number(assetId)
+    if (!Number.isFinite(id) || id <= 0) return
+    setMetaSelectedMap((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const toggleMetaSelectAllVisible = () => {
+    setMetaSelectedMap((prev) => {
+      const next = { ...prev }
+      const setTo = !allVisibleMetaSelected
+      allVisibleMetaIds.forEach((id) => {
+        next[id] = setTo
+      })
+      return next
+    })
+  }
+
+  const updateMetaDraft = (assetId, patch) => {
+    const id = Number(assetId)
+    if (!Number.isFinite(id) || id <= 0) return
+    setMetaDraftMap((prev) => {
+      const current = prev[id] || {
+        id,
+        title: '',
+        titleEn: '',
+        description: '',
+        categories: [],
+        tags: [],
+      }
+      return {
+        ...prev,
+        [id]: {
+          ...current,
+          ...patch,
+        },
+      }
+    })
+  }
+
+  const saveMetaRow = async (assetId, { silent = false } = {}) => {
+    const id = Number(assetId)
+    const draft = metaDraftMap[id]
+    if (!Number.isFinite(id) || id <= 0 || !draft) return false
+
+    const categoriesPayload = normalizeMetaCategoryList(draft.categories).map((c) => String(c.slug || c.name || '').trim().toLowerCase()).filter(Boolean)
+    const tagsPayload = normalizeMetaTagList(draft.tags).map((t) => String(t.slug || t.name || '').trim().toLowerCase()).filter(Boolean)
+
+    await http.putData('/assets', id, {
+      title: String(draft.title || '').trim(),
+      titleEn: String(draft.titleEn || '').trim(),
+      description: String(draft.description || '').trim(),
+      categories: categoriesPayload,
+      tags: tagsPayload,
+    })
+
+    if (!silent) {
+      await successAlert('Guardado', `Metadata guardada para asset #${id}`)
+    }
+    return true
+  }
+
+  const saveMetaSelected = async () => {
+    if (!metaSelectedIds.length) return
+    let okCount = 0
+    let failCount = 0
+    setMetaBusy(true)
+    for (const id of metaSelectedIds) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await saveMetaRow(id, { silent: true })
+        okCount += 1
+      } catch {
+        failCount += 1
+      }
+    }
+    setMetaBusy(false)
+    setRefreshTick((n) => n + 1)
+    if (okCount > 0) {
+      await successAlert('Guardado', `Se actualizaron ${okCount} assets`)
+    }
+    if (failCount > 0) {
+      await errorAlert('Parcial', `Fallaron ${failCount} assets al guardar`)
+    }
+  }
+
+  const runMetaDescriptionGeneration = async (mode, ids = []) => {
+    setMetaBusy(true)
+    try {
+      const payload = { mode }
+      if (Array.isArray(ids) && ids.length > 0) payload.assetIds = ids
+      const res = await http.postData('/assets/meta/generate-descriptions', payload)
+      const updated = Number(res?.data?.updated || 0)
+      await successAlert('Descripciones generadas', `Se actualizaron ${updated} descripciones.`)
+      setRefreshTick((n) => n + 1)
+    } catch (e) {
+      await errorAlert('Error', e?.response?.data?.message || 'No se pudieron generar descripciones')
+    } finally {
+      setMetaBusy(false)
+    }
+  }
+
+  const runMetaTagsGenerationForSelected = async () => {
+    if (!metaSelectedIds.length) return
+    setMetaBusy(true)
+    try {
+      const res = await http.postData('/assets/meta/generate-tags', { assetIds: metaSelectedIds })
+      const updated = Number(res?.data?.updated || 0)
+      await successAlert('Tags generados', `Se actualizaron tags en ${updated} assets.`)
+      await loadMeta()
+      setRefreshTick((n) => n + 1)
+    } catch (e) {
+      await errorAlert('Error', e?.response?.data?.message || 'No se pudieron generar tags')
+    } finally {
+      setMetaBusy(false)
+    }
+  }
+
+  const handleGenerateSelectedDescriptions = async () => {
+    if (!metaSelectedIds.length) return
+    await runMetaDescriptionGeneration('selected', metaSelectedIds)
+  }
+
+  const handleGenerateSingleDescription = async (assetId) => {
+    await runMetaDescriptionGeneration('selected', [Number(assetId)])
+  }
+
+  const openMetaProfiles = (assetId) => {
+    const id = Number(assetId)
+    if (!Number.isFinite(id) || id <= 0) return
+    setMetaProfileAssetId(id)
+    setMetaProfilesOpen(true)
+  }
+
+  const selectedMetaRowForProfiles = useMemo(() => {
+    const id = Number(metaProfileAssetId || 0)
+    if (!Number.isFinite(id) || id <= 0) return null
+    const draft = metaDraftMap[id]
+    if (!draft) return null
+    return {
+      categorias: normalizeMetaCategoryList(draft.categories).map((c) => ({
+        slug: c.slug,
+        name: c.name,
+      })),
+      tags: normalizeMetaTagList(draft.tags).map((t) => ({
+        slug: t.slug,
+        name: t.name,
+      })),
+    }
+  }, [metaProfileAssetId, metaDraftMap, normalizeMetaCategoryList, normalizeMetaTagList])
+
+  const applyMetaProfile = (profile) => {
+    const id = Number(metaProfileAssetId || 0)
+    if (!Number.isFinite(id) || id <= 0) return
+
+    const profileCategorySlugs = Array.isArray(profile?.categories)
+      ? profile.categories.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean)
+      : []
+    const profileTagSlugs = Array.isArray(profile?.tags)
+      ? profile.tags.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean)
+      : []
+
+    const nextCategories = profileCategorySlugs.map((slug) => {
+      const found = categories.find((c) => String(c?.slug || '').toLowerCase() === slug)
+      if (found) return { id: found.id, slug: found.slug, name: found.name }
+      return { slug, name: slug }
+    })
+
+    const nextTags = profileTagSlugs.map((slug) => {
+      const found = allTags.find((t) => String(t?.slug || '').toLowerCase() === slug)
+      if (found) return { id: found.id, slug: found.slug, name: found.name }
+      return { slug, name: slug }
+    })
+
+    updateMetaDraft(id, {
+      categories: normalizeMetaCategoryList(nextCategories),
+      tags: normalizeMetaTagList(nextTags),
+    })
+    setMetaSelectedMap((prev) => ({ ...prev, [id]: true }))
+    setMetaProfilesOpen(false)
+    setMetaProfileAssetId(null)
+  }
+
   return (
-    <div className="p-3">
+    <div className="p-3 mb-5">
       <Tabs
         value={tab}
         onChange={(_, v) => setTab(v)}
@@ -1624,6 +1916,7 @@ export default function AssetsAdminPage() {
         <Tab label="STL-LIST" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
         <Tab label="SIMILAR-IMAGES" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
         <Tab label="SIMILAR-NAMES" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
+        <Tab label="META-SEO" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fff' : undefined }} />
       </Tabs>
       {tab === 0 && (
         <>
@@ -2407,6 +2700,266 @@ export default function AssetsAdminPage() {
               </Stack>
             </Paper>
           </Box>
+        </Stack>
+      )}
+      {tab === 3 && (
+        <Stack spacing={2} >
+          <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.2} justifyContent="space-between" alignItems={{ xs: 'stretch', lg: 'center' }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>META-SEO</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Edita nombre, tags, categorías y descripción. También puedes generar descripciones/tags en lote con IA.
+                </Typography>
+              </Box>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button variant="contained" onClick={() => runMetaDescriptionGeneration('all')} disabled={metaBusy || loading}>
+                  Generar todas las descripciones
+                </Button>
+                <Button variant="outlined" onClick={() => runMetaDescriptionGeneration('missing')} disabled={metaBusy || loading}>
+                  Generar descripciones faltantes
+                </Button>
+                <Button variant="outlined" onClick={handleGenerateSelectedDescriptions} disabled={metaBusy || loading || !metaSelectedIds.length}>
+                  Generar descripciones seleccionadas
+                </Button>
+                <Button variant="outlined" color="secondary" onClick={runMetaTagsGenerationForSelected} disabled={metaBusy || loading || !metaSelectedIds.length}>
+                  Generar tags de seleccionados
+                </Button>
+                <Button variant="outlined" color="success" onClick={saveMetaSelected} disabled={metaBusy || loading || !metaSelectedIds.length}>
+                  Guardar seleccionados
+                </Button>
+              </Stack>
+            </Stack>
+
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mt: 1.5 }} alignItems={{ xs: 'flex-start', md: 'center' }}>
+              <Chip label={`Seleccionados: ${metaSelectedIds.length}`} color={metaSelectedIds.length ? 'warning' : 'default'} />
+              <Chip label={`Filas actuales: ${metaRows.length}`} />
+              <Chip label={`Total: ${rowCount}`} />
+
+              <Typography variant="caption" color="text.secondary" sx={{ ml: { md: 'auto' } }}>
+                Usa el paginador inferior igual que en STL-LIST.
+              </Typography>
+            </Stack>
+          </Paper>
+
+          {(metaBusy || loading) && <LinearProgress />}
+
+          <TableContainer component={Paper} sx={{ borderRadius: 2, maxHeight: 'calc(100vh - 260px)' }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={allVisibleMetaSelected}
+                      onChange={toggleMetaSelectAllVisible}
+                      disabled={metaBusy || loading || !allVisibleMetaIds.length}
+                    />
+                  </TableCell>
+                  <TableCell>ID</TableCell>
+                  <TableCell sx={{ minWidth: 130 }}>Imágenes</TableCell>
+                  <TableCell>Nombre ES</TableCell>
+                  <TableCell>Name EN</TableCell>
+                  <TableCell>Descripción SEO</TableCell>
+                  <TableCell sx={{ minWidth: 220 }}>Categorías</TableCell>
+                  <TableCell sx={{ minWidth: 260 }}>Tags</TableCell>
+                  <TableCell>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {metaRows.map((row) => {
+                  const id = Number(row?.id || 0)
+                  const draft = metaDraftMap[id] || {
+                    id,
+                    title: String(row?.title || ''),
+                    titleEn: String(row?.titleEn || ''),
+                    description: String(row?.description || ''),
+                    categories: normalizeMetaCategoryList(row?.categories),
+                    tags: normalizeMetaTagList(row?.tags),
+                  }
+                  const isSelected = !!metaSelectedMap[id]
+
+                  return (
+                    <TableRow key={`meta-${id}`} hover>
+                      <TableCell padding="checkbox">
+                        <Checkbox checked={isSelected} onChange={() => toggleMetaSelect(id)} disabled={metaBusy || loading} />
+                      </TableCell>
+                      <TableCell>{id}</TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={0.6}>
+                          {(Array.isArray(row?.images) ? row.images : []).slice(0, 2).map((img, idx) => (
+                            <Box
+                              key={`meta-img-${id}-${idx}`}
+                              component="img"
+                              src={imgUrl(img)}
+                              alt={`asset-${id}-${idx + 1}`}
+                              sx={{
+                                width: 52,
+                                height: 52,
+                                objectFit: 'cover',
+                                borderRadius: 1,
+                                border: '1px solid rgba(127,127,127,0.35)',
+                              }}
+                            />
+                          ))}
+                          {(!Array.isArray(row?.images) || row.images.length === 0) && (
+                            <Box
+                              sx={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 1,
+                                display: 'grid',
+                                placeItems: 'center',
+                                bgcolor: 'rgba(120,120,120,0.2)',
+                              }}
+                            >
+                              <Typography variant="caption" color="text.secondary">N/A</Typography>
+                            </Box>
+                          )}
+                        </Stack>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 210 }}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          value={draft.title}
+                          onChange={(e) => updateMetaDraft(id, { title: e.target.value })}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 210 }}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          value={draft.titleEn}
+                          onChange={(e) => updateMetaDraft(id, { titleEn: e.target.value })}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 280 }}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          multiline
+                          minRows={2}
+                          value={draft.description}
+                          placeholder="No hay descripción de este producto."
+                          onChange={(e) => updateMetaDraft(id, { description: e.target.value })}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Autocomplete
+                          multiple
+                          options={categories}
+                          getOptionLabel={(option) => option?.name || option?.slug || ''}
+                          value={normalizeMetaCategoryList(draft.categories)}
+                          isOptionEqualToValue={(a, b) => String(a?.slug || '') === String(b?.slug || '')}
+                          onChange={(_, value) => updateMetaDraft(id, { categories: normalizeMetaCategoryList(value) })}
+                          renderInput={(params) => <TextField {...params} size="small" placeholder="Categorías" />}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Autocomplete
+                          multiple
+                          freeSolo
+                          options={allTags}
+                          getOptionLabel={(option) => {
+                            if (typeof option === 'string') return option
+                            return option?.name || option?.slug || ''
+                          }}
+                          value={normalizeMetaTagList(draft.tags)}
+                          isOptionEqualToValue={(a, b) => {
+                            const aSlug = String(a?.slug || a?.name || '').trim().toLowerCase()
+                            const bSlug = String(b?.slug || b?.name || '').trim().toLowerCase()
+                            return !!aSlug && !!bSlug && aSlug === bSlug
+                          }}
+                          onChange={(_, value) => updateMetaDraft(id, { tags: normalizeMetaTagList(value) })}
+                          renderInput={(params) => <TextField {...params} size="small" placeholder="Tags" />}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Stack spacing={0.8}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="secondary"
+                            onClick={() => openMetaProfiles(id)}
+                            disabled={metaBusy || loading}
+                          >
+                            Perfiles
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleGenerateSingleDescription(id)}
+                            disabled={metaBusy || loading}
+                          >
+                            Generar descripción IA
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={async () => {
+                              try {
+                                setMetaBusy(true)
+                                await saveMetaRow(id)
+                                setRefreshTick((n) => n + 1)
+                              } catch (e) {
+                                await errorAlert('Error', e?.response?.data?.message || 'No se pudo guardar el asset')
+                              } finally {
+                                setMetaBusy(false)
+                              }
+                            }}
+                            disabled={metaBusy || loading}
+                          >
+                            Guardar
+                          </Button>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {!metaRows.length && (
+                  <TableRow>
+                    <TableCell colSpan={9}>
+                      <Typography variant="body2" color="text.secondary">
+                        No hay assets en esta página/filtro.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Paper sx={{ borderRadius: 2 }}>
+            <TablePagination
+              component="div"
+              count={rowCount}
+              page={pageIndex}
+              onPageChange={(_, nextPage) => setPageIndex(nextPage)}
+              rowsPerPage={pageSize}
+              onRowsPerPageChange={(e) => {
+                setPageSize(Number(e.target.value) || 50)
+                setPageIndex(0)
+              }}
+              rowsPerPageOptions={[10, 25, 50, 100, 200, 300, 400, 500, 1000]}
+              disabled={metaBusy || loading}
+            />
+          </Paper>
+
+          <ProfilesModal
+            open={metaProfilesOpen}
+            onClose={() => {
+              setMetaProfilesOpen(false)
+              setMetaProfileAssetId(null)
+            }}
+            selectedRow={selectedMetaRowForProfiles}
+            onApply={applyMetaProfile}
+          />
         </Stack>
       )}
     </div>

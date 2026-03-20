@@ -18,6 +18,8 @@ export default function BatchRow({
   cuentas = [],
   onNombreChange = () => {},
   onNombreEnChange = () => {},
+  onDescriptionChange = () => {},
+  onDescriptionEnChange = () => {},
   onCategoriasChange = () => {},
   onTagsChange = () => {},
   onCuentaChange = () => {},
@@ -290,6 +292,55 @@ export default function BatchRow({
              <IconButton size="small" sx={{ ml: 0.5, color: '#4fc3f7' }} onClick={() => onOpenCreateModal('tag', idx)}><AddIcon fontSize="small" /></IconButton>
           )}
         </Box>
+      </TableCell>
+      <TableCell sx={{ minWidth: 320, borderBottom: cellBorder, color: primaryText }}>
+        <Typography variant="caption" sx={{ display: 'block', color: secondaryText, mb: 0.25 }}>
+          Descripción ES
+        </Typography>
+        <TextField
+          value={row.description || ''}
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          onChange={e => onDescriptionChange(idx, e.target.value)}
+          variant="standard"
+          InputProps={{ disableUnderline: isOk || isProcesso, sx: { color: '#fff' } }}
+          sx={{
+            '& textarea': { color: primaryText, lineHeight: 1.3 },
+            '& textarea::placeholder': { color: secondaryText, opacity: 1 },
+            '& .MuiInputBase-input.Mui-disabled': {
+              color: '#f8fbff',
+              WebkitTextFillColor: '#f8fbff',
+              opacity: 1,
+            },
+          }}
+          disabled={isOk || isProcesso}
+        />
+
+        <Typography variant="caption" sx={{ display: 'block', color: secondaryText, mt: 0.9, mb: 0.25 }}>
+          Description EN
+        </Typography>
+        <TextField
+          value={row.descriptionEn || ''}
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          onChange={e => onDescriptionEnChange(idx, e.target.value)}
+          variant="standard"
+          InputProps={{ disableUnderline: isOk || isProcesso, sx: { color: '#fff' } }}
+          sx={{
+            '& textarea': { color: primaryText, lineHeight: 1.3 },
+            '& textarea::placeholder': { color: secondaryText, opacity: 1 },
+            '& .MuiInputBase-input.Mui-disabled': {
+              color: '#f8fbff',
+              WebkitTextFillColor: '#f8fbff',
+              opacity: 1,
+            },
+          }}
+          disabled={isOk || isProcesso}
+        />
       </TableCell>
       <TableCell sx={{ borderBottom: cellBorder, color: primaryText }}>
         <Button 

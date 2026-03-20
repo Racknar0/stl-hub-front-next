@@ -446,6 +446,15 @@ export default function BatchTable() {
     return s
   }
 
+  const buildFallbackDescriptions = (titleEs, titleEn) => {
+    const esBase = String(titleEs || '').trim() || 'asset'
+    const enBase = String(titleEn || '').trim() || esBase
+    return {
+      es: `Modelo STL de ${esBase}.`,
+      en: `STL model of ${enBase}.`,
+    }
+  }
+
   const fetchQueue = async () => {
      try {
        const res = await http.getData('/batch-imports')
@@ -461,12 +470,21 @@ export default function BatchTable() {
                  const backendTags = Array.isArray(item.tags) ? item.tags : []
                  const localCats = Array.isArray(existing.categorias) ? existing.categorias : []
                  const localTags = Array.isArray(existing.tags) ? existing.tags : []
+                  const backendTitleEs = String(item.title || item.folderName || '').trim()
+                  const backendTitleEn = String(item.titleEn || item.title || item.folderName || '').trim()
+                  const fallbackDescriptions = buildFallbackDescriptions(backendTitleEs, backendTitleEn)
+                  const backendDescription = String(item.description || '').trim() || fallbackDescriptions.es
+                  const backendDescriptionEn = String(item.descriptionEn || item.description || '').trim() || fallbackDescriptions.en
+                 const localDescription = String(existing.description || '').trim()
+                 const localDescriptionEn = String(existing.descriptionEn || '').trim()
 
                  // Mantener edición local, pero no pisar sugerencias IA si local está vacío.
                  return {
                    ...existing,
                    categorias: localCats.length > 0 ? localCats : backendCats,
                    tags: localTags.length > 0 ? localTags : backendTags,
+                   description: localDescription || backendDescription,
+                   descriptionEn: localDescriptionEn || backendDescriptionEn,
                  }
                }
                
@@ -477,6 +495,8 @@ export default function BatchTable() {
                  nombreEn: item.titleEn || item.title || item.folderName,
                  categorias: item.categories || [],
                  tags: item.tags || [],
+                 description: String(item.description || '').trim() || buildFallbackDescriptions(item.title || item.folderName, item.titleEn || item.title || item.folderName).es,
+                 descriptionEn: String(item.descriptionEn || item.description || '').trim() || buildFallbackDescriptions(item.title || item.folderName, item.titleEn || item.title || item.folderName).en,
                  imagenes: item.images || [],
                  cuenta: item.targetAccount || '',
                  estado: estadoDB,
@@ -624,6 +644,18 @@ export default function BatchTable() {
   const handleNombreEnChange = (idx, value) => {
     const updated = [...rows]
     updated[idx].nombreEn = value
+    setRows(updated)
+  }
+
+  const handleDescriptionChange = (idx, value) => {
+    const updated = [...rows]
+    updated[idx].description = value
+    setRows(updated)
+  }
+
+  const handleDescriptionEnChange = (idx, value) => {
+    const updated = [...rows]
+    updated[idx].descriptionEn = value
     setRows(updated)
   }
 
@@ -901,6 +933,8 @@ export default function BatchTable() {
         http.patchData('/batch-imports/items', row.id, {
           title: row.nombre,
           titleEn: row.nombreEn,
+          description: row.description,
+          descriptionEn: row.descriptionEn,
           targetAccount: row.cuenta,
           categories: row.categorias,
           tags: row.tags
@@ -1288,6 +1322,7 @@ export default function BatchTable() {
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (ES / EN)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags (IA)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta MEGA Asignada</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Main</TableCell>
@@ -1298,7 +1333,7 @@ export default function BatchTable() {
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                     <Typography variant="h6" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 600 }}>No hay assets en /uploads/batch_imports/</Typography>
                  </TableCell>
               </TableRow>
@@ -1314,6 +1349,8 @@ export default function BatchTable() {
                 cuentas={cuentas}
                 onNombreChange={handleNombreChange}
                 onNombreEnChange={handleNombreEnChange}
+                onDescriptionChange={handleDescriptionChange}
+                onDescriptionEnChange={handleDescriptionEnChange}
                 onCategoriasChange={handleCategoriasChange}
                 onTagsChange={handleTagsChange}
                 onCuentaChange={handleCuentaChange}
