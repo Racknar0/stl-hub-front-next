@@ -82,9 +82,6 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    content-visibility: auto;
-    contain: layout paint style;
-    contain-intrinsic-size: 390px 240px;
 
     @media screen and (max-width: 992px) {
         height: 390px;
