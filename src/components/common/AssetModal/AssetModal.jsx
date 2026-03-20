@@ -105,13 +105,15 @@ export default function AssetModal({ open, onClose, asset }) {
         if (!open || !data?.id || loadedDetail.current) return;
         const needCategories =
             !Array.isArray(data?.categories) || data.categories.length === 0;
-        if (!needCategories) return;
+        const needDescription = !String(data?.description || '').trim();
+        if (!needCategories && !needDescription) return;
         (async () => {
             try {
                 const res = await http.getData(`/assets/${data.id}`);
                 const d = res.data || {};
                 setData((prev) => ({
                     ...prev,
+                    description: String(d.description || prev?.description || '').trim(),
                     categories: Array.isArray(d.categories)
                         ? d.categories
                         : prev?.categories,
@@ -312,8 +314,6 @@ export default function AssetModal({ open, onClose, asset }) {
         );
         return `/search?categories=${q}`;
     };
-
-    const primaryCategoryLabel = displayCategories[0]?.label || null;
 
     // --- TAGS / CHIPS NORMALIZATION ---
     // Listados (home/buscador) proveen: chipsEs, chipsEn, tagSlugs
@@ -694,6 +694,12 @@ export default function AssetModal({ open, onClose, asset }) {
                                                 >
                                                     {displayTitle}
                                                 </h3>
+                                            </div>
+
+                                            <div className="head-badges">
+                                                <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
+                                                    {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
+                                                </span>
                                                 {data?.slug && (
                                                     <Link
                                                         href={`/asset/${data.slug}`}
@@ -703,15 +709,6 @@ export default function AssetModal({ open, onClose, asset }) {
                                                         {isEn ? 'open page' : 'ver página'}
                                                     </Link>
                                                 )}
-                                            </div>
-
-                                            <div className="head-badges">
-                                                <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
-                                                    {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
-                                                </span>
-                                                {primaryCategoryLabel ? (
-                                                    <span className="head-badge is-neutral">{primaryCategoryLabel}</span>
-                                                ) : null}
                                             </div>
                                         </div>
                                     </div>

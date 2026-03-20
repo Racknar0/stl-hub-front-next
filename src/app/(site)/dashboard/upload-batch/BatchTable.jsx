@@ -17,6 +17,8 @@ import { successAlert } from '@/helpers/alerts';
 const MAX_SIMILARITY_HASH_IMAGES = 8
 const ACCOUNT_LIMIT_MB = 19 * 1024
 const BATCH_MIN_USED_MB = 16 * 1024
+const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
+const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
@@ -470,7 +472,30 @@ export default function BatchTable() {
     }
   }
 
-  const fetchQueue = async () => {
+  const mapBackendItemToRow = (item) => {
+    const titleEs = item.title || item.folderName
+    const titleEn = item.titleEn || item.title || item.folderName
+    return {
+      id: item.id,
+      batchId: item.batchId,
+      nombre: titleEs,
+      nombreEn: titleEn,
+      categorias: item.categories || [],
+      tags: item.tags || [],
+      description: String(item.description || '').trim() || buildFallbackDescriptions(titleEs, titleEn).es,
+      descriptionEn: String(item.descriptionEn || item.description || '').trim() || buildFallbackDescriptions(titleEs, titleEn).en,
+      imagenes: item.images || [],
+      cuenta: item.targetAccount || '',
+      estado: mapEstado(item.status),
+      pesoMB: item.pesoMB || 0,
+      perfiles: item.profiles || '',
+      mainStatus: item.mainStatus || 'PENDING',
+      backupStatus: item.backupStatus || 'PENDING',
+      mainProgress: item.mainProgress || 0,
+    }
+  }
+
+  const fetchQueue = async ({ forceBackendDraft = false } = {}) => {
      try {
        const res = await http.getData('/batch-imports')
        if (res.data?.success && res.data?.items) {
@@ -478,9 +503,10 @@ export default function BatchTable() {
              return res.data.items.map(item => {
                const existing = prevRows.find(r => r.id === item.id)
                const estadoDB = mapEstado(item.status)
+               const backendRow = mapBackendItemToRow(item)
                
                // Preservar ediciones locales si sigue en borrador
-               if (existing && existing.estado === 'borrador' && estadoDB === 'borrador') {
+               if (!forceBackendDraft && existing && existing.estado === 'borrador' && estadoDB === 'borrador') {
                  const backendCats = Array.isArray(item.categories) ? item.categories : []
                  const backendTags = Array.isArray(item.tags) ? item.tags : []
                  const localCats = Array.isArray(existing.categorias) ? existing.categorias : []
@@ -503,24 +529,7 @@ export default function BatchTable() {
                  }
                }
                
-               return {
-                 id: item.id,
-                 batchId: item.batchId,
-                 nombre: item.title || item.folderName,
-                 nombreEn: item.titleEn || item.title || item.folderName,
-                 categorias: item.categories || [],
-                 tags: item.tags || [],
-                 description: String(item.description || '').trim() || buildFallbackDescriptions(item.title || item.folderName, item.titleEn || item.title || item.folderName).es,
-                 descriptionEn: String(item.descriptionEn || item.description || '').trim() || buildFallbackDescriptions(item.title || item.folderName, item.titleEn || item.title || item.folderName).en,
-                 imagenes: item.images || [],
-                 cuenta: item.targetAccount || '',
-                 estado: estadoDB,
-                 pesoMB: item.pesoMB || 0,
-                 perfiles: item.profiles || '',
-                 mainStatus: item.mainStatus || 'PENDING',
-                 backupStatus: item.backupStatus || 'PENDING',
-                 mainProgress: item.mainProgress || 0,
-               }
+               return backendRow
              })
           })
        }
@@ -661,11 +670,11 @@ export default function BatchTable() {
         const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
         setToast({ open: true, msg: finalMsg, type: finalType })
 
-        fetchQueue()
+        fetchQueue({ forceBackendDraft: true })
         if (res.data?.aiApplyDeferred) {
-          setTimeout(() => { void fetchQueue() }, 2500)
-          setTimeout(() => { void fetchQueue() }, 6000)
-          setTimeout(() => { void fetchQueue() }, 10000)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 2500)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 6000)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 10000)
         }
       } else {
         setToast({ open: true, msg: res.data?.message || 'No se pudo generar metadatos IA.', type: 'error' })
@@ -716,11 +725,11 @@ export default function BatchTable() {
         const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
         setToast({ open: true, msg: finalMsg, type: finalType })
 
-        fetchQueue()
+        fetchQueue({ forceBackendDraft: true })
         if (res.data?.aiApplyDeferred) {
-          setTimeout(() => { void fetchQueue() }, 2500)
-          setTimeout(() => { void fetchQueue() }, 6000)
-          setTimeout(() => { void fetchQueue() }, 10000)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 2500)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 6000)
+          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 10000)
         }
       } else {
         setToast({ open: true, msg: res.data?.message || 'No se pudo reintentar IA.', type: 'error' })
@@ -1305,6 +1314,42 @@ export default function BatchTable() {
          </Button>
        </Stack>
 
+       {(isApplyingAiMetadata || isRetryingAi) && (
+         <Box
+           sx={{
+             mb: 2,
+             p: 2,
+             borderRadius: 2,
+             border: '1px solid rgba(94,234,212,0.55)',
+             background: 'linear-gradient(90deg, rgba(13,148,136,0.26), rgba(20,184,166,0.18))',
+             boxShadow: '0 10px 22px rgba(13,148,136,0.25)',
+           }}
+         >
+           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} alignItems={{ xs: 'flex-start', md: 'center' }}>
+             <Typography variant="h5" sx={{ color: '#ccfbf1', fontWeight: 900, lineHeight: 1.15 }}>
+               IA en proceso
+             </Typography>
+             <Typography variant="body1" sx={{ color: 'rgba(236,253,245,0.95)', fontWeight: 600 }}>
+               {isRetryingAi
+                 ? 'Reintentando sugerencias fallidas. Los campos se actualizarán automáticamente al terminar.'
+                 : 'Generando nombres, categorías, tags y descripciones sugeridas para el batch.'}
+             </Typography>
+           </Stack>
+           <LinearProgress
+             variant="indeterminate"
+             sx={{
+               mt: 1.4,
+               height: 12,
+               borderRadius: 999,
+               backgroundColor: 'rgba(255,255,255,0.2)',
+               '& .MuiLinearProgress-bar': {
+                 background: 'linear-gradient(90deg, #2dd4bf, #5eead4)',
+               },
+             }}
+           />
+         </Box>
+       )}
+
        {isScanning && (
          <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2, px: 0.5 }}>
            <CircularProgress size={18} thickness={5} />
@@ -1747,8 +1792,8 @@ export default function BatchTable() {
                         src={safeSrc}
                         alt={`current-${i}`}
                         style={{
-                          width: 144,
-                          height: 144,
+                          width: SIMILARITY_CURRENT_IMAGE_SIZE,
+                          height: SIMILARITY_CURRENT_IMAGE_SIZE,
                           objectFit: 'cover',
                           borderRadius: 6,
                           border: '1px solid rgba(173, 175, 184, 0.45)',
@@ -1823,8 +1868,8 @@ export default function BatchTable() {
                                key={i}
                                src={safeSrc}
                                style={{
-                                 width: 154,
-                                 height: 154,
+                                 width: SIMILARITY_MATCH_IMAGE_SIZE,
+                                 height: SIMILARITY_MATCH_IMAGE_SIZE,
                                  objectFit: 'cover',
                                  borderRadius: 6,
                                  border: '1px solid rgba(148,163,184,0.45)',

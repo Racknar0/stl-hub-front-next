@@ -1,13 +1,19 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination } from '@mui/material'
+import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Tooltip } from '@mui/material'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import LinkIcon from '@mui/icons-material/Link'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutline'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import FilterAltIcon from '@mui/icons-material/FilterAlt'
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck'
+import SellIcon from '@mui/icons-material/Sell'
+import SaveIcon from '@mui/icons-material/Save'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import ImagesSection from './uploader/ImagesSection'
 import HttpService from '@/services/HttpService'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -2713,22 +2719,66 @@ export default function AssetsAdminPage() {
                 </Typography>
               </Box>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button variant="contained" onClick={() => runMetaDescriptionGeneration('all')} disabled={metaBusy || loading}>
-                  Generar todas las descripciones
-                </Button>
-                <Button variant="outlined" onClick={() => runMetaDescriptionGeneration('missing')} disabled={metaBusy || loading}>
-                  Generar descripciones faltantes
-                </Button>
-                <Button variant="outlined" onClick={handleGenerateSelectedDescriptions} disabled={metaBusy || loading || !metaSelectedIds.length}>
-                  Generar descripciones seleccionadas
-                </Button>
-                <Button variant="outlined" color="secondary" onClick={runMetaTagsGenerationForSelected} disabled={metaBusy || loading || !metaSelectedIds.length}>
-                  Generar tags de seleccionados
-                </Button>
-                <Button variant="outlined" color="success" onClick={saveMetaSelected} disabled={metaBusy || loading || !metaSelectedIds.length}>
-                  Guardar seleccionados
-                </Button>
+              <Stack direction="row" spacing={0.7} sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <Tooltip title="Generar descripciones IA (todos)">
+                  <span>
+                    <IconButton
+                      onClick={() => runMetaDescriptionGeneration('all')}
+                      disabled={metaBusy || loading}
+                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                    >
+                      <AutoAwesomeIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Generar descripciones IA faltantes">
+                  <span>
+                    <IconButton
+                      onClick={() => runMetaDescriptionGeneration('missing')}
+                      disabled={metaBusy || loading}
+                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                    >
+                      <FilterAltIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Generar descripciones IA de seleccionados">
+                  <span>
+                    <IconButton
+                      onClick={handleGenerateSelectedDescriptions}
+                      disabled={metaBusy || loading || !metaSelectedIds.length}
+                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                    >
+                      <PlaylistAddCheckIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Generar tags IA de seleccionados">
+                  <span>
+                    <IconButton
+                      onClick={runMetaTagsGenerationForSelected}
+                      disabled={metaBusy || loading || !metaSelectedIds.length}
+                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                    >
+                      <SellIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Guardar seleccionados">
+                  <span>
+                    <IconButton
+                      onClick={saveMetaSelected}
+                      disabled={metaBusy || loading || !metaSelectedIds.length}
+                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, color: '#16a34a' }}
+                    >
+                      <SaveIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
             </Stack>
 
@@ -2763,7 +2813,7 @@ export default function AssetsAdminPage() {
                   <TableCell>Descripción SEO</TableCell>
                   <TableCell sx={{ minWidth: 220 }}>Categorías</TableCell>
                   <TableCell sx={{ minWidth: 260 }}>Tags</TableCell>
-                  <TableCell>Acciones</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -2880,43 +2930,56 @@ export default function AssetsAdminPage() {
                           disabled={metaBusy || loading}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Stack spacing={0.8}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="secondary"
-                            onClick={() => openMetaProfiles(id)}
-                            disabled={metaBusy || loading}
-                          >
-                            Perfiles
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleGenerateSingleDescription(id)}
-                            disabled={metaBusy || loading}
-                          >
-                            Generar descripción IA
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={async () => {
-                              try {
-                                setMetaBusy(true)
-                                await saveMetaRow(id)
-                                setRefreshTick((n) => n + 1)
-                              } catch (e) {
-                                await errorAlert('Error', e?.response?.data?.message || 'No se pudo guardar el asset')
-                              } finally {
-                                setMetaBusy(false)
-                              }
-                            }}
-                            disabled={metaBusy || loading}
-                          >
-                            Guardar
-                          </Button>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <Tooltip title="Perfiles rápidos">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => openMetaProfiles(id)}
+                                disabled={metaBusy || loading}
+                                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                              >
+                                <AccountTreeIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+
+                          <Tooltip title="Generar descripción IA">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleGenerateSingleDescription(id)}
+                                disabled={metaBusy || loading}
+                                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                              >
+                                <AutoAwesomeIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+
+                          <Tooltip title="Guardar fila">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={async () => {
+                                  try {
+                                    setMetaBusy(true)
+                                    await saveMetaRow(id)
+                                    setRefreshTick((n) => n + 1)
+                                  } catch (e) {
+                                    await errorAlert('Error', e?.response?.data?.message || 'No se pudo guardar el asset')
+                                  } finally {
+                                    setMetaBusy(false)
+                                  }
+                                }}
+                                disabled={metaBusy || loading}
+                                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, color: '#16a34a' }}
+                              >
+                                <SaveIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                         </Stack>
                       </TableCell>
                     </TableRow>
