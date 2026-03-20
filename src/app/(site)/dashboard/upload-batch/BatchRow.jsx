@@ -85,17 +85,17 @@ export default function BatchRow({
                    key={i} 
                    src={srcUrl} 
                    sx={{ 
-                     width: 44, height: 44, 
+                     width: 56, height: 56,
                      border: '2px solid rgba(255,255,255,0.15)', 
                      cursor: 'pointer',
                      transition: 'transform 0.2s',
-                     '&:hover': { transform: 'scale(1.15)', zIndex: 10 }
+                     '&:hover': { transform: 'scale(1.12)', zIndex: 10 }
                    }} 
                    onClick={() => onOpenImagePreview?.(srcUrl)}
                  />
                )
              }) : (
-                <Avatar sx={{ width: 44, height: 44, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
+                <Avatar sx={{ width: 56, height: 56, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
              )}
           </Stack>
           <Box flex={1}>
@@ -166,13 +166,13 @@ export default function BatchRow({
                     size="small"
                     {...tagProps}
                     sx={{
-                      color: '#ecfeff',
-                      backgroundColor: option.iaSuggested ? 'rgba(6,182,212,0.48)' : 'rgba(14,165,233,0.38)',
-                      border: '1px solid rgba(165,243,252,0.78)',
-                      fontWeight: 700,
+                      color: '#111827',
+                      backgroundColor: '#d8bb00',
+                      border: '1px solid rgba(148,163,184,0.52)',
+                      fontWeight: 400,
                       '& .MuiChip-label': { px: 0.75 },
-                      '& .MuiChip-deleteIcon': { color: '#ecfeff' },
-                      '&.Mui-disabled': { opacity: 1, color: '#ecfeff' },
+                      '& .MuiChip-deleteIcon': { color: '#111827' },
+                      '&.Mui-disabled': { opacity: 1, color: '#111827' },
                     }}
                   />
                 )
@@ -227,13 +227,13 @@ export default function BatchRow({
                      label={option.name || option.es || option.nameEn || option.en || option.slug || option}
                      {...tagProps}
                      sx={{
-                       color: '#fff1ff',
-                       backgroundColor: option.iaSuggested ? 'rgba(244,114,182,0.46)' : 'rgba(217,70,239,0.36)',
-                       border: '1px solid rgba(251,207,232,0.78)',
-                       fontWeight: 700,
+                       color: '#111827',
+                       backgroundColor: option.iaSuggested ? 'rgba(187,247,208,0.95)' : 'rgba(220,252,231,0.95)',
+                       border: '1px solid rgba(134,239,172,0.9)',
+                       fontWeight: 400,
                        '& .MuiChip-label': { px: 0.75 },
-                       '& .MuiChip-deleteIcon': { color: '#fff1ff' },
-                       '&.Mui-disabled': { opacity: 1, color: '#fff1ff' },
+                       '& .MuiChip-deleteIcon': { color: '#111827' },
+                       '&.Mui-disabled': { opacity: 1, color: '#111827' },
                      }}
                    />
                  )

@@ -13,6 +13,7 @@ import RightSidebar from '../assets/uploader/RightSidebar';
 
 const MAX_SIMILARITY_HASH_IMAGES = 8
 const ACCOUNT_LIMIT_MB = 19 * 1024
+const BATCH_MIN_USED_MB = 16 * 1024
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
@@ -242,10 +243,10 @@ export default function BatchTable() {
         setCategoriesCatalog(cats.data?.items || [])
         const tgs = await http.getData('/tags')
         setTagsCatalog(tgs.data?.items || [])
-        const accs = await http.getData('/accounts') // Load real Mega accounts
+          const accs = await http.getData('/accounts?batchUpload=1') // Load batch-eligible Mega accounts
         if (accs.data?.length > 0) {
            setCuentas(accs.data
-             .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) === 0)
+             .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) >= BATCH_MIN_USED_MB)
              .map(c => ({
               id: c.id, alias: c.alias || c.email, limitMB: ACCOUNT_LIMIT_MB, usedMB: c.storageUsedMB || 0
            })))
