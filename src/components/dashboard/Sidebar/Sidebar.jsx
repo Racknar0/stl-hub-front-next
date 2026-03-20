@@ -63,89 +63,88 @@ const Sidebar = () => {
                 Dashboard
               </Link>
             </li>
-            <li>
-              <Link href="/dashboard/notifications" className="item" onClick={() => setOpen(false)}>
+            <li className="submenu-group" tabIndex={0}>
+              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
                 <span className="icon" aria-hidden>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Zm6-6V11a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </span>
-                Notificaciones
-                {hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
-              </Link>
+                Upload
+                <span className="submenu-caret" aria-hidden>▾</span>
+              </div>
+              <ul className="submenu" aria-label="Submenu Upload">
+                <li>
+                  <Link href="/dashboard/assets/uploader" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Subir Stl
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/upload-batch" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Upload Batch
+                  </Link>
+                </li>
+              </ul>
             </li>
-            <li>
-              <Link href="/dashboard/users" className="item" onClick={() => setOpen(false)}>
+
+            <li className="submenu-group" tabIndex={0}>
+              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
+                <span className="icon" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </span>
+                Meta Info
+                <span className="submenu-caret" aria-hidden>▾</span>
+              </div>
+              <ul className="submenu" aria-label="Submenu Meta Info">
+                <li>
+                  <Link href="/dashboard/categories" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Categorías
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/tags" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Tags
+                  </Link>
+                </li>
+              </ul>
+            </li>
+
+            <li className="submenu-group" tabIndex={0}>
+              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
                 <span className="icon" aria-hidden>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </span>
-                Usuarios
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/assets" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Stl's
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/assets/uploader" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Subir Stl
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/upload-batch" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Upload Batch
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/accounts" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6h16v12H4z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M4 10h16" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </span>
-                Cuentas MEGA
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/categories" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Categorías
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/tags" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Tags
-              </Link>
+                Informacion
+                {hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
+                <span className="submenu-caret" aria-hidden>▾</span>
+              </div>
+              <ul className="submenu" aria-label="Submenu Informacion">
+                <li>
+                  <Link href="/dashboard/assets" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Asset
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/users" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Usuarios
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/accounts" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Cuentas MEGA
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/notifications" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Notificaciones
+                  </Link>
+                </li>
+              </ul>
             </li>
           </ul>
         </nav>

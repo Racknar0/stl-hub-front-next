@@ -75,6 +75,54 @@
 }
 .dash-sidebar .menu .item:hover{ background: rgba(255,255,255,0.06); }
 
+.dash-sidebar .menu .submenu-group {
+  outline: none;
+}
+
+.dash-sidebar .menu .submenu-parent {
+  cursor: default;
+  user-select: none;
+}
+
+.dash-sidebar .menu .submenu-caret {
+  margin-left: auto;
+  opacity: 0.8;
+  font-size: 12px;
+  transition: transform .18s ease;
+}
+
+.dash-sidebar .menu .submenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: max-height .2s ease, opacity .16s ease, transform .16s ease;
+}
+
+.dash-sidebar .menu .submenu-group:hover .submenu,
+.dash-sidebar .menu .submenu-group:focus-within .submenu,
+.dash-sidebar .menu .submenu-group:focus .submenu {
+  max-height: 180px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dash-sidebar .menu .submenu-group:hover .submenu-caret,
+.dash-sidebar .menu .submenu-group:focus-within .submenu-caret,
+.dash-sidebar .menu .submenu-group:focus .submenu-caret {
+  transform: rotate(180deg);
+}
+
+.dash-sidebar .menu .submenu .submenu-item {
+  margin-left: 30px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: rgba(232, 232, 240, 0.9);
+}
+
 /* Contenedor pegado al fondo para el widget */
 .dash-sidebar .sidebar-bottom{
   margin-top: auto;
