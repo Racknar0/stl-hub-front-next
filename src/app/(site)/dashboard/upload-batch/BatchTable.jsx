@@ -19,6 +19,7 @@ const BATCH_MIN_USED_MB = 16 * 1024
 export default function BatchTable() {
   const [rows, setRows] = useState([])
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
+  const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
@@ -303,6 +304,36 @@ export default function BatchTable() {
     try { e.target.value = '' } catch {}
   }, [pickScpFile])
 
+  const refreshBatchAccounts = useCallback(async ({ silent = false } = {}) => {
+    if (isRefreshingAccounts) return cuentas
+    setIsRefreshingAccounts(true)
+    try {
+      const accs = await http.getData('/accounts?batchUpload=1')
+      const list = Array.isArray(accs?.data) ? accs.data : []
+      const normalized = list
+        .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) >= BATCH_MIN_USED_MB)
+        .map(c => ({
+          id: c.id,
+          alias: c.alias || c.email,
+          limitMB: ACCOUNT_LIMIT_MB,
+          usedMB: Number(c.storageUsedMB || 0),
+        }))
+      setCuentas(normalized)
+      if (!silent) {
+        setToast({ open: true, msg: 'Cuentas refrescadas con uso real.', type: 'info' })
+      }
+      return normalized
+    } catch (e) {
+      console.error('refreshBatchAccounts error', e)
+      if (!silent) {
+        setToast({ open: true, msg: 'No se pudo refrescar cuentas ahora.', type: 'warning' })
+      }
+      return cuentas
+    } finally {
+      setIsRefreshingAccounts(false)
+    }
+  }, [cuentas, http, isRefreshingAccounts])
+
   useEffect(() => {
     async function fetchCatalogs() {
       try {
@@ -310,18 +341,11 @@ export default function BatchTable() {
         setCategoriesCatalog(cats.data?.items || [])
         const tgs = await http.getData('/tags')
         setTagsCatalog(tgs.data?.items || [])
-          const accs = await http.getData('/accounts?batchUpload=1') // Load batch-eligible Mega accounts
-        if (accs.data?.length > 0) {
-           setCuentas(accs.data
-             .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) >= BATCH_MIN_USED_MB)
-             .map(c => ({
-              id: c.id, alias: c.alias || c.email, limitMB: ACCOUNT_LIMIT_MB, usedMB: c.storageUsedMB || 0
-           })))
-        }
+        await refreshBatchAccounts({ silent: true })
       } catch {}
     }
     fetchCatalogs()
-  }, [])
+  }, [http, refreshBatchAccounts])
 
   const fetchBatchScpCommand = async () => {
     const pin = String(scpPin || '').trim()
@@ -732,12 +756,18 @@ export default function BatchTable() {
   }, [rows])
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
-  const handleAutoDistribute = () => {
+  const handleAutoDistribute = async () => {
     const LIMIT_GB = 19
     const LIMIT_MB = LIMIT_GB * 1024  // 18944 MB
 
+    const freshAccounts = await refreshBatchAccounts({ silent: true })
+    if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
+      setToast({ open: true, msg: 'No hay cuentas disponibles para distribuir.', type: 'warning' })
+      return
+    }
+
     // Clonar cuentas y ordenar ASCENDENTE por espacio usado (la menos llena primero)
-    let accountsStatus = cuentas
+    let accountsStatus = freshAccounts
       .map(c => ({ ...c, simulatedUsedMB: c.usedMB || 0 }))
       .sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
 
@@ -770,6 +800,10 @@ export default function BatchTable() {
        setToast({ open: true, msg: 'Distribución inteligente completada con éxito. Revisa el balance.', type: 'success' })
     }
   }
+
+  const handleCuentaSelectOpen = useCallback(() => {
+    void refreshBatchAccounts({ silent: true })
+  }, [refreshBatchAccounts])
 
   const handleOpenPerfilModal = (rowIdx) => {
     setSelectedRowIdxPerfil(rowIdx)
@@ -1280,6 +1314,7 @@ export default function BatchTable() {
                 onCategoriasChange={handleCategoriasChange}
                 onTagsChange={handleTagsChange}
                 onCuentaChange={handleCuentaChange}
+                onCuentaSelectOpen={handleCuentaSelectOpen}
                 onOpenCreateModal={openCreateModal}
                 onOpenProfiles={handleOpenPerfilModal}
                 onOpenImagePreview={setPreviewImage}
