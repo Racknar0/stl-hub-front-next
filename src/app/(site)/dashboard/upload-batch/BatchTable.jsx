@@ -10,6 +10,7 @@ import BatchRow from './BatchRow';
 import MetaCreateDialog from './MetaCreateDialog';
 import ProfilesModal from './ProfilesModal';
 import RightSidebar from '../assets/uploader/RightSidebar';
+import { successAlert } from '@/helpers/alerts';
 
 const MAX_SIMILARITY_HASH_IMAGES = 8
 const ACCOUNT_LIMIT_MB = 19 * 1024
@@ -33,7 +34,6 @@ export default function BatchTable() {
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
 
   const [previewImage, setPreviewImage] = useState(null)
-  const [finishModal, setFinishModal] = useState({ open: false, completed: 0, failed: 0, total: 0 })
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
 
   // SIMILARS SIDEBAR STATES
@@ -372,10 +372,7 @@ export default function BatchTable() {
     })
     if (!allTerminal) return
 
-    const total = trackedIds.length
-    const completed = trackedRows.filter(r => String(r.estado || '').toLowerCase() === 'completado').length
-    const failed = trackedRows.filter(r => String(r.estado || '').toLowerCase() === 'error').length
-    setFinishModal({ open: true, completed, failed, total })
+    void successAlert('Cola finalizada', 'La cola de subidas ha finalizado.')
     setWatchBatchRun({ active: false, trackedIds: [], sawInFlight: false })
   }, [rows, watchBatchRun])
 
@@ -1122,39 +1119,6 @@ export default function BatchTable() {
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button variant="contained" onClick={() => setScpModalOpen(false)}>¡Entendido!</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={finishModal.open}
-        onClose={() => setFinishModal(prev => ({ ...prev, open: false }))}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { background: '#1d1e26', color: '#fff' } }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Batch finalizado</DialogTitle>
-        <DialogContent sx={{ pt: 2.5 }}>
-          <Typography variant="body1" sx={{ color: '#fff', mb: 1.5 }}>
-            El procesamiento del lote terminó.
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-            Total: {finishModal.total}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#81c784' }}>
-            Completados: {finishModal.completed}
-          </Typography>
-          <Typography variant="body2" sx={{ color: finishModal.failed > 0 ? '#e57373' : 'rgba(255,255,255,0.8)' }}>
-            Fallidos: {finishModal.failed}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Button
-            onClick={() => setFinishModal(prev => ({ ...prev, open: false }))}
-            variant="contained"
-            sx={{ textTransform: 'none', fontWeight: 700 }}
-          >
-            Entendido
-          </Button>
         </DialogActions>
       </Dialog>
 

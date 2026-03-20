@@ -5,6 +5,7 @@ import Link from 'next/link'
 import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
 import AssetsUploadedWidget from '@/app/(site)/dashboard/assets/uploader/AssetsUploadedWidget'
+import VpsMemoryWidget from './VpsMemoryWidget'
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false)
@@ -149,6 +150,7 @@ const Sidebar = () => {
           </ul>
         </nav>
         <div className="sidebar-bottom">
+          <VpsMemoryWidget />
           <AssetsUploadedWidget />
         </div>
       </aside>
