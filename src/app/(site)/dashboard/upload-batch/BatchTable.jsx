@@ -908,6 +908,56 @@ export default function BatchTable() {
     }
   }
 
+  const tableSummary = useMemo(() => {
+    const total = rows.length
+    const retryableRows = rows.filter((r) => r.estado === 'borrador' || r.estado === 'error')
+    const retryable = retryableRows.length
+
+    const hasCategories = (row) => {
+      const arr = Array.isArray(row?.categorias) ? row.categorias : []
+      return arr.some((c) => {
+        const id = Number(c?.id || 0)
+        const key = String(c?.slug || c?.name || '').trim()
+        return (Number.isFinite(id) && id > 0) || !!key
+      })
+    }
+
+    const hasTags = (row) => {
+      const arr = Array.isArray(row?.tags) ? row.tags : []
+      return arr.some((t) => {
+        if (typeof t === 'string') return !!String(t).trim()
+        const id = Number(t?.id || 0)
+        const key = String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || '').trim()
+        return (Number.isFinite(id) && id > 0) || !!key
+      })
+    }
+
+    const readyRows = retryableRows.filter((row) => {
+      const accountId = Number(row?.cuenta || 0)
+      return Number.isFinite(accountId) && accountId > 0 && hasCategories(row) && hasTags(row)
+    })
+
+    const ready = readyRows.length
+    const missing = Math.max(0, retryable - ready)
+    const processing = rows.filter((r) => r.estado === 'procesando').length
+    const completed = rows.filter((r) => r.estado === 'completado').length
+    const error = rows.filter((r) => r.estado === 'error').length
+    const readyPct = retryable > 0 ? Math.round((ready / retryable) * 100) : 0
+    const readyGb = readyRows.reduce((acc, r) => acc + Number(r.pesoMB || 0), 0) / 1024
+
+    return {
+      total,
+      retryable,
+      ready,
+      missing,
+      processing,
+      completed,
+      error,
+      readyPct,
+      readyGb,
+    }
+  }, [rows])
+
 
 
   return (
@@ -1133,6 +1183,51 @@ export default function BatchTable() {
            </Box>
          )
        })()}
+
+      <Box
+        sx={{
+          mb: 2,
+          p: 1.4,
+          borderRadius: 2,
+          border: '1px solid rgba(148,163,184,0.35)',
+          background: 'linear-gradient(180deg, rgba(15,23,42,0.65), rgba(15,23,42,0.45))',
+        }}
+      >
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
+          <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700 }}>
+            Resumen de Tabla: {tableSummary.total} archivos
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.8)' }}>
+            Listos para subir: {tableSummary.ready}/{tableSummary.retryable} · {tableSummary.readyGb.toFixed(2)} GB
+          </Typography>
+        </Stack>
+
+        <LinearProgress
+          variant="determinate"
+          value={Math.max(0, Math.min(100, Number(tableSummary.readyPct || 0)))}
+          sx={{
+            mt: 1,
+            mb: 1,
+            height: 8,
+            borderRadius: 999,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            '& .MuiLinearProgress-bar': {
+              background: tableSummary.readyPct >= 100
+                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                : 'linear-gradient(90deg, #38bdf8, #0ea5e9)',
+            },
+          }}
+        />
+
+        <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+          <Chip size="small" label={`Total: ${tableSummary.total}`} sx={{ bgcolor: 'rgba(148,163,184,0.2)', color: '#e2e8f0' }} />
+          <Chip size="small" label={`Listos: ${tableSummary.ready}`} sx={{ bgcolor: 'rgba(34,197,94,0.2)', color: '#bbf7d0' }} />
+          <Chip size="small" label={`Pendientes: ${tableSummary.missing}`} sx={{ bgcolor: 'rgba(245,158,11,0.2)', color: '#fde68a' }} />
+          <Chip size="small" label={`En proceso: ${tableSummary.processing}`} sx={{ bgcolor: 'rgba(56,189,248,0.2)', color: '#bae6fd' }} />
+          <Chip size="small" label={`Completados: ${tableSummary.completed}`} sx={{ bgcolor: 'rgba(16,185,129,0.2)', color: '#a7f3d0' }} />
+          <Chip size="small" label={`Error: ${tableSummary.error}`} sx={{ bgcolor: 'rgba(239,68,68,0.2)', color: '#fecaca' }} />
+        </Stack>
+      </Box>
 
       <TableContainer
         component={Paper}

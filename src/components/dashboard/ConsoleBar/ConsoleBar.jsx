@@ -115,7 +115,25 @@ export default function ConsoleBar() {
   }, [open, expandedHeight]);
 
   const addLine = useCallback((text, extra={}) => {
-    setLines(l => [...l.slice(-999), { id: Date.now() + Math.random(), text, ...extra }]);
+    setLines(l => [...l.slice(-9999), { id: Date.now() + Math.random(), text, ...extra }]);
+  }, []);
+
+  const formatBatchAiResultSummary = useCallback((items) => {
+    if (!Array.isArray(items) || items.length === 0) return ['[BATCH][AI][RESULT] sin items'];
+
+    const lines = [`[BATCH][AI][RESULT] items=${items.length}`];
+    for (const it of items) {
+      const itemId = Number(it?.itemId || 0) || '-';
+      const nameEs = String(it?.nombre?.es || '').trim();
+      const nameEn = String(it?.nombre?.en || '').trim();
+      const cat = String(it?.categoria?.slug || it?.categoria?.name || it?.categoria?.es || '').trim() || '-';
+      const tags = Array.isArray(it?.tags)
+        ? it.tags.map((t) => String(t?.slug || t?.name || t?.es || '').trim()).filter(Boolean).slice(0, 3)
+        : [];
+      const tagsText = tags.length ? tags.join(', ') : '-';
+      lines.push(`#${itemId} | es="${nameEs || '-'}" | en="${nameEn || '-'}" | cat=${cat} | tags=${tagsText}`);
+    }
+    return lines;
   }, []);
 
   const requestRestart = useCallback(async () => {
@@ -174,6 +192,22 @@ export default function ConsoleBar() {
         if (!levelsEnabled[payload.level]) return;
         const ts = new Date(payload.timestamp).toLocaleTimeString();
         const msg = payload.messages.join(' ');
+
+        const aiResultMarker = '[BATCH][AI][RESULT_JSON]';
+        if (msg.includes(aiResultMarker)) {
+          const raw = msg.slice(msg.indexOf(aiResultMarker) + aiResultMarker.length).trim();
+          try {
+            const parsed = JSON.parse(raw);
+            const formatted = formatBatchAiResultSummary(parsed);
+            for (const ln of formatted) {
+              addLine(`${ts} [${payload.level.toUpperCase()}] ${ln}`, { level: payload.level, ts: payload.timestamp, isAiResult: true });
+            }
+          } catch (fmtErr) {
+            addLine(`${ts} [${payload.level.toUpperCase()}] [BATCH][AI][RESULT] parse-error: ${fmtErr.message}`, { level: 'warn', ts: payload.timestamp });
+          }
+          return;
+        }
+
         addLine(`${ts} [${payload.level.toUpperCase()}] ${msg}`, { level: payload.level, ts: payload.timestamp });
       } catch (e) {
         addLine('Error parseando log SSE: ' + e.message, { level: 'error' });
@@ -239,7 +273,8 @@ export default function ConsoleBar() {
             <LogArea ref={logsRef}>
               {lines.map(l => (
                 <div key={l.id} style={{
-                  color: l.level === 'error' ? '#ff6b6b' : l.level === 'warn' ? '#ffd166' : l.level === 'info' ? '#86c5ff' : '#eee'
+                  color: l.level === 'error' ? '#ff6b6b' : l.level === 'warn' ? '#ffd166' : l.level === 'info' ? '#86c5ff' : '#eee',
+                  whiteSpace: l.isAiResult ? 'pre-wrap' : 'normal'
                 }}>
                   {l.text}
                 </div>
