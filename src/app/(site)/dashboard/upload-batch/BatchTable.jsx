@@ -506,15 +506,30 @@ export default function BatchTable() {
     try {
       setIsScanning(true)
       setToast({ open: true, msg: `Escaneando carpeta local uploads/batch_imports...`, type: 'info' })
-      const res = await http.postData('/batch-imports/scan');
+      const res = await http.postData('/batch-imports/scan', {}, { timeout: 0 });
       if (res.data?.success) {
-        setToast({ open: true, msg: res.data.message || `Carpetas escaneadas exitosamente`, type: 'success' })
+        const aiWarn = res.data?.aiTimedOut ? ' IA tardó demasiado y se omitió en esta corrida.' : ''
+        setToast({ open: true, msg: `${res.data.message || `Carpetas escaneadas exitosamente`}${aiWarn}`, type: 'success' })
         fetchQueue()
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message}`, type: 'error' })
       }
     } catch(e) {
-      setToast({ open: true, msg: `Excepción al escanear: ${e.message}`, type: 'error' })
+      const isNetworkError = !e?.response
+      if (isNetworkError) {
+        setToast({
+          open: true,
+          msg: 'Network Error durante el escaneo. El backend puede seguir procesando; refrescando la cola…',
+          type: 'warning'
+        })
+        try {
+          await fetchQueue()
+          setTimeout(() => { void fetchQueue() }, 2500)
+          setTimeout(() => { void fetchQueue() }, 6000)
+        } catch {}
+      } else {
+        setToast({ open: true, msg: `Excepción al escanear: ${e.response?.data?.message || e.message}`, type: 'error' })
+      }
     } finally {
       setIsScanning(false)
     }

@@ -15,11 +15,11 @@ export default class HttpService {
     return axiosInstance.get(`${url}/${id}`).then((response) => response);
   }
 
-  async postData(url, data) {
+  async postData(url, data, config = {}) {
     // console.log('Data createData ------------------------:');
     // console.log(JSON.stringify(data, null, 2));
 
-    return axiosInstance.post(url, data).then((response) => {
+    return axiosInstance.post(url, data, config).then((response) => {
       // console.log('Response createData ------------------------:');
       // console.log(JSON.stringify(response, null, 2));
       return response;
