@@ -29,6 +29,9 @@ export default function BatchRow({
   const isProcesso = row.estado === 'procesando';
   const isOk = row.estado === 'completado';
   const isError = row.estado === 'error';
+  const mainStatus = String(row.mainStatus || 'PENDING').toUpperCase();
+  const backupStatus = String(row.backupStatus || 'PENDING').toUpperCase();
+  const rowInFlight = isProcesso || (isOk && ['PENDING', 'UPLOADING'].includes(backupStatus));
 
   return (
     <TableRow key={idx} hover sx={{ backgroundColor: isError ? 'rgba(244, 67, 54, 0.15)' : isOk ? 'rgba(76, 175, 80, 0.15)' : 'transparent', '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}>
@@ -54,7 +57,7 @@ export default function BatchRow({
                 <DeleteIcon fontSize="small" />
              </IconButton>
           </Tooltip>
-          {(String(row.mainStatus || '').toUpperCase() === 'UPLOADING' || String(row.backupStatus || '').toUpperCase() === 'UPLOADING') && (
+          {(mainStatus === 'UPLOADING' || backupStatus === 'UPLOADING') && (
             <Button
               size="small"
               variant="outlined"
@@ -206,7 +209,7 @@ export default function BatchRow({
       {/* ─── Main Status ─── */}
       <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         {(() => {
-          const s = row.mainStatus || 'PENDING'
+          const s = mainStatus
           if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(76,175,80,0.25)', color: '#81c784', fontWeight: 700, fontSize: 11 }} />
           if (s === 'UPLOADING') return <Chip label={`⬆️ ${row.mainProgress || 0}%`} size="small" sx={{ bgcolor: 'rgba(33,150,243,0.25)', color: '#64b5f6', fontWeight: 700, fontSize: 11 }} />
           if (s === 'EXTRACTING') return <Chip label="🔓 Extrayendo" size="small" sx={{ bgcolor: 'rgba(255,152,0,0.2)', color: '#ffb74d', fontWeight: 700, fontSize: 11 }} />
@@ -218,7 +221,7 @@ export default function BatchRow({
       {/* ─── Backup Status ─── */}
       <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         {(() => {
-          const s = row.backupStatus || 'PENDING'
+          const s = backupStatus
           if (s === 'OK') return <Chip label="✅ OK" size="small" sx={{ bgcolor: 'rgba(76,175,80,0.25)', color: '#81c784', fontWeight: 700, fontSize: 11 }} />
           if (s === 'UPLOADING') return <Chip label="⬆️ Subiendo" size="small" sx={{ bgcolor: 'rgba(33,150,243,0.25)', color: '#64b5f6', fontWeight: 700, fontSize: 11 }} />
           if (s === 'N/A') return <Chip label="— N/A" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)', fontSize: 11 }} />
@@ -227,7 +230,7 @@ export default function BatchRow({
         })()}
       </TableCell>
       <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-         {isProcesso && <CircularProgress size={24} />}
+         {rowInFlight && <CircularProgress size={24} />}
          {isOk && <CheckCircleOutlineIcon color="success" />}
          {isError && (
            <Tooltip title="Fallo al subir a MEGA">

@@ -32,6 +32,8 @@ export default function BatchTable() {
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
 
   const [previewImage, setPreviewImage] = useState(null)
+  const [finishModal, setFinishModal] = useState({ open: false, completed: 0, failed: 0, total: 0 })
+  const [watchBatchRun, setWatchBatchRun] = useState(false)
 
   // SIMILARS SIDEBAR STATES
   const RIGHT_SIDEBAR_WIDTH = 340
@@ -243,7 +245,7 @@ export default function BatchTable() {
         const accs = await http.getData('/accounts') // Load real Mega accounts
         if (accs.data?.length > 0) {
            setCuentas(accs.data
-             .filter(c => c.type === 'main' && (c.storageUsedMB / 1024) < 19)
+             .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) === 0)
              .map(c => ({
               id: c.id, alias: c.alias || c.email, limitMB: ACCOUNT_LIMIT_MB, usedMB: c.storageUsedMB || 0
            })))
@@ -307,16 +309,38 @@ export default function BatchTable() {
 
   useEffect(() => {
      fetchQueue()
-     // Solo poll rápido si hay items procesando
+     // Poll mientras exista cualquier item en flujo (main/backup)
      const iv = setInterval(() => {
        setRows(prevRows => {
-         const hasProcessing = prevRows.some(r => r.estado === 'procesando')
+         const hasProcessing = prevRows.some(r => {
+          const st = String(r.estado || '').toLowerCase()
+          const backup = String(r.backupStatus || '').toUpperCase()
+          return st === 'procesando' || (st === 'completado' && (backup === 'PENDING' || backup === 'UPLOADING'))
+         })
          if (hasProcessing) fetchQueue()
          return prevRows
        })
      }, 3000)
      return () => clearInterval(iv)
   }, [])
+
+  useEffect(() => {
+    if (!watchBatchRun) return
+
+    const hasInFlight = rows.some(r => {
+      const st = String(r.estado || '').toLowerCase()
+      const backup = String(r.backupStatus || '').toUpperCase()
+      return st === 'procesando' || (st === 'completado' && (backup === 'PENDING' || backup === 'UPLOADING'))
+    })
+
+    if (hasInFlight) return
+
+    const total = rows.length
+    const completed = rows.filter(r => String(r.estado || '').toLowerCase() === 'completado').length
+    const failed = rows.filter(r => String(r.estado || '').toLowerCase() === 'error').length
+    setFinishModal({ open: true, completed, failed, total })
+    setWatchBatchRun(false)
+  }, [rows, watchBatchRun])
 
   const handleScanLocal = async () => {
     try {
@@ -555,6 +579,7 @@ export default function BatchTable() {
           ? `¡${confirmedCount} assets enviados a la cola de subida!${renameMsg}`
           : 'No se enviaron assets: revisa límites y cuentas asignadas.'
         setToast({ open: true, msg: confirmedMsg, type: confirmedCount > 0 ? 'success' : 'warning' })
+        if (confirmedCount > 0) setWatchBatchRun(true)
          fetchQueue() // Refrescar del backend
       } else {
          setToast({ open: true, msg: `Error: ${res.data?.message || 'Fallo inesperado'}`, type: 'error' })
@@ -798,6 +823,39 @@ export default function BatchTable() {
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button variant="contained" onClick={() => setScpModalOpen(false)}>¡Entendido!</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={finishModal.open}
+        onClose={() => setFinishModal(prev => ({ ...prev, open: false }))}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { background: '#1d1e26', color: '#fff' } }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Batch finalizado</DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}>
+          <Typography variant="body1" sx={{ color: '#fff', mb: 1.5 }}>
+            El procesamiento del lote terminó.
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+            Total: {finishModal.total}
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#81c784' }}>
+            Completados: {finishModal.completed}
+          </Typography>
+          <Typography variant="body2" sx={{ color: finishModal.failed > 0 ? '#e57373' : 'rgba(255,255,255,0.8)' }}>
+            Fallidos: {finishModal.failed}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Button
+            onClick={() => setFinishModal(prev => ({ ...prev, open: false }))}
+            variant="contained"
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            Entendido
+          </Button>
         </DialogActions>
       </Dialog>
 
