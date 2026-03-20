@@ -26,7 +26,6 @@ export default function BatchTable() {
   const [tagsCatalog, setTagsCatalog] = useState([])
 
   const [scpModalOpen, setScpModalOpen] = useState(false)
-  const [scpPin, setScpPin] = useState('')
   const [scpCommandData, setScpCommandData] = useState(null)
   const [scpCommandError, setScpCommandError] = useState('')
   const [scpCommandLoading, setScpCommandLoading] = useState(false)
@@ -295,7 +294,6 @@ export default function BatchTable() {
     setScpModalOpen(true)
     setScpCommandData(null)
     setScpCommandError('')
-    setScpPin('')
   }, [])
 
   const handleScpDrop = useCallback((e) => {
@@ -355,12 +353,7 @@ export default function BatchTable() {
     fetchCatalogs()
   }, [http, refreshBatchAccounts])
 
-  const fetchBatchScpCommand = async () => {
-    const pin = String(scpPin || '').trim()
-    if (pin.length !== 4) {
-      setScpCommandError('PIN inválido. Debe tener 4 dígitos.')
-      return
-    }
+  const fetchBatchScpCommand = useCallback(async () => {
     if (!scpIndexedFile?.name) {
       setScpCommandError('Arrastra un archivo para indexar la subida.')
       return
@@ -369,7 +362,6 @@ export default function BatchTable() {
     setScpCommandError('')
     try {
       const res = await http.postData('/assets/scp-command', {
-        pin,
         mode: 'batch',
         filename: scpIndexedFile.name,
       })
@@ -385,7 +377,14 @@ export default function BatchTable() {
     } finally {
       setScpCommandLoading(false)
     }
-  }
+  }, [http, scpIndexedFile])
+
+  useEffect(() => {
+    if (!scpModalOpen || !scpIndexedFile?.name) return
+    if (scpCommandLoading) return
+    if (scpCommandData?.commands) return
+    void fetchBatchScpCommand()
+  }, [scpModalOpen, scpIndexedFile, scpCommandLoading, scpCommandData, fetchBatchScpCommand])
 
   useEffect(() => {
     if (!scpModalOpen || !scpIndexedFile?.name) return
@@ -1025,7 +1024,7 @@ export default function BatchTable() {
              borderRadius: 2,
              px: 2,
              py: 1.25,
-             border: '2px dashed',
+             border: '1px solid',
              borderColor: scpDropActive ? '#38bdf8' : 'rgba(148,163,184,0.7)',
              background: scpDropActive ? 'rgba(56,189,248,0.12)' : 'rgba(15,23,42,0.35)',
              cursor: 'pointer',
@@ -1033,7 +1032,7 @@ export default function BatchTable() {
            }}
          >
            <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700, lineHeight: 1.2 }}>
-             Arrastra para desbloquear subida
+             Arrastra para preparar comando de subida
            </Typography>
            <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.78)', display: 'block', mt: 0.45 }}>
              {scpIndexedFile?.name
@@ -1375,28 +1374,19 @@ export default function BatchTable() {
         <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Comando para Subida Pesada (SCP)</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
-            Arrastraste: <strong>{scpIndexedFile?.name || '—'}</strong>. Desbloquea con PIN para obtener el comando generado por backend.
+            Arrastraste: <strong>{scpIndexedFile?.name || '—'}</strong>. El comando se genera desde backend sin bloqueo por PIN.
           </Typography>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)', display: 'block', mb: 1.3 }}>
             Tamaño indexado: {formatBytes(scpIndexedFile?.size || 0)}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
-            <TextField
-              label="PIN"
-              value={scpPin}
-              onChange={(e) => setScpPin(String(e.target.value || '').replace(/\D/g, '').slice(0, 4))}
-              fullWidth
-              autoFocus
-              placeholder="1991"
-              inputProps={{ maxLength: 4 }}
-            />
             <Button
               variant="contained"
               onClick={fetchBatchScpCommand}
               disabled={scpCommandLoading}
               sx={{ minWidth: 170, textTransform: 'none', fontWeight: 700 }}
             >
-              {scpCommandLoading ? 'Desbloqueando…' : 'Desbloquear'}
+              {scpCommandLoading ? 'Generando…' : 'Regenerar comandos'}
             </Button>
           </Stack>
 
@@ -1406,6 +1396,21 @@ export default function BatchTable() {
 
           {!scpCommandData?.commands ? null : (
           <Box sx={{ p: 2, borderRadius: 2, background: 'rgba(0,0,0,0.3)', fontFamily: 'monospace', fontSize: 13, border: '1px solid rgba(255,255,255,0.1)' }}>
+            {scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd ? (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#93c5fd' }}>Comando WSL rsync (recomendado para masivo):</div>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mt: 0.6 }}>
+                  Ejecuta en Linux/WSL. Lee archivos en Windows desde /mnt/c/stl-hub/super-batch y reanuda cortes.
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.2, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
+                    {scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd}
+                  </Typography>
+                  <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd)}>Copiar</Button>
+                </Stack>
+              </>
+            ) : null}
+
             {scpCommandData.commands.winscpKeepupCmd ? (
               <>
                 <div style={{ fontWeight: 700, fontSize: 15, color: '#ffd54f' }}>Comando recomendado (reanuda si se corta):</div>
