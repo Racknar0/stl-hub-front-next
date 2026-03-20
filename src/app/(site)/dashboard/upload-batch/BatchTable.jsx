@@ -29,6 +29,18 @@ export default function BatchTable() {
   const [scpCommandData, setScpCommandData] = useState(null)
   const [scpCommandError, setScpCommandError] = useState('')
   const [scpCommandLoading, setScpCommandLoading] = useState(false)
+  const [scpDropActive, setScpDropActive] = useState(false)
+  const [scpIndexedFile, setScpIndexedFile] = useState(null)
+  const [scpUploadProbe, setScpUploadProbe] = useState({
+    exists: false,
+    percent: 0,
+    sizeB: 0,
+    speedMBs: 0,
+    done: false,
+    error: '',
+  })
+  const scpPickerRef = React.useRef(null)
+  const scpProbeRef = React.useRef({ sizeB: 0, ts: 0 })
 
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
@@ -236,6 +248,61 @@ export default function BatchTable() {
 
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
 
+  const formatBytes = useCallback((b) => {
+    const n = Number(b || 0)
+    if (!Number.isFinite(n) || n <= 0) return '0 B'
+    if (n < 1024) return `${n} B`
+    const kb = n / 1024
+    if (kb < 1024) return `${kb.toFixed(1)} KB`
+    const mb = kb / 1024
+    if (mb < 1024) return `${mb.toFixed(1)} MB`
+    const gb = mb / 1024
+    return `${gb.toFixed(2)} GB`
+  }, [])
+
+  const pickScpFile = useCallback((filesLike) => {
+    const files = Array.from(filesLike || [])
+    if (!files.length) return
+
+    const selected = files.reduce((best, curr) => {
+      if (!best) return curr
+      return Number(curr?.size || 0) > Number(best?.size || 0) ? curr : best
+    }, null)
+
+    if (!selected) return
+
+    const fileMeta = {
+      name: String(selected.name || '').trim(),
+      size: Math.max(0, Number(selected.size || 0)),
+      relPath: String(selected.webkitRelativePath || '').trim(),
+    }
+
+    if (!fileMeta.name) {
+      setToast({ open: true, msg: 'Archivo inválido para SCP.', type: 'warning' })
+      return
+    }
+
+    setScpIndexedFile(fileMeta)
+    setScpUploadProbe({ exists: false, percent: 0, sizeB: 0, speedMBs: 0, done: false, error: '' })
+    scpProbeRef.current = { sizeB: 0, ts: 0 }
+    setScpModalOpen(true)
+    setScpCommandData(null)
+    setScpCommandError('')
+    setScpPin('')
+  }, [])
+
+  const handleScpDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setScpDropActive(false)
+    pickScpFile(e.dataTransfer?.files)
+  }, [pickScpFile])
+
+  const handleScpPick = useCallback((e) => {
+    pickScpFile(e.target?.files)
+    try { e.target.value = '' } catch {}
+  }, [pickScpFile])
+
   useEffect(() => {
     async function fetchCatalogs() {
       try {
@@ -262,10 +329,18 @@ export default function BatchTable() {
       setScpCommandError('PIN inválido. Debe tener 4 dígitos.')
       return
     }
+    if (!scpIndexedFile?.name) {
+      setScpCommandError('Arrastra un archivo para indexar la subida.')
+      return
+    }
     setScpCommandLoading(true)
     setScpCommandError('')
     try {
-      const res = await http.postData('/assets/scp-command', { pin, mode: 'batch' })
+      const res = await http.postData('/assets/scp-command', {
+        pin,
+        mode: 'batch',
+        filename: scpIndexedFile.name,
+      })
       if (res?.data?.ok && res?.data?.commands) {
         setScpCommandData(res.data)
       } else {
@@ -279,6 +354,57 @@ export default function BatchTable() {
       setScpCommandLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!scpModalOpen || !scpIndexedFile?.name) return
+
+    let cancelled = false
+    const pathRel = `batch_imports/${scpIndexedFile.name}`
+    const expectedSize = Number(scpIndexedFile.size || 0)
+
+    const poll = async () => {
+      try {
+        const r = await http.postData('/assets/staged-status/batch-imports', {
+          paths: [pathRel],
+          expectedSizes: [expectedSize],
+        })
+        const row = Array.isArray(r?.data?.data) ? r.data.data[0] : null
+        if (cancelled || !row) return
+
+        const sizeB = Math.max(0, Number(row.sizeB || 0))
+        const rawPct = Number(row.percent)
+        const pct = Number.isFinite(rawPct)
+          ? Math.max(0, Math.min(100, rawPct))
+          : (expectedSize > 0 ? Math.max(0, Math.min(100, Math.floor((sizeB / expectedSize) * 100))) : 0)
+
+        const now = Date.now()
+        const prev = scpProbeRef.current || { sizeB: 0, ts: 0 }
+        const dt = Math.max(0, now - Number(prev.ts || 0))
+        const db = Math.max(0, sizeB - Number(prev.sizeB || 0))
+        const speedMBs = dt > 0 ? (db / (1024 * 1024)) / (dt / 1000) : 0
+
+        scpProbeRef.current = { sizeB, ts: now }
+        setScpUploadProbe({
+          exists: !!row.exists,
+          percent: pct,
+          sizeB,
+          speedMBs: Number.isFinite(speedMBs) ? speedMBs : 0,
+          done: pct >= 100,
+          error: '',
+        })
+      } catch {
+        if (cancelled) return
+        setScpUploadProbe((prev) => ({ ...prev, error: 'No se pudo leer el progreso del archivo en VPS.' }))
+      }
+    }
+
+    poll()
+    const id = setInterval(poll, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [scpModalOpen, scpIndexedFile, http])
 
   const mapEstado = (status) => {
     const s = (status || '').toLowerCase()
@@ -763,20 +889,40 @@ export default function BatchTable() {
       }}
     >
        {/* PANEL DE CONTROL SUPERIOR */}
-       <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} mb={3}>
-         <Button 
-            variant="contained" 
-            color="secondary"
-            onClick={() => {
-              setScpModalOpen(true)
-              setScpPin('')
-              setScpCommandData(null)
-              setScpCommandError('')
-            }}
-            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+       <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} mb={3} flexWrap="wrap" useFlexGap>
+         <input
+           ref={scpPickerRef}
+           type="file"
+           style={{ display: 'none' }}
+           onChange={handleScpPick}
+         />
+         <Box
+           onClick={() => scpPickerRef.current?.click()}
+           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setScpDropActive(true) }}
+           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setScpDropActive(false) }}
+           onDrop={handleScpDrop}
+           sx={{
+             minWidth: { xs: '100%', md: 360 },
+             maxWidth: 420,
+             borderRadius: 2,
+             px: 2,
+             py: 1.25,
+             border: '2px dashed',
+             borderColor: scpDropActive ? '#38bdf8' : 'rgba(148,163,184,0.7)',
+             background: scpDropActive ? 'rgba(56,189,248,0.12)' : 'rgba(15,23,42,0.35)',
+             cursor: 'pointer',
+             userSelect: 'none',
+           }}
          >
-           Subida SCP ("El Pesado")
-         </Button>
+           <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700, lineHeight: 1.2 }}>
+             Arrastra para desbloquear subida
+           </Typography>
+           <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.78)', display: 'block', mt: 0.45 }}>
+             {scpIndexedFile?.name
+               ? `${scpIndexedFile.name} · ${formatBytes(scpIndexedFile.size)}`
+               : 'Suelta aquí el archivo pesado (o haz clic para elegir)'}
+           </Typography>
+         </Box>
          <Button 
             variant="outlined" 
             color="primary"
@@ -1065,7 +1211,10 @@ export default function BatchTable() {
         <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Comando para Subida Pesada (SCP)</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
-            Desbloquea con PIN para obtener el comando generado por backend. Host, usuario, puerto y ruta remota base no son editables.
+            Arrastraste: <strong>{scpIndexedFile?.name || '—'}</strong>. Desbloquea con PIN para obtener el comando generado por backend.
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)', display: 'block', mb: 1.3 }}>
+            Tamaño indexado: {formatBytes(scpIndexedFile?.size || 0)}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
             <TextField
@@ -1096,9 +1245,9 @@ export default function BatchTable() {
             <div style={{ fontWeight: 700, fontSize: 15, color: '#69f0ae' }}>Comando SCP Directo:</div>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.5, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
               <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
-                {scpCommandData.commands.folderContentCmd}
+                {scpCommandData.commands.singleFileCmd || scpCommandData.commands.folderContentCmd}
               </Typography>
-              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.folderContentCmd)}>Copiar</Button>
+              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.singleFileCmd || scpCommandData.commands.folderContentCmd)}>Copiar</Button>
             </Stack>
 
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mb: 1 }}>
@@ -1116,6 +1265,47 @@ export default function BatchTable() {
             </Typography>
           </Box>
           )}
+
+          {scpIndexedFile?.name ? (
+            <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(56,189,248,0.35)' }}>
+              <Typography variant="body2" sx={{ color: '#e0f2fe', fontWeight: 700, mb: 0.8 }}>
+                Progreso de subida detectado en VPS
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={Math.max(0, Math.min(100, Number(scpUploadProbe.percent || 0)))}
+                sx={{
+                  height: 12,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255,255,255,0.14)',
+                  '& .MuiLinearProgress-bar': {
+                    background: scpUploadProbe.percent >= 100
+                      ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                      : 'linear-gradient(90deg, #38bdf8, #0ea5e9)',
+                  },
+                }}
+              />
+              <Typography variant="caption" sx={{ color: 'rgba(224,242,254,0.92)', display: 'block', mt: 0.65 }}>
+                {Math.max(0, Math.min(100, Number(scpUploadProbe.percent || 0))).toFixed(0)}% · {formatBytes(scpUploadProbe.sizeB)} / {formatBytes(scpIndexedFile?.size || 0)}
+                {scpUploadProbe.speedMBs > 0 ? ` · ${scpUploadProbe.speedMBs.toFixed(2)} MB/s` : ''}
+              </Typography>
+              {!scpUploadProbe.exists ? (
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.68)', display: 'block', mt: 0.4 }}>
+                  Esperando que inicie la transferencia SCP...
+                </Typography>
+              ) : null}
+              {scpUploadProbe.done ? (
+                <Typography variant="caption" sx={{ color: '#86efac', display: 'block', mt: 0.4, fontWeight: 700 }}>
+                  Archivo recibido completo en el VPS.
+                </Typography>
+              ) : null}
+              {scpUploadProbe.error ? (
+                <Typography variant="caption" sx={{ color: '#fecaca', display: 'block', mt: 0.4 }}>
+                  {scpUploadProbe.error}
+                </Typography>
+              ) : null}
+            </Box>
+          ) : null}
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button variant="contained" onClick={() => setScpModalOpen(false)}>¡Entendido!</Button>
