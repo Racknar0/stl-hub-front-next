@@ -1,16 +1,13 @@
 .widget {
-  position: fixed;
-  bottom: 50px;
-  left: 0px;
+  position: relative;
   background: rgba(15,20,30,0.88);
   backdrop-filter: blur(6px);
   color: #fff;
   padding: 12px 14px;
   border-radius: 12px;
   box-shadow: 0 12px 36px rgba(0,0,0,0.5);
-  width: 220px;
-  max-width: calc(100vw - 48px);
-  z-index: 9999;
+  width: 100%;
+  max-width: 100%;
   font-size: 12px;
   transition: transform .18s ease, opacity .18s ease;
 }

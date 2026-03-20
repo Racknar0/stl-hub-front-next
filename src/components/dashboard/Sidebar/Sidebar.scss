@@ -78,4 +78,7 @@
 /* Contenedor pegado al fondo para el widget */
 .dash-sidebar .sidebar-bottom{
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

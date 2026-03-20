@@ -6,6 +6,23 @@ import styles from './VpsMemoryWidget.module.scss'
 
 const POLL_MS = 15000
 
+function buildWindowsPreviewMemory() {
+  const totalBytes = 16 * 1024 * 1024 * 1024
+  const usagePct = 57.4
+  const usedBytes = Math.round((usagePct / 100) * totalBytes)
+  const availableBytes = Math.max(0, totalBytes - usedBytes)
+
+  return {
+    supported: true,
+    platform: 'win32-preview',
+    totalBytes,
+    availableBytes,
+    usedBytes,
+    usagePct,
+    dangerThresholdPct: 90,
+  }
+}
+
 function toGB(value) {
   const n = Number(value || 0)
   if (!Number.isFinite(n) || n <= 0) return '0.0'
@@ -15,6 +32,7 @@ function toGB(value) {
 export default function VpsMemoryWidget() {
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(false)
+  const runningOnWindowsClient = typeof window !== 'undefined' && /win/i.test(String(window.navigator?.platform || ''))
 
   const pct = useMemo(() => {
     const n = Number(memory?.usagePct || 0)
@@ -35,11 +53,15 @@ export default function VpsMemoryWidget() {
         if (abort) return
         if (data?.supported) {
           setMemory(data)
+        } else if (String(data?.platform || '').toLowerCase() === 'win32') {
+          setMemory(buildWindowsPreviewMemory())
         } else {
           setMemory(null)
         }
       } catch {
-        if (!abort) setMemory(null)
+        if (!abort) {
+          setMemory(runningOnWindowsClient ? buildWindowsPreviewMemory() : null)
+        }
       } finally {
         if (!abort) setLoading(false)
       }
