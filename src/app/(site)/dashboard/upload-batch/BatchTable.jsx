@@ -12,6 +12,7 @@ import ProfilesModal from './ProfilesModal';
 import RightSidebar from '../assets/uploader/RightSidebar';
 
 const MAX_SIMILARITY_HASH_IMAGES = 8
+const ACCOUNT_LIMIT_MB = 19 * 1024
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
@@ -242,9 +243,9 @@ export default function BatchTable() {
         const accs = await http.getData('/accounts') // Load real Mega accounts
         if (accs.data?.length > 0) {
            setCuentas(accs.data
-             .filter(c => c.type === 'main' && (c.storageUsedMB / 1024) < 18)
+             .filter(c => c.type === 'main' && (c.storageUsedMB / 1024) < 19)
              .map(c => ({
-              id: c.id, alias: c.alias || c.email, limitMB: 19500, usedMB: c.storageUsedMB || 0
+              id: c.id, alias: c.alias || c.email, limitMB: ACCOUNT_LIMIT_MB, usedMB: c.storageUsedMB || 0
            })))
         }
         
@@ -425,7 +426,7 @@ export default function BatchTable() {
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = () => {
-    const LIMIT_GB = 18.5
+    const LIMIT_GB = 19
     const LIMIT_MB = LIMIT_GB * 1024  // 18944 MB
 
     // Clonar cuentas y ordenar ASCENDENTE por espacio usado (la menos llena primero)
@@ -442,7 +443,7 @@ export default function BatchTable() {
        
        const peso = row.pesoMB || 0;
        
-       // Buscar la primera cuenta donde (usado + peso) NO supere 18.5GB
+      // Buscar la primera cuenta donde (usado + peso) NO supere 19GB
        let bestAccount = accountsStatus.find(a => (a.simulatedUsedMB + peso) <= LIMIT_MB)
        
        if (bestAccount) {
@@ -494,6 +495,33 @@ export default function BatchTable() {
     const unassignedCount = retryableRows.length
     if (unassignedCount === 0) return
 
+    const incomingByAccount = new Map()
+    for (const row of retryableRows) {
+      const accountId = Number(row.cuenta || 0)
+      if (!accountId) continue
+      const sizeMb = Number(row.pesoMB || 0)
+      incomingByAccount.set(accountId, (incomingByAccount.get(accountId) || 0) + sizeMb)
+    }
+
+    const overflowAccounts = []
+    for (const [accountId, incomingMb] of incomingByAccount.entries()) {
+      const account = cuentas.find(c => Number(c.id) === Number(accountId))
+      if (!account) continue
+      const usedMb = Number(account.usedMB || 0)
+      const projectedMb = usedMb + Number(incomingMb || 0)
+      if (projectedMb > ACCOUNT_LIMIT_MB) {
+        overflowAccounts.push(`${account.alias} (${(projectedMb / 1024).toFixed(2)} GB)`)
+      }
+    }
+    if (overflowAccounts.length > 0) {
+      setToast({
+        open: true,
+        msg: `Límite 19GB excedido en: ${overflowAccounts.join(', ')}. Reasigna antes de confirmar.`,
+        type: 'error'
+      })
+      return
+    }
+
     setIsProcessing(true)
     setToast({ open: true, msg: 'Guardando datos e iniciando subida...', type: 'info' })
 
@@ -516,9 +544,17 @@ export default function BatchTable() {
       const res = await http.postData('/batch-imports/confirm', { itemIds })
       
       if (res.data?.success) {
+        const rejected = Array.isArray(res.data?.rejectedOverLimit) ? res.data.rejectedOverLimit.length : 0
+        if (rejected > 0) {
+          setToast({ open: true, msg: `Se bloquearon ${rejected} assets por límite 19GB. Revisa asignaciones.`, type: 'warning' })
+        }
         const renamedCount = Array.isArray(res.data?.renamed) ? res.data.renamed.length : 0
         const renameMsg = renamedCount > 0 ? ` · renombrados por duplicado: ${renamedCount}` : ''
-        setToast({ open: true, msg: `¡${itemIds.length} assets enviados a la cola de subida!${renameMsg}`, type: 'success' })
+        const confirmedCount = Number(res.data?.confirmed || 0)
+        const confirmedMsg = confirmedCount > 0
+          ? `¡${confirmedCount} assets enviados a la cola de subida!${renameMsg}`
+          : 'No se enviaron assets: revisa límites y cuentas asignadas.'
+        setToast({ open: true, msg: confirmedMsg, type: confirmedCount > 0 ? 'success' : 'warning' })
          fetchQueue() // Refrescar del backend
       } else {
          setToast({ open: true, msg: `Error: ${res.data?.message || 'Fallo inesperado'}`, type: 'error' })
@@ -604,7 +640,7 @@ export default function BatchTable() {
          const accountIds = Object.keys(byAccount)
          if (!accountIds.length) return null
 
-         const LIMIT_MB = 20480 // 20GB
+         const LIMIT_MB = ACCOUNT_LIMIT_MB // 19GB
 
          return (
            <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
