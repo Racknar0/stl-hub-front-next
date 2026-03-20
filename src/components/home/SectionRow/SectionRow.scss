@@ -3,6 +3,70 @@
 .section-row {
     padding: 1.5rem 0;
 }
+
+.section-row--freebies-glow .container-narrow {
+  position: relative;
+  padding: 1rem 1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: transparent;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.section-row--freebies-glow .container-narrow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 19px;
+  padding: 2px;
+  background: linear-gradient(120deg, #22c55e, #10b981, #84cc16, #22c55e);
+  background-size: 320% 320%;
+  animation: freebiesGlowShift 7s linear infinite;
+  opacity: 0.9;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 0;
+}
+
+.section-row--freebies-glow .container-narrow::after {
+  content: none;
+}
+
+.section-row--freebies-glow .header,
+.section-row--freebies-glow .row-slider,
+.section-row--freebies-glow .card-item {
+  position: relative;
+  z-index: 2;
+}
+
+.section-row--freebies-glow .header h3 {
+  color: #d9fbe6;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.22);
+}
+
+.section-row--freebies-glow .card-item {
+  border-color: rgba(74, 222, 128, 0.2);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.08);
+}
+
+.section-row--freebies-glow .card-item:hover {
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.section-row--freebies-glow .chip {
+  border-color: rgba(74, 222, 128, 0.26);
+  background: rgba(22, 163, 74, 0.14);
+  color: #dcfce7;
+}
+
+.section-row--freebies-glow .chip--link:hover {
+  background: rgba(34, 197, 94, 0.24);
+  border-color: rgba(74, 222, 128, 0.56);
+  color: #f0fdf4;
+}
 .section-row .header {
     display: flex;
     align-items: center;
@@ -103,3 +167,9 @@
 /* ubicación segura dentro del contenedor */
 .row-slider .swiper-button-prev { left: var(--swiper-navigation-sides-offset); }
 .row-slider .swiper-button-next { right: var(--swiper-navigation-sides-offset); }
+
+@keyframes freebiesGlowShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

@@ -72,6 +72,17 @@ const shuffleArray = (arr) => {
   return a
 }
 
+const pickRandomItems = (arr, n = 20) => shuffleArray(arr).slice(0, n)
+
+const rotateListBy = (arr, steps = 0) => {
+  const list = Array.isArray(arr) ? arr : []
+  const len = list.length
+  if (len <= 1) return list
+  const offset = ((steps % len) + len) % len
+  if (offset === 0) return list
+  return list.slice(offset).concat(list.slice(0, offset))
+}
+
 const Home = () => {
   const http = new HttpService();
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
@@ -88,6 +99,7 @@ const Home = () => {
   const [latestData, setLatestData] = useState([]);
   const [topData, setTopData] = useState([]);
   const [freeData, setFreeData] = useState([]);
+  const [topRotationStep, setTopRotationStep] = useState(0);
   // Categorías y sliders
   const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
   const [catsLoadOrder, setCatsLoadOrder] = useState([]); // mismo shape, pero barajado para carga
@@ -160,13 +172,16 @@ const Home = () => {
         const latestArr = Array.isArray(res.data) ? res.data : [];
         setLatestRaw(latestArr);
 
-  const resTop = await http.getData('/assets/top?limit=20');
-        const topArr = Array.isArray(resTop.data) ? resTop.data : [];
-        setTopRaw(topArr);
+        // "Lo más descargado" simulado con assets aleatorios y refrescado en cada carga.
+        const resTopRandomPool = await http.getData('/assets/search?pageIndex=0&pageSize=80');
+        const topPool = Array.isArray(resTopRandomPool.data?.items) ? resTopRandomPool.data.items : [];
+        const topArr = pickRandomItems(topPool, 20);
+        setTopRaw(topArr.length ? topArr : latestArr);
+        setTopRotationStep(0);
 
         // Nuevo: FREE actuales (público vía /assets/search)
-  // Orden: últimos primero (id desc) y límite 20
-  const resFree = await http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20');
+        // Orden: últimos primero (id desc) y límite 20
+        const resFree = await http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20');
         const freeArr = Array.isArray(resFree.data?.items) ? resFree.data.items : [];
         setFreeRaw(freeArr);
 
@@ -184,6 +199,7 @@ const Home = () => {
       } catch (e) {
         setLatestRaw([]);
         setTopRaw([]);
+        setTopRotationStep(0);
         setFreeRaw([]);
         setCats([]);
         setCatsLoadOrder([]);
@@ -197,6 +213,14 @@ const Home = () => {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(topRaw) || topRaw.length < 2) return undefined;
+    const timer = setInterval(() => {
+      setTopRotationStep((prev) => prev + 1);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [topRaw]);
 
   // Cargar primer lote de categorías cuando ya tengamos listado
   useEffect(() => {
@@ -264,7 +288,10 @@ const Home = () => {
   // Derivar listas según idioma
   // Limitar sliders a 20 elementos por seguridad adicional
   const latest = useMemo(() => latestData.slice(0,20).map(a => toCardItem(a, language)), [latestData, language]);
-  const top = useMemo(() => topData.slice(0,20).map(a => toCardItem(a, language)), [topData, language]);
+  const top = useMemo(() => {
+    const rotated = rotateListBy(topData, topRotationStep);
+    return rotated.slice(0,20).map(a => toCardItem(a, language));
+  }, [topData, topRotationStep, language]);
   const free = useMemo(() => freeData.slice(0,20).map(a => toCardItem(a, language)), [freeData, language]);
 
   const catSliders = useMemo(() => (
@@ -288,6 +315,7 @@ const Home = () => {
       <Hero />
 
       <FeatureSection
+        variantClass="feature-section--latest-glow"
         title={t('home.latest.title')}
         subtitle={t('home.latest.subtitle')}
         ctaLabel={t('home.latest.cta')}
@@ -297,6 +325,7 @@ const Home = () => {
 
       {/* Nuevo slider: Gratis (se actualiza diario) */}
       <SectionRow
+        variantClass="section-row--freebies-glow"
         title={t('home.free.title')}
         items={free}
         onItemClick={handleOpen}

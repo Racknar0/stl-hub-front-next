@@ -12,7 +12,7 @@ import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import '../../common/GlobalLoader/GlobalLoader.scss';
 
-const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false }) => {
+const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '' }) => {
   const { t } = useI18n();
   const finalLinkLabel = linkLabel || t('sliders.row.more');
   const Spinner = ({ size = 36 }) => (
@@ -33,7 +33,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
   );
   const showLoader = loading || !Array.isArray(items) || items.length === 0;
   return (
-    <section className="section-row">
+    <section className={`section-row ${variantClass}`.trim()}>
       <div className="container-narrow" style={{
                 maxWidth: "98%"
             }}>

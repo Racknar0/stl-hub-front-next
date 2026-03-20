@@ -12,6 +12,12 @@ import '../../../components/common/GlobalLoader/GlobalLoader.scss';
 import './search.scss';
 
 const SEARCH_EVENT_DEDUPE_MS = 8000;
+const PAGE_SIZE = 72;
+const VIRTUALIZE_AFTER_ITEMS = 240;
+const CARD_MIN_WIDTH_PX = 240;
+const GRID_GAP_PX = 10;
+const ROW_HEIGHT_PX = 390;
+const OVERSCAN_ROWS = 4;
 
 function stripLeadingHashes(value) {
   return String(value || '').replace(/^#+/, '');
@@ -140,8 +146,6 @@ export default function SearchClient({ initialParams }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const isEn = String(language || 'es').toLowerCase() === 'en';
-  // paginación real
-  const PAGE_SIZE = 24;
   const [q, setQ] = useState(initialParams?.q || '');
   const [categories, setCategories] = useState(initialParams?.categories || '');
   const [tags, setTags] = useState(initialParams?.tags || '');
@@ -152,11 +156,18 @@ export default function SearchClient({ initialParams }) {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef(null);
+  const gridShellRef = useRef(null);
   const searchEventIdRef = useRef(null);
   // Refs para evitar condiciones de carrera y loops
   const pageRef = useRef(0);
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(true);
+  const [virtualWindow, setVirtualWindow] = useState({
+    columns: 1,
+    totalRows: 0,
+    startRow: 0,
+    endRow: 0,
+  });
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -301,6 +312,112 @@ export default function SearchClient({ initialParams }) {
     loadPageReal(pageRef.current);
   }, [loadPageReal, items.length]);
 
+  const shouldVirtualize = items.length >= VIRTUALIZE_AFTER_ITEMS;
+
+  const computeVirtualWindow = useCallback(() => {
+    const el = gridShellRef.current;
+    if (!el) return;
+
+    const width = Math.max(1, Number(el.clientWidth || 1));
+    const columns = Math.max(1, Math.floor((width + GRID_GAP_PX) / (CARD_MIN_WIDTH_PX + GRID_GAP_PX)));
+    const totalRows = Math.max(1, Math.ceil(Math.max(0, items.length) / columns));
+
+    if (!shouldVirtualize) {
+      const next = {
+        columns,
+        totalRows,
+        startRow: 0,
+        endRow: Math.max(0, totalRows - 1),
+      };
+      setVirtualWindow((prev) => (
+        prev.columns === next.columns
+        && prev.totalRows === next.totalRows
+        && prev.startRow === next.startRow
+        && prev.endRow === next.endRow
+      ) ? prev : next);
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const gridTopAbs = window.scrollY + rect.top;
+    const viewportTop = window.scrollY;
+    const viewportBottom = viewportTop + window.innerHeight;
+
+    const firstVisibleRow = Math.floor((viewportTop - gridTopAbs) / ROW_HEIGHT_PX);
+    const lastVisibleRow = Math.floor((viewportBottom - gridTopAbs) / ROW_HEIGHT_PX);
+
+    const startRow = Math.max(0, firstVisibleRow - OVERSCAN_ROWS);
+    const endRow = Math.min(
+      totalRows - 1,
+      Math.max(lastVisibleRow + OVERSCAN_ROWS, startRow + 1)
+    );
+
+    const next = { columns, totalRows, startRow, endRow };
+    setVirtualWindow((prev) => (
+      prev.columns === next.columns
+      && prev.totalRows === next.totalRows
+      && prev.startRow === next.startRow
+      && prev.endRow === next.endRow
+    ) ? prev : next);
+  }, [items.length, shouldVirtualize]);
+
+  useEffect(() => {
+    let rafId = 0;
+    const schedule = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        computeVirtualWindow();
+      });
+    };
+
+    computeVirtualWindow();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+
+    return () => {
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [computeVirtualWindow]);
+
+  const virtualState = useMemo(() => {
+    const columns = Math.max(1, Number(virtualWindow.columns || 1));
+    const totalRows = Math.max(1, Math.ceil(Math.max(0, items.length) / columns));
+
+    if (!shouldVirtualize) {
+      return {
+        columns,
+        startIndex: 0,
+        endIndex: items.length,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+        renderItems: items,
+      };
+    }
+
+    const safeStartRow = Math.max(0, Math.min(totalRows - 1, Number(virtualWindow.startRow || 0)));
+    const safeEndRow = Math.max(
+      safeStartRow,
+      Math.min(totalRows - 1, Number(virtualWindow.endRow || safeStartRow))
+    );
+
+    const startIndex = safeStartRow * columns;
+    const endIndex = Math.min(items.length, (safeEndRow + 1) * columns);
+    const topSpacerHeight = safeStartRow * ROW_HEIGHT_PX;
+    const bottomSpacerHeight = Math.max(0, (totalRows - safeEndRow - 1) * ROW_HEIGHT_PX);
+
+    return {
+      columns,
+      startIndex,
+      endIndex,
+      topSpacerHeight,
+      bottomSpacerHeight,
+      renderItems: items.slice(startIndex, endIndex),
+    };
+  }, [items, shouldVirtualize, virtualWindow]);
+
   // IntersectionObserver para scroll infinito
   useEffect(() => {
     const el = sentinelRef.current;
@@ -354,8 +471,14 @@ export default function SearchClient({ initialParams }) {
   ) : null}
   {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
 
-        <div className="results-grid">
-          {items.map((it) => (
+        <div ref={gridShellRef} className="results-virtual-shell">
+          {virtualState.topSpacerHeight > 0 ? <div style={{ height: virtualState.topSpacerHeight }} /> : null}
+
+          <div
+            className="results-grid"
+            style={shouldVirtualize ? { gridTemplateColumns: `repeat(${virtualState.columns}, minmax(240px, 1fr))` } : undefined}
+          >
+          {virtualState.renderItems.map((it) => (
             <article
               key={it.id}
               className="fcard"
@@ -429,6 +552,10 @@ export default function SearchClient({ initialParams }) {
               <span className="badge" aria-hidden="true">✓</span>
             </article>
           ))}
+          </div>
+
+          {virtualState.bottomSpacerHeight > 0 ? <div style={{ height: virtualState.bottomSpacerHeight }} /> : null}
+
           {items.length > 0 && (
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
             {hasMore ? (

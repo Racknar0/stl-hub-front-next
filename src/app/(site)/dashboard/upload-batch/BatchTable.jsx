@@ -5,6 +5,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloseIcon from '@mui/icons-material/Close';
+import ReplayIcon from '@mui/icons-material/Replay';
 import HttpService from '@/services/HttpService';
 import BatchRow from './BatchRow';
 import MetaCreateDialog from './MetaCreateDialog';
@@ -21,9 +22,11 @@ export default function BatchTable() {
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
+  const [isRetryingAi, setIsRetryingAi] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
   const [tagsCatalog, setTagsCatalog] = useState([])
+  const [aiRetryCandidateIds, setAiRetryCandidateIds] = useState([])
 
   const [scpModalOpen, setScpModalOpen] = useState(false)
   const [scpCommandData, setScpCommandData] = useState(null)
@@ -569,8 +572,30 @@ export default function BatchTable() {
       setToast({ open: true, msg: `Escaneando carpeta local uploads/batch_imports...`, type: 'info' })
       const res = await http.postData('/batch-imports/scan', {}, { timeout: 0 });
       if (res.data?.success) {
-        const aiWarn = res.data?.aiTimedOut ? ' IA tardó demasiado y se omitió en esta corrida.' : ''
-        setToast({ open: true, msg: `${res.data.message || `Carpetas escaneadas exitosamente`}${aiWarn}`, type: 'success' })
+        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
+        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
+        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
+        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
+          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
+          : []
+        setAiRetryCandidateIds(aiFailedItemIds)
+
+        const aiNotes = []
+        if (res.data?.aiTimedOut) aiNotes.push('IA tardó demasiado y quedó en proceso diferido.')
+        if (aiRetryAttempts > 0) aiNotes.push(`Reintentos IA ejecutados: ${aiRetryAttempts}.`)
+        if (aiFailedItems > 0) {
+          aiNotes.push(
+            aiRateLimitedItems > 0
+              ? `IA no pudo clasificar ${aiFailedItems} item(s), ${aiRateLimitedItems} por rate limit. Quedan en borrador para reintentar luego.`
+              : `IA no pudo clasificar ${aiFailedItems} item(s). Quedan en borrador para reintentar luego.`
+          )
+        }
+
+        const baseMsg = res.data.message || 'Carpetas escaneadas exitosamente'
+        const finalMsg = aiNotes.length > 0 ? `${baseMsg} ${aiNotes.join(' ')}` : baseMsg
+        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
+
+        setToast({ open: true, msg: finalMsg, type: finalType })
         fetchQueue()
         if (res.data?.aiApplyDeferred) {
           setTimeout(() => { void fetchQueue() }, 2500)
@@ -598,6 +623,61 @@ export default function BatchTable() {
       }
     } finally {
       setIsScanning(false)
+    }
+  }
+
+  const handleRetryFailedAi = async () => {
+    const ids = Array.from(new Set(aiRetryCandidateIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
+    if (!ids.length) {
+      setToast({ open: true, msg: 'No hay items fallidos de IA para reintentar.', type: 'info' })
+      return
+    }
+
+    try {
+      setIsRetryingAi(true)
+      setToast({ open: true, msg: `Reintentando IA para ${ids.length} item(s) fallidos...`, type: 'info' })
+      const res = await http.postData('/batch-imports/retry-ai', { itemIds: ids }, { timeout: 0 })
+
+      if (res.data?.success) {
+        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
+        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
+        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
+        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
+          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
+          : []
+
+        if (!res.data?.aiTimedOut) {
+          setAiRetryCandidateIds(aiFailedItemIds)
+        }
+
+        const note = []
+        if (aiRetryAttempts > 0) note.push(`reintentos IA: ${aiRetryAttempts}`)
+        if (aiFailedItems > 0) {
+          note.push(
+            aiRateLimitedItems > 0
+              ? `fallidos: ${aiFailedItems} (${aiRateLimitedItems} por rate limit)`
+              : `fallidos: ${aiFailedItems}`
+          )
+        }
+
+        const baseMsg = res.data?.message || 'Reintento IA finalizado.'
+        const finalMsg = note.length ? `${baseMsg} ${note.join(' · ')}` : baseMsg
+        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
+        setToast({ open: true, msg: finalMsg, type: finalType })
+
+        fetchQueue()
+        if (res.data?.aiApplyDeferred) {
+          setTimeout(() => { void fetchQueue() }, 2500)
+          setTimeout(() => { void fetchQueue() }, 6000)
+          setTimeout(() => { void fetchQueue() }, 10000)
+        }
+      } else {
+        setToast({ open: true, msg: res.data?.message || 'No se pudo reintentar IA.', type: 'error' })
+      }
+    } catch (e) {
+      setToast({ open: true, msg: `Error reintentando IA: ${e.response?.data?.message || e.message}`, type: 'error' })
+    } finally {
+      setIsRetryingAi(false)
     }
   }
 
@@ -1082,6 +1162,15 @@ export default function BatchTable() {
             sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
          >
            {isScanning ? 'Escaneando + IA...' : 'Escanear Carpetas'}
+         </Button>
+         <Button
+            variant="outlined"
+            startIcon={<ReplayIcon />}
+            onClick={handleRetryFailedAi}
+            disabled={isRetryingAi || isScanning || aiRetryCandidateIds.length === 0}
+            sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 'bold' }}
+         >
+           {isRetryingAi ? 'Reintentando IA...' : `Reintentar IA fallidos (${aiRetryCandidateIds.length})`}
          </Button>
          <Button 
             variant="outlined" 

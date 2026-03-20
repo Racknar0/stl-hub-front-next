@@ -20,6 +20,7 @@ const FeatureSection = ({
     ctaLabel,
     items = [],
     onItemClick,
+    variantClass = '',
 }) => {
     const { t } = useI18n();
     const finalTitle = title || t('sliders.feature.title');
@@ -44,7 +45,7 @@ const FeatureSection = ({
             </div>
         );
     return (
-        <section className="feature-section">
+        <section className={`feature-section ${variantClass}`.trim()}>
             <div className="container-narrow" style={{
                 maxWidth: "97%"
             }}>
