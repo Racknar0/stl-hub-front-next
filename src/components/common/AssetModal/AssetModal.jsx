@@ -114,6 +114,7 @@ export default function AssetModal({ open, onClose, asset }) {
                 setData((prev) => ({
                     ...prev,
                     description: String(d.description || prev?.description || '').trim(),
+                    descriptionEn: String(d.descriptionEn || prev?.descriptionEn || '').trim(),
                     categories: Array.isArray(d.categories)
                         ? d.categories
                         : prev?.categories,

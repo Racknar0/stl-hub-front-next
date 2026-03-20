@@ -148,6 +148,7 @@ const Home = () => {
       slug: a.slug, // necesario para enlace "ver detalle"
       title,
       description: a.description,
+      descriptionEn: a.descriptionEn,
       chips: (chips || []),
       thumb,
       images: images.map(imgUrl),
