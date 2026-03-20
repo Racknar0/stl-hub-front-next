@@ -1406,6 +1406,21 @@ export default function BatchTable() {
 
           {!scpCommandData?.commands ? null : (
           <Box sx={{ p: 2, borderRadius: 2, background: 'rgba(0,0,0,0.3)', fontFamily: 'monospace', fontSize: 13, border: '1px solid rgba(255,255,255,0.1)' }}>
+            {scpCommandData.commands.winscpKeepupCmd ? (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#ffd54f' }}>Comando recomendado (reanuda si se corta):</div>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mt: 0.6 }}>
+                  Ideal para archivos muy grandes. Mantiene estado local y reintenta sin perder el avance completado.
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.8, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
+                    {scpCommandData.commands.winscpKeepupCmd}
+                  </Typography>
+                  <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.winscpKeepupCmd)}>Copiar</Button>
+                </Stack>
+              </>
+            ) : null}
+
             <div style={{ fontWeight: 700, fontSize: 15, color: '#69f0ae' }}>Comando SCP Directo:</div>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.5, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
               <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
