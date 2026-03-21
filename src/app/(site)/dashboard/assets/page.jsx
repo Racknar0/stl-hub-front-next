@@ -1907,6 +1907,30 @@ export default function AssetsAdminPage() {
     await runMetaDescriptionGeneration('selected', metaSelectedIds)
   }
 
+  const handleGenerateAllDescriptions = async () => {
+    const ok = await confirmAlert(
+      'Generar descripciones (todos)',
+      'Esto intentará generar descripciones IA para todos los assets según el límite configurado. ¿Deseas continuar?',
+      'Sí, generar',
+      'Cancelar',
+      'warning',
+    )
+    if (!ok) return
+    await runMetaDescriptionGeneration('all')
+  }
+
+  const handleGenerateMissingDescriptions = async () => {
+    const ok = await confirmAlert(
+      'Generar descripciones (faltantes)',
+      'Esto generará descripciones IA solo para assets con descripción faltante. ¿Deseas continuar?',
+      'Sí, generar',
+      'Cancelar',
+      'question',
+    )
+    if (!ok) return
+    await runMetaDescriptionGeneration('missing')
+  }
+
   const handleGenerateSingleDescription = async (assetId) => {
     await runMetaDescriptionGeneration('selected', [Number(assetId)])
   }
@@ -2786,7 +2810,7 @@ export default function AssetsAdminPage() {
                 <Tooltip title="Generar descripciones IA (todos)">
                   <span>
                     <IconButton
-                      onClick={() => runMetaDescriptionGeneration('all')}
+                      onClick={handleGenerateAllDescriptions}
                       disabled={metaBusy || loading}
                       sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
                     >
@@ -2798,7 +2822,7 @@ export default function AssetsAdminPage() {
                 <Tooltip title="Generar descripciones IA faltantes">
                   <span>
                     <IconButton
-                      onClick={() => runMetaDescriptionGeneration('missing')}
+                      onClick={handleGenerateMissingDescriptions}
                       disabled={metaBusy || loading}
                       sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
                     >
