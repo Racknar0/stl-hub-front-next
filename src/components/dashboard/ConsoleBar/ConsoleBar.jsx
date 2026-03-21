@@ -83,6 +83,7 @@ export default function ConsoleBar() {
   const [logHeight, setLogHeight] = useState(0);
   const [lines, setLines] = useState([]);
   const [live, setLive] = useState(true);
+  const [scanOnly, setScanOnly] = useState(false);
   const [restartLoading, setRestartLoading] = useState(false);
   const [levelsEnabled, setLevelsEnabled] = useState({ log: true, info: true, warn: true, error: true });
   const logsRef = useRef(null);
@@ -116,6 +117,10 @@ export default function ConsoleBar() {
 
   const addLine = useCallback((text, extra={}) => {
     setLines(l => [...l.slice(-9999), { id: Date.now() + Math.random(), text, ...extra }]);
+  }, []);
+
+  const isBatchScanStatusLine = useCallback((raw = '') => {
+    return String(raw || '').includes('[BATCH SCAN][STATUS]');
   }, []);
 
   const formatBatchAiResultSummary = useCallback((items) => {
@@ -192,6 +197,7 @@ export default function ConsoleBar() {
         if (!levelsEnabled[payload.level]) return;
         const ts = new Date(payload.timestamp).toLocaleTimeString();
         const msg = payload.messages.join(' ');
+        const scanStatus = isBatchScanStatusLine(msg);
 
         const aiResultMarker = '[BATCH][AI][RESULT_JSON]';
         if (msg.includes(aiResultMarker)) {
@@ -200,22 +206,50 @@ export default function ConsoleBar() {
             const parsed = JSON.parse(raw);
             const formatted = formatBatchAiResultSummary(parsed);
             for (const ln of formatted) {
-              addLine(`${ts} [${payload.level.toUpperCase()}] ${ln}`, { level: payload.level, ts: payload.timestamp, isAiResult: true });
+              addLine(`${ts} [${payload.level.toUpperCase()}] ${ln}`, { level: payload.level, ts: payload.timestamp, isAiResult: true, isScanStatus: false });
             }
           } catch (fmtErr) {
-            addLine(`${ts} [${payload.level.toUpperCase()}] [BATCH][AI][RESULT] parse-error: ${fmtErr.message}`, { level: 'warn', ts: payload.timestamp });
+            addLine(`${ts} [${payload.level.toUpperCase()}] [BATCH][AI][RESULT] parse-error: ${fmtErr.message}`, { level: 'warn', ts: payload.timestamp, isScanStatus: false });
           }
           return;
         }
 
-        addLine(`${ts} [${payload.level.toUpperCase()}] ${msg}`, { level: payload.level, ts: payload.timestamp });
+        addLine(`${ts} [${payload.level.toUpperCase()}] ${msg}`, { level: payload.level, ts: payload.timestamp, isScanStatus: scanStatus });
       } catch (e) {
-        addLine('Error parseando log SSE: ' + e.message, { level: 'error' });
+        addLine('Error parseando log SSE: ' + e.message, { level: 'error', isScanStatus: false });
       }
     });
     evtSource.onerror = () => { /* opcional: reconectar */ };
     return () => { cancelled = true; evtSource.close(); };
   }, [live, addLine, levelsEnabled]);
+
+  const visibleLines = scanOnly ? lines.filter((l) => !!l.isScanStatus) : lines;
+
+  const getLineStyle = (line) => {
+    const baseColor = line.level === 'error'
+      ? '#ff6b6b'
+      : line.level === 'warn'
+        ? '#ffd166'
+        : line.level === 'info'
+          ? '#86c5ff'
+          : '#eee';
+
+    if (line.isScanStatus) {
+      return {
+        color: '#bae6fd',
+        background: 'rgba(14,116,144,0.18)',
+        borderLeft: '3px solid #38bdf8',
+        paddingLeft: 8,
+        marginBottom: 2,
+        whiteSpace: 'normal',
+      };
+    }
+
+    return {
+      color: baseColor,
+      whiteSpace: line.isAiResult ? 'pre-wrap' : 'normal',
+    };
+  };
 
   return (
     <Root>
@@ -230,6 +264,17 @@ export default function ConsoleBar() {
             <IconButton size="small" color="inherit" onClick={() => setLive(v => !v)}>
               {live ? <PauseCircleOutlineIcon fontSize="small" /> : <PlayCircleOutlineIcon fontSize="small" />}
             </IconButton>
+          </Tooltip>
+          <Tooltip title={scanOnly ? 'Mostrar todos los logs' : 'Mostrar solo estado de escaneo'}>
+            <Button
+              size="small"
+              variant={scanOnly ? 'contained' : 'outlined'}
+              color={scanOnly ? 'info' : 'inherit'}
+              onClick={() => setScanOnly(v => !v)}
+              sx={{ minWidth: 88, textTransform: 'none', fontWeight: 700 }}
+            >
+              {scanOnly ? 'Solo Scan' : 'Filtrar Scan'}
+            </Button>
           </Tooltip>
           {Number(roleId) === 2 && (
             <Tooltip title="Reiniciar backend (PM2)">
@@ -271,15 +316,12 @@ export default function ConsoleBar() {
         {open && (
           <div style={{ height: logHeight, transition: 'height .2s', borderTop: '1px solid #222' }}>
             <LogArea ref={logsRef}>
-              {lines.map(l => (
-                <div key={l.id} style={{
-                  color: l.level === 'error' ? '#ff6b6b' : l.level === 'warn' ? '#ffd166' : l.level === 'info' ? '#86c5ff' : '#eee',
-                  whiteSpace: l.isAiResult ? 'pre-wrap' : 'normal'
-                }}>
+              {visibleLines.map(l => (
+                <div key={l.id} style={getLineStyle(l)}>
                   {l.text}
                 </div>
               ))}
-              {!lines.length && <div style={{ opacity: 0.5 }}>Sin output todavía...</div>}
+              {!visibleLines.length && <div style={{ opacity: 0.5 }}>{scanOnly ? 'Sin eventos de escaneo todavía...' : 'Sin output todavía...'}</div>}
             </LogArea>
           </div>
         )}

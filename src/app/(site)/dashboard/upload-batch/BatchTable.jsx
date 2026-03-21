@@ -25,6 +25,7 @@ export default function BatchTable() {
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
+  const [scanStatus, setScanStatus] = useState(null)
   const [isApplyingAiMetadata, setIsApplyingAiMetadata] = useState(false)
   const [isRetryingAi, setIsRetryingAi] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -50,6 +51,8 @@ export default function BatchTable() {
   const scpProbeRef = React.useRef({ sizeB: 0, ts: 0 })
   const cuentasRef = React.useRef([])
   const isRefreshingAccountsRef = React.useRef(false)
+  const scanTerminalToastRef = React.useRef('')
+  const scanTrackingSinceRef = React.useRef(0)
 
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
   const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
@@ -588,7 +591,11 @@ export default function BatchTable() {
   }, [rows, watchBatchRun])
 
   const handleScanLocal = async () => {
+    const nowTs = Date.now()
+    scanTrackingSinceRef.current = nowTs
+    scanTerminalToastRef.current = ''
     try {
+      setScanStatus(null)
       setIsScanning(true)
       setToast({ open: true, msg: 'Escaneando carpeta local uploads/batch_imports...', type: 'info' })
       const res = await http.postData('/batch-imports/scan', {}, { timeout: 0 });
@@ -601,17 +608,52 @@ export default function BatchTable() {
           msg: res.data.message || `Escaneo completo: ${scannedCount} detectados, ${queuedCount} nuevos.`,
           type: 'success'
         })
+        const statusRes = await http.getData('/batch-imports/scan-status').catch(() => null)
+        const scan = statusRes?.data?.scan || null
+        if (scan) {
+          setScanStatus(scan)
+          if (Number(scan?.runId || 0) > 0) {
+            scanTerminalToastRef.current = `${scan.runId}:done`
+          }
+        }
+        setIsScanning(false)
         fetchQueue()
       } else {
+        setIsScanning(false)
         setToast({ open: true, msg: `Error: ${res.data?.message}`, type: 'error' })
       }
     } catch(e) {
-      const isNetworkError = !e?.response
-      if (isNetworkError) {
+      if (Number(e?.response?.status) === 409) {
+        const runningScan = e?.response?.data?.scan || null
+        if (runningScan) {
+          setScanStatus(runningScan)
+          const startedAt = Number(runningScan?.startedAt || 0)
+          scanTrackingSinceRef.current = startedAt > 0 ? startedAt : Date.now()
+        }
+        setIsScanning(true)
         setToast({
           open: true,
-          msg: 'Network Error durante el escaneo. El backend puede seguir procesando; refrescando la cola…',
+          msg: e?.response?.data?.message || 'Ya existe un escaneo en progreso. Mostrando estado en vivo.',
           type: 'warning'
+        })
+        return
+      }
+
+      const isNetworkError = !e?.response
+      if (isNetworkError) {
+        const statusRes = await http.getData('/batch-imports/scan-status').catch(() => null)
+        const scan = statusRes?.data?.scan || null
+        if (scan) {
+          setScanStatus(scan)
+        }
+        const running = String(scan?.status || '').toLowerCase() === 'running'
+        setIsScanning(running)
+        setToast({
+          open: true,
+          msg: running
+            ? 'Network Error durante el escaneo. El backend sigue procesando; mostrando progreso en vivo.'
+            : 'Network Error durante el escaneo. No se pudo confirmar que siga en ejecución.',
+          type: running ? 'warning' : 'error'
         })
         try {
           await fetchQueue()
@@ -619,12 +661,111 @@ export default function BatchTable() {
           setTimeout(() => { void fetchQueue() }, 6000)
         } catch {}
       } else {
+        setIsScanning(false)
         setToast({ open: true, msg: `Excepción al escanear: ${e.response?.data?.message || e.message}`, type: 'error' })
       }
-    } finally {
-      setIsScanning(false)
     }
   }
+
+  useEffect(() => {
+    if (!isScanning) return
+    let cancelled = false
+
+    const poll = async () => {
+      try {
+        const res = await http.getData('/batch-imports/scan-status')
+        if (cancelled) return
+        const scan = res?.data?.scan || null
+        if (!scan) return
+
+        setScanStatus(scan)
+
+        const startedAt = Number(scan?.startedAt || 0)
+        const trackingSince = Number(scanTrackingSinceRef.current || 0)
+        const belongsToCurrentWatch = !trackingSince || (startedAt > 0 && startedAt >= (trackingSince - 1500))
+        if (!belongsToCurrentWatch) return
+
+        const status = String(scan?.status || '').toLowerCase()
+        if (status === 'done' || status === 'error' || status === 'idle') {
+          setIsScanning(false)
+
+          const runId = Number(scan?.runId || 0)
+          const toastKey = `${runId}:${status}`
+          if (scanTerminalToastRef.current !== toastKey) {
+            scanTerminalToastRef.current = toastKey
+            if (status === 'done') {
+              setToast({
+                open: true,
+                msg: String(scan?.message || '').trim() || 'Escaneo finalizado.',
+                type: 'success',
+              })
+            } else if (status === 'error') {
+              setToast({
+                open: true,
+                msg: String(scan?.message || '').trim() || 'El escaneo finalizó con error.',
+                type: 'error',
+              })
+            }
+          }
+
+          void fetchQueue()
+        }
+      } catch {
+        // Mantener el polling vivo para reintentar en el siguiente tick.
+      }
+    }
+
+    void poll()
+    const id = setInterval(() => { void poll() }, 1000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [isScanning, http])
+
+  const scanStatusUi = useMemo(() => {
+    const phase = String(scanStatus?.phase || '').toLowerCase()
+    const status = String(scanStatus?.status || '').toLowerCase()
+    const current = Math.max(0, Number(scanStatus?.current || 0))
+    const total = Math.max(0, Number(scanStatus?.total || 0))
+    const percentRaw = Number(scanStatus?.percent)
+    const percent = Number.isFinite(percentRaw)
+      ? Math.max(0, Math.min(100, Math.round(percentRaw)))
+      : (total > 0 ? Math.round((current / total) * 100) : 0)
+
+    const phaseLabelMap = {
+      initializing: 'Inicializando',
+      decompress: 'Descompresión',
+      discovery: 'Discovery',
+      cleanup: 'Limpieza',
+      done: 'Completado',
+      error: 'Error',
+      idle: 'Inactivo',
+    }
+
+    const archivesDone = Math.max(0, Number(scanStatus?.counters?.archives?.done || 0))
+    const archivesTotal = Math.max(0, Number(scanStatus?.counters?.archives?.total || 0))
+    const foldersDone = Math.max(0, Number(scanStatus?.counters?.folders?.done || 0))
+    const foldersTotal = Math.max(0, Number(scanStatus?.counters?.folders?.total || 0))
+    const itemsDone = Math.max(0, Number(scanStatus?.counters?.items?.done || 0))
+    const itemsTotal = Math.max(0, Number(scanStatus?.counters?.items?.total || 0))
+
+    return {
+      status,
+      phase,
+      phaseLabel: phaseLabelMap[phase] || 'Procesando',
+      message: String(scanStatus?.message || '').trim(),
+      current,
+      total,
+      percent,
+      archivesDone,
+      archivesTotal,
+      foldersDone,
+      foldersTotal,
+      itemsDone,
+      itemsTotal,
+    }
+  }, [scanStatus])
 
   const handleApplyAiMetadata = async () => {
     const ids = rows
@@ -1351,12 +1492,52 @@ export default function BatchTable() {
        )}
 
        {isScanning && (
-         <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2, px: 0.5 }}>
-           <CircularProgress size={18} thickness={5} />
-           <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.92)', fontWeight: 600 }}>
-             Procesando escaneo de carpetas, espera a que finalice...
+         <Box
+           sx={{
+             mb: 2,
+             px: 1.25,
+             py: 1.1,
+             borderRadius: 2,
+             border: '1px solid rgba(59,130,246,0.45)',
+             background: 'linear-gradient(90deg, rgba(29,78,216,0.2), rgba(37,99,235,0.14))',
+             boxShadow: '0 10px 20px rgba(29,78,216,0.18)',
+           }}
+         >
+           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} alignItems={{ xs: 'flex-start', md: 'center' }}>
+             <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+               <CircularProgress size={18} thickness={5} />
+               <Box sx={{ minWidth: 0 }}>
+                 <Typography variant="body2" sx={{ color: '#dbeafe', fontWeight: 800 }}>
+                   Escaneo en vivo · {scanStatusUi.phaseLabel}
+                 </Typography>
+                 <Typography variant="caption" sx={{ color: 'rgba(219,234,254,0.92)', display: 'block' }}>
+                   {scanStatusUi.message || 'Procesando escaneo de carpetas...'}
+                 </Typography>
+               </Box>
+             </Stack>
+             <Typography variant="caption" sx={{ color: '#bfdbfe', fontWeight: 700, whiteSpace: 'nowrap' }}>
+               Paso {scanStatusUi.current}/{scanStatusUi.total || 0} · {scanStatusUi.percent}%
+             </Typography>
+           </Stack>
+
+           <LinearProgress
+             variant="determinate"
+             value={scanStatusUi.percent}
+             sx={{
+               mt: 1,
+               height: 9,
+               borderRadius: 999,
+               backgroundColor: 'rgba(30,41,59,0.5)',
+               '& .MuiLinearProgress-bar': {
+                 background: 'linear-gradient(90deg, #60a5fa, #3b82f6)',
+               },
+             }}
+           />
+
+           <Typography variant="caption" sx={{ color: 'rgba(191,219,254,0.95)', mt: 0.75, display: 'block' }}>
+             Comprimidos: {scanStatusUi.archivesDone}/{scanStatusUi.archivesTotal} · Lotes: {scanStatusUi.foldersDone}/{scanStatusUi.foldersTotal} · Items: {scanStatusUi.itemsDone}/{scanStatusUi.itemsTotal}
            </Typography>
-         </Stack>
+         </Box>
        )}
 
        <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
