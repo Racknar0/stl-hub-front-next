@@ -15,7 +15,8 @@ import RightSidebar from '../assets/uploader/RightSidebar';
 import { successAlert } from '@/helpers/alerts';
 
 const MAX_SIMILARITY_HASH_IMAGES = 8
-const ACCOUNT_LIMIT_MB = 19 * 1024
+const UI_ACCOUNT_LIMIT_MB = 18 * 1024
+const BACKEND_SAFETY_LIMIT_MB = 19 * 1024
 const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
 const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
 const REVIEW_ROW_HEIGHT = 130
@@ -451,11 +452,11 @@ export default function BatchTable() {
         .map(c => ({
           id: c.id,
           alias: c.alias || c.email || `Cuenta ${c.id}`,
-          limitMB: ACCOUNT_LIMIT_MB,
+          limitMB: UI_ACCOUNT_LIMIT_MB,
           usedMB: Number(c.storageUsedMB || 0),
           totalMB: Number(c.storageTotalMB || 0),
         }))
-        .filter(c => Number(c.id) > 0 && Number(c.usedMB || 0) < Number(c.limitMB || ACCOUNT_LIMIT_MB))
+        .filter(c => Number(c.id) > 0 && Number(c.usedMB || 0) < Number(c.limitMB || UI_ACCOUNT_LIMIT_MB))
 
       const availableIds = new Set(normalized.map((c) => Number(c.id)))
       setDistributionAccountIds((prev) => {
@@ -1256,8 +1257,8 @@ export default function BatchTable() {
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
-    const LIMIT_GB = 19
-    const LIMIT_MB = LIMIT_GB * 1024  // 18944 MB
+    const LIMIT_GB = 18
+    const LIMIT_MB = LIMIT_GB * 1024  // 18432 MB
 
     const freshAccounts = await refreshBatchAccounts({ silent: true })
     if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
@@ -1308,7 +1309,7 @@ export default function BatchTable() {
        
        const peso = row.pesoMB || 0;
        
-      // Buscar la primera cuenta donde (usado + peso) NO supere 19GB
+      // Buscar la primera cuenta donde (usado + peso) NO supere 18GB
        let bestAccount = accountsStatus.find(a => (a.simulatedUsedMB + peso) <= LIMIT_MB)
        
        if (bestAccount) {
@@ -1427,7 +1428,7 @@ export default function BatchTable() {
       if (!account) continue
       const usedMb = Number(account.usedMB || 0)
       const projectedMb = usedMb + Number(incomingMb || 0)
-      if (projectedMb > ACCOUNT_LIMIT_MB) {
+      if (projectedMb > BACKEND_SAFETY_LIMIT_MB) {
         overflowAccounts.push(`${account.alias} (${(projectedMb / 1024).toFixed(2)} GB)`)
       }
     }
@@ -1670,7 +1671,7 @@ export default function BatchTable() {
              }}
            >
              {cuentas.map((c) => {
-               const freeMb = Math.max(0, Number(c.limitMB || ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
+               const freeMb = Math.max(0, Number(c.limitMB || UI_ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
                const freeGb = (freeMb / 1024).toFixed(2)
                const checked = distributionAccountIds.includes(Number(c.id))
                return (
@@ -1911,7 +1912,7 @@ export default function BatchTable() {
          const accountIds = Object.keys(byAccount)
          if (!accountIds.length) return null
 
-         const LIMIT_MB = ACCOUNT_LIMIT_MB // 19GB
+         const LIMIT_MB = BACKEND_SAFETY_LIMIT_MB // 19GB
 
          return (
            <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
