@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 export default function BatchRow({
   row,
   idx,
+  reviewMode = false,
   isSimilarityFocused = false,
   categoriesCatalog = [],
   tagsCatalog = [],
@@ -38,12 +39,132 @@ export default function BatchRow({
   const primaryText = '#eef4ff';
   const secondaryText = 'rgba(220,232,255,0.82)';
   const cellBorder = '1px solid rgba(148,163,184,0.24)';
+  const reviewThumbSize = 112;
   const baseRowBg = isError
     ? 'rgba(239, 68, 68, 0.22)'
     : isOk
       ? 'rgba(22, 163, 74, 0.18)'
       : 'rgba(15, 23, 42, 0.38)';
   const focusedBg = 'rgba(8, 145, 178, 0.26)';
+
+  if (reviewMode) {
+    return (
+      <TableRow
+        key={idx}
+        hover
+        sx={{
+          backgroundColor: isSimilarityFocused ? focusedBg : baseRowBg,
+          boxShadow: isSimilarityFocused
+            ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
+            : 'none',
+          transition: 'background-color 160ms ease, box-shadow 160ms ease',
+          '&:hover': {
+            backgroundColor: isSimilarityFocused ? 'rgba(14, 165, 233, 0.32)' : 'rgba(51, 65, 85, 0.42)'
+          },
+        }}
+      >
+        <TableCell sx={{ minWidth: 120, borderBottom: cellBorder, color: primaryText }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-start" alignItems="center">
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => onOpenSimilar?.(row)}
+              sx={{
+                minWidth: 'auto', px: 1.5, py: 0.35, fontSize: 12, lineHeight: 1.1,
+                whiteSpace: 'nowrap', borderRadius: 6, textTransform: 'none', fontWeight: 600,
+                background: 'linear-gradient(135deg, #00b4d8, #0077b6)',
+                color: '#fff', boxShadow: '0 1px 6px rgba(0,180,216,0.35)',
+                '&:hover': { background: 'linear-gradient(135deg, #0096c7, #005f8a)', boxShadow: '0 2px 10px rgba(0,180,216,0.5)' }
+              }}
+            >
+              Similares
+            </Button>
+            <Tooltip title="Eliminar borrador">
+              <IconButton color="error" onClick={() => onRemoverFila(idx)} size="small">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </TableCell>
+
+        <TableCell sx={{ minWidth: 280, borderBottom: cellBorder, color: primaryText }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={-3} sx={{ mr: 1, '&:hover .MuiAvatar-root': { zIndex: 1 } }}>
+              {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? row.imagenes.slice(0, 3).map((img, i) => {
+                const srcUrl = img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`
+                return (
+                  <Avatar
+                    key={i}
+                    src={srcUrl}
+                    sx={{
+                      width: reviewThumbSize, height: reviewThumbSize,
+                      border: '2px solid rgba(255,255,255,0.15)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s',
+                      '&:hover': { transform: 'scale(1.12)', zIndex: 10 }
+                    }}
+                    onClick={() => onOpenImagePreview?.(srcUrl)}
+                  />
+                )
+              }) : (
+                <Avatar sx={{ width: reviewThumbSize, height: reviewThumbSize, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
+              )}
+            </Stack>
+            <Box flex={1}>
+              <Typography variant="body2" sx={{ color: primaryText, fontWeight: 700, lineHeight: 1.25 }}>
+                {row.nombre || '(sin nombre ES)'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: secondaryText, display: 'block', mt: 0.35 }}>
+                {row.nombreEn || '(sin nombre EN)'}
+              </Typography>
+            </Box>
+          </Stack>
+        </TableCell>
+
+        <TableCell sx={{ minWidth: 220, borderBottom: cellBorder, color: primaryText }}>
+          <Stack direction="row" spacing={0.6} useFlexGap flexWrap="wrap">
+            {(Array.isArray(row.categorias) ? row.categorias : []).map((cat, i) => (
+              <Chip
+                key={`cat-${i}`}
+                size="small"
+                label={cat?.name || cat?.slug || `cat-${i}`}
+                sx={{
+                  color: '#111827',
+                  backgroundColor: '#d8bb00',
+                  border: '1px solid rgba(148,163,184,0.52)',
+                  fontWeight: 500,
+                }}
+              />
+            ))}
+            {(!Array.isArray(row.categorias) || row.categorias.length === 0) && (
+              <Typography variant="caption" sx={{ color: secondaryText }}>Sin categorías</Typography>
+            )}
+          </Stack>
+        </TableCell>
+
+        <TableCell sx={{ minWidth: 280, borderBottom: cellBorder, color: primaryText }}>
+          <Stack direction="row" spacing={0.6} useFlexGap flexWrap="wrap">
+            {(Array.isArray(row.tags) ? row.tags : []).map((tag, i) => (
+              <Chip
+                key={`tag-${i}`}
+                size="small"
+                label={tag?.name || tag?.es || tag?.nameEn || tag?.en || tag?.slug || String(tag || '').trim() || `tag-${i}`}
+                sx={{
+                  color: '#111827',
+                  backgroundColor: 'rgba(220,252,231,0.95)',
+                  border: '1px solid rgba(134,239,172,0.9)',
+                  fontWeight: 500,
+                }}
+              />
+            ))}
+            {(!Array.isArray(row.tags) || row.tags.length === 0) && (
+              <Typography variant="caption" sx={{ color: secondaryText }}>Sin tags</Typography>
+            )}
+          </Stack>
+        </TableCell>
+      </TableRow>
+    )
+  }
 
   return (
     <TableRow

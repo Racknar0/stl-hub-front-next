@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, FormControl, InputLabel, Select, MenuItem, OutlinedInput, Checkbox, ListItemText } from '@mui/material';
+import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, FormControl, InputLabel, Select, MenuItem, OutlinedInput, Checkbox, ListItemText, Switch, FormControlLabel } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -18,6 +18,9 @@ const MAX_SIMILARITY_HASH_IMAGES = 8
 const ACCOUNT_LIMIT_MB = 19 * 1024
 const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
 const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
+const REVIEW_ROW_HEIGHT = 130
+const REVIEW_VIEWPORT_HEIGHT = 620
+const REVIEW_OVERSCAN = 6
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
@@ -61,6 +64,9 @@ export default function BatchTable() {
   const [previewImage, setPreviewImage] = useState(null)
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
+  const [reviewMode, setReviewMode] = useState(false)
+  const [reviewScrollTop, setReviewScrollTop] = useState(0)
+  const reviewScrollRef = React.useRef(null)
 
   // SIMILARS SIDEBAR STATES
   const RIGHT_SIDEBAR_WIDTH = 340
@@ -86,6 +92,51 @@ export default function BatchTable() {
     minHeight: 34,
     whiteSpace: 'nowrap',
   }
+
+  const reviewRows = useMemo(() => {
+    return rows.filter((r) => {
+      const st = String(r?.estado || '').toLowerCase()
+      return st === 'borrador' || st === 'error'
+    })
+  }, [rows])
+
+  const visibleRows = useMemo(() => (reviewMode ? reviewRows : rows), [reviewMode, reviewRows, rows])
+
+  const rowIndexById = useMemo(() => {
+    const m = new Map()
+    rows.forEach((r, i) => m.set(Number(r?.id || 0), i))
+    return m
+  }, [rows])
+
+  const visibleEntries = useMemo(() => {
+    return visibleRows
+      .map((row) => ({ row, rowIndex: Number(rowIndexById.get(Number(row?.id || 0))) }))
+      .filter((entry) => Number.isFinite(entry.rowIndex) && entry.rowIndex >= 0)
+  }, [visibleRows, rowIndexById])
+
+  const reviewVirtualWindow = useMemo(() => {
+    const total = visibleEntries.length
+    if (!reviewMode) {
+      return {
+        start: 0,
+        end: total,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+      }
+    }
+    const start = Math.max(0, Math.floor(reviewScrollTop / REVIEW_ROW_HEIGHT) - REVIEW_OVERSCAN)
+    const end = Math.min(total, Math.ceil((reviewScrollTop + REVIEW_VIEWPORT_HEIGHT) / REVIEW_ROW_HEIGHT) + REVIEW_OVERSCAN)
+    const topSpacerHeight = start * REVIEW_ROW_HEIGHT
+    const bottomSpacerHeight = Math.max(0, (total - end) * REVIEW_ROW_HEIGHT)
+    return { start, end, topSpacerHeight, bottomSpacerHeight }
+  }, [reviewMode, reviewScrollTop, visibleEntries])
+
+  const renderedEntries = useMemo(() => {
+    if (!reviewMode) return visibleEntries
+    return visibleEntries.slice(reviewVirtualWindow.start, reviewVirtualWindow.end)
+  }, [reviewMode, visibleEntries, reviewVirtualWindow])
+
+  const visibleColumnCount = reviewMode ? 4 : 10
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -252,6 +303,60 @@ export default function BatchTable() {
     setSimilaritySelectedId(row.id)
     void startSimilarityCheck(row)
   }, [startSimilarityCheck])
+
+  const scrollReviewToVisible = useCallback((index) => {
+    if (!reviewMode) return
+    const el = reviewScrollRef.current
+    if (!el) return
+    const rowTop = Math.max(0, index * REVIEW_ROW_HEIGHT)
+    const rowBottom = rowTop + REVIEW_ROW_HEIGHT
+    const viewTop = Number(el.scrollTop || 0)
+    const viewBottom = viewTop + REVIEW_VIEWPORT_HEIGHT
+
+    if (rowTop < viewTop) {
+      el.scrollTop = Math.max(0, rowTop - REVIEW_ROW_HEIGHT)
+    } else if (rowBottom > viewBottom) {
+      el.scrollTop = Math.max(0, rowBottom - REVIEW_VIEWPORT_HEIGHT + REVIEW_ROW_HEIGHT)
+    }
+  }, [reviewMode])
+
+  const openSimilarAtVisibleIndex = useCallback((index) => {
+    const total = visibleEntries.length
+    if (!total) return
+    const safeIndex = Math.max(0, Math.min(total - 1, Number(index || 0)))
+    const target = visibleEntries[safeIndex]?.row
+    if (!target) return
+    setSimilaritySelectedId(target.id)
+    void startSimilarityCheck(target)
+    scrollReviewToVisible(safeIndex)
+  }, [visibleEntries, startSimilarityCheck, scrollReviewToVisible])
+
+  const moveReviewFocus = useCallback((delta) => {
+    if (!reviewMode) return
+    const ids = visibleEntries.map((entry) => Number(entry?.row?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
+    if (!ids.length) return
+
+    const currentIdx = ids.findIndex((id) => id === Number(similaritySelectedId || 0))
+    let nextIdx = 0
+    if (currentIdx >= 0) {
+      nextIdx = Math.max(0, Math.min(ids.length - 1, currentIdx + Number(delta || 0)))
+      if (nextIdx === currentIdx) return
+    } else {
+      nextIdx = Number(delta || 0) < 0 ? ids.length - 1 : 0
+    }
+
+    openSimilarAtVisibleIndex(nextIdx)
+  }, [reviewMode, visibleEntries, similaritySelectedId, openSimilarAtVisibleIndex])
+
+  useEffect(() => {
+    if (!reviewMode) {
+      setReviewScrollTop(0)
+      return
+    }
+    if (!similaritySelectedId) return
+    const exists = visibleEntries.some((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId || 0))
+    if (!exists) setSimilaritySelectedId(null)
+  }, [reviewMode, similaritySelectedId, visibleEntries])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -978,7 +1083,8 @@ export default function BatchTable() {
     setRows(updated)
   }
 
-  const handleRemoverFila = async (idx) => {
+  const handleRemoverFila = async (idx, options = {}) => {
+    const nextFocusId = Number(options?.nextFocusId || 0)
     const row = rows[idx]
     if (!row || !row.id) return
 
@@ -989,6 +1095,15 @@ export default function BatchTable() {
         const updated = [...rows]
         updated.splice(idx, 1)
         setRows(updated)
+        if (Number(similaritySelectedId || 0) === Number(row.id || 0)) {
+          if (nextFocusId > 0) {
+            setSimilaritySelectedId(nextFocusId)
+            const nextRow = updated.find((r) => Number(r?.id || 0) === nextFocusId)
+            if (nextRow) void startSimilarityCheck(nextRow)
+          } else {
+            setSimilaritySelectedId(null)
+          }
+        }
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
       }
@@ -997,6 +1112,44 @@ export default function BatchTable() {
       setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
     }
   }
+
+  const deleteFocusedReviewItem = useCallback(async () => {
+    if (!reviewMode) return
+    const ids = visibleEntries.map((entry) => Number(entry?.row?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
+    if (!ids.length) return
+    const currentIdx = ids.findIndex((id) => id === Number(similaritySelectedId || 0))
+    if (currentIdx < 0) return
+    const targetEntry = visibleEntries[currentIdx]
+    if (!targetEntry || targetEntry.rowIndex < 0) return
+
+    const nextFocusId = ids[currentIdx + 1] || ids[currentIdx - 1] || null
+    await handleRemoverFila(targetEntry.rowIndex, { nextFocusId })
+  }, [reviewMode, visibleEntries, similaritySelectedId])
+
+  useEffect(() => {
+    if (!reviewMode) return
+
+    const onKeyDown = (ev) => {
+      const tag = String(ev?.target?.tagName || '').toLowerCase()
+      const isEditable = Boolean(ev?.target?.isContentEditable) || ['input', 'textarea', 'select'].includes(tag)
+      if (isEditable) return
+
+      const key = String(ev?.key || '').toLowerCase()
+      if (key === 'd') {
+        ev.preventDefault()
+        moveReviewFocus(1)
+      } else if (key === 'a') {
+        ev.preventDefault()
+        moveReviewFocus(-1)
+      } else if (key === 'f') {
+        ev.preventDefault()
+        void deleteFocusedReviewItem()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [reviewMode, moveReviewFocus, deleteFocusedReviewItem])
 
   const handleRetryWithOtherProxy = async (row) => {
     const id = Number(row?.id || 0)
@@ -1544,6 +1697,22 @@ export default function BatchTable() {
         >
           Rotar Proxy
         </Button>
+        <FormControlLabel
+          control={<Switch checked={reviewMode} onChange={(e) => setReviewMode(Boolean(e?.target?.checked))} color="info" />}
+          label={
+            <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 700 }}>
+              Modo revisión (virtual) · Atajos: A/D/F
+            </Typography>
+          }
+          sx={{
+            m: 0,
+            px: 1,
+            py: 0.2,
+            borderRadius: 2,
+            border: '1px solid rgba(125,211,252,0.35)',
+            background: 'rgba(14,116,144,0.18)',
+          }}
+        />
          <Button 
             variant="outlined" 
             size="small"
@@ -1838,7 +2007,11 @@ export default function BatchTable() {
         component={Paper}
         elevation={0}
         variant="outlined"
+        ref={reviewMode ? reviewScrollRef : undefined}
+        onScroll={reviewMode ? (e) => setReviewScrollTop(Number(e?.currentTarget?.scrollTop || 0)) : undefined}
         sx={{
+          maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'none',
+          overflowY: reviewMode ? 'auto' : 'visible',
           borderRadius: 2,
           background: 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(17,24,39,0.78))',
           borderColor: 'rgba(148,163,184,0.32)',
@@ -1855,28 +2028,42 @@ export default function BatchTable() {
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (ES / EN)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags (IA)</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta MEGA Asignada</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Main</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Backup</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags</TableCell>
+              {!reviewMode && (
+                <>
+                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
+                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
+                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta MEGA Asignada</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Main</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Backup</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
+                </>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.length === 0 && (
+            {visibleEntries.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
-                    <Typography variant="h6" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 600 }}>No hay assets en /uploads/batch_imports/</Typography>
+                <TableCell colSpan={visibleColumnCount} align="center" sx={{ py: 6 }}>
+                    <Typography variant="h6" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 600 }}>
+                      {reviewMode ? 'No hay items en fase de revisión (borrador/error).' : 'No hay assets en /uploads/batch_imports/'}
+                    </Typography>
                  </TableCell>
               </TableRow>
             )}
-            {rows.map((row, idx) => (
+
+            {reviewMode && reviewVirtualWindow.topSpacerHeight > 0 && (
+              <TableRow>
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${reviewVirtualWindow.topSpacerHeight}px` }} />
+              </TableRow>
+            )}
+
+            {renderedEntries.map(({ row, rowIndex }, idx) => (
               <BatchRow
-                key={row.id || idx}
+                key={row.id || `${rowIndex}-${idx}`}
                 row={row}
-                idx={idx}
+                idx={rowIndex}
+                reviewMode={reviewMode}
                 isSimilarityFocused={Number(row?.id || 0) > 0 && Number(row?.id || 0) === Number(similaritySelectedId || 0)}
                 categoriesCatalog={categoriesCatalog}
                 tagsCatalog={tagsCatalog}
@@ -1895,6 +2082,12 @@ export default function BatchTable() {
                 onRemoverFila={handleRemoverFila}
               />
             ))}
+
+            {reviewMode && reviewVirtualWindow.bottomSpacerHeight > 0 && (
+              <TableRow>
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${reviewVirtualWindow.bottomSpacerHeight}px` }} />
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
