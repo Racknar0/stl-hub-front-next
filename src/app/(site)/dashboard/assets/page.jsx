@@ -92,6 +92,7 @@ export default function AssetsAdminPage() {
   const [metaDraftMap, setMetaDraftMap] = useState({})
   const [metaSelectedMap, setMetaSelectedMap] = useState({})
   const [metaBusy, setMetaBusy] = useState(false)
+  const [metaImagePreview, setMetaImagePreview] = useState(null)
   const [metaProfilesOpen, setMetaProfilesOpen] = useState(false)
   const [metaProfileAssetId, setMetaProfileAssetId] = useState(null)
   const [similarThreshold, setSimilarThreshold] = useState(88)
@@ -2893,12 +2894,14 @@ export default function AssetsAdminPage() {
                               component="img"
                               src={imgUrl(img)}
                               alt={`asset-${id}-${idx + 1}`}
+                              onClick={() => setMetaImagePreview(imgUrl(img))}
                               sx={{
                                 width: 52,
                                 height: 52,
                                 objectFit: 'cover',
                                 borderRadius: 1,
                                 border: '1px solid rgba(127,127,127,0.35)',
+                                cursor: 'zoom-in',
                               }}
                             />
                           ))}
@@ -3085,6 +3088,37 @@ export default function AssetsAdminPage() {
             selectedRow={selectedMetaRowForProfiles}
             onApply={applyMetaProfile}
           />
+
+          <Dialog
+            open={!!metaImagePreview}
+            onClose={() => setMetaImagePreview(null)}
+            maxWidth="lg"
+            PaperProps={{ sx: { background: 'transparent', boxShadow: 'none' } }}
+          >
+            {metaImagePreview && (
+              <Box
+                onClick={() => setMetaImagePreview(null)}
+                sx={{
+                  cursor: 'zoom-out',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                }}
+              >
+                <img
+                  src={metaImagePreview}
+                  alt="Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '90vh',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                  }}
+                />
+              </Box>
+            )}
+          </Dialog>
         </Stack>
       )}
     </div>
