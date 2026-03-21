@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Tooltip } from '@mui/material'
+import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Tooltip, MenuItem } from '@mui/material'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import LinkIcon from '@mui/icons-material/Link'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -1705,6 +1705,20 @@ export default function AssetsAdminPage() {
   }, [tab, assets, normalizeMetaCategoryList, normalizeMetaTagList])
 
   const metaRows = filtered
+  const metaTotalPages = useMemo(() => {
+    const total = Number(rowCount) || 0
+    const size = Math.max(1, Number(pageSize) || 1)
+    return Math.max(1, Math.ceil(total / size))
+  }, [rowCount, pageSize])
+  const metaPageOptions = useMemo(
+    () => Array.from({ length: metaTotalPages }, (_, idx) => idx),
+    [metaTotalPages]
+  )
+
+  useEffect(() => {
+    const lastPage = Math.max(0, metaTotalPages - 1)
+    if (pageIndex > lastPage) setPageIndex(lastPage)
+  }, [pageIndex, metaTotalPages])
 
   const metaSelectedIds = useMemo(() => {
     return Object.entries(metaSelectedMap)
@@ -3064,19 +3078,44 @@ export default function AssetsAdminPage() {
           </TableContainer>
 
           <Paper sx={{ borderRadius: 2 }}>
-            <TablePagination
-              component="div"
-              count={rowCount}
-              page={pageIndex}
-              onPageChange={(_, nextPage) => setPageIndex(nextPage)}
-              rowsPerPage={pageSize}
-              onRowsPerPageChange={(e) => {
-                setPageSize(Number(e.target.value) || 50)
-                setPageIndex(0)
-              }}
-              rowsPerPageOptions={[10, 25, 50, 100, 200, 300, 400, 500, 1000]}
-              disabled={metaBusy || loading}
-            />
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', md: 'center' }}
+            >
+              <TablePagination
+                component="div"
+                count={rowCount}
+                page={pageIndex}
+                onPageChange={(_, nextPage) => setPageIndex(nextPage)}
+                rowsPerPage={pageSize}
+                onRowsPerPageChange={(e) => {
+                  setPageSize(Number(e.target.value) || 50)
+                  setPageIndex(0)
+                }}
+                rowsPerPageOptions={[10, 25, 50, 100, 200, 300, 400, 500, 1000]}
+                showFirstButton
+                showLastButton
+                disabled={metaBusy || loading}
+              />
+
+              <TextField
+                select
+                size="small"
+                label="Ir a página"
+                value={pageIndex}
+                onChange={(e) => setPageIndex(Number(e.target.value) || 0)}
+                disabled={metaBusy || loading || Number(rowCount || 0) <= 0}
+                sx={{ minWidth: { xs: '100%', md: 240 }, mr: { md: 2 }, mb: { xs: 2, md: 0 } }}
+              >
+                {metaPageOptions.map((pageOption) => (
+                  <MenuItem key={`meta-page-${pageOption}`} value={pageOption}>
+                    {`Página ${pageOption + 1} de ${metaTotalPages}`}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
           </Paper>
 
           <ProfilesModal
