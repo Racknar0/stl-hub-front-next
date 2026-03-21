@@ -749,6 +749,12 @@ export default function BatchTable() {
     const foldersTotal = Math.max(0, Number(scanStatus?.counters?.folders?.total || 0))
     const itemsDone = Math.max(0, Number(scanStatus?.counters?.items?.done || 0))
     const itemsTotal = Math.max(0, Number(scanStatus?.counters?.items?.total || 0))
+    const updatedAtMs = Number(scanStatus?.updatedAt || 0)
+    const updatedAgoSec = updatedAtMs > 0
+      ? Math.max(0, Math.floor((Date.now() - updatedAtMs) / 1000))
+      : null
+    const staleWarnSec = 25
+    const isStale = status === 'running' && Number.isFinite(updatedAgoSec) && updatedAgoSec >= staleWarnSec
 
     return {
       status,
@@ -764,8 +770,10 @@ export default function BatchTable() {
       foldersTotal,
       itemsDone,
       itemsTotal,
+      updatedAgoSec,
+      isStale,
     }
-  }, [scanStatus])
+  }, [scanStatus, isScanning])
 
   const handleApplyAiMetadata = async () => {
     const ids = rows
@@ -1536,6 +1544,18 @@ export default function BatchTable() {
 
            <Typography variant="caption" sx={{ color: 'rgba(191,219,254,0.95)', mt: 0.75, display: 'block' }}>
              Comprimidos: {scanStatusUi.archivesDone}/{scanStatusUi.archivesTotal} · Lotes: {scanStatusUi.foldersDone}/{scanStatusUi.foldersTotal} · Items: {scanStatusUi.itemsDone}/{scanStatusUi.itemsTotal}
+           </Typography>
+           <Typography
+             variant="caption"
+             sx={{
+               color: scanStatusUi.isStale ? '#facc15' : 'rgba(191,219,254,0.9)',
+               mt: 0.35,
+               display: 'block',
+               fontWeight: scanStatusUi.isStale ? 700 : 500,
+             }}
+           >
+             Última señal: {Number.isFinite(scanStatusUi.updatedAgoSec) ? `${scanStatusUi.updatedAgoSec}s` : '--'}
+             {scanStatusUi.isStale ? ' · posible espera larga, revisa consola para detalle.' : ''}
            </Typography>
          </Box>
        )}
