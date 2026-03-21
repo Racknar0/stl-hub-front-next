@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
+import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, FormControl, InputLabel, Select, MenuItem, OutlinedInput, Checkbox, ListItemText } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -16,7 +16,6 @@ import { successAlert } from '@/helpers/alerts';
 
 const MAX_SIMILARITY_HASH_IMAGES = 8
 const ACCOUNT_LIMIT_MB = 19 * 1024
-const BATCH_MIN_USED_MB = 16 * 1024
 const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
 const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
 
@@ -51,6 +50,8 @@ export default function BatchTable() {
   const scpProbeRef = React.useRef({ sizeB: 0, ts: 0 })
   const cuentasRef = React.useRef([])
   const isRefreshingAccountsRef = React.useRef(false)
+  const distributionAccountIdsRef = React.useRef([])
+  const distributionSelectionDirtyRef = React.useRef(false)
   const scanTerminalToastRef = React.useRef('')
   const scanTrackingSinceRef = React.useRef(0)
 
@@ -59,6 +60,7 @@ export default function BatchTable() {
 
   const [previewImage, setPreviewImage] = useState(null)
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
+  const [distributionAccountIds, setDistributionAccountIds] = useState([])
 
   // SIMILARS SIDEBAR STATES
   const RIGHT_SIDEBAR_WIDTH = 340
@@ -274,6 +276,10 @@ export default function BatchTable() {
     cuentasRef.current = Array.isArray(cuentas) ? cuentas : []
   }, [cuentas])
 
+  useEffect(() => {
+    distributionAccountIdsRef.current = Array.isArray(distributionAccountIds) ? distributionAccountIds : []
+  }, [distributionAccountIds])
+
   const formatBytes = useCallback((b) => {
     const n = Number(b || 0)
     if (!Number.isFinite(n) || n <= 0) return '0 B'
@@ -336,13 +342,25 @@ export default function BatchTable() {
       const accs = await http.getData('/accounts?batchUpload=1')
       const list = Array.isArray(accs?.data) ? accs.data : []
       const normalized = list
-        .filter(c => c.type === 'main' && Number(c.storageUsedMB || 0) >= BATCH_MIN_USED_MB)
+        .filter(c => String(c?.type || '').toLowerCase() === 'main')
         .map(c => ({
           id: c.id,
-          alias: c.alias || c.email,
+          alias: c.alias || c.email || `Cuenta ${c.id}`,
           limitMB: ACCOUNT_LIMIT_MB,
           usedMB: Number(c.storageUsedMB || 0),
+          totalMB: Number(c.storageTotalMB || 0),
         }))
+        .filter(c => Number(c.id) > 0 && Number(c.usedMB || 0) < Number(c.limitMB || ACCOUNT_LIMIT_MB))
+
+      const availableIds = new Set(normalized.map((c) => Number(c.id)))
+      setDistributionAccountIds((prev) => {
+        const keep = (Array.isArray(prev) ? prev : [])
+          .map((id) => Number(id))
+          .filter((id) => availableIds.has(id))
+        distributionAccountIdsRef.current = keep
+        return keep
+      })
+
       setCuentas(normalized)
       if (!silent) {
         setToast({ open: true, msg: 'Cuentas refrescadas con uso real.', type: 'info' })
@@ -1084,7 +1102,7 @@ export default function BatchTable() {
   }, [rows])
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
-  const handleAutoDistribute = async () => {
+  const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
     const LIMIT_GB = 19
     const LIMIT_MB = LIMIT_GB * 1024  // 18944 MB
 
@@ -1094,10 +1112,39 @@ export default function BatchTable() {
       return
     }
 
+    const preferredSet = new Set(
+      (Array.isArray(preferredAccountIds) ? preferredAccountIds : [])
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    )
+
     // Clonar cuentas y ordenar ASCENDENTE por espacio usado (la menos llena primero)
     let accountsStatus = freshAccounts
       .map(c => ({ ...c, simulatedUsedMB: c.usedMB || 0 }))
-      .sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
+      .filter((a) => Number(a.simulatedUsedMB || 0) < LIMIT_MB)
+
+    if (preferredSet.size > 0) {
+      accountsStatus = accountsStatus.filter((a) => preferredSet.has(Number(a.id)))
+    }
+
+    if (accountsStatus.length === 0) {
+      setToast({
+        open: true,
+        msg: preferredSet.size > 0
+          ? 'Las cuentas seleccionadas no tienen espacio disponible.'
+          : 'No hay cuentas con espacio disponible para distribuir.',
+        type: 'warning',
+      })
+      return
+    }
+
+    accountsStatus = accountsStatus.sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
+
+    const assignableRows = rows.filter((r) => r.estado !== 'completado' && r.estado !== 'procesando')
+    if (!assignableRows.length) {
+      setToast({ open: true, msg: 'No hay items en borrador/error para redistribuir.', type: 'info' })
+      return
+    }
 
     const updatedRows = [...rows]
     let unassignedCount = 0
@@ -1125,8 +1172,35 @@ export default function BatchTable() {
     if (unassignedCount > 0) {
        setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (límite ${LIMIT_GB}GB). Añade más cuentas.`, type: 'warning' })
     } else {
-       setToast({ open: true, msg: 'Distribución inteligente completada con éxito. Revisa el balance.', type: 'success' })
+       const scopedMsg = preferredSet.size > 0
+         ? `Distribución completada usando ${accountsStatus.length} cuenta(s) seleccionadas.`
+         : 'Distribución inteligente completada con éxito. Revisa el balance.'
+       setToast({ open: true, msg: scopedMsg, type: 'success' })
     }
+  }
+
+  const handleDistributionAccountsChange = (event) => {
+    const rawValue = event?.target?.value
+    const list = Array.isArray(rawValue) ? rawValue : []
+    const normalized = Array.from(new Set(
+      list
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    ))
+    distributionSelectionDirtyRef.current = true
+    distributionAccountIdsRef.current = normalized
+    setDistributionAccountIds(normalized)
+  }
+
+  const handleDistributionSelectorClose = () => {
+    if (!distributionSelectionDirtyRef.current) return
+    distributionSelectionDirtyRef.current = false
+    const selected = distributionAccountIdsRef.current
+    if (!Array.isArray(selected) || selected.length === 0) {
+      setToast({ open: true, msg: 'Sin selección de cuentas: no se redistribuyó.', type: 'info' })
+      return
+    }
+    void handleAutoDistribute({ preferredAccountIds: selected })
   }
 
   const handleOpenPerfilModal = (rowIdx) => {
@@ -1402,11 +1476,64 @@ export default function BatchTable() {
             variant="outlined" 
             size="small"
             startIcon={<AutoAwesomeIcon />} 
-            onClick={handleAutoDistribute}
+            onClick={() => void handleAutoDistribute({ preferredAccountIds: distributionAccountIdsRef.current })}
             sx={{ ...compactActionBtnSx, borderColor: '#b388ff', color: '#b388ff', '&:hover': { borderColor: '#d1c4e9', color: '#d1c4e9' } }}
          >
            Distribuir Automáticamente
          </Button>
+         <FormControl
+           size="small"
+           sx={{
+             minWidth: { xs: '100%', md: 330 },
+             maxWidth: 460,
+           }}
+         >
+           <InputLabel id="batch-distribution-accounts-label" sx={{ color: 'rgba(226,232,240,0.88)' }}>
+             Cuentas para distribución
+           </InputLabel>
+           <Select
+             labelId="batch-distribution-accounts-label"
+             multiple
+             displayEmpty
+             value={distributionAccountIds}
+             onChange={handleDistributionAccountsChange}
+             onClose={handleDistributionSelectorClose}
+             input={<OutlinedInput label="Cuentas para distribución" />}
+             renderValue={(selected) => {
+               const ids = Array.isArray(selected) ? selected.map(Number) : []
+               if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
+               const labels = cuentas
+                 .filter((c) => ids.includes(Number(c.id)))
+                 .map((c) => c.alias)
+               return labels.join(', ')
+             }}
+             sx={{
+               color: '#f8fbff',
+               bgcolor: 'rgba(30,41,59,0.55)',
+               borderRadius: 2,
+               '& .MuiSelect-icon': { color: '#e2e8f0' },
+               '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(148,163,184,0.45)' },
+               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(191,219,254,0.72)' },
+             }}
+           >
+             {cuentas.map((c) => {
+               const freeMb = Math.max(0, Number(c.limitMB || ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
+               const freeGb = (freeMb / 1024).toFixed(2)
+               const checked = distributionAccountIds.includes(Number(c.id))
+               return (
+                 <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', bgcolor: '#0f172a' }}>
+                   <Checkbox checked={checked} size="small" sx={{ color: '#93c5fd', '&.Mui-checked': { color: '#60a5fa' } }} />
+                   <ListItemText
+                     primary={c.alias}
+                     secondary={`${freeGb} GB libres`}
+                     primaryTypographyProps={{ fontWeight: 700, color: '#e2e8f0' }}
+                     secondaryTypographyProps={{ color: 'rgba(203,213,225,0.82)' }}
+                   />
+                 </MenuItem>
+               )
+             })}
+           </Select>
+         </FormControl>
         <Button
           variant="outlined"
           color="warning"
