@@ -1694,6 +1694,7 @@ export default function AssetsAdminPage() {
           title: String(asset?.title || ''),
           titleEn: String(asset?.titleEn || ''),
           description: String(asset?.description || ''),
+          descriptionEn: String(asset?.descriptionEn || ''),
           categories: normalizeMetaCategoryList(asset?.categories),
           tags: normalizeMetaTagList(asset?.tags),
         }
@@ -1748,6 +1749,7 @@ export default function AssetsAdminPage() {
         title: '',
         titleEn: '',
         description: '',
+        descriptionEn: '',
         categories: [],
         tags: [],
       }
@@ -1773,6 +1775,7 @@ export default function AssetsAdminPage() {
       title: String(draft.title || '').trim(),
       titleEn: String(draft.titleEn || '').trim(),
       description: String(draft.description || '').trim(),
+      descriptionEn: String(draft.descriptionEn || '').trim(),
       categories: categoriesPayload,
       tags: tagsPayload,
     })
@@ -1814,6 +1817,51 @@ export default function AssetsAdminPage() {
       if (Array.isArray(ids) && ids.length > 0) payload.assetIds = ids
       const res = await http.postData('/assets/meta/generate-descriptions', payload)
       const updated = Number(res?.data?.updated || 0)
+      const generatedItems = Array.isArray(res?.data?.items) ? res.data.items : []
+
+      if (generatedItems.length) {
+        setMetaDraftMap((prev) => {
+          const next = { ...prev }
+          generatedItems.forEach((item) => {
+            if (!item?.updated) return
+            const id = Number(item?.id || 0)
+            if (!Number.isFinite(id) || id <= 0) return
+            const current = next[id] || {
+              id,
+              title: '',
+              titleEn: '',
+              description: '',
+              descriptionEn: '',
+              categories: [],
+              tags: [],
+            }
+            next[id] = {
+              ...current,
+              description: String(item?.description || current.description || ''),
+              descriptionEn: String(item?.descriptionEn || current.descriptionEn || ''),
+            }
+          })
+          return next
+        })
+
+        setAssets((prev) => {
+          const patchById = new Map()
+          generatedItems.forEach((item) => {
+            if (!item?.updated) return
+            const id = Number(item?.id || 0)
+            if (!Number.isFinite(id) || id <= 0) return
+            patchById.set(id, {
+              description: String(item?.description || ''),
+              descriptionEn: String(item?.descriptionEn || ''),
+            })
+          })
+          return (Array.isArray(prev) ? prev : []).map((row) => {
+            const patch = patchById.get(Number(row?.id || 0))
+            return patch ? { ...row, ...patch } : row
+          })
+        })
+      }
+
       await successAlert('Descripciones generadas', `Se actualizaron ${updated} descripciones.`)
       setRefreshTick((n) => n + 1)
     } catch (e) {
@@ -2810,7 +2858,8 @@ export default function AssetsAdminPage() {
                   <TableCell sx={{ minWidth: 130 }}>Imágenes</TableCell>
                   <TableCell>Nombre ES</TableCell>
                   <TableCell>Name EN</TableCell>
-                  <TableCell>Descripción SEO</TableCell>
+                  <TableCell sx={{ minWidth: 280 }}>Descripción SEO ES</TableCell>
+                  <TableCell sx={{ minWidth: 280 }}>SEO Description EN</TableCell>
                   <TableCell sx={{ minWidth: 220 }}>Categorías</TableCell>
                   <TableCell sx={{ minWidth: 260 }}>Tags</TableCell>
                   <TableCell align="right">Acciones</TableCell>
@@ -2824,6 +2873,7 @@ export default function AssetsAdminPage() {
                     title: String(row?.title || ''),
                     titleEn: String(row?.titleEn || ''),
                     description: String(row?.description || ''),
+                    descriptionEn: String(row?.descriptionEn || ''),
                     categories: normalizeMetaCategoryList(row?.categories),
                     tags: normalizeMetaTagList(row?.tags),
                   }
@@ -2892,9 +2942,21 @@ export default function AssetsAdminPage() {
                           fullWidth
                           multiline
                           minRows={2}
-                          value={draft.description}
+                          value={String(draft.description || '')}
                           placeholder="No hay descripción de este producto."
                           onChange={(e) => updateMetaDraft(id, { description: e.target.value })}
+                          disabled={metaBusy || loading}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 280 }}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          multiline
+                          minRows={2}
+                          value={String(draft.descriptionEn || '')}
+                          placeholder="No description available for this product."
+                          onChange={(e) => updateMetaDraft(id, { descriptionEn: e.target.value })}
                           disabled={metaBusy || loading}
                         />
                       </TableCell>
@@ -2987,7 +3049,7 @@ export default function AssetsAdminPage() {
                 })}
                 {!metaRows.length && (
                   <TableRow>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Typography variant="body2" color="text.secondary">
                         No hay assets en esta página/filtro.
                       </Typography>

@@ -21,6 +21,9 @@ export default function AssetDetailCore({ asset }) {
 
   const title = isEn ? (asset.titleEn || asset.title) : (asset.title || asset.titleEn);
   const tags = isEn ? (asset.tagsEn || asset.tagsEs || []) : (asset.tagsEs || asset.tagsEn || []);
+  const description = isEn
+    ? (asset.descriptionEn || asset.description)
+    : (asset.description || asset.descriptionEn);
   const images = Array.isArray(asset.images) ? asset.images : [];
   const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
   const imgUrl = (rel) => {
@@ -55,7 +58,7 @@ export default function AssetDetailCore({ asset }) {
             ))}
           </div>
         )}
-        {asset.description && <p className="description">{asset.description}</p>}
+        {description && <p className="description">{description}</p>}
         <div className="cta-block" style={{marginTop:'1rem'}}>
           <Button variant="purple" styles={{width:'220px',height:'48px'}} href={`/search?related=${asset.slug}`}>Buscar similares</Button>
         </div>

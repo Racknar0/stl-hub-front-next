@@ -116,6 +116,8 @@ function toDisplayItem(a, lang) {
   return {
     id: a.id,
     title,
+    description: a.description,
+    descriptionEn: a.descriptionEn,
     chips,
     thumb: makeUrl(first),
     images: images.map(makeUrl),

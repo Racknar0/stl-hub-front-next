@@ -18,6 +18,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import useStore from '@/store/useStore';
 
 const statusColor = (s) =>
     ({
@@ -36,6 +37,9 @@ export default function ModalDetalle({
     formatMBfromB,
     loadingDetail,
 }) {
+    const language = useStore((s) => s.language);
+    const isEn = String(language || 'es').toLowerCase() === 'en';
+
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle
@@ -170,9 +174,17 @@ export default function ModalDetalle({
                                             </Grid>
                                         )}
                                     </Grid>
-                                    {(detail?.description ?? selected?.description) && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{detail?.description ?? selected?.description}</Typography>
-                                    )}
+                                    {(() => {
+                                        const activeDescription = isEn
+                                            ? (detail?.descriptionEn ?? selected?.descriptionEn ?? detail?.description ?? selected?.description)
+                                            : (detail?.description ?? selected?.description ?? detail?.descriptionEn ?? selected?.descriptionEn);
+                                        if (!activeDescription) return null;
+                                        return (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                {activeDescription}
+                                            </Typography>
+                                        );
+                                    })()}
                                 </Stack>
                             </Grid>
                         </Grid>

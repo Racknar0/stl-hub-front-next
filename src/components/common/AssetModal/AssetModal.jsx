@@ -105,7 +105,9 @@ export default function AssetModal({ open, onClose, asset }) {
         if (!open || !data?.id || loadedDetail.current) return;
         const needCategories =
             !Array.isArray(data?.categories) || data.categories.length === 0;
-        const needDescription = !String(data?.description || '').trim();
+        const needDescriptionEs = !String(data?.description || '').trim();
+        const needDescriptionEn = !String(data?.descriptionEn || '').trim();
+        const needDescription = needDescriptionEs || needDescriptionEn;
         if (!needCategories && !needDescription) return;
         (async () => {
             try {
