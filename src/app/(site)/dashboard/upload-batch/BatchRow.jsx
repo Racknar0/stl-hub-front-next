@@ -29,7 +29,9 @@ export default function BatchRow({
   onOpenProfiles = () => {},
   onOpenImagePreview = () => {},
   onOpenSimilar = () => {},
-  onRemoverFila = () => {}
+  onRemoverFila = () => {},
+  measureElement = null,
+  virtualIndex = undefined
 }) {
   const isProcesso = row.estado === 'procesando';
   const isOk = row.estado === 'completado';
@@ -53,6 +55,8 @@ export default function BatchRow({
       <TableRow
         key={idx}
         hover
+        ref={measureElement}
+        data-index={virtualIndex}
         sx={{
           backgroundColor: isSimilarityFocused ? focusedBg : baseRowBg,
           boxShadow: isSimilarityFocused
@@ -186,6 +190,8 @@ export default function BatchRow({
     <TableRow
       key={idx}
       hover
+      ref={measureElement}
+      data-index={virtualIndex}
       sx={{
         backgroundColor: isSimilarityFocused ? focusedBg : baseRowBg,
         boxShadow: isSimilarityFocused
