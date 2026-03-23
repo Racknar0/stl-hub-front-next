@@ -345,10 +345,7 @@ export default function BatchTable() {
   }, [reviewMode, visibleEntries, similaritySelectedId, openSimilarAtVisibleIndex])
 
   useEffect(() => {
-    if (!reviewMode) {
-      setReviewScrollTop(0)
-      return
-    }
+    if (!reviewMode) return
     if (!similaritySelectedId) return
     const exists = visibleEntries.some((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId || 0))
     if (!exists) setSimilaritySelectedId(null)
@@ -1422,6 +1419,12 @@ export default function BatchTable() {
       const pruned = (Array.isArray(prev) ? prev : [])
         .map((n) => Number(n))
         .filter((n) => Number.isFinite(n) && n > 0 && allowed.has(n))
+      
+      // ROMPEMOS EL BUCLE INFINITO DE REACT
+      if (pruned.length === prev.length && pruned.every((val, i) => val === prev[i])) {
+        return prev
+      }
+
       distributionAccountIdsRef.current = pruned
       return pruned
     })
@@ -1778,7 +1781,6 @@ export default function BatchTable() {
                value={distributionAccountIds}
                onChange={handleDistributionAccountsChange}
                onClose={handleDistributionSelectorClose}
-               input={<OutlinedInput label="Cuentas para distribución" />}
                renderValue={(selected) => {
                  const ids = Array.isArray(selected) ? selected.map(Number) : []
                  if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
@@ -2208,15 +2210,9 @@ export default function BatchTable() {
         elevation={0}
         variant="outlined"
         ref={reviewScrollRef}
-        onScroll={(e) => {
-          const st = Number(e?.currentTarget?.scrollTop || 0);
-          if (Math.abs(st - reviewScrollTop) > 2) {
-            setReviewScrollTop(st);
-          }
-        }}
         sx={{
           maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'calc(100vh - 280px)',
-          overflowY: 'auto',
+          overflowY: 'scroll',
           overflowAnchor: 'none',
           borderRadius: 2,
           background: 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(17,24,39,0.78))',
