@@ -17,6 +17,7 @@ import { successAlert } from '@/helpers/alerts';
 const MAX_SIMILARITY_HASH_IMAGES = 8
 const UI_ACCOUNT_LIMIT_MB = 18 * 1024
 const BACKEND_SAFETY_LIMIT_MB = 19 * 1024
+const DISTRIBUTION_HEADROOM_MB = 128
 const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
 const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
 const REVIEW_ROW_HEIGHT = 130
@@ -111,7 +112,7 @@ export default function BatchTable() {
 
   const visibleEntries = useMemo(() => {
     return visibleRows
-      .map((row) => ({ row, rowIndex: Number(rowIndexById.get(Number(row?.id || 0))) }))
+      .map((row, visibleIndex) => ({ row, visibleIndex, rowIndex: Number(rowIndexById.get(Number(row?.id || 0))) }))
       .filter((entry) => Number.isFinite(entry.rowIndex) && entry.rowIndex >= 0)
   }, [visibleRows, rowIndexById])
 
@@ -137,7 +138,7 @@ export default function BatchTable() {
     return visibleEntries.slice(reviewVirtualWindow.start, reviewVirtualWindow.end)
   }, [reviewMode, visibleEntries, reviewVirtualWindow])
 
-  const visibleColumnCount = reviewMode ? 4 : 10
+  const visibleColumnCount = reviewMode ? 5 : 11
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -1255,10 +1256,59 @@ export default function BatchTable() {
     }
   }, [rows])
 
+  const rowsPendingDistribution = useMemo(() => {
+    return rows.filter((r) => {
+      const st = String(r?.estado || '').toLowerCase()
+      return st !== 'completado' && st !== 'procesando'
+    })
+  }, [rows])
+
+  const minPendingAssetMb = useMemo(() => {
+    const sizes = rowsPendingDistribution
+      .map((r) => Math.max(0, Number(r?.pesoMB || 0)))
+      .filter((n) => n > 0)
+    if (!sizes.length) return 0
+    return Math.min(...sizes)
+  }, [rowsPendingDistribution])
+
+  const accountSelectionMeta = useMemo(() => {
+    const selectedSet = new Set(
+      (Array.isArray(distributionAccountIds) ? distributionAccountIds : [])
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    )
+
+    const enriched = (Array.isArray(cuentas) ? cuentas : []).map((c) => {
+      const limitMb = Number(c?.limitMB || BACKEND_SAFETY_LIMIT_MB)
+      const usedMb = Math.max(0, Number(c?.usedMB || 0))
+      const freeMb = Math.max(0, limitMb - usedMb)
+      const checked = selectedSet.has(Number(c?.id || 0))
+      const canFitMinPending = minPendingAssetMb <= 0 || freeMb >= minPendingAssetMb
+      return {
+        ...c,
+        limitMb,
+        usedMb,
+        freeMb,
+        checked,
+        canFitMinPending,
+      }
+    })
+
+    const selectable = enriched.filter((c) => c.canFitMinPending || c.checked)
+    const selectableIdSet = new Set(selectable.map((c) => Number(c.id)))
+    const blockedCount = Math.max(0, enriched.length - selectable.length)
+
+    return {
+      selectable,
+      selectableIdSet,
+      blockedCount,
+    }
+  }, [cuentas, distributionAccountIds, minPendingAssetMb])
+
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
-    const LIMIT_GB = 18
-    const LIMIT_MB = LIMIT_GB * 1024  // 18432 MB
+    const LIMIT_MB = Math.max(0, BACKEND_SAFETY_LIMIT_MB - DISTRIBUTION_HEADROOM_MB)
+    const LIMIT_GB = LIMIT_MB / 1024
 
     const freshAccounts = await refreshBatchAccounts({ silent: true })
     if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
@@ -1272,10 +1322,31 @@ export default function BatchTable() {
         .filter((n) => Number.isFinite(n) && n > 0)
     )
 
-    // Clonar cuentas y ordenar ASCENDENTE por espacio usado (la menos llena primero)
+    const pendingRows = rows.filter((r) => {
+      const st = String(r?.estado || '').toLowerCase()
+      return st !== 'completado' && st !== 'procesando'
+    })
+
+    if (!pendingRows.length) {
+      setToast({ open: true, msg: 'No hay items en borrador/error para redistribuir.', type: 'info' })
+      return
+    }
+
+    const minPendingMb = pendingRows
+      .map((r) => Math.max(0, Number(r?.pesoMB || 0)))
+      .filter((n) => n > 0)
+      .reduce((min, n) => Math.min(min, n), Number.POSITIVE_INFINITY)
+
     let accountsStatus = freshAccounts
       .map(c => ({ ...c, simulatedUsedMB: c.usedMB || 0 }))
       .filter((a) => Number(a.simulatedUsedMB || 0) < LIMIT_MB)
+
+    if (Number.isFinite(minPendingMb)) {
+      accountsStatus = accountsStatus.filter((a) => {
+        const freeMb = Math.max(0, LIMIT_MB - Number(a.simulatedUsedMB || 0))
+        return freeMb >= minPendingMb
+      })
+    }
 
     if (preferredSet.size > 0) {
       accountsStatus = accountsStatus.filter((a) => preferredSet.has(Number(a.id)))
@@ -1285,8 +1356,8 @@ export default function BatchTable() {
       setToast({
         open: true,
         msg: preferredSet.size > 0
-          ? 'Las cuentas seleccionadas no tienen espacio disponible.'
-          : 'No hay cuentas con espacio disponible para distribuir.',
+          ? 'Las cuentas seleccionadas no tienen espacio suficiente para el menor asset pendiente.'
+          : 'No hay cuentas con espacio suficiente para los assets pendientes.',
         type: 'warning',
       })
       return
@@ -1294,37 +1365,42 @@ export default function BatchTable() {
 
     accountsStatus = accountsStatus.sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
 
-    const assignableRows = rows.filter((r) => r.estado !== 'completado' && r.estado !== 'procesando')
-    if (!assignableRows.length) {
-      setToast({ open: true, msg: 'No hay items en borrador/error para redistribuir.', type: 'info' })
-      return
-    }
-
     const updatedRows = [...rows]
+    const candidatesBySize = updatedRows
+      .map((row, index) => ({ row, index, pesoMb: Math.max(0, Number(row?.pesoMB || 0)) }))
+      .filter(({ row }) => {
+        const st = String(row?.estado || '').toLowerCase()
+        return st !== 'completado' && st !== 'procesando'
+      })
+      .sort((a, b) => b.pesoMb - a.pesoMb)
+
     let unassignedCount = 0
 
-    for (let i = 0; i < updatedRows.length; i++) {
-       const row = updatedRows[i]
-       if (row.estado === 'completado' || row.estado === 'procesando') continue;
-       
-       const peso = row.pesoMB || 0;
-       
-      // Buscar la primera cuenta donde (usado + peso) NO supere 18GB
-       let bestAccount = accountsStatus.find(a => (a.simulatedUsedMB + peso) <= LIMIT_MB)
-       
-       if (bestAccount) {
-          row.cuenta = bestAccount.id
-          bestAccount.simulatedUsedMB += peso
-       } else {
-          row.cuenta = '' // Ninguna cuenta aguanta este archivo
-          unassignedCount++
-       }
+    for (const { index, pesoMb } of candidatesBySize) {
+      const row = updatedRows[index]
+      const fitCandidates = accountsStatus
+        .filter((a) => (Number(a.simulatedUsedMB || 0) + pesoMb) <= LIMIT_MB)
+        .sort((a, b) => {
+          const remA = LIMIT_MB - (Number(a.simulatedUsedMB || 0) + pesoMb)
+          const remB = LIMIT_MB - (Number(b.simulatedUsedMB || 0) + pesoMb)
+          return remA - remB
+        })
+
+      const bestAccount = fitCandidates[0]
+
+      if (bestAccount) {
+        row.cuenta = bestAccount.id
+        bestAccount.simulatedUsedMB = Number(bestAccount.simulatedUsedMB || 0) + pesoMb
+      } else {
+        row.cuenta = ''
+        unassignedCount++
+      }
     }
 
     setRows(updatedRows)
     
     if (unassignedCount > 0) {
-       setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (límite ${LIMIT_GB}GB). Añade más cuentas.`, type: 'warning' })
+       setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (límite operativo ${LIMIT_GB.toFixed(2)}GB). Añade más cuentas o reduce tamaño.`, type: 'warning' })
     } else {
        const scopedMsg = preferredSet.size > 0
          ? `Distribución completada usando ${accountsStatus.length} cuenta(s) seleccionadas.`
@@ -1339,12 +1415,23 @@ export default function BatchTable() {
     const normalized = Array.from(new Set(
       list
         .map((n) => Number(n))
-        .filter((n) => Number.isFinite(n) && n > 0)
+        .filter((n) => Number.isFinite(n) && n > 0 && accountSelectionMeta.selectableIdSet.has(n))
     ))
     distributionSelectionDirtyRef.current = true
     distributionAccountIdsRef.current = normalized
     setDistributionAccountIds(normalized)
   }
+
+  useEffect(() => {
+    const allowed = accountSelectionMeta.selectableIdSet
+    setDistributionAccountIds((prev) => {
+      const pruned = (Array.isArray(prev) ? prev : [])
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0 && allowed.has(n))
+      distributionAccountIdsRef.current = pruned
+      return pruned
+    })
+  }, [accountSelectionMeta.selectableIdSet])
 
   const handleDistributionSelectorClose = () => {
     if (!distributionSelectionDirtyRef.current) return
@@ -1446,7 +1533,14 @@ export default function BatchTable() {
 
     try {
       // 1. Guardar cambios (nombre, cuenta, categorias, tags)
-      const savePromises = readyRows.map(row => 
+      const readyRowsSorted = [...readyRows].sort((a, b) => {
+        const accA = Number(a?.cuenta || 0)
+        const accB = Number(b?.cuenta || 0)
+        if (accA !== accB) return accA - accB
+        return Number(a?.id || 0) - Number(b?.id || 0)
+      })
+
+      const savePromises = readyRowsSorted.map(row => 
         http.patchData('/batch-imports/items', row.id, {
           title: row.nombre,
           titleEn: row.nombreEn,
@@ -1460,7 +1554,7 @@ export default function BatchTable() {
       await Promise.all(savePromises)
 
       // 2. Confirmar items para pasarlos a QUEUED en el Worker
-      const itemIds = readyRows.map(r => r.id)
+      const itemIds = readyRowsSorted.map(r => r.id)
       const res = await http.postData('/batch-imports/confirm', { itemIds })
       
       if (res.data?.success) {
@@ -1694,7 +1788,7 @@ export default function BatchTable() {
                renderValue={(selected) => {
                  const ids = Array.isArray(selected) ? selected.map(Number) : []
                  if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
-                 const labels = cuentas
+                 const labels = (Array.isArray(cuentas) ? cuentas : [])
                    .filter((c) => ids.includes(Number(c.id)))
                    .map((c) => c.alias)
                  return labels.join(', ')
@@ -1716,8 +1810,8 @@ export default function BatchTable() {
                  },
                }}
              >
-               {cuentas.map((c) => {
-                 const freeMb = Math.max(0, Number(c.limitMB || UI_ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
+               {accountSelectionMeta.selectable.map((c) => {
+                 const freeMb = Math.max(0, Number(c.freeMb || 0))
                  const freeGb = (freeMb / 1024).toFixed(2)
                  const checked = distributionAccountIds.includes(Number(c.id))
                  return (
@@ -1750,6 +1844,10 @@ export default function BatchTable() {
                })}
              </Select>
            </FormControl>
+           <Typography variant="caption" sx={{ mt: 0.5, color: 'rgba(191,219,254,0.9)', display: 'block' }}>
+             Filtro activo: solo cuentas con al menos {(Math.max(0, minPendingAssetMb) / 1024).toFixed(2)} GB libres (asset mínimo pendiente).
+             {accountSelectionMeta.blockedCount > 0 ? ` Ocultas por espacio insuficiente: ${accountSelectionMeta.blockedCount}.` : ''}
+           </Typography>
          </Box>
         <Button
           variant="outlined"
@@ -2133,6 +2231,7 @@ export default function BatchTable() {
         <Table size="medium">
           <TableHead>
             <TableRow>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>#</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (ES / EN)</TableCell>
               <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
@@ -2166,11 +2265,12 @@ export default function BatchTable() {
               </TableRow>
             )}
 
-            {renderedEntries.map(({ row, rowIndex }, idx) => (
+            {renderedEntries.map(({ row, rowIndex, visibleIndex }, idx) => (
               <BatchRow
                 key={row.id || `${rowIndex}-${idx}`}
                 row={row}
                 idx={rowIndex}
+                sequenceLabel={`${visibleIndex + 1}/${visibleEntries.length}`}
                 reviewMode={reviewMode}
                 isSimilarityFocused={Number(row?.id || 0) > 0 && Number(row?.id || 0) === Number(similaritySelectedId || 0)}
                 categoriesCatalog={categoriesCatalog}

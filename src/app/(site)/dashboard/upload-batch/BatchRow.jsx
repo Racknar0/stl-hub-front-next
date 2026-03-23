@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 export default function BatchRow({
   row,
   idx,
+  sequenceLabel = '',
   reviewMode = false,
   isSimilarityFocused = false,
   categoriesCatalog = [],
@@ -63,6 +64,21 @@ export default function BatchRow({
           },
         }}
       >
+        <TableCell sx={{ width: 86, minWidth: 86, borderBottom: cellBorder, color: primaryText }}>
+          <Chip
+            size="small"
+            label={sequenceLabel || '--/--'}
+            sx={{
+              height: 22,
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#082f49',
+              backgroundColor: 'rgba(186,230,253,0.96)',
+              border: '1px solid rgba(56,189,248,0.65)',
+            }}
+          />
+        </TableCell>
+
         <TableCell sx={{ minWidth: 120, borderBottom: cellBorder, color: primaryText }}>
           <Stack direction="row" spacing={1} justifyContent="flex-start" alignItems="center">
             <Button
@@ -181,6 +197,21 @@ export default function BatchRow({
         },
       }}
     >
+      <TableCell sx={{ width: 86, minWidth: 86, borderBottom: cellBorder, color: primaryText }}>
+        <Chip
+          size="small"
+          label={sequenceLabel || '--/--'}
+          sx={{
+            height: 22,
+            fontSize: 11,
+            fontWeight: 800,
+            color: '#082f49',
+            backgroundColor: 'rgba(186,230,253,0.96)',
+            border: '1px solid rgba(56,189,248,0.65)',
+          }}
+        />
+      </TableCell>
+
       {/* Acciones */}
       <TableCell sx={{ minWidth: 100, borderBottom: cellBorder, color: primaryText }}>
         <Stack direction="row" spacing={1} justifyContent="flex-start" alignItems="center">
