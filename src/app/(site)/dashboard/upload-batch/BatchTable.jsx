@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, FormControl, InputLabel, Select, MenuItem, OutlinedInput, Checkbox, ListItemText, Switch, FormControlLabel } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
@@ -116,21 +117,14 @@ export default function BatchTable() {
       .filter((entry) => Number.isFinite(entry.rowIndex) && entry.rowIndex >= 0)
   }, [visibleRows, rowIndexById])
 
-  const virtualWindow = useMemo(() => {
-    const total = visibleEntries.length
-    const rowHeight = reviewMode ? REVIEW_ROW_HEIGHT : 75 // Altura promedio de la fila estándar
-    const viewportHeight = reviewMode ? REVIEW_VIEWPORT_HEIGHT : 800
-    
-    const start = Math.max(0, Math.floor(reviewScrollTop / rowHeight) - REVIEW_OVERSCAN)
-    const end = Math.min(total, Math.ceil((reviewScrollTop + viewportHeight) / rowHeight) + REVIEW_OVERSCAN)
-    const topSpacerHeight = start * rowHeight
-    const bottomSpacerHeight = Math.max(0, (total - end) * rowHeight)
-    return { start, end, topSpacerHeight, bottomSpacerHeight }
-  }, [reviewMode, reviewScrollTop, visibleEntries])
+  const virtualizer = useVirtualizer({
+    count: visibleEntries.length,
+    getScrollElement: () => reviewScrollRef.current,
+    estimateSize: () => reviewMode ? REVIEW_ROW_HEIGHT : 110,
+    overscan: 5,
+  })
 
-  const renderedEntries = useMemo(() => {
-    return visibleEntries.slice(virtualWindow.start, virtualWindow.end)
-  }, [visibleEntries, virtualWindow])
+  const virtualItems = virtualizer.getVirtualItems()
 
   const visibleColumnCount = reviewMode ? 5 : 11
 
@@ -2260,17 +2254,21 @@ export default function BatchTable() {
               </TableRow>
             )}
 
-            {virtualWindow.topSpacerHeight > 0 && (
+            {virtualItems.length > 0 && virtualItems[0].start > 0 && (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualWindow.topSpacerHeight}px` }} />
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualItems[0].start}px` }} />
               </TableRow>
             )}
 
-            {renderedEntries.map(({ row, rowIndex, visibleIndex }, idx) => (
+            {virtualItems.map((virtualRow) => {
+              const { row, rowIndex, visibleIndex } = visibleEntries[virtualRow.index];
+              return (
               <BatchRow
-                key={row.id || `${rowIndex}-${idx}`}
+                key={row.id || `${rowIndex}-${virtualRow.index}`}
                 row={row}
                 idx={rowIndex}
+                measureElement={virtualizer.measureElement}
+                virtualIndex={virtualRow.index}
                 sequenceLabel={`${visibleIndex + 1}/${visibleEntries.length}`}
                 reviewMode={reviewMode}
                 isSimilarityFocused={Number(row?.id || 0) > 0 && Number(row?.id || 0) === Number(similaritySelectedId || 0)}
@@ -2290,11 +2288,11 @@ export default function BatchTable() {
                 onOpenSimilar={handleOpenSimilar}
                 onRemoverFila={handleRemoverFila}
               />
-            ))}
+            )})}
 
-            {virtualWindow.bottomSpacerHeight > 0 && (
+            {virtualItems.length > 0 && virtualItems[virtualItems.length - 1].end < virtualizer.getTotalSize() && (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualWindow.bottomSpacerHeight}px` }} />
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end}px` }} />
               </TableRow>
             )}
           </TableBody>
