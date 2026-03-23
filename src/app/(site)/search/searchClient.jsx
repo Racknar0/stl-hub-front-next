@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from '../../../services/AxiosInterceptor';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
@@ -13,6 +14,10 @@ import './search.scss';
 
 const SEARCH_EVENT_DEDUPE_MS = 8000;
 const PAGE_SIZE = 72;
+const GRID_GAP_PX = 10;
+const GRID_MIN_CARD_WIDTH_PX = 240;
+const GRID_CARD_HEIGHT_DESKTOP = 370;
+const GRID_CARD_HEIGHT_MOBILE = 390;
 
 function stripLeadingHashes(value) {
   return String(value || '').replace(/^#+/, '');
@@ -153,11 +158,39 @@ export default function SearchClient({ initialParams }) {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef(null);
+  const virtualRootRef = useRef(null);
+  const [scrollElement, setScrollElement] = useState(null);
+  const [virtualMetrics, setVirtualMetrics] = useState({ width: 0, top: 0, windowW: 0 });
   const searchEventIdRef = useRef(null);
+  
   // Refs para evitar condiciones de carrera y loops
   const pageRef = useRef(0);
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const findScrollParent = (node) => {
+      // Ignoramos el window y document para que useVirtualizer interactúe con el body como fallback seguro para ResizeObserver
+      if (!node || node === document.documentElement) return document.body;
+      
+      const style = window.getComputedStyle(node);
+      const isScrollY = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      const isTailwindScroll = typeof node.className === 'string' && (node.className.includes('overflow-y-auto') || node.className.includes('overflow-auto'));
+      
+      if (isScrollY || isTailwindScroll) {
+        return node;
+      }
+      return findScrollParent(node.parentNode);
+    };
+    
+    // Le damos un parpadeo de vida al DOM
+    const t = setTimeout(() => {
+      const el = findScrollParent(virtualRootRef.current);
+      setScrollElement(el);
+    }, 200);
+    return () => clearTimeout(t);
+  }, []);
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -318,6 +351,147 @@ export default function SearchClient({ initialParams }) {
     };
   }, [loadMoreReal, page, hasMore, isLoadingMore]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const updateMetrics = () => {
+      const node = virtualRootRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const next = {
+        width: Math.max(1, Math.round(rect.width || 1)),
+        // Calculate stable absolute document top
+        top: Math.max(0, Math.round(rect.top + (window.scrollY || window.pageYOffset || 0))),
+        windowW: Math.max(1, Math.round(window.innerWidth || 1)),
+      };
+      setVirtualMetrics((prev) => {
+        // Only trigger re-render if width or window boundaries change significantly
+        // Ignore micro-shifts in 'top' to prevent jitter storms on scroll
+        if (prev.width === next.width && prev.windowW === next.windowW && Math.abs(prev.top - next.top) < 50) return prev;
+        return next;
+      });
+    };
+
+    // Give it a tiny delay to ensure DOM is settled (images, texts, above grid)
+    const tId = setTimeout(updateMetrics, 100);
+
+    window.addEventListener('resize', updateMetrics);
+
+    const node = virtualRootRef.current;
+    const ro = (typeof ResizeObserver !== 'undefined' && node)
+      ? new ResizeObserver(() => updateMetrics())
+      : null;
+    if (ro && node) ro.observe(node);
+
+    return () => {
+      clearTimeout(tId);
+      window.removeEventListener('resize', updateMetrics);
+      if (ro) ro.disconnect();
+    };
+  }, [items.length]);
+
+  const columns = useMemo(() => {
+    const width = Math.max(1, Number(virtualMetrics.width || 1));
+    return Math.max(1, Math.floor((width + GRID_GAP_PX) / (GRID_MIN_CARD_WIDTH_PX + GRID_GAP_PX)));
+  }, [virtualMetrics.width]);
+
+  const rowHeight = useMemo(() => {
+    return Number(virtualMetrics.windowW || 0) <= 992
+      ? GRID_CARD_HEIGHT_MOBILE + GRID_GAP_PX
+      : GRID_CARD_HEIGHT_DESKTOP + GRID_GAP_PX;
+  }, [virtualMetrics.windowW]);
+
+  const rowCount = useMemo(() => Math.ceil(items.length / columns), [items.length, columns]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: Math.max(0, rowCount),
+    getScrollElement: () => scrollElement,
+    estimateSize: () => rowHeight,
+    overscan: 12,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalVirtualHeight = Math.max(0, Number(rowVirtualizer.getTotalSize() || 0));
+  
+  // Detenemos virtualización si no hemos encontrado la caja real de scroll
+  const hasRenderableVirtualRows = virtualRows.some((row) => (row.index * columns) < items.length);
+  const canVirtualize = !!scrollElement && hasRenderableVirtualRows && totalVirtualHeight > 0;
+
+  const renderResultCard = (it) => (
+    <article
+      key={it.id}
+      className="fcard"
+      onClick={() => {
+        void trackClick(it.id);
+        setModalAsset(it);
+        setModalOpen(true);
+      }}
+    >
+      <div className="thumb">
+        <Image
+          src={it.thumb}
+          alt={it.title}
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 240px"
+          className="thumb-img"
+          priority={false}
+        />
+      </div>
+      <div className="finfo">
+        <div className="ftitle">{it.title}</div>
+        <div className="fbottom">
+          <div className="chips">
+            {(it.chips || []).slice(0, 3).map((c, i) => (
+              <Link
+                key={i}
+                className="chip chip--link"
+                href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
+                onClick={(e) => { e.stopPropagation(); }}
+              >
+                #{c}
+              </Link>
+            ))}
+            {(it.chips || []).length > 3 && (
+              <span className="chip">+{(it.chips || []).length - 3}</span>
+            )}
+          </div>
+          {(() => {
+            if (!it.createdAt && !it.slug) return null;
+            let dateStr = '';
+            if (it.createdAt) {
+              const d = new Date(it.createdAt);
+              if (!isNaN(d.getTime())) {
+                const dd = String(d.getDate()).padStart(2, '0');
+                const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                const mmm = months[d.getMonth()];
+                const yyyy = d.getFullYear();
+                dateStr = `${dd}-${mmm}-${yyyy}`;
+              }
+            }
+            return (
+              <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                {it.slug ? (
+                  <Link
+                    href={`/asset/${it.slug}`}
+                    onClick={(e)=>{ e.stopPropagation(); void trackClick(it.id); }}
+                    aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
+                    style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                  >
+                    {dateStr && <span>upload · {dateStr} · detail</span>}
+                    <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
+                  </Link>
+                ) : (
+                  dateStr && <span>upload: {dateStr}</span>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+      <span className="badge" aria-hidden="true">✓</span>
+    </article>
+  );
+
   const catHref = (c) => {
     if (!c) return '#'
     const s = typeof c === 'string' ? c : (language === 'en' ? c.slugEn || c.slug : c.slug || c.slugEn)
@@ -355,101 +529,61 @@ export default function SearchClient({ initialParams }) {
   ) : null}
   {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
 
-        <div className="results-grid">
-          {items.map((it) => (
-            <article
-              key={it.id}
-              className="fcard"
-              onClick={() => {
-                void trackClick(it.id);
-                setModalAsset(it);
-                setModalOpen(true);
+        <div className="results-virtual-shell" ref={virtualRootRef}>
+          {canVirtualize ? (
+            <div
+              style={{
+                width: '100%',
+                paddingTop: `${virtualRows.length > 0 ? virtualRows[0].start : 0}px`,
+                paddingBottom: `${virtualRows.length > 0 ? totalVirtualHeight - virtualRows[virtualRows.length - 1].end : totalVirtualHeight}px`,
               }}
             >
-              <div className="thumb">
-                <Image
-                  src={it.thumb}
-                  alt={it.title}
-                  fill
-                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 240px"
-                  className="thumb-img"
-                  priority={false}
-                />
-              </div>
-              <div className="finfo">
-                <div className="ftitle">{it.title}</div>
-                <div className="fbottom">
-                  <div className="chips">
-                    {(it.chips || []).slice(0, 3).map((c, i) => (
-                      <Link
-                        key={i}
-                        className="chip chip--link"
-                        href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
-                        onClick={(e) => { e.stopPropagation(); }}
-                      >
-                        #{c}
-                      </Link>
-                    ))}
-                    {(it.chips || []).length > 3 && (
-                      <span className="chip">+{(it.chips || []).length - 3}</span>
-                    )}
-                  </div>
-                  {(() => {
-                    if (!it.createdAt && !it.slug) return null;
-                    let dateStr = '';
-                    if (it.createdAt) {
-                      const d = new Date(it.createdAt);
-                      if (!isNaN(d.getTime())) {
-                        const dd = String(d.getDate()).padStart(2, '0');
-                        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-                        const mmm = months[d.getMonth()];
-                        const yyyy = d.getFullYear();
-                        dateStr = `${dd}-${mmm}-${yyyy}`;
-                      }
-                    }
-                    return (
-                      <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {it.slug ? (
-                          <Link
-                            href={`/asset/${it.slug}`}
-                            onClick={(e)=>{ e.stopPropagation(); void trackClick(it.id); }}
-                            aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
-                            style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
-                          >
-                            {dateStr && <span>upload · {dateStr} · detail</span>}
-                            <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
-                          </Link>
-                        ) : (
-                          dateStr && <span>upload: {dateStr}</span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              <span className="badge" aria-hidden="true">✓</span>
-            </article>
-          ))}
+              {virtualRows.map((virtualRow) => {
+                const rowStart = virtualRow.index * columns;
+                const rowEnd = Math.min(items.length, rowStart + columns);
+                const rowItems = items.slice(rowStart, rowEnd);
 
-          {items.length > 0 && (
-          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+                if (!rowItems.length) return null;
+
+                return (
+                  <div
+                    key={virtualRow.key}
+                    className="results-grid"
+                    style={{
+                      gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      marginBottom: `${GRID_GAP_PX}px`
+                    }}
+                  >
+                    {rowItems.map((it) => renderResultCard(it))}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="results-grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+              {items.map((it) => renderResultCard(it))}
+            </div>
+          )}
+        </div>
+
+        {items.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
             {hasMore ? (
               <div ref={sentinelRef} style={{ color: '#9aa4c7', fontSize: '.9rem', display:'flex', alignItems:'center', gap:'10px' }}>
                 {isLoadingMore ? <Spinner /> : 'Cargar más…'}
               </div>
             ) : (
               <div style={{ color: '#9aa4c7', fontSize: '.9rem' }}>
-                {
-                  isEn ? 'No more results' : 'No hay más resultados'
-                }
+                {isEn ? 'No more results' : 'No hay más resultados'}
               </div>
             )}
           </div>
-          )}
-        </div>
+        )}
       </div>
 
-  <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
+      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
     </section>
   );
 }
