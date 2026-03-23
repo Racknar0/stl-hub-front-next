@@ -95,6 +95,11 @@ export default function AssetsAdminPage() {
   const [metaImagePreview, setMetaImagePreview] = useState(null)
   const [metaProfilesOpen, setMetaProfilesOpen] = useState(false)
   const [metaProfileAssetId, setMetaProfileAssetId] = useState(null)
+  
+  // Virtualización nativa para META-SEO
+  const metaScrollRef = useRef(null)
+  const [metaScrollTop, setMetaScrollTop] = useState(0)
+
   const [similarThreshold, setSimilarThreshold] = useState(88)
   const [similarLoading, setSimilarLoading] = useState(false)
   const [similarError, setSimilarError] = useState('')
@@ -1705,6 +1710,23 @@ export default function AssetsAdminPage() {
   }, [tab, assets, normalizeMetaCategoryList, normalizeMetaTagList])
 
   const metaRows = filtered
+
+  const metaVirtualWindow = useMemo(() => {
+    const total = metaRows.length
+    const rowHeight = 110 // Altura estimada (TextField multiline, imagenes, etc)
+    const viewportHeight = 800
+    
+    // Calcula la ventana visible con un buffer extra de seguridad (overscan de 6 items antes y después)
+    const start = Math.max(0, Math.floor(metaScrollTop / rowHeight) - 8)
+    const end = Math.min(total, Math.ceil((metaScrollTop + viewportHeight) / rowHeight) + 8)
+    const topSpacerHeight = start * rowHeight
+    const bottomSpacerHeight = Math.max(0, (total - end) * rowHeight)
+    return { start, end, topSpacerHeight, bottomSpacerHeight }
+  }, [metaScrollTop, metaRows])
+
+  const renderedMetaRows = useMemo(() => {
+    return metaRows.slice(metaVirtualWindow.start, metaVirtualWindow.end)
+  }, [metaRows, metaVirtualWindow])
   const metaTotalPages = useMemo(() => {
     const total = Number(rowCount) || 0
     const size = Math.max(1, Number(pageSize) || 1)
@@ -2882,7 +2904,25 @@ export default function AssetsAdminPage() {
 
           {(metaBusy || loading) && <LinearProgress />}
 
-          <TableContainer component={Paper} sx={{ borderRadius: 2, maxHeight: 'calc(100vh - 260px)' }}>
+          <TableContainer 
+            component={Paper} 
+            ref={metaScrollRef}
+            onScroll={(e) => {
+              const st = Number(e?.currentTarget?.scrollTop || 0)
+              if (Math.abs(st - metaScrollTop) > 2) setMetaScrollTop(st)
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              maxHeight: 'calc(100vh - 260px)',
+              overflowY: 'scroll',
+              overflowAnchor: 'none',
+              '& .MuiTableCell-head': {
+                backgroundColor: '#0f172a',
+                backdropFilter: 'blur(8px)',
+                zIndex: 10,
+              },
+            }}
+          >
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
@@ -2905,7 +2945,13 @@ export default function AssetsAdminPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {metaRows.map((row) => {
+                {metaVirtualWindow.topSpacerHeight > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${metaVirtualWindow.topSpacerHeight}px` }} />
+                  </TableRow>
+                )}
+
+                {renderedMetaRows.map((row) => {
                   const id = Number(row?.id || 0)
                   const draft = metaDraftMap[id] || {
                     id,
@@ -3088,6 +3134,13 @@ export default function AssetsAdminPage() {
                     </TableRow>
                   )
                 })}
+
+                {metaVirtualWindow.bottomSpacerHeight > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${metaVirtualWindow.bottomSpacerHeight}px` }} />
+                  </TableRow>
+                )}
+
                 {!metaRows.length && (
                   <TableRow>
                     <TableCell colSpan={10}>

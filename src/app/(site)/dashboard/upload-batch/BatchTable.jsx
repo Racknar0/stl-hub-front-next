@@ -2222,6 +2222,11 @@ export default function BatchTable() {
             color: '#edf3ff',
             borderBottom: '1px solid rgba(148,163,184,0.24)',
           },
+          '& .MuiTableCell-head': {
+            backgroundColor: '#0f172a',
+            backdropFilter: 'blur(8px)',
+            zIndex: 10,
+          },
         }}
       >
         <Table size="medium" stickyHeader>
