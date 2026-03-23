@@ -116,27 +116,21 @@ export default function BatchTable() {
       .filter((entry) => Number.isFinite(entry.rowIndex) && entry.rowIndex >= 0)
   }, [visibleRows, rowIndexById])
 
-  const reviewVirtualWindow = useMemo(() => {
+  const virtualWindow = useMemo(() => {
     const total = visibleEntries.length
-    if (!reviewMode) {
-      return {
-        start: 0,
-        end: total,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
-      }
-    }
-    const start = Math.max(0, Math.floor(reviewScrollTop / REVIEW_ROW_HEIGHT) - REVIEW_OVERSCAN)
-    const end = Math.min(total, Math.ceil((reviewScrollTop + REVIEW_VIEWPORT_HEIGHT) / REVIEW_ROW_HEIGHT) + REVIEW_OVERSCAN)
-    const topSpacerHeight = start * REVIEW_ROW_HEIGHT
-    const bottomSpacerHeight = Math.max(0, (total - end) * REVIEW_ROW_HEIGHT)
+    const rowHeight = reviewMode ? REVIEW_ROW_HEIGHT : 75 // Altura promedio de la fila estándar
+    const viewportHeight = reviewMode ? REVIEW_VIEWPORT_HEIGHT : 800
+    
+    const start = Math.max(0, Math.floor(reviewScrollTop / rowHeight) - REVIEW_OVERSCAN)
+    const end = Math.min(total, Math.ceil((reviewScrollTop + viewportHeight) / rowHeight) + REVIEW_OVERSCAN)
+    const topSpacerHeight = start * rowHeight
+    const bottomSpacerHeight = Math.max(0, (total - end) * rowHeight)
     return { start, end, topSpacerHeight, bottomSpacerHeight }
   }, [reviewMode, reviewScrollTop, visibleEntries])
 
   const renderedEntries = useMemo(() => {
-    if (!reviewMode) return visibleEntries
-    return visibleEntries.slice(reviewVirtualWindow.start, reviewVirtualWindow.end)
-  }, [reviewMode, visibleEntries, reviewVirtualWindow])
+    return visibleEntries.slice(virtualWindow.start, virtualWindow.end)
+  }, [visibleEntries, virtualWindow])
 
   const visibleColumnCount = reviewMode ? 5 : 11
 
@@ -2213,11 +2207,17 @@ export default function BatchTable() {
         component={Paper}
         elevation={0}
         variant="outlined"
-        ref={reviewMode ? reviewScrollRef : undefined}
-        onScroll={reviewMode ? (e) => setReviewScrollTop(Number(e?.currentTarget?.scrollTop || 0)) : undefined}
+        ref={reviewScrollRef}
+        onScroll={(e) => {
+          const st = Number(e?.currentTarget?.scrollTop || 0);
+          if (Math.abs(st - reviewScrollTop) > 2) {
+            setReviewScrollTop(st);
+          }
+        }}
         sx={{
-          maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'none',
-          overflowY: reviewMode ? 'auto' : 'visible',
+          maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'calc(100vh - 280px)',
+          overflowY: 'auto',
+          overflowAnchor: 'none',
           borderRadius: 2,
           background: 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(17,24,39,0.78))',
           borderColor: 'rgba(148,163,184,0.32)',
@@ -2228,7 +2228,7 @@ export default function BatchTable() {
           },
         }}
       >
-        <Table size="medium">
+        <Table size="medium" stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>#</TableCell>
@@ -2259,9 +2259,9 @@ export default function BatchTable() {
               </TableRow>
             )}
 
-            {reviewMode && reviewVirtualWindow.topSpacerHeight > 0 && (
+            {virtualWindow.topSpacerHeight > 0 && (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${reviewVirtualWindow.topSpacerHeight}px` }} />
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualWindow.topSpacerHeight}px` }} />
               </TableRow>
             )}
 
@@ -2291,9 +2291,9 @@ export default function BatchTable() {
               />
             ))}
 
-            {reviewMode && reviewVirtualWindow.bottomSpacerHeight > 0 && (
+            {virtualWindow.bottomSpacerHeight > 0 && (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${reviewVirtualWindow.bottomSpacerHeight}px` }} />
+                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualWindow.bottomSpacerHeight}px` }} />
               </TableRow>
             )}
           </TableBody>

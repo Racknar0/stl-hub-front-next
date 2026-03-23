@@ -590,7 +590,7 @@ export default function BatchRow({
         })()}
       </TableCell>
       <TableCell align="center" sx={{ borderBottom: cellBorder, color: primaryText }}>
-         {rowInFlight && <CircularProgress size={24} />}
+         {rowInFlight && <Box component="span" sx={{ fontSize: 18 }}>⏳</Box>}
          {isOk && <CheckCircleOutlineIcon color="success" />}
          {isError && (
            <Tooltip title="Fallo al subir a MEGA">
