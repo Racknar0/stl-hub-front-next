@@ -1716,7 +1716,7 @@ export default function AssetsAdminPage() {
     count: metaRows.length,
     getScrollElement: () => metaScrollRef.current,
     estimateSize: () => 140, // Altura estimada con TextField multiline
-    overscan: 16,
+    overscan: 5,
   })
 
   const virtualItems = metaVirtualizer.getVirtualItems()
