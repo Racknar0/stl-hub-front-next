@@ -4482,7 +4482,7 @@ export default function AssetsAdminPage() {
                                         ID
                                     </TableCell>
                                     <TableCell
-                                        sx={{ minWidth: 150, width: 150 }}
+                                        sx={{ minWidth: 270, width: 270 }}
                                     >
                                         Imágenes
                                     </TableCell>
@@ -4497,12 +4497,12 @@ export default function AssetsAdminPage() {
                                         SEO Description (ES/EN)
                                     </TableCell>
                                     <TableCell
-                                        sx={{ minWidth: 220, width: 220 }}
+                                        sx={{ minWidth: 300, width: 300 }}
                                     >
                                         Categorías
                                     </TableCell>
                                     <TableCell
-                                        sx={{ minWidth: 260, width: 260 }}
+                                        sx={{ minWidth: 400, width: 400 }}
                                     >
                                         Tags
                                     </TableCell>
@@ -4592,8 +4592,8 @@ export default function AssetsAdminPage() {
                                                                     )
                                                                 }
                                                                 sx={{
-                                                                    width: 150,
-                                                                    height: 150,
+                                                                    width: 250,
+                                                                    height: 250,
                                                                     objectFit:
                                                                         'cover',
                                                                     borderRadius: 1.5,
@@ -4601,7 +4601,7 @@ export default function AssetsAdminPage() {
                                                                     cursor: 'pointer',
                                                                     ml:
                                                                         idx > 0
-                                                                            ? -4
+                                                                            ? -20
                                                                             : 0,
                                                                     transition:
                                                                         'transform 0.2s, z-index 0.2s',
@@ -4621,8 +4621,8 @@ export default function AssetsAdminPage() {
                                                             0) && (
                                                         <Box
                                                             sx={{
-                                                                width: 96,
-                                                                height: 96,
+                                                                width: 250,
+                                                                height: 250,
                                                                 borderRadius: 1.5,
                                                                 display: 'grid',
                                                                 placeItems:
@@ -4782,18 +4782,46 @@ export default function AssetsAdminPage() {
                                                     disabled={
                                                         metaBusy || loading
                                                     }
-                                                    sx={{
-                                                        '& .MuiInputBase-root':
-                                                            {
-                                                                maxHeight: 110,
-                                                                minHeight: 110,
-                                                                overflowY:
-                                                                    'auto',
-                                                                alignItems:
-                                                                    'flex-start',
-                                                                alignContent:
-                                                                    'flex-start',
+                                                    renderTags={(
+                                                        value,
+                                                        getTagProps,
+                                                    ) =>
+                                                        value.map(
+                                                            (option, index) => {
+                                                                const {
+                                                                    key,
+                                                                    ...tagProps
+                                                                } = getTagProps({
+                                                                    index,
+                                                                });
+                                                                return (
+                                                                    <Chip
+                                                                        key={key}
+                                                                        label={
+                                                                            option.name ||
+                                                                            option.slug
+                                                                        }
+                                                                        size="small"
+                                                                        {...tagProps}
+                                                                        sx={{
+                                                                            m: '2px',
+                                                                        }}
+                                                                    />
+                                                                );
                                                             },
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            maxHeight: 110,
+                                                            minHeight: 110,
+                                                            overflowY: 'auto',
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            alignItems: 'flex-start',
+                                                            alignContent: 'flex-start',
+                                                            p: '4px 34px 4px 4px !important',
+                                                        },
                                                     }}
                                                 />
                                             </TableCell>
@@ -4861,18 +4889,50 @@ export default function AssetsAdminPage() {
                                                     disabled={
                                                         metaBusy || loading
                                                     }
-                                                    sx={{
-                                                        '& .MuiInputBase-root':
-                                                            {
-                                                                maxHeight: 110,
-                                                                minHeight: 110,
-                                                                overflowY:
-                                                                    'auto',
-                                                                alignItems:
-                                                                    'flex-start',
-                                                                alignContent:
-                                                                    'flex-start',
+                                                    renderTags={(
+                                                        value,
+                                                        getTagProps,
+                                                    ) =>
+                                                        value.map(
+                                                            (option, index) => {
+                                                                const {
+                                                                    key,
+                                                                    ...tagProps
+                                                                } = getTagProps({
+                                                                    index,
+                                                                });
+                                                                return (
+                                                                    <Chip
+                                                                        key={key}
+                                                                        size="small"
+                                                                        label={
+                                                                            option.name ||
+                                                                            option.es ||
+                                                                            option.nameEn ||
+                                                                            option.en ||
+                                                                            option.slug ||
+                                                                            option
+                                                                        }
+                                                                        {...tagProps}
+                                                                        sx={{
+                                                                            m: '2px',
+                                                                        }}
+                                                                    />
+                                                                );
                                                             },
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            maxHeight: 110,
+                                                            minHeight: 110,
+                                                            overflowY: 'auto',
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            alignItems: 'flex-start',
+                                                            alignContent: 'flex-start',
+                                                            p: '4px 34px 4px 4px !important',
+                                                        },
                                                     }}
                                                 />
                                             </TableCell>

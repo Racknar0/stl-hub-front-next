@@ -126,7 +126,7 @@ export default function BatchTable() {
 
   const virtualItems = virtualizer.getVirtualItems()
 
-  const visibleColumnCount = reviewMode ? 5 : 11
+  const visibleColumnCount = reviewMode ? 3 : 9
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -2228,9 +2228,7 @@ export default function BatchTable() {
             <TableRow>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>#</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset (ES / EN)</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Categorías</TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Tags</TableCell>
+              <TableCell sx={{ minWidth: 500, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset Info (Nombre, Cat, Tags)</TableCell>
               {!reviewMode && (
                 <>
                   <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
