@@ -65,6 +65,7 @@ export default function BatchTable() {
   const [previewImage, setPreviewImage] = useState(null)
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
+  const [distributionSelectorOpen, setDistributionSelectorOpen] = useState(false)
   const [reviewMode, setReviewMode] = useState(false)
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
@@ -1347,6 +1348,7 @@ export default function BatchTable() {
   }
 
   const handleDistributionSelectorClose = () => {
+    setDistributionSelectorOpen(false)
     if (!distributionSelectionDirtyRef.current) return
     distributionSelectionDirtyRef.current = false
     const selected = distributionAccountIdsRef.current
@@ -1635,59 +1637,104 @@ export default function BatchTable() {
          >
            Distribuir Automáticamente
          </Button>
-         <FormControl
-           size="small"
+         <Box
            sx={{
              minWidth: { xs: '100%', md: 330 },
              maxWidth: 460,
            }}
          >
-           <InputLabel id="batch-distribution-accounts-label" sx={{ color: 'rgba(226,232,240,0.88)' }}>
-             Cuentas para distribución
-           </InputLabel>
-           <Select
-             labelId="batch-distribution-accounts-label"
-             multiple
-             displayEmpty
-             value={distributionAccountIds}
-             onChange={handleDistributionAccountsChange}
-             onClose={handleDistributionSelectorClose}
-             input={<OutlinedInput label="Cuentas para distribución" />}
-             renderValue={(selected) => {
-               const ids = Array.isArray(selected) ? selected.map(Number) : []
-               if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
-               const labels = cuentas
-                 .filter((c) => ids.includes(Number(c.id)))
-                 .map((c) => c.alias)
-               return labels.join(', ')
-             }}
-             sx={{
-               color: '#f8fbff',
-               bgcolor: 'rgba(30,41,59,0.55)',
-               borderRadius: 2,
-               '& .MuiSelect-icon': { color: '#e2e8f0' },
-               '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(148,163,184,0.45)' },
-               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(191,219,254,0.72)' },
-             }}
-           >
-             {cuentas.map((c) => {
-               const freeMb = Math.max(0, Number(c.limitMB || UI_ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
-               const freeGb = (freeMb / 1024).toFixed(2)
-               const checked = distributionAccountIds.includes(Number(c.id))
-               return (
-                 <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', bgcolor: '#0f172a' }}>
-                   <Checkbox checked={checked} size="small" sx={{ color: '#93c5fd', '&.Mui-checked': { color: '#60a5fa' } }} />
-                   <ListItemText
-                     primary={c.alias}
-                     secondary={`${freeGb} GB libres`}
-                     primaryTypographyProps={{ fontWeight: 700, color: '#e2e8f0' }}
-                     secondaryTypographyProps={{ color: 'rgba(203,213,225,0.82)' }}
-                   />
-                 </MenuItem>
-               )
-             })}
-           </Select>
-         </FormControl>
+           {distributionSelectorOpen && (
+             <Box
+               sx={{
+                 mb: 0.8,
+                 px: 1.2,
+                 py: 0.8,
+                 borderRadius: 1.5,
+                 border: '1px solid rgba(125,211,252,0.35)',
+                 background: 'linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(2,6,23,0.94) 100%)',
+               }}
+             >
+               <Typography variant="caption" sx={{ color: '#cbd5e1', fontWeight: 700, display: 'block' }}>
+                 Resumen de carga
+               </Typography>
+               <Typography variant="body2" sx={{ color: '#f8fbff', fontWeight: 700, lineHeight: 1.2 }}>
+                 Listos: {tableSummary.ready} de {tableSummary.retryable} · Faltan: {tableSummary.missing}
+               </Typography>
+             </Box>
+           )}
+           <FormControl size="small" fullWidth>
+             <InputLabel id="batch-distribution-accounts-label" sx={{ color: 'rgba(226,232,240,0.88)' }}>
+               Cuentas para distribución
+             </InputLabel>
+             <Select
+               labelId="batch-distribution-accounts-label"
+               multiple
+               displayEmpty
+               value={distributionAccountIds}
+               onOpen={() => setDistributionSelectorOpen(true)}
+               onChange={handleDistributionAccountsChange}
+               onClose={handleDistributionSelectorClose}
+               input={<OutlinedInput label="Cuentas para distribución" />}
+               renderValue={(selected) => {
+                 const ids = Array.isArray(selected) ? selected.map(Number) : []
+                 if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
+                 const labels = cuentas
+                   .filter((c) => ids.includes(Number(c.id)))
+                   .map((c) => c.alias)
+                 return labels.join(', ')
+               }}
+               sx={{
+                 color: '#f8fbff',
+                 bgcolor: 'rgba(30,41,59,0.55)',
+                 borderRadius: 2,
+                 '& .MuiSelect-icon': { color: '#e2e8f0' },
+                 '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(148,163,184,0.45)' },
+                 '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(191,219,254,0.72)' },
+               }}
+               MenuProps={{
+                 PaperProps: {
+                   sx: {
+                     bgcolor: '#020617',
+                     border: '1px solid rgba(71,85,105,0.55)',
+                   },
+                 },
+               }}
+             >
+               {cuentas.map((c) => {
+                 const freeMb = Math.max(0, Number(c.limitMB || UI_ACCOUNT_LIMIT_MB) - Number(c.usedMB || 0))
+                 const freeGb = (freeMb / 1024).toFixed(2)
+                 const checked = distributionAccountIds.includes(Number(c.id))
+                 return (
+                   <MenuItem
+                     key={c.id}
+                     value={c.id}
+                     sx={{
+                       color: '#e2e8f0',
+                       bgcolor: '#0f172a',
+                       '&.Mui-selected': {
+                         bgcolor: '#020617',
+                       },
+                       '&.Mui-selected:hover': {
+                         bgcolor: '#111827',
+                       },
+                       '&:hover': {
+                         bgcolor: '#1e293b',
+                       },
+                     }}
+                   >
+                     <Checkbox checked={checked} size="small" sx={{ color: '#93c5fd', '&.Mui-checked': { color: '#d1d5db' } }} />
+                     <ListItemText
+                       primary={c.alias}
+                       secondary={`${freeGb} GB libres`}
+                       primaryTypographyProps={{ fontWeight: checked ? 800 : 700, color: '#e2e8f0' }}
+                       secondaryTypographyProps={{ color: checked ? 'rgba(226,232,240,0.92)' : 'rgba(203,213,225,0.82)' }}
+                     />
+                   </MenuItem>
+                 )
+               })}
+             </Select>
+           </FormControl>
+         </Box>
         <Button
           variant="outlined"
           color="warning"
