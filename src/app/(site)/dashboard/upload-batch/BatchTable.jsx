@@ -65,7 +65,6 @@ export default function BatchTable() {
   const [previewImage, setPreviewImage] = useState(null)
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
-  const [distributionSelectorOpen, setDistributionSelectorOpen] = useState(false)
   const [reviewMode, setReviewMode] = useState(false)
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
@@ -1348,7 +1347,6 @@ export default function BatchTable() {
   }
 
   const handleDistributionSelectorClose = () => {
-    setDistributionSelectorOpen(false)
     if (!distributionSelectionDirtyRef.current) return
     distributionSelectionDirtyRef.current = false
     const selected = distributionAccountIdsRef.current
@@ -1548,6 +1546,44 @@ export default function BatchTable() {
     }
   }, [rows])
 
+  const distributionSelectionSummary = useMemo(() => {
+    const selectedIds = Array.from(new Set(
+      (Array.isArray(distributionAccountIds) ? distributionAccountIds : [])
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    ))
+
+    if (!selectedIds.length) return null
+
+    const selectedSet = new Set(selectedIds)
+    const candidateRows = rows.filter((row) => {
+      const st = String(row?.estado || '').toLowerCase()
+      return st === 'borrador' || st === 'error'
+    })
+
+    const totalAssets = candidateRows.length
+    const totalMb = candidateRows.reduce((acc, row) => acc + Math.max(0, Number(row?.pesoMB || 0)), 0)
+
+    const assignedRows = candidateRows.filter((row) => selectedSet.has(Number(row?.cuenta || 0)))
+    const assignedAssets = assignedRows.length
+    const assignedMb = assignedRows.reduce((acc, row) => acc + Math.max(0, Number(row?.pesoMB || 0)), 0)
+
+    const pendingAssets = Math.max(0, totalAssets - assignedAssets)
+    const pendingMb = Math.max(0, totalMb - assignedMb)
+    const pct = totalAssets > 0 ? Math.round((assignedAssets / totalAssets) * 100) : 0
+
+    return {
+      selectedCount: selectedIds.length,
+      totalAssets,
+      assignedAssets,
+      pendingAssets,
+      totalGb: totalMb / 1024,
+      assignedGb: assignedMb / 1024,
+      pendingGb: pendingMb / 1024,
+      pct,
+    }
+  }, [rows, distributionAccountIds])
+
 
 
   return (
@@ -1643,25 +1679,6 @@ export default function BatchTable() {
              maxWidth: 460,
            }}
          >
-           {distributionSelectorOpen && (
-             <Box
-               sx={{
-                 mb: 0.8,
-                 px: 1.2,
-                 py: 0.8,
-                 borderRadius: 1.5,
-                 border: '1px solid rgba(125,211,252,0.35)',
-                 background: 'linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(2,6,23,0.94) 100%)',
-               }}
-             >
-               <Typography variant="caption" sx={{ color: '#cbd5e1', fontWeight: 700, display: 'block' }}>
-                 Resumen de carga
-               </Typography>
-               <Typography variant="body2" sx={{ color: '#f8fbff', fontWeight: 700, lineHeight: 1.2 }}>
-                 Listos: {tableSummary.ready} de {tableSummary.retryable} · Faltan: {tableSummary.missing}
-               </Typography>
-             </Box>
-           )}
            <FormControl size="small" fullWidth>
              <InputLabel id="batch-distribution-accounts-label" sx={{ color: 'rgba(226,232,240,0.88)' }}>
                Cuentas para distribución
@@ -1671,7 +1688,6 @@ export default function BatchTable() {
                multiple
                displayEmpty
                value={distributionAccountIds}
-               onOpen={() => setDistributionSelectorOpen(true)}
                onChange={handleDistributionAccountsChange}
                onClose={handleDistributionSelectorClose}
                input={<OutlinedInput label="Cuentas para distribución" />}
@@ -1900,6 +1916,50 @@ export default function BatchTable() {
            >
              Última señal: {Number.isFinite(scanStatusUi.updatedAgoSec) ? `${scanStatusUi.updatedAgoSec}s` : '--'}
              {scanStatusUi.isStale ? ' · posible espera larga, revisa consola para detalle.' : ''}
+           </Typography>
+         </Box>
+       )}
+
+       {distributionSelectionSummary && (
+         <Box
+           sx={{
+             mb: 2,
+             px: 1.25,
+             py: 1.1,
+             borderRadius: 2,
+             border: '1px solid rgba(251,191,36,0.45)',
+             background: 'linear-gradient(90deg, rgba(120,53,15,0.28), rgba(180,83,9,0.2))',
+             boxShadow: '0 10px 20px rgba(180,83,9,0.18)',
+           }}
+         >
+           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.1} alignItems={{ xs: 'flex-start', md: 'center' }}>
+             <Typography variant="body2" sx={{ color: '#fde68a', fontWeight: 800 }}>
+               Cobertura de cuentas seleccionadas ({distributionSelectionSummary.selectedCount})
+             </Typography>
+             <Typography variant="caption" sx={{ color: 'rgba(254,240,138,0.95)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+               {distributionSelectionSummary.assignedAssets}/{distributionSelectionSummary.totalAssets} assets · {distributionSelectionSummary.pct}%
+             </Typography>
+           </Stack>
+
+           <LinearProgress
+             variant="determinate"
+             value={distributionSelectionSummary.pct}
+             sx={{
+               mt: 1,
+               height: 9,
+               borderRadius: 999,
+               backgroundColor: 'rgba(30,41,59,0.55)',
+               '& .MuiLinearProgress-bar': {
+                 background: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+               },
+             }}
+           />
+
+           <Typography variant="caption" sx={{ color: 'rgba(255,247,204,0.95)', mt: 0.75, display: 'block' }}>
+             Data total: {distributionSelectionSummary.totalGb.toFixed(2)} GB · En cuentas seleccionadas: {distributionSelectionSummary.assignedGb.toFixed(2)} GB · Falta asignar: {distributionSelectionSummary.pendingGb.toFixed(2)} GB
+           </Typography>
+           <Typography variant="caption" sx={{ color: 'rgba(255,247,204,0.9)', mt: 0.2, display: 'block' }}>
+             Assets faltantes por meter en cuentas seleccionadas: {distributionSelectionSummary.pendingAssets}
            </Typography>
          </Box>
        )}
