@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { Chip, Stack, Typography, LinearProgress, Link as MUILink, Box, TextField, Dialog, DialogTitle, DialogContent, IconButton, Button, Autocomplete, FormControlLabel, Switch, Tabs, Tab, Paper, Slider, Checkbox, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Tooltip, MenuItem } from '@mui/material'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import LinkIcon from '@mui/icons-material/Link'
@@ -1711,22 +1712,17 @@ export default function AssetsAdminPage() {
 
   const metaRows = filtered
 
-  const metaVirtualWindow = useMemo(() => {
-    const total = metaRows.length
-    const rowHeight = 110 // Altura estimada (TextField multiline, imagenes, etc)
-    const viewportHeight = 800
-    
-    // Calcula la ventana visible con un buffer extra de seguridad (overscan de 6 items antes y después)
-    const start = Math.max(0, Math.floor(metaScrollTop / rowHeight) - 8)
-    const end = Math.min(total, Math.ceil((metaScrollTop + viewportHeight) / rowHeight) + 8)
-    const topSpacerHeight = start * rowHeight
-    const bottomSpacerHeight = Math.max(0, (total - end) * rowHeight)
-    return { start, end, topSpacerHeight, bottomSpacerHeight }
-  }, [metaScrollTop, metaRows])
+  const metaVirtualizer = useVirtualizer({
+    count: metaRows.length,
+    getScrollElement: () => metaScrollRef.current,
+    estimateSize: () => 140, // Altura estimada con TextField multiline
+    overscan: 16,
+  })
 
-  const renderedMetaRows = useMemo(() => {
-    return metaRows.slice(metaVirtualWindow.start, metaVirtualWindow.end)
-  }, [metaRows, metaVirtualWindow])
+  const virtualItems = metaVirtualizer.getVirtualItems()
+  const totalSize = metaVirtualizer.getTotalSize()
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0
+  const paddingBottom = virtualItems.length > 0 ? totalSize - virtualItems[virtualItems.length - 1].end : 0
   const metaTotalPages = useMemo(() => {
     const total = Number(rowCount) || 0
     const size = Math.max(1, Number(pageSize) || 1)
@@ -2907,10 +2903,6 @@ export default function AssetsAdminPage() {
           <TableContainer 
             component={Paper} 
             ref={metaScrollRef}
-            onScroll={(e) => {
-              const st = Number(e?.currentTarget?.scrollTop || 0)
-              if (Math.abs(st - metaScrollTop) > 2) setMetaScrollTop(st)
-            }}
             sx={{ 
               borderRadius: 2, 
               maxHeight: 'calc(100vh - 260px)',
@@ -2920,6 +2912,9 @@ export default function AssetsAdminPage() {
                 backgroundColor: '#0f172a',
                 backdropFilter: 'blur(8px)',
                 zIndex: 10,
+                color: '#f8fbff',
+                fontWeight: 800,
+                borderBottom: '1px solid rgba(191,219,254,0.45)',
               },
             }}
           >
@@ -2945,13 +2940,14 @@ export default function AssetsAdminPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {metaVirtualWindow.topSpacerHeight > 0 && (
+                {paddingTop > 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${metaVirtualWindow.topSpacerHeight}px` }} />
+                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${paddingTop}px` }} />
                   </TableRow>
                 )}
 
-                {renderedMetaRows.map((row) => {
+                {virtualItems.map((virtualRow) => {
+                  const row = metaRows[virtualRow.index]
                   const id = Number(row?.id || 0)
                   const draft = metaDraftMap[id] || {
                     id,
@@ -2965,7 +2961,12 @@ export default function AssetsAdminPage() {
                   const isSelected = !!metaSelectedMap[id]
 
                   return (
-                    <TableRow key={`meta-${id}`} hover>
+                    <TableRow 
+                      key={`meta-${id}`} 
+                      hover
+                      ref={metaVirtualizer.measureElement}
+                      data-index={virtualRow.index}
+                    >
                       <TableCell padding="checkbox">
                         <Checkbox checked={isSelected} onChange={() => toggleMetaSelect(id)} disabled={metaBusy || loading} />
                       </TableCell>
@@ -3135,9 +3136,9 @@ export default function AssetsAdminPage() {
                   )
                 })}
 
-                {metaVirtualWindow.bottomSpacerHeight > 0 && (
+                {paddingBottom > 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${metaVirtualWindow.bottomSpacerHeight}px` }} />
+                    <TableCell colSpan={10} sx={{ p: 0, borderBottom: 'none', height: `${paddingBottom}px` }} />
                   </TableRow>
                 )}
 
