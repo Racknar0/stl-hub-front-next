@@ -34,6 +34,7 @@ export default function BatchTable() {
   const [isApplyingAiMetadata, setIsApplyingAiMetadata] = useState(false)
   const [isRetryingAi, setIsRetryingAi] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isStoppingAll, setIsStoppingAll] = useState(false)
   const [categoriesCatalog, setCategoriesCatalog] = useState([])
   const [tagsCatalog, setTagsCatalog] = useState([])
   const [aiRetryCandidateIds, setAiRetryCandidateIds] = useState([])
@@ -1581,6 +1582,34 @@ export default function BatchTable() {
     }
   }
 
+  const handleStopAndResetToDraft = async () => {
+    const hasResettable = rows.some((r) => String(r?.estado || '').toLowerCase() !== 'borrador')
+    if (!hasResettable) {
+      setToast({ open: true, msg: 'No hay items activos para reiniciar.', type: 'info' })
+      return
+    }
+
+    if (!confirm('¿Detener todo y pasar la cola a borrador? Si MAIN ya se subió, backup quedará en error para identificar.')) return
+
+    setIsStoppingAll(true)
+    setWatchBatchRun({ active: false, trackedIds: [], sawInFlight: false })
+
+    try {
+      const res = await http.postData('/batch-imports/stop-and-draft', {})
+      if (res?.data?.success) {
+        setToast({ open: true, msg: res.data.message || 'Cola reiniciada a borrador.', type: 'success' })
+        await fetchQueue({ forceBackendDraft: true })
+      } else {
+        setToast({ open: true, msg: res?.data?.message || 'No se pudo detener/reiniciar la cola.', type: 'error' })
+      }
+    } catch (e) {
+      console.error(e)
+      setToast({ open: true, msg: 'Error de red al detener/reiniciar la cola.', type: 'error' })
+    } finally {
+      setIsStoppingAll(false)
+    }
+  }
+
   const tableSummary = useMemo(() => {
     const total = rows.length
     const retryableRows = rows.filter((r) => r.estado === 'borrador' || r.estado === 'error')
@@ -1848,6 +1877,21 @@ export default function BatchTable() {
           sx={compactActionBtnSx}
         >
           Rotar Proxy
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          color="error"
+          onClick={handleStopAndResetToDraft}
+          disabled={isStoppingAll || rows.every((r) => String(r?.estado || '').toLowerCase() === 'borrador')}
+          sx={{
+            ...compactActionBtnSx,
+            borderColor: '#ef4444',
+            color: '#fecaca',
+            '&:hover': { borderColor: '#fca5a5', color: '#fee2e2', background: 'rgba(239,68,68,0.14)' }
+          }}
+        >
+          {isStoppingAll ? 'Deteniendo...' : 'Detener Todo -> Borrador'}
         </Button>
         <FormControlLabel
           control={<Switch checked={reviewMode} onChange={(e) => setReviewMode(Boolean(e?.target?.checked))} color="info" />}
@@ -2306,7 +2350,7 @@ export default function BatchTable() {
             size="large"
             startIcon={<CloudUploadIcon />}
             onClick={handleProcessBatch}
-          disabled={isProcessing || rows.filter(r => r.estado === 'borrador' || r.estado === 'error').length === 0}
+          disabled={isProcessing || isStoppingAll || rows.filter(r => r.estado === 'borrador' || r.estado === 'error').length === 0}
             sx={{ 
                borderRadius: 8, 
                textTransform: 'none', 
