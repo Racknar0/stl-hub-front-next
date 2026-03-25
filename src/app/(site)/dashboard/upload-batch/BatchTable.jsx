@@ -301,16 +301,31 @@ export default function BatchTable() {
     if (!reviewMode) return
     const el = reviewScrollRef.current
     if (!el) return
-    const rowTop = Math.max(0, index * REVIEW_ROW_HEIGHT)
-    const rowBottom = rowTop + REVIEW_ROW_HEIGHT
-    const viewTop = Number(el.scrollTop || 0)
-    const viewBottom = viewTop + REVIEW_VIEWPORT_HEIGHT
 
-    if (rowTop < viewTop) {
-      el.scrollTop = Math.max(0, rowTop - REVIEW_ROW_HEIGHT)
-    } else if (rowBottom > viewBottom) {
-      el.scrollTop = Math.max(0, rowBottom - REVIEW_VIEWPORT_HEIGHT + REVIEW_ROW_HEIGHT)
+    const safeIndex = Math.max(0, Number(index || 0))
+    const rowSelector = `tr[data-index="${safeIndex}"]`
+
+    const ensureVisible = () => {
+      const rowEl = el.querySelector(rowSelector)
+      if (rowEl?.scrollIntoView) {
+        rowEl.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        return
+      }
+
+      const rowTop = Math.max(0, safeIndex * REVIEW_ROW_HEIGHT)
+      const rowBottom = rowTop + REVIEW_ROW_HEIGHT
+      const viewTop = Number(el.scrollTop || 0)
+      const viewBottom = viewTop + Number(el.clientHeight || REVIEW_VIEWPORT_HEIGHT)
+
+      if (rowTop < viewTop) {
+        el.scrollTop = Math.max(0, rowTop)
+      } else if (rowBottom > viewBottom) {
+        el.scrollTop = Math.max(0, rowBottom - Number(el.clientHeight || REVIEW_VIEWPORT_HEIGHT))
+      }
     }
+
+    ensureVisible()
+    requestAnimationFrame(ensureVisible)
   }, [reviewMode])
 
   const openSimilarAtVisibleIndex = useCallback((index) => {
@@ -1072,6 +1087,30 @@ export default function BatchTable() {
     updated[idx].tags = value
     setRows(updated)
   }
+
+  const handleSetPrimaryImage = useCallback((rowIdx, imageIdx) => {
+    const targetRowIdx = Number(rowIdx)
+    const targetImageIdx = Number(imageIdx)
+    if (!Number.isInteger(targetRowIdx) || !Number.isInteger(targetImageIdx)) return
+
+    setRows((prev) => {
+      if (!Array.isArray(prev) || targetRowIdx < 0 || targetRowIdx >= prev.length) return prev
+      const row = prev[targetRowIdx]
+      const images = Array.isArray(row?.imagenes) ? row.imagenes : []
+      if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length || targetImageIdx === 0) return prev
+
+      const nextImages = [...images]
+      const [selected] = nextImages.splice(targetImageIdx, 1)
+      nextImages.unshift(selected)
+
+      const nextRows = [...prev]
+      nextRows[targetRowIdx] = {
+        ...row,
+        imagenes: nextImages,
+      }
+      return nextRows
+    })
+  }, [])
 
   const handleRemoverFila = async (idx, options = {}) => {
     const nextFocusId = Number(options?.nextFocusId || 0)
@@ -2341,6 +2380,7 @@ export default function BatchTable() {
                 onOpenCreateModal={openCreateModal}
                 onOpenProfiles={handleOpenPerfilModal}
                 onOpenImagePreview={setPreviewImage}
+                onSetPrimaryImage={handleSetPrimaryImage}
                 onOpenSimilar={handleOpenSimilar}
                 onRemoverFila={handleRemoverFila}
               />

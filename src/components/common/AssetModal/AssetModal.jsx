@@ -18,7 +18,7 @@ import { Dialog, IconButton, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 
-export default function AssetModal({ open, onClose, asset }) {
+export default function AssetModal({ open, onClose, asset, descriptionLimit = null }) {
     const http = useMemo(() => new HttpService(), []);
     const token = useStore((s) => s.token);
     const language = useStore((s) => s.language);
@@ -724,8 +724,13 @@ export default function AssetModal({ open, onClose, asset }) {
                                                 : (data.description || data.descriptionEn);
                                             const baseDesc = rawDesc && rawDesc.trim().length ? rawDesc : buildAutoDescription(isEn ? 'en' : 'es');
                                             if (!baseDesc) return null;
+                                            const safeLimit = Number(descriptionLimit);
+                                            const shouldLimit = Number.isFinite(safeLimit) && safeLimit > 0;
+                                            const finalDesc = shouldLimit && baseDesc.length > safeLimit
+                                                ? `${baseDesc.slice(0, safeLimit).trimEnd()}...`
+                                                : baseDesc;
                                             return (
-                                                <p className="asset-desc">{baseDesc}</p>
+                                                <p className="asset-desc" title={baseDesc}>{finalDesc}</p>
                                             );
                                         })()}
 

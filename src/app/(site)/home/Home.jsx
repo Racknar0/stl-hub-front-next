@@ -377,7 +377,7 @@ const Home = () => {
 
 
       {/* Modal */}
-      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} />
+      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} descriptionLimit={200} />
     </div>
   );
 }

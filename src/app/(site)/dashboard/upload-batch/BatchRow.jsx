@@ -28,6 +28,7 @@ export default function BatchRow({
   onOpenCreateModal = () => {},
   onOpenProfiles = () => {},
   onOpenImagePreview = () => {},
+  onSetPrimaryImage = () => {},
   onOpenSimilar = () => {},
   onRemoverFila = () => {},
   measureElement = null,
@@ -112,6 +113,7 @@ export default function BatchRow({
             <Stack direction="row" spacing={-3} sx={{ mr: 1, '&:hover .MuiAvatar-root': { zIndex: 1 } }}>
               {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? row.imagenes.slice(0, 3).map((img, i) => {
                 const srcUrl = img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`
+                const isPrimary = i === 0
                 return (
                   <Avatar
                     key={i}
@@ -119,13 +121,15 @@ export default function BatchRow({
                     variant="rounded"
                     sx={{
                       width: reviewThumbSize, height: reviewThumbSize,
-                      border: '2px solid rgba(255,255,255,0.15)',
+                      border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
+                      boxShadow: isPrimary ? '0 0 0 2px rgba(250,204,21,0.25)' : 'none',
                       cursor: 'pointer',
                       transition: 'transform 0.2s',
                       '&:hover': { transform: 'scale(1.12)', zIndex: 10 },
                       '& .MuiAvatar-img': { objectFit: 'cover' }
                     }}
-                    onClick={() => onOpenImagePreview?.(srcUrl)}
+                    onClick={() => onSetPrimaryImage?.(idx, i)}
+                    onDoubleClick={() => onOpenImagePreview?.(srcUrl)}
                   />
                 )
               }) : (
@@ -144,45 +148,148 @@ export default function BatchRow({
         </TableCell>
 
         <TableCell sx={{ minWidth: 220, borderBottom: cellBorder, color: primaryText }}>
-          <Stack direction="row" spacing={0.6} useFlexGap flexWrap="wrap">
-            {(Array.isArray(row.categorias) ? row.categorias : []).map((cat, i) => (
-              <Chip
-                key={`cat-${i}`}
-                size="small"
-                label={cat?.name || cat?.slug || `cat-${i}`}
-                sx={{
-                  color: '#111827',
-                  backgroundColor: '#d8bb00',
-                  border: '1px solid rgba(148,163,184,0.52)',
-                  fontWeight: 500,
-                }}
-              />
-            ))}
-            {(!Array.isArray(row.categorias) || row.categorias.length === 0) && (
-              <Typography variant="caption" sx={{ color: secondaryText }}>Sin categorías</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Autocomplete
+              multiple
+              options={categoriesCatalog}
+              getOptionLabel={o => o.name || o.slug || ''}
+              value={Array.isArray(row.categorias) ? row.categorias : []}
+              disabled={isOk || isProcesso}
+              onChange={(_, v) => onCategoriasChange(idx, v)}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index })
+                  return (
+                    <Chip
+                      key={key}
+                      label={option.name || option.slug}
+                      size="small"
+                      {...tagProps}
+                      sx={{
+                        color: '#111827',
+                        backgroundColor: '#d8bb00',
+                        border: '1px solid rgba(148,163,184,0.52)',
+                        fontWeight: 400,
+                        '& .MuiChip-label': { px: 0.75 },
+                        '& .MuiChip-deleteIcon': { color: '#111827' },
+                        '&.Mui-disabled': { opacity: 1, color: '#111827' },
+                      }}
+                    />
+                  )
+                })
+              }
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  size="small"
+                  placeholder={(Array.isArray(row.categorias) ? row.categorias.length : 0) === 0 ? 'Categorías...' : ''}
+                  variant="standard"
+                  sx={{
+                    '& input': { color: primaryText },
+                    '& input::placeholder': { color: secondaryText, opacity: 1 },
+                  }}
+                />
+              )}
+              sx={{
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  maxHeight: 60,
+                  minHeight: 60,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'flex-start',
+                  alignContent: 'flex-start',
+                  p: '4px 34px 4px 4px !important',
+                },
+                '& .MuiSvgIcon-root': { color: primaryText },
+                '& .MuiChip-root': { opacity: 1 },
+                '&.Mui-disabled': { opacity: 1 },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#e6f4ff',
+                  WebkitTextFillColor: '#e6f4ff',
+                  opacity: 1,
+                },
+              }}
+            />
+            {!isOk && !isProcesso && (
+              <IconButton size="small" sx={{ ml: 0.5, color: '#4fc3f7' }} onClick={() => onOpenCreateModal('cat', idx)}><AddIcon fontSize="small" /></IconButton>
             )}
-          </Stack>
+          </Box>
         </TableCell>
 
         <TableCell sx={{ minWidth: 280, borderBottom: cellBorder, color: primaryText }}>
-          <Stack direction="row" spacing={0.6} useFlexGap flexWrap="wrap">
-            {(Array.isArray(row.tags) ? row.tags : []).map((tag, i) => (
-              <Chip
-                key={`tag-${i}`}
-                size="small"
-                label={tag?.name || tag?.es || tag?.nameEn || tag?.en || tag?.slug || String(tag || '').trim() || `tag-${i}`}
-                sx={{
-                  color: '#111827',
-                  backgroundColor: 'rgba(220,252,231,0.95)',
-                  border: '1px solid rgba(134,239,172,0.9)',
-                  fontWeight: 500,
-                }}
-              />
-            ))}
-            {(!Array.isArray(row.tags) || row.tags.length === 0) && (
-              <Typography variant="caption" sx={{ color: secondaryText }}>Sin tags</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Autocomplete
+              multiple
+              freeSolo
+              options={tagsCatalog}
+              getOptionLabel={o => o.name || o.es || o.nameEn || o.en || o.slug || ''}
+              value={Array.isArray(row.tags) ? row.tags : []}
+              disabled={isOk || isProcesso}
+              onChange={(_, v) => onTagsChange(idx, v)}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index })
+                  return (
+                    <Chip
+                      key={key}
+                      size="small"
+                      label={option.name || option.es || option.nameEn || option.en || option.slug || option}
+                      {...tagProps}
+                      sx={{
+                        color: '#111827',
+                        backgroundColor: option.iaSuggested ? 'rgba(187,247,208,0.95)' : 'rgba(220,252,231,0.95)',
+                        border: '1px solid rgba(134,239,172,0.9)',
+                        fontWeight: 400,
+                        '& .MuiChip-label': { px: 0.75 },
+                        '& .MuiChip-deleteIcon': { color: '#111827' },
+                        '&.Mui-disabled': { opacity: 1, color: '#111827' },
+                      }}
+                    />
+                  )
+                })
+              }
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  size="small"
+                  placeholder={(Array.isArray(row.tags) ? row.tags.length : 0) === 0 ? '+ Inteligencia Artificial (Tags)' : ''}
+                  variant="standard"
+                  sx={{
+                    '& input': { color: primaryText },
+                    '& input::placeholder': { color: secondaryText, opacity: 1 },
+                  }}
+                />
+              )}
+              sx={{
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  maxHeight: 60,
+                  minHeight: 60,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'flex-start',
+                  alignContent: 'flex-start',
+                  p: '4px 34px 4px 4px !important',
+                },
+                '& .MuiSvgIcon-root': { color: primaryText },
+                '& .MuiChip-root': { opacity: 1 },
+                '&.Mui-disabled': { opacity: 1 },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#f8e8ff',
+                  WebkitTextFillColor: '#f8e8ff',
+                  opacity: 1,
+                },
+              }}
+            />
+            {!isOk && !isProcesso && (
+              <IconButton size="small" sx={{ ml: 0.5, color: '#4fc3f7' }} onClick={() => onOpenCreateModal('tag', idx)}><AddIcon fontSize="small" /></IconButton>
             )}
-          </Stack>
+          </Box>
         </TableCell>
       </TableRow>
     )
