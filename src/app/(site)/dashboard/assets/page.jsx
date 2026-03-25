@@ -61,7 +61,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
-import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
+import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import CachedIcon from '@mui/icons-material/Cached';
 
 // Nuevos componentes
@@ -2441,10 +2441,16 @@ export default function AssetsAdminPage() {
         });
 
         if (!silent) {
-            await successAlert(
-                'Guardado',
-                `Metadata guardada para asset #${id}`,
-            );
+            await fireAlert({
+                toast: true,
+                position: 'bottom',
+                icon: 'success',
+                title: `Metadata guardada para asset #${id}`,
+                showConfirmButton: false,
+                timer: 1700,
+                timerProgressBar: true,
+                zIndex: 2000,
+            });
         }
         return true;
     };
@@ -5014,13 +5020,24 @@ export default function AssetsAdminPage() {
                                                                                 1,
                                                                         );
                                                                     } catch (e) {
-                                                                        await errorAlert(
-                                                                            'Error',
-                                                                            e
-                                                                                ?.response
-                                                                                ?.data
-                                                                                ?.message ||
-                                                                                'No se pudo guardar el asset',
+                                                                        await fireAlert(
+                                                                            {
+                                                                                toast: true,
+                                                                                position: 'bottom',
+                                                                                icon: 'error',
+                                                                                title:
+                                                                                    e
+                                                                                        ?.response
+                                                                                        ?.data
+                                                                                        ?.message ||
+                                                                                    'No se pudo guardar el asset',
+                                                                                showConfirmButton:
+                                                                                    false,
+                                                                                timer: 2200,
+                                                                                timerProgressBar:
+                                                                                    true,
+                                                                                zIndex: 2000,
+                                                                            },
                                                                         );
                                                                     } finally {
                                                                         setMetaBusy(
