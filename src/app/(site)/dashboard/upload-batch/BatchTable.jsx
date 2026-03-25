@@ -19,6 +19,8 @@ const MAX_SIMILARITY_HASH_IMAGES = 8
 const UI_ACCOUNT_LIMIT_MB = 18 * 1024
 const BACKEND_SAFETY_LIMIT_MB = 19 * 1024
 const DISTRIBUTION_HEADROOM_MB = 128
+const AUTO_DISTRIBUTION_LIMIT_MB = UI_ACCOUNT_LIMIT_MB
+const MIN_SELECTOR_FREE_MB = 300
 const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
 const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
 const REVIEW_ROW_HEIGHT = 130
@@ -1264,17 +1266,23 @@ export default function BatchTable() {
         .filter((n) => Number.isFinite(n) && n > 0)
     )
 
+    const minRequiredFreeMb = Math.max(0, Math.max(Number(minPendingAssetMb || 0), MIN_SELECTOR_FREE_MB))
+
     const enriched = (Array.isArray(cuentas) ? cuentas : []).map((c) => {
       const limitMb = Number(c?.limitMB || BACKEND_SAFETY_LIMIT_MB)
       const usedMb = Math.max(0, Number(c?.usedMB || 0))
       const freeMb = Math.max(0, limitMb - usedMb)
+      const effectiveLimitMb = Math.max(0, limitMb - DISTRIBUTION_HEADROOM_MB)
+      const effectiveFreeMb = Math.max(0, effectiveLimitMb - usedMb)
       const checked = selectedSet.has(Number(c?.id || 0))
-      const canFitMinPending = minPendingAssetMb <= 0 || freeMb >= minPendingAssetMb
+      const canFitMinPending = effectiveFreeMb >= minRequiredFreeMb
       return {
         ...c,
         limitMb,
         usedMb,
         freeMb,
+        effectiveLimitMb,
+        effectiveFreeMb,
         checked,
         canFitMinPending,
       }
@@ -1288,12 +1296,13 @@ export default function BatchTable() {
       selectable,
       selectableIdSet,
       blockedCount,
+      minRequiredFreeMb,
     }
   }, [cuentas, distributionAccountIds, minPendingAssetMb])
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
-    const LIMIT_MB = Math.max(0, BACKEND_SAFETY_LIMIT_MB - DISTRIBUTION_HEADROOM_MB)
+    const LIMIT_MB = Math.max(0, AUTO_DISTRIBUTION_LIMIT_MB - DISTRIBUTION_HEADROOM_MB)
     const LIMIT_GB = LIMIT_MB / 1024
 
     const freshAccounts = await refreshBatchAccounts({ silent: true })
@@ -1322,17 +1331,22 @@ export default function BatchTable() {
       .map((r) => Math.max(0, Number(r?.pesoMB || 0)))
       .filter((n) => n > 0)
       .reduce((min, n) => Math.min(min, n), Number.POSITIVE_INFINITY)
+    const minRequiredFreeMb = Math.max(
+      MIN_SELECTOR_FREE_MB,
+      Number.isFinite(minPendingMb) ? Math.max(0, Number(minPendingMb || 0)) : 0
+    )
 
     let accountsStatus = freshAccounts
-      .map(c => ({ ...c, simulatedUsedMB: c.usedMB || 0 }))
+      .map(c => ({
+        ...c,
+        simulatedUsedMB: Math.max(0, Number(c?.usedMB || 0)),
+      }))
       .filter((a) => Number(a.simulatedUsedMB || 0) < LIMIT_MB)
 
-    if (Number.isFinite(minPendingMb)) {
-      accountsStatus = accountsStatus.filter((a) => {
-        const freeMb = Math.max(0, LIMIT_MB - Number(a.simulatedUsedMB || 0))
-        return freeMb >= minPendingMb
-      })
-    }
+    accountsStatus = accountsStatus.filter((a) => {
+      const freeMb = Math.max(0, LIMIT_MB - Number(a.simulatedUsedMB || 0))
+      return freeMb >= minRequiredFreeMb
+    })
 
     if (preferredSet.size > 0) {
       accountsStatus = accountsStatus.filter((a) => preferredSet.has(Number(a.id)))
@@ -1342,8 +1356,8 @@ export default function BatchTable() {
       setToast({
         open: true,
         msg: preferredSet.size > 0
-          ? 'Las cuentas seleccionadas no tienen espacio suficiente para el menor asset pendiente.'
-          : 'No hay cuentas con espacio suficiente para los assets pendientes.',
+          ? `Las cuentas seleccionadas no cumplen el mínimo libre (${(minRequiredFreeMb / 1024).toFixed(2)} GB).`
+          : `No hay cuentas con espacio suficiente. Mínimo requerido: ${(minRequiredFreeMb / 1024).toFixed(2)} GB libres.`,
         type: 'warning',
       })
       return
@@ -1386,7 +1400,7 @@ export default function BatchTable() {
     setRows(updatedRows)
     
     if (unassignedCount > 0) {
-       setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (límite operativo ${LIMIT_GB.toFixed(2)}GB). Añade más cuentas o reduce tamaño.`, type: 'warning' })
+       setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (tope auto-distribución ${(AUTO_DISTRIBUTION_LIMIT_MB / 1024).toFixed(2)}GB, margen ${(DISTRIBUTION_HEADROOM_MB / 1024).toFixed(2)}GB, operativo ${LIMIT_GB.toFixed(2)}GB).`, type: 'warning' })
     } else {
        const scopedMsg = preferredSet.size > 0
          ? `Distribución completada usando ${accountsStatus.length} cuenta(s) seleccionadas.`

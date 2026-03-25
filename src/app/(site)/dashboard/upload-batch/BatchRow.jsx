@@ -116,12 +116,14 @@ export default function BatchRow({
                   <Avatar
                     key={i}
                     src={srcUrl}
+                    variant="rounded"
                     sx={{
                       width: reviewThumbSize, height: reviewThumbSize,
                       border: '2px solid rgba(255,255,255,0.15)',
                       cursor: 'pointer',
                       transition: 'transform 0.2s',
-                      '&:hover': { transform: 'scale(1.12)', zIndex: 10 }
+                      '&:hover': { transform: 'scale(1.12)', zIndex: 10 },
+                      '& .MuiAvatar-img': { objectFit: 'cover' }
                     }}
                     onClick={() => onOpenImagePreview?.(srcUrl)}
                   />
@@ -267,18 +269,20 @@ export default function BatchRow({
                  <Avatar 
                    key={i} 
                    src={srcUrl} 
+                   variant="rounded"
                    sx={{ 
-                     width: 250, height: 250,
+                     width: 200, height: 200,
                      border: '2px solid rgba(255,255,255,0.15)', 
                      cursor: 'pointer',
                      transition: 'transform 0.2s',
-                     '&:hover': { transform: 'scale(1.12)', zIndex: 10 }
+                     '&:hover': { transform: 'scale(1.12)', zIndex: 10 },
+                     '& .MuiAvatar-img': { objectFit: 'cover' }
                    }} 
                    onClick={() => onOpenImagePreview?.(srcUrl)}
                  />
                )
              }) : (
-                <Avatar sx={{ width: 250, height: 250, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
+                <Avatar sx={{ width: 200, height: 200, border: '2px solid rgba(255,255,255,0.1)' }} variant="rounded" />
              )}
           </Stack>
           <Box flex={1}>
