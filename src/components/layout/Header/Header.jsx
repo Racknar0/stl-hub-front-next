@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import './Header.scss'
 import Button from '../Buttons/Button'
@@ -11,6 +11,21 @@ import { confirmAlert } from '../../../helpers/alerts'
 import HttpService from '../../../services/HttpService'
 // import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
 import { useI18n } from '../../../i18n'
+
+/**
+ * Inner component that safely reads useSearchParams inside Suspense.
+ * Resets the search loading state when pathname/searchParams change.
+ */
+function SearchParamsWatcher({ onReset }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    onReset()
+  }, [pathname, searchParams?.toString()])
+
+  return null
+}
 
 const Header = () => {
   const token = useStore((s) => s.token)
@@ -59,7 +74,6 @@ const Header = () => {
   const setLanguage = useStore((s) => s.setLanguage)
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const http = new HttpService()
   const { t } = useI18n()
 
@@ -86,13 +100,6 @@ const Header = () => {
     loadCats()
     return () => { mounted = false }
   }, [])
-
-  // Resetear spinner local al cambiar de ruta o de querystring (importante en /search)
-  useEffect(() => {
-    // cualquier cambio de path o de parámetros de búsqueda libera el loading
-    setSearchLoading(false)
-  }, [pathname, searchParams?.toString()])
-
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
@@ -186,7 +193,10 @@ const Header = () => {
 
   return (
     <header className="app-header">
-      {/* Eliminado loader global del layout */}
+      {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
+      <Suspense fallback={null}>
+        <SearchParamsWatcher onReset={() => setSearchLoading(false)} />
+      </Suspense>
       <div className="container-narrow">
         <nav className="navbar d-flex align-items-center justify-content-between">
           <Link
