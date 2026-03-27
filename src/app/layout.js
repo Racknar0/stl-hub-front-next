@@ -4,35 +4,21 @@ import "./globals.css";
 import "../styles/bundle.scss";
 import { cookies } from "next/headers";
 
-// Fuerza dinámico para leer cookies por request
-export const dynamic = "force-dynamic";
+const SITE_URL = 'https://stl-hub.com';
 
 export async function generateMetadata() {
-const cookieStore = await cookies();                 // 👈 await
-  const lang = (cookieStore.get("lang")?.value || "es").toLowerCase();
-  const isEn = lang === "en";
+  // Metadata estática en español (Google no envía cookies,
+  // siempre verá la versión ES — que es la principal para SEO)
+  const title = "Descargar STL gratis y premium por MEGA | Modelos 3D y cosplay – STL HUB";
+  const description = "Descarga STL gratis y premium listos para imprimir: modelos 3D, props y piezas de cosplay. Enlaces directos por MEGA gratis, descargas rápidas, previews y archivos optimizados para FDM y resina.";
+  const keywords = [
+    'descargar stl gratis','descargar stl por mega gratis','descarga stl','modelos 3d imprimir','stl mega','stl free','archivos stl gratis','modelos 3d cosplay','stl premium','stl resin','stl fdm'
+  ];
 
-  const title = isEn
-    ? "Premium STL downloads via MEGA | Free & paid 3D models – STL HUB"
-    : "Descargar STL gratis y premium por MEGA | Modelos 3D y cosplay – STL HUB";
-
-  const description = isEn
-    ? "Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links, fast downloads, previews and files optimized for FDM & resin printers."
-    : "Descarga STL gratis y premium listos para imprimir: modelos 3D, props y piezas de cosplay. Enlaces directos por MEGA gratis, descargas rápidas, previews y archivos optimizados para FDM y resina.";
-
-  // Keywords / frases SEO (ES incluye 'descargar stl gratis', 'descargar stl por mega gratis')
-  const keywords = isEn
-    ? [
-        'stl files','free stl download','3d models','mega stl','cosplay stl','resin printable','fdm printable','3d printing files'
-      ]
-    : [
-        'descargar stl gratis','descargar stl por mega gratis','descarga stl','modelos 3d imprimir','stl mega','stl free','archivos stl gratis','modelos 3d cosplay','stl premium','stl resin','stl fdm'
-      ];
-
-  const pathname = isEn ? "/en" : "/";
+  const pathname = "/";
 
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+    metadataBase: new URL(SITE_URL),
     title,
     description,
     alternates: {
@@ -44,17 +30,17 @@ const cookieStore = await cookies();                 // 👈 await
       },
     },
     openGraph: {
-      title: isEn ? "STL HUB — Premium STL (Mega)" : "STL HUB — Modelos 3D y STL premium (Mega)",
+      title: "STL HUB — Modelos 3D y STL premium (Mega)",
       description,
       siteName: "STL HUB",
       type: "website",
-      locale: isEn ? "en_US" : "es_ES",
+      locale: "es_ES",
       url: pathname,
       images: ["/logo_horizontal.png"],
     },
     twitter: {
       card: "summary_large_image",
-      title: isEn ? "STL HUB — Premium STL via Mega" : "STL HUB — Descarga STL premium por Mega",
+      title: "STL HUB — Descarga STL premium por Mega",
       description,
     },
     keywords,
@@ -84,10 +70,10 @@ export default async  function RootLayout({ children }) {
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'STL HUB',
-              url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+              url: SITE_URL,
               potentialAction: {
                 '@type': 'SearchAction',
-                target: (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') + '/search?q={search_term_string}',
+                target: SITE_URL + '/search?q={search_term_string}',
                 'query-input': 'required name=search_term_string'
               },
               description: 'Descargar STL gratis y premium por MEGA. Modelos 3D listos para imprimir (FDM y resina).'

@@ -4,7 +4,7 @@ export default function robots() {
     rules: [
       { userAgent: "*", allow: "/" },
       // bloquea áreas no indexables
-      { userAgent: "*", disallow: ["/account", "/search"] },
+      { userAgent: "*", disallow: ["/account", "/dashboard"] },
     ],
     sitemap: `${base}/sitemap.xml`,
     host: base,
