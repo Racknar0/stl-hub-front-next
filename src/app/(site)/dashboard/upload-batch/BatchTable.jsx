@@ -1,31 +1,33 @@
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ BatchTable.jsx — ORQUESTADOR                                       ║
+// ║ Estado central, hooks, callbacks y composición de sub-componentes  ║
+// ╚══════════════════════════════════════════════════════════════════════╝
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Stack, Box, Typography, LinearProgress, Divider, Snackbar, Alert, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, FormControl, InputLabel, Select, MenuItem, OutlinedInput, Checkbox, ListItemText, Switch, FormControlLabel } from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import StorageIcon from '@mui/icons-material/Storage';
-import CloseIcon from '@mui/icons-material/Close';
-import ReplayIcon from '@mui/icons-material/Replay';
-import HttpService from '@/services/HttpService';
-import BatchRow from './BatchRow';
-import MetaCreateDialog from './MetaCreateDialog';
-import ProfilesModal from './ProfilesModal';
-import RightSidebar from '../assets/uploader/RightSidebar';
-import { successAlert } from '@/helpers/alerts';
+import { Box, Dialog, Snackbar, Alert } from '@mui/material'
+import HttpService from '@/services/HttpService'
+import { successAlert } from '@/helpers/alerts'
 
-const MAX_SIMILARITY_HASH_IMAGES = 8
-const UI_ACCOUNT_LIMIT_MB = 18 * 1024
-const BACKEND_SAFETY_LIMIT_MB = 19 * 1024
-const DISTRIBUTION_HEADROOM_MB = 128
-const AUTO_DISTRIBUTION_LIMIT_MB = UI_ACCOUNT_LIMIT_MB
-const MIN_SELECTOR_FREE_MB = 300
-const SIMILARITY_CURRENT_IMAGE_SIZE = Math.round(144 * 1.75)
-const SIMILARITY_MATCH_IMAGE_SIZE = Math.round(154 * 1.75)
-const REVIEW_ROW_HEIGHT = 130
-const REVIEW_VIEWPORT_HEIGHT = 620
-const REVIEW_OVERSCAN = 6
+// ─── Componentes propios ───
+import MetaCreateDialog from './MetaCreateDialog'
+import ProfilesModal from './ProfilesModal'
+import BatchControlPanel from './components/BatchControlPanel'
+import BatchProgressBars from './components/BatchProgressBars'
+import BatchStorageBars from './components/BatchStorageBars'
+import BatchSummaryBar from './components/BatchSummaryBar'
+import BatchDataTable from './components/BatchDataTable'
+import BatchFooter from './components/BatchFooter'
+import ScpUploadDialog from './components/ScpUploadDialog'
+import SimilaritySidebar from './components/SimilaritySidebar'
+
+// ─── Constantes ───
+import {
+  MAX_SIMILARITY_HASH_IMAGES, UI_ACCOUNT_LIMIT_MB, BACKEND_SAFETY_LIMIT_MB,
+  DISTRIBUTION_HEADROOM_MB, AUTO_DISTRIBUTION_LIMIT_MB, MIN_SELECTOR_FREE_MB,
+  REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
+} from './constants'
+
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
@@ -75,7 +77,6 @@ export default function BatchTable() {
   const reviewScrollRef = React.useRef(null)
 
   // SIMILARS SIDEBAR STATES
-  const RIGHT_SIDEBAR_WIDTH = 340
   const [searchSidebarSide, setSearchSidebarSide] = useState('right')
   const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
   const [similarityMap, setSimilarityMap] = useState({})
@@ -1773,674 +1774,105 @@ export default function BatchTable() {
 
 
   return (
-    <Box 
-      sx={{ 
-         pb: 10,
-         pr: searchSidebarSide === 'right' ? `${RIGHT_SIDEBAR_WIDTH}px` : 0,
-         transition: 'padding 180ms ease'
+    <Box
+      sx={{
+        pb: 10,
+        pr: searchSidebarSide === 'right' ? `${RIGHT_SIDEBAR_WIDTH}px` : 0,
+        transition: 'padding 180ms ease'
       }}
     >
-       {/* PANEL DE CONTROL SUPERIOR */}
-       <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} mb={3} flexWrap="wrap" useFlexGap>
-         <input
-           ref={scpPickerRef}
-           type="file"
-           style={{ display: 'none' }}
-           onChange={handleScpPick}
-         />
-         <Box
-           onClick={() => scpPickerRef.current?.click()}
-           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setScpDropActive(true) }}
-           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setScpDropActive(false) }}
-           onDrop={handleScpDrop}
-           sx={{
-             minWidth: { xs: '100%', md: 360 },
-             maxWidth: 420,
-             borderRadius: 2,
-             px: 2,
-             py: 1.25,
-             border: '1px solid',
-             borderColor: scpDropActive ? '#38bdf8' : 'rgba(148,163,184,0.7)',
-             background: scpDropActive ? 'rgba(56,189,248,0.12)' : 'rgba(15,23,42,0.35)',
-             cursor: 'pointer',
-             userSelect: 'none',
-           }}
-         >
-           <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700, lineHeight: 1.2 }}>
-             Arrastra para preparar comando de subida
-           </Typography>
-           <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.78)', display: 'block', mt: 0.45 }}>
-             {scpIndexedFile?.name
-               ? `${scpIndexedFile.name} · ${formatBytes(scpIndexedFile.size)}`
-               : 'Suelta aquí el archivo pesado (o haz clic para elegir)'}
-           </Typography>
-         </Box>
-         <Button 
-            variant="outlined" 
-            color="primary"
-            size="small"
-            onClick={handleScanLocal}
-            disabled={isScanning || isApplyingAiMetadata || isRetryingAi}
-            sx={compactActionBtnSx}
-         >
-           {isScanning ? 'Escaneando...' : 'Escanear Carpetas'}
-         </Button>
-         <Button
-            variant="outlined"
-            size="small"
-            startIcon={<AutoFixHighIcon />}
-            onClick={handleApplyAiMetadata}
-            disabled={isApplyingAiMetadata || isScanning || isRetryingAi}
-            sx={{
-              ...compactActionBtnSx,
-              borderColor: '#5eead4',
-              color: '#5eead4',
-              '&:hover': { borderColor: '#99f6e4', color: '#99f6e4', background: 'rgba(45,212,191,0.12)' }
-            }}
-         >
-           {isApplyingAiMetadata ? 'Metadatos IA...' : 'Metadatos IA'}
-         </Button>
-         <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ReplayIcon />}
-            onClick={handleRetryFailedAi}
-            disabled={isRetryingAi || isScanning || isApplyingAiMetadata || aiRetryCandidateIds.length === 0}
-            sx={compactActionBtnSx}
-         >
-           {isRetryingAi ? 'Reintentando IA...' : `Reintentar IA fallidos (${aiRetryCandidateIds.length})`}
-         </Button>
-         <Button 
-            variant="outlined" 
-            size="small"
-            startIcon={<AutoAwesomeIcon />} 
-            onClick={() => void handleAutoDistribute({ preferredAccountIds: distributionAccountIdsRef.current })}
-            sx={{ ...compactActionBtnSx, borderColor: '#b388ff', color: '#b388ff', '&:hover': { borderColor: '#d1c4e9', color: '#d1c4e9' } }}
-         >
-           Distribuir Automáticamente
-         </Button>
-         <Box
-           sx={{
-             minWidth: { xs: '100%', md: 330 },
-             maxWidth: 460,
-           }}
-         >
-           <FormControl size="small" fullWidth>
-             <InputLabel id="batch-distribution-accounts-label" sx={{ color: 'rgba(226,232,240,0.88)' }}>
-               Cuentas para distribución
-             </InputLabel>
-             <Select
-               labelId="batch-distribution-accounts-label"
-               multiple
-               displayEmpty
-               value={distributionAccountIds}
-               onChange={handleDistributionAccountsChange}
-               onClose={handleDistributionSelectorClose}
-               renderValue={(selected) => {
-                 const ids = Array.isArray(selected) ? selected.map(Number) : []
-                 if (!ids.length) return 'Selecciona cuentas y cierra para redistribuir'
-                 const labels = (Array.isArray(cuentas) ? cuentas : [])
-                   .filter((c) => ids.includes(Number(c.id)))
-                   .map((c) => c.alias)
-                 return labels.join(', ')
-               }}
-               sx={{
-                 color: '#f8fbff',
-                 bgcolor: 'rgba(30,41,59,0.55)',
-                 borderRadius: 2,
-                 '& .MuiSelect-icon': { color: '#e2e8f0' },
-                 '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(148,163,184,0.45)' },
-                 '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(191,219,254,0.72)' },
-               }}
-               MenuProps={{
-                 PaperProps: {
-                   sx: {
-                     bgcolor: '#020617',
-                     border: '1px solid rgba(71,85,105,0.55)',
-                   },
-                 },
-               }}
-             >
-               {accountSelectionMeta.selectable.map((c) => {
-                 const freeMb = Math.max(0, Number(c.freeMb || 0))
-                 const freeGb = (freeMb / 1024).toFixed(2)
-                 const checked = distributionAccountIds.includes(Number(c.id))
-                 return (
-                   <MenuItem
-                     key={c.id}
-                     value={c.id}
-                     sx={{
-                       color: '#e2e8f0',
-                       bgcolor: '#0f172a',
-                       '&.Mui-selected': {
-                         bgcolor: '#020617',
-                       },
-                       '&.Mui-selected:hover': {
-                         bgcolor: '#111827',
-                       },
-                       '&:hover': {
-                         bgcolor: '#1e293b',
-                       },
-                     }}
-                   >
-                     <Checkbox checked={checked} size="small" sx={{ color: '#93c5fd', '&.Mui-checked': { color: '#d1d5db' } }} />
-                     <ListItemText
-                       primary={c.alias}
-                       secondary={`${freeGb} GB libres`}
-                       primaryTypographyProps={{ fontWeight: checked ? 800 : 700, color: '#e2e8f0' }}
-                       secondaryTypographyProps={{ color: checked ? 'rgba(226,232,240,0.92)' : 'rgba(203,213,225,0.82)' }}
-                     />
-                   </MenuItem>
-                 )
-               })}
-             </Select>
-           </FormControl>
-           <Typography variant="caption" sx={{ mt: 0.5, color: 'rgba(191,219,254,0.9)', display: 'block' }}>
-             Filtro activo: solo cuentas con al menos {(Math.max(0, minPendingAssetMb) / 1024).toFixed(2)} GB libres (asset mínimo pendiente).
-             {accountSelectionMeta.blockedCount > 0 ? ` Ocultas por espacio insuficiente: ${accountSelectionMeta.blockedCount}.` : ''}
-           </Typography>
-         </Box>
-        <Button
-          variant="outlined"
-          color="warning"
-          size="small"
-          onClick={handleRotateProxyGlobal}
-          disabled={!activeUploadingRow}
-          sx={compactActionBtnSx}
-        >
-          Rotar Proxy
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          color="error"
-          onClick={handleStopAndResetToDraft}
-          disabled={isStoppingAll || rows.every((r) => String(r?.estado || '').toLowerCase() === 'borrador')}
-          sx={{
-            ...compactActionBtnSx,
-            borderColor: '#ef4444',
-            color: '#fecaca',
-            '&:hover': { borderColor: '#fca5a5', color: '#fee2e2', background: 'rgba(239,68,68,0.14)' }
-          }}
-        >
-          {isStoppingAll ? 'Deteniendo...' : 'Detener Todo -> Borrador'}
-        </Button>
-        <FormControlLabel
-          control={<Switch checked={reviewMode} onChange={(e) => setReviewMode(Boolean(e?.target?.checked))} color="info" />}
-          label={
-            <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 700 }}>
-              Modo revisión (virtual) · Atajos: A/D/F
-            </Typography>
-          }
-          sx={{
-            m: 0,
-            px: 1,
-            py: 0.2,
-            borderRadius: 2,
-            border: '1px solid rgba(125,211,252,0.35)',
-            background: 'rgba(14,116,144,0.18)',
-          }}
-        />
-         <Button 
-            variant="outlined" 
-            size="small"
-            onClick={async () => {
-              if (!confirm('¿Eliminar todos los items COMPLETADOS del batch?')) return
-              try {
-                const res = await http.deleteRaw('/batch-imports/completed')
-                if (res.data?.success) {
-                  setToast({ open: true, msg: res.data.message || 'Completados eliminados', type: 'success' })
-                  fetchQueue()
-                } else {
-                  setToast({ open: true, msg: 'Error al eliminar completados', type: 'error' })
-                }
-              } catch (e) {
-                console.error(e)
-                setToast({ open: true, msg: 'Error de red al eliminar completados', type: 'error' })
-              }
-            }}
-            sx={{ ...compactActionBtnSx, borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#fbbf24', color: '#fbbf24', background: 'rgba(245,158,11,0.08)' } }}
-         >
-           ✅ Eliminar Completados
-         </Button>
-         <Button 
-            variant="outlined" 
-            size="small"
-            onClick={async () => {
-              if (!confirm('¿Estás seguro? Esto eliminará TODOS los items del batch, las carpetas y los registros de la BD.')) return
-              try {
-                const res = await http.deleteRaw('/batch-imports/purge-all')
-                if (res.data?.success) {
-                  setRows([])
-                  setToast({ open: true, msg: res.data.message, type: 'success' })
-                } else {
-                  setToast({ open: true, msg: 'Error al purgar', type: 'error' })
-                }
-              } catch (e) {
-                console.error(e)
-                setToast({ open: true, msg: 'Error de red al purgar', type: 'error' })
-              }
-            }}
-            sx={{ ...compactActionBtnSx, borderColor: '#ff5252', color: '#ff5252', '&:hover': { borderColor: '#ff8a80', color: '#ff8a80', background: 'rgba(255,82,82,0.08)' } }}
-         >
-           🗑️ Eliminar Todo
-         </Button>
-       </Stack>
+      {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}
+      <BatchControlPanel
+        scpPickerRef={scpPickerRef}
+        scpDropActive={scpDropActive}
+        scpIndexedFile={scpIndexedFile}
+        formatBytes={formatBytes}
+        handleScpPick={handleScpPick}
+        handleScpDrop={handleScpDrop}
+        setScpDropActive={setScpDropActive}
+        isScanning={isScanning}
+        isApplyingAiMetadata={isApplyingAiMetadata}
+        isRetryingAi={isRetryingAi}
+        isProcessing={isProcessing}
+        isStoppingAll={isStoppingAll}
+        aiRetryCandidateIds={aiRetryCandidateIds}
+        handleScanLocal={handleScanLocal}
+        handleApplyAiMetadata={handleApplyAiMetadata}
+        handleRetryFailedAi={handleRetryFailedAi}
+        handleAutoDistribute={handleAutoDistribute}
+        distributionAccountIdsRef={distributionAccountIdsRef}
+        distributionAccountIds={distributionAccountIds}
+        handleDistributionAccountsChange={handleDistributionAccountsChange}
+        handleDistributionSelectorClose={handleDistributionSelectorClose}
+        accountSelectionMeta={accountSelectionMeta}
+        minPendingAssetMb={minPendingAssetMb}
+        cuentas={cuentas}
+        activeUploadingRow={activeUploadingRow}
+        handleRotateProxyGlobal={handleRotateProxyGlobal}
+        rows={rows}
+        handleStopAndResetToDraft={handleStopAndResetToDraft}
+        reviewMode={reviewMode}
+        setReviewMode={setReviewMode}
+        http={http}
+        setToast={setToast}
+        setRows={setRows}
+        fetchQueue={fetchQueue}
+        compactActionBtnSx={compactActionBtnSx}
+      />
 
-       {(isApplyingAiMetadata || isRetryingAi) && (
-         <Box
-           sx={{
-             mb: 2,
-             p: 2,
-             borderRadius: 2,
-             border: '1px solid rgba(94,234,212,0.55)',
-             background: 'linear-gradient(90deg, rgba(13,148,136,0.26), rgba(20,184,166,0.18))',
-             boxShadow: '0 10px 22px rgba(13,148,136,0.25)',
-           }}
-         >
-           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} alignItems={{ xs: 'flex-start', md: 'center' }}>
-             <Typography variant="h5" sx={{ color: '#ccfbf1', fontWeight: 900, lineHeight: 1.15 }}>
-               IA en proceso
-             </Typography>
-             <Typography variant="body1" sx={{ color: 'rgba(236,253,245,0.95)', fontWeight: 600 }}>
-               {isRetryingAi
-                 ? 'Reintentando sugerencias fallidas. Los campos se actualizarán automáticamente al terminar.'
-                 : 'Generando nombres, categorías, tags y descripciones sugeridas para el batch.'}
-             </Typography>
-           </Stack>
-           <LinearProgress
-             variant="indeterminate"
-             sx={{
-               mt: 1.4,
-               height: 12,
-               borderRadius: 999,
-               backgroundColor: 'rgba(255,255,255,0.2)',
-               '& .MuiLinearProgress-bar': {
-                 background: 'linear-gradient(90deg, #2dd4bf, #5eead4)',
-               },
-             }}
-           />
-         </Box>
-       )}
+      {/* ═══════════ BARRAS DE PROGRESO (IA, Escaneo, Main/Backup) ═══════════ */}
+      <BatchProgressBars
+        isApplyingAiMetadata={isApplyingAiMetadata}
+        isRetryingAi={isRetryingAi}
+        isScanning={isScanning}
+        scanStatusUi={scanStatusUi}
+        mainProgressStats={mainProgressStats}
+        backupProgressStats={backupProgressStats}
+        distributionSelectionSummary={distributionSelectionSummary}
+      />
 
-       {isScanning && (
-         <Box
-           sx={{
-             mb: 2,
-             px: 1.25,
-             py: 1.1,
-             borderRadius: 2,
-             border: '1px solid rgba(59,130,246,0.45)',
-             background: 'linear-gradient(90deg, rgba(29,78,216,0.2), rgba(37,99,235,0.14))',
-             boxShadow: '0 10px 20px rgba(29,78,216,0.18)',
-           }}
-         >
-           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} alignItems={{ xs: 'flex-start', md: 'center' }}>
-             <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-               <CircularProgress size={18} thickness={5} />
-               <Box sx={{ minWidth: 0 }}>
-                 <Typography variant="body2" sx={{ color: '#dbeafe', fontWeight: 800 }}>
-                   Escaneo en vivo · {scanStatusUi.phaseLabel}
-                 </Typography>
-                 <Typography variant="caption" sx={{ color: 'rgba(219,234,254,0.92)', display: 'block' }}>
-                   {scanStatusUi.message || 'Procesando escaneo de carpetas...'}
-                 </Typography>
-               </Box>
-             </Stack>
-             <Typography variant="caption" sx={{ color: '#bfdbfe', fontWeight: 700, whiteSpace: 'nowrap' }}>
-               Paso {scanStatusUi.current}/{scanStatusUi.total || 0} · {scanStatusUi.percent}%
-             </Typography>
-           </Stack>
+      {/* ═══════════ BARRAS DE ALMACENAMIENTO POR CUENTA ═══════════ */}
+      <BatchStorageBars rows={rows} cuentas={cuentas} />
 
-           <LinearProgress
-             variant="determinate"
-             value={scanStatusUi.percent}
-             sx={{
-               mt: 1,
-               height: 9,
-               borderRadius: 999,
-               backgroundColor: 'rgba(30,41,59,0.5)',
-               '& .MuiLinearProgress-bar': {
-                 background: 'linear-gradient(90deg, #60a5fa, #3b82f6)',
-               },
-             }}
-           />
+      {/* ═══════════ RESUMEN DE TABLA ═══════════ */}
+      <BatchSummaryBar tableSummary={tableSummary} />
 
-           <Typography variant="caption" sx={{ color: 'rgba(191,219,254,0.95)', mt: 0.75, display: 'block' }}>
-             Comprimidos: {scanStatusUi.archivesDone}/{scanStatusUi.archivesTotal} · Lotes: {scanStatusUi.foldersDone}/{scanStatusUi.foldersTotal} · Items: {scanStatusUi.itemsDone}/{scanStatusUi.itemsTotal}
-           </Typography>
-           <Typography
-             variant="caption"
-             sx={{
-               color: scanStatusUi.isStale ? '#facc15' : 'rgba(191,219,254,0.9)',
-               mt: 0.35,
-               display: 'block',
-               fontWeight: scanStatusUi.isStale ? 700 : 500,
-             }}
-           >
-             Última señal: {Number.isFinite(scanStatusUi.updatedAgoSec) ? `${scanStatusUi.updatedAgoSec}s` : '--'}
-             {scanStatusUi.isStale ? ' · posible espera larga, revisa consola para detalle.' : ''}
-           </Typography>
-         </Box>
-       )}
+      {/* ═══════════ TABLA DE DATOS VIRTUALIZADA ═══════════ */}
+      <BatchDataTable
+        reviewScrollRef={reviewScrollRef}
+        reviewMode={reviewMode}
+        virtualizer={virtualizer}
+        virtualItems={virtualItems}
+        visibleEntries={visibleEntries}
+        visibleColumnCount={visibleColumnCount}
+        categoriesCatalog={categoriesCatalog}
+        tagsCatalog={tagsCatalog}
+        cuentas={cuentas}
+        similaritySelectedId={similaritySelectedId}
+        handleNombreChange={handleNombreChange}
+        handleNombreEnChange={handleNombreEnChange}
+        handleDescriptionChange={handleDescriptionChange}
+        handleDescriptionEnChange={handleDescriptionEnChange}
+        handleCategoriasChange={handleCategoriasChange}
+        handleTagsChange={handleTagsChange}
+        handleCuentaChange={handleCuentaChange}
+        openCreateModal={openCreateModal}
+        handleOpenPerfilModal={handleOpenPerfilModal}
+        setPreviewImage={setPreviewImage}
+        handleSetPrimaryImage={handleSetPrimaryImage}
+        handleOpenSimilar={handleOpenSimilar}
+        handleRemoverFila={handleRemoverFila}
+      />
 
-       {distributionSelectionSummary && (
-         <Box
-           sx={{
-             mb: 2,
-             px: 1.25,
-             py: 1.1,
-             borderRadius: 2,
-             border: '1px solid rgba(251,191,36,0.45)',
-             background: 'linear-gradient(90deg, rgba(120,53,15,0.28), rgba(180,83,9,0.2))',
-             boxShadow: '0 10px 20px rgba(180,83,9,0.18)',
-           }}
-         >
-           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.1} alignItems={{ xs: 'flex-start', md: 'center' }}>
-             <Typography variant="body2" sx={{ color: '#fde68a', fontWeight: 800 }}>
-               Cobertura de cuentas seleccionadas ({distributionSelectionSummary.selectedCount})
-             </Typography>
-             <Typography variant="caption" sx={{ color: 'rgba(254,240,138,0.95)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-               {distributionSelectionSummary.assignedAssets}/{distributionSelectionSummary.totalAssets} assets · {distributionSelectionSummary.pct}%
-             </Typography>
-           </Stack>
+      {/* ═══════════ PIE: TOTAL GB + BOTÓN SUBIR ═══════════ */}
+      <BatchFooter
+        rows={rows}
+        isProcessing={isProcessing}
+        isStoppingAll={isStoppingAll}
+        handleProcessBatch={handleProcessBatch}
+      />
 
-           <LinearProgress
-             variant="determinate"
-             value={distributionSelectionSummary.pct}
-             sx={{
-               mt: 1,
-               height: 9,
-               borderRadius: 999,
-               backgroundColor: 'rgba(30,41,59,0.55)',
-               '& .MuiLinearProgress-bar': {
-                 background: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
-               },
-             }}
-           />
-
-           <Typography variant="caption" sx={{ color: 'rgba(255,247,204,0.95)', mt: 0.75, display: 'block' }}>
-             Data total: {distributionSelectionSummary.totalGb.toFixed(2)} GB · En cuentas seleccionadas: {distributionSelectionSummary.assignedGb.toFixed(2)} GB · Falta asignar: {distributionSelectionSummary.pendingGb.toFixed(2)} GB
-           </Typography>
-           <Typography variant="caption" sx={{ color: 'rgba(255,247,204,0.9)', mt: 0.2, display: 'block' }}>
-             Assets faltantes por meter en cuentas seleccionadas: {distributionSelectionSummary.pendingAssets}
-           </Typography>
-         </Box>
-       )}
-
-       <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-         <Box sx={{ p: 1.5, borderRadius: 2, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(125,211,252,0.35)' }}>
-           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
-             <Typography variant="body2" sx={{ fontWeight: 700, color: '#e0f2fe' }}>Progreso Main</Typography>
-             <Typography variant="caption" sx={{ color: '#bae6fd' }}>{mainProgressStats.pct}%</Typography>
-           </Stack>
-           <LinearProgress
-             variant="determinate"
-             value={mainProgressStats.pct}
-             sx={{
-               height: 10,
-               borderRadius: 999,
-               backgroundColor: 'rgba(30,41,59,0.6)',
-               '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' },
-             }}
-           />
-           <Typography variant="caption" sx={{ color: 'rgba(224,242,254,0.85)', mt: 0.75, display: 'block' }}>
-             OK: {mainProgressStats.ok}/{mainProgressStats.total} · Subiendo: {mainProgressStats.uploading} · Error: {mainProgressStats.error}
-           </Typography>
-         </Box>
-
-         <Box sx={{ p: 1.5, borderRadius: 2, background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(216,180,254,0.35)' }}>
-           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
-             <Typography variant="body2" sx={{ fontWeight: 700, color: '#f5d0fe' }}>Progreso Backup</Typography>
-             <Typography variant="caption" sx={{ color: '#e9d5ff' }}>{backupProgressStats.pct}%</Typography>
-           </Stack>
-           <LinearProgress
-             variant="determinate"
-             value={backupProgressStats.pct}
-             sx={{
-               height: 10,
-               borderRadius: 999,
-               backgroundColor: 'rgba(30,41,59,0.6)',
-               '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #c084fc, #a855f7)' },
-             }}
-           />
-           <Typography variant="caption" sx={{ color: 'rgba(245,208,254,0.88)', mt: 0.75, display: 'block' }}>
-             OK: {backupProgressStats.ok}/{backupProgressStats.total} · Subiendo: {backupProgressStats.uploading} · Error: {backupProgressStats.error}
-           </Typography>
-         </Box>
-       </Box>
-
-       {/* ─── BARRA DE ALMACENAMIENTO POR CUENTA ─── */}
-       {(() => {
-         // Agrupar items asignados por cuenta
-         const byAccount = {}
-         rows.forEach(r => {
-           if (!r.cuenta) return
-           if (!byAccount[r.cuenta]) byAccount[r.cuenta] = 0
-           byAccount[r.cuenta] += (r.pesoMB || 0)
-         })
-
-         const accountIds = Object.keys(byAccount)
-         if (!accountIds.length) return null
-
-         const LIMIT_MB = BACKEND_SAFETY_LIMIT_MB // 19GB
-
-         return (
-           <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-             {accountIds.map(accId => {
-               const acc = cuentas.find(c => c.id === Number(accId))
-               if (!acc) return null
-               const usedMB = acc.usedMB || 0
-               const incomingMB = byAccount[accId] || 0
-               const usedPct = Math.min(100, (usedMB / LIMIT_MB) * 100)
-               const incomingPct = Math.min(100 - usedPct, (incomingMB / LIMIT_MB) * 100)
-               const totalPct = usedPct + incomingPct
-
-               return (
-                 <Box key={accId} sx={{ p: 1.5, borderRadius: 2, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#fff' }}>{acc.alias}</Typography>
-                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                       {(usedMB/1024).toFixed(1)} GB ocupados + {(incomingMB/1024).toFixed(1)} GB entrando = {((usedMB+incomingMB)/1024).toFixed(1)} GB / {(LIMIT_MB/1024).toFixed(0)} GB
-                     </Typography>
-                   </Stack>
-                   <Box sx={{ width: '100%', height: 10, borderRadius: 5, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', position: 'relative' }}>
-                     <Box sx={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${usedPct}%`, background: 'linear-gradient(90deg, #7b61ff, #9b7dff)', borderRadius: 5, transition: 'width 300ms ease' }} />
-                     <Box sx={{ position: 'absolute', left: `${usedPct}%`, top: 0, height: '100%', width: `${incomingPct}%`, background: 'linear-gradient(90deg, #ff9800, #ffb74d)', borderRadius: '0 5px 5px 0', transition: 'width 300ms ease' }} />
-                   </Box>
-                   {totalPct > 90 && (
-                     <Typography variant="caption" sx={{ color: '#ff5252', mt: 0.5, display: 'block' }}>
-                       ⚠️ Esta cuenta estará a más del 90% de capacidad
-                     </Typography>
-                   )}
-                 </Box>
-               )
-             })}
-             <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-               <Stack direction="row" alignItems="center" spacing={0.5}>
-                 <Box sx={{ width: 12, height: 12, borderRadius: 2, background: 'linear-gradient(90deg, #7b61ff, #9b7dff)' }} />
-                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Ocupado</Typography>
-               </Stack>
-               <Stack direction="row" alignItems="center" spacing={0.5}>
-                 <Box sx={{ width: 12, height: 12, borderRadius: 2, background: 'linear-gradient(90deg, #ff9800, #ffb74d)' }} />
-                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Entrando (batch)</Typography>
-               </Stack>
-             </Stack>
-           </Box>
-         )
-       })()}
-
-      <Box
-        sx={{
-          mb: 2,
-          p: 1.4,
-          borderRadius: 2,
-          border: '1px solid rgba(148,163,184,0.35)',
-          background: 'linear-gradient(180deg, rgba(15,23,42,0.65), rgba(15,23,42,0.45))',
-        }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
-          <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700 }}>
-            Resumen de Tabla: {tableSummary.total} archivos
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.8)' }}>
-            Listos para subir: {tableSummary.ready}/{tableSummary.retryable} · {tableSummary.readyGb.toFixed(2)} GB
-          </Typography>
-        </Stack>
-
-        <LinearProgress
-          variant="determinate"
-          value={Math.max(0, Math.min(100, Number(tableSummary.readyPct || 0)))}
-          sx={{
-            mt: 1,
-            mb: 1,
-            height: 8,
-            borderRadius: 999,
-            backgroundColor: 'rgba(255,255,255,0.12)',
-            '& .MuiLinearProgress-bar': {
-              background: tableSummary.readyPct >= 100
-                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #38bdf8, #0ea5e9)',
-            },
-          }}
-        />
-
-        <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-          <Chip size="small" label={`Total: ${tableSummary.total}`} sx={{ bgcolor: 'rgba(148,163,184,0.2)', color: '#e2e8f0' }} />
-          <Chip size="small" label={`Listos: ${tableSummary.ready}`} sx={{ bgcolor: 'rgba(34,197,94,0.2)', color: '#bbf7d0' }} />
-          <Chip size="small" label={`Pendientes: ${tableSummary.missing}`} sx={{ bgcolor: 'rgba(245,158,11,0.2)', color: '#fde68a' }} />
-          <Chip size="small" label={`En proceso: ${tableSummary.processing}`} sx={{ bgcolor: 'rgba(56,189,248,0.2)', color: '#bae6fd' }} />
-          <Chip size="small" label={`Completados: ${tableSummary.completed}`} sx={{ bgcolor: 'rgba(16,185,129,0.2)', color: '#a7f3d0' }} />
-          <Chip size="small" label={`Error: ${tableSummary.error}`} sx={{ bgcolor: 'rgba(239,68,68,0.2)', color: '#fecaca' }} />
-        </Stack>
-      </Box>
-
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        variant="outlined"
-        ref={reviewScrollRef}
-        sx={{
-          maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'calc(100vh - 280px)',
-          overflowY: 'scroll',
-          overflowAnchor: 'none',
-          borderRadius: 2,
-          background: 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(17,24,39,0.78))',
-          borderColor: 'rgba(148,163,184,0.32)',
-          boxShadow: '0 10px 24px rgba(2,6,23,0.35)',
-          '& .MuiTableCell-root': {
-            color: '#edf3ff',
-            borderBottom: '1px solid rgba(148,163,184,0.24)',
-          },
-          '& .MuiTableCell-head': {
-            backgroundColor: '#0f172a',
-            backdropFilter: 'blur(8px)',
-            zIndex: 10,
-          },
-        }}
-      >
-        <Table size="medium" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}># / Acciones</TableCell>
-              <TableCell sx={{ minWidth: 500, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset Info (Nombre, Cat, Tags)</TableCell>
-              {!reviewMode && (
-                <>
-                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Perfil Rápido</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta MEGA Asignada</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Main</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Backup</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
-                </>
-              )}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {visibleEntries.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={visibleColumnCount} align="center" sx={{ py: 6 }}>
-                    <Typography variant="h6" sx={{ color: 'rgba(226,232,240,0.95)', fontWeight: 600 }}>
-                      {reviewMode ? 'No hay items en fase de revisión (borrador/error).' : 'No hay assets en /uploads/batch_imports/'}
-                    </Typography>
-                 </TableCell>
-              </TableRow>
-            )}
-
-            {virtualItems.length > 0 && virtualItems[0].start > 0 && (
-              <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualItems[0].start}px` }} />
-              </TableRow>
-            )}
-
-            {virtualItems.map((virtualRow) => {
-              const { row, rowIndex, visibleIndex } = visibleEntries[virtualRow.index];
-              return (
-              <BatchRow
-                key={row.id || `${rowIndex}-${virtualRow.index}`}
-                row={row}
-                idx={rowIndex}
-                measureElement={virtualizer.measureElement}
-                virtualIndex={virtualRow.index}
-                sequenceLabel={`${visibleIndex + 1}/${visibleEntries.length}`}
-                reviewMode={reviewMode}
-                isSimilarityFocused={Number(row?.id || 0) > 0 && Number(row?.id || 0) === Number(similaritySelectedId || 0)}
-                categoriesCatalog={categoriesCatalog}
-                tagsCatalog={tagsCatalog}
-                cuentas={cuentas}
-                onNombreChange={handleNombreChange}
-                onNombreEnChange={handleNombreEnChange}
-                onDescriptionChange={handleDescriptionChange}
-                onDescriptionEnChange={handleDescriptionEnChange}
-                onCategoriasChange={handleCategoriasChange}
-                onTagsChange={handleTagsChange}
-                onCuentaChange={handleCuentaChange}
-                onOpenCreateModal={openCreateModal}
-                onOpenProfiles={handleOpenPerfilModal}
-                onOpenImagePreview={setPreviewImage}
-                onSetPrimaryImage={handleSetPrimaryImage}
-                onOpenSimilar={handleOpenSimilar}
-                onRemoverFila={handleRemoverFila}
-              />
-            )})}
-
-            {virtualItems.length > 0 && virtualItems[virtualItems.length - 1].end < virtualizer.getTotalSize() && (
-              <TableRow>
-                <TableCell colSpan={visibleColumnCount} sx={{ p: 0, borderBottom: 'none', height: `${virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end}px` }} />
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
-         <Typography variant="h6" sx={{ color: '#fff', textShadow: '0px 1px 3px rgba(0,0,0,0.5)' }}>
-            <strong>Total Batch:</strong> {(rows.reduce((a,b)=>a+(b.pesoMB||0),0)/1024).toFixed(2)} GB
-         </Typography>
-         <Button 
-            variant="contained" 
-            size="large"
-            startIcon={<CloudUploadIcon />}
-            onClick={handleProcessBatch}
-          disabled={isProcessing || isStoppingAll || rows.filter(r => r.estado === 'borrador' || r.estado === 'error').length === 0}
-            sx={{ 
-               borderRadius: 8, 
-               textTransform: 'none', 
-               fontWeight: 700, 
-               px: 4, 
-               py: 1.5, 
-               background: 'linear-gradient(45deg, #00C853 30%, #64DD17 90%)',
-               color: '#fff',
-               boxShadow: '0 3px 5px 2px rgba(0, 200, 83, .3)',
-               '&:hover': {
-                  background: 'linear-gradient(45deg, #00E676 30%, #76FF03 90%)',
-               }
-            }}
-         >
-           {isProcessing ? 'Enviando al Worker...' : 'Confirmar y Subir al Worker'}
-         </Button>
-      </Box>
-
+      {/* ═══════════ MODALES ═══════════ */}
       <MetaCreateDialog
         open={createModalOpen}
         type={createModalType}
@@ -2455,288 +1887,42 @@ export default function BatchTable() {
         onApply={handleApplyProfileToRow}
       />
 
-      <Dialog open={scpModalOpen} onClose={() => setScpModalOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { background: '#1d1e26', color: '#fff' } }}>
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Comando para Subida Pesada (SCP)</DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
-            Arrastraste: <strong>{scpIndexedFile?.name || '—'}</strong>. El comando se genera desde backend sin bloqueo por PIN.
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)', display: 'block', mb: 1.3 }}>
-            Tamaño indexado: {formatBytes(scpIndexedFile?.size || 0)}
-          </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
-            <Button
-              variant="contained"
-              onClick={fetchBatchScpCommand}
-              disabled={scpCommandLoading}
-              sx={{ minWidth: 170, textTransform: 'none', fontWeight: 700 }}
-            >
-              {scpCommandLoading ? 'Generando…' : 'Regenerar comandos'}
-            </Button>
-          </Stack>
+      {/* ═══════════ DIALOG SCP ═══════════ */}
+      <ScpUploadDialog
+        open={scpModalOpen}
+        onClose={() => setScpModalOpen(false)}
+        scpIndexedFile={scpIndexedFile}
+        scpCommandData={scpCommandData}
+        scpCommandError={scpCommandError}
+        scpCommandLoading={scpCommandLoading}
+        scpUploadProbe={scpUploadProbe}
+        fetchBatchScpCommand={fetchBatchScpCommand}
+        formatBytes={formatBytes}
+      />
 
-          {scpCommandError ? (
-            <Alert severity="error" sx={{ mb: 2 }}>{scpCommandError}</Alert>
-          ) : null}
-
-          {!scpCommandData?.commands ? null : (
-          <Box sx={{ p: 2, borderRadius: 2, background: 'rgba(0,0,0,0.3)', fontFamily: 'monospace', fontSize: 13, border: '1px solid rgba(255,255,255,0.1)' }}>
-            {scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd ? (
-              <>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#93c5fd' }}>Comando WSL rsync (recomendado para masivo):</div>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mt: 0.6 }}>
-                  Ejecuta en Linux/WSL. Lee archivos en Windows desde /mnt/c/stl-hub/super-batch y reanuda cortes.
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.2, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
-                    {scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd}
-                  </Typography>
-                  <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.rsyncWslFileCmd || scpCommandData.commands.rsyncWslFolderCmd)}>Copiar</Button>
-                </Stack>
-              </>
-            ) : null}
-
-            {scpCommandData.commands.winscpKeepupCmd ? (
-              <>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#ffd54f' }}>Comando recomendado (reanuda si se corta):</div>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mt: 0.6 }}>
-                  Ideal para archivos muy grandes. Mantiene estado local y reintenta sin perder el avance completado.
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.8, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
-                    {scpCommandData.commands.winscpKeepupCmd}
-                  </Typography>
-                  <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.winscpKeepupCmd)}>Copiar</Button>
-                </Stack>
-              </>
-            ) : null}
-
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#69f0ae' }}>Comando SCP Directo:</div>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 1.5, p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
-              <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
-                {scpCommandData.commands.singleFileCmd || scpCommandData.commands.folderContentCmd}
-              </Typography>
-              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.singleFileCmd || scpCommandData.commands.folderContentCmd)}>Copiar</Button>
-            </Stack>
-
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mb: 1 }}>
-              Crear carpeta remota (solo si hace falta):
-            </Typography>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 1, background: 'rgba(0,0,0,0.4)', borderRadius: 1 }}>
-              <Typography variant="body2" sx={{ wordBreak: 'break-all', flex: 1 }}>
-                {scpCommandData.commands.mkdirCmd}
-              </Typography>
-              <Button size="small" variant="outlined" onClick={() => navigator.clipboard.writeText(scpCommandData.commands.mkdirCmd)}>Copiar</Button>
-            </Stack>
-
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mt: 1.25 }}>
-              Ruta destino fija: {scpCommandData.commands.remoteBatchImportsDir}
-            </Typography>
-          </Box>
-          )}
-
-          {scpIndexedFile?.name ? (
-            <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(56,189,248,0.35)' }}>
-              <Typography variant="body2" sx={{ color: '#e0f2fe', fontWeight: 700, mb: 0.8 }}>
-                Progreso de subida detectado en VPS
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={Math.max(0, Math.min(100, Number(scpUploadProbe.percent || 0)))}
-                sx={{
-                  height: 12,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(255,255,255,0.14)',
-                  '& .MuiLinearProgress-bar': {
-                    background: scpUploadProbe.percent >= 100
-                      ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                      : 'linear-gradient(90deg, #38bdf8, #0ea5e9)',
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ color: 'rgba(224,242,254,0.92)', display: 'block', mt: 0.65 }}>
-                {Math.max(0, Math.min(100, Number(scpUploadProbe.percent || 0))).toFixed(0)}% · {formatBytes(scpUploadProbe.sizeB)} / {formatBytes(scpIndexedFile?.size || 0)}
-                {scpUploadProbe.speedMBs > 0 ? ` · ${scpUploadProbe.speedMBs.toFixed(2)} MB/s` : ''}
-              </Typography>
-              {!scpUploadProbe.exists ? (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.68)', display: 'block', mt: 0.4 }}>
-                  Esperando que inicie la transferencia SCP...
-                </Typography>
-              ) : null}
-              {scpUploadProbe.done ? (
-                <Typography variant="caption" sx={{ color: '#86efac', display: 'block', mt: 0.4, fontWeight: 700 }}>
-                  Archivo recibido completo en el VPS.
-                </Typography>
-              ) : null}
-              {scpUploadProbe.error ? (
-                <Typography variant="caption" sx={{ color: '#fecaca', display: 'block', mt: 0.4 }}>
-                  {scpUploadProbe.error}
-                </Typography>
-              ) : null}
-            </Box>
-          ) : null}
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
-          <Button variant="contained" onClick={() => setScpModalOpen(false)}>¡Entendido!</Button>
-        </DialogActions>
-      </Dialog>
-
+      {/* ═══════════ PREVIEW DE IMAGEN ═══════════ */}
       <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="lg" PaperProps={{ sx: { background: 'transparent', boxShadow: 'none' } }}>
         {previewImage && (
-           <Box onClick={() => setPreviewImage(null)} sx={{ cursor: 'zoom-out', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-             <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
-           </Box>
-        )}
-      </Dialog>
-      
-      <RightSidebar
-        side={searchSidebarSide}
-        collapsible={false}
-        inFlow={false}
-        open
-        width={RIGHT_SIDEBAR_WIDTH}
-        title="Búsqueda Similares"
-        headerAction={
-          <Stack direction="row" spacing={1}>
-            <Button size="small" variant="outlined" onClick={toggleSearchSidebarSide} sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1, color: '#adafb8', borderColor: 'rgba(173,175,184,0.35)' }}>
-              {searchSidebarSide === 'right' ? 'A Izquierda' : 'A Derecha'}
-            </Button>
-            <Button size="small" variant="contained" color="error" onClick={() => setSimilaritySelectedId(null)} sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}>
-              Cerrar
-            </Button>
-          </Stack>
-        }
-      >
-        {!sidebarQueueItem ? (
-          <Typography variant="body2" sx={{ opacity: 0.8, px: 1 }}>Selecciona un ítem para ver similares.</Typography>
-        ) : (
-          <Box sx={{ px: 1 }}>
-            <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem Borrador</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
-              {sidebarQueueItem?.nombre || '(sin nombre)'}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.75, display: 'block' }}>
-              {sidebarQueueItem?.pesoMB} MB • {(sidebarQueueItem?.imagenes || []).length} imágenes
-            </Typography>
-
-            {(sidebarQueueItem?.imagenes || []).length > 0 && (
-              <Box sx={{ mt: 0.9 }}>
-                <Typography variant="caption" sx={{ opacity: 0.82, display: 'block', mb: 0.55 }}>
-                  Imágenes del ítem actual
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.25 }}>
-                  {(sidebarQueueItem?.imagenes || []).map((src, i) => {
-                    const safeSrc = makeUploadsUrl(src)
-                    if (!safeSrc) return null
-                    return (
-                      <img
-                        key={`current-${i}`}
-                        src={safeSrc}
-                        alt={`current-${i}`}
-                        style={{
-                          width: SIMILARITY_CURRENT_IMAGE_SIZE,
-                          height: SIMILARITY_CURRENT_IMAGE_SIZE,
-                          objectFit: 'cover',
-                          borderRadius: 6,
-                          border: '1px solid rgba(173, 175, 184, 0.45)',
-                          cursor: 'pointer',
-                          background: 'rgba(255,255,255,0.06)'
-                        }}
-                        onClick={() => setPreviewImage(safeSrc)}
-                      />
-                    )
-                  })}
-                </Box>
-              </Box>
-            )}
-
-            <Divider sx={{ my: 1.25, opacity: 0.2 }} />
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Assets similares</Typography>
-              {sidebarSimilarity?.status === 'loading' && <CircularProgress size={14} />}
-              <Box sx={{ flex: 1 }} />
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => { if (sidebarQueueItem) void startSimilarityCheck(sidebarQueueItem) }}
-                disabled={!sidebarQueueItem || sidebarSimilarity?.status === 'loading'}
-                sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
-              >
-                Revalidar
-              </Button>
-            </Box>
-
-            {sidebarSimilarity?.status === 'loading' && (
-              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
-                {sidebarSimilarity?.phase || 'Buscando similares…'}
-              </Typography>
-            )}
-
-            {sidebarSimilarity?.status === 'done' && (
-              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
-                {(sidebarSimilarity?.items || []).length} encontrados · hashes usados: {Number(sidebarSimilarity?.imageHashCount || 0)}
-              </Typography>
-            )}
-
-            {sidebarSimilarity?.status === 'error' && (
-              <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.5 }}>
-                {sidebarSimilarity?.error || 'No se pudo buscar similares'}
-              </Typography>
-            )}
-
-            {sidebarSimilarity?.status === 'done' && (
-              <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1.1 }}>
-                {(sidebarSimilarity?.items || []).map((a) => (
-                  <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.65)', background: 'rgba(255,255,255,0.05)' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.25 }}>{a.title}</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.25, wordBreak: 'break-word' }}>{a.archiveName}</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.25 }}>
-                      {((Number(a.fileSizeB || a.archiveSizeB || 0)) / (1024*1024)).toFixed(2)} MB • {(a.images || []).length} imágenes
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.35 }}>
-                      Score total: {Number(a?._similarity?.score || 0)} · nombre: {Number(a?._similarity?.name || 0)} · imagen: {Number(a?._similarity?.image || 0)}
-                    </Typography>
-                    <Typography variant="caption" sx={{ display: 'inline-block', mt: 0.55, px: 0.8, py: 0.2, borderRadius: 999, border: '1px solid rgba(88, 214, 141, 0.55)', background: 'rgba(88, 214, 141, 0.14)', color: '#d7ffe7', fontWeight: 700 }}>
-                      Coincidencia visual alta
-                    </Typography>
-                    {(a.images || []).length > 0 && (
-                       <Box sx={{ display: 'flex', gap: 1, mt: 0.75, overflowX: 'auto' }}>
-                         {(a.images || []).map((src, i) => {
-                           const safeSrc = makeUploadsUrl(src)
-                           if (!safeSrc) return null
-                           return (
-                             <img
-                               key={i}
-                               src={safeSrc}
-                               style={{
-                                 width: SIMILARITY_MATCH_IMAGE_SIZE,
-                                 height: SIMILARITY_MATCH_IMAGE_SIZE,
-                                 objectFit: 'cover',
-                                 borderRadius: 6,
-                                 border: '1px solid rgba(148,163,184,0.45)',
-                                 cursor: 'pointer'
-                               }}
-                               onClick={() => setPreviewImage(safeSrc)}
-                             />
-                           )
-                         })}
-                       </Box>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            )}
-
-            {sidebarSimilarity?.status === 'done' && (sidebarSimilarity?.items || []).length === 0 && (
-              <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
-                No se encontraron coincidencias.
-              </Typography>
-            )}
+          <Box onClick={() => setPreviewImage(null)} sx={{ cursor: 'zoom-out', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
           </Box>
         )}
-      </RightSidebar>
+      </Dialog>
 
+      {/* ═══════════ SIDEBAR DE SIMILARES ═══════════ */}
+      <SimilaritySidebar
+        searchSidebarSide={searchSidebarSide}
+        toggleSearchSidebarSide={toggleSearchSidebarSide}
+        similaritySelectedId={similaritySelectedId}
+        setSimilaritySelectedId={setSimilaritySelectedId}
+        sidebarQueueItem={sidebarQueueItem}
+        sidebarSimilarity={sidebarSimilarity}
+        startSimilarityCheck={startSimilarityCheck}
+        makeUploadsUrl={makeUploadsUrl}
+        setPreviewImage={setPreviewImage}
+      />
+
+      {/* ═══════════ TOAST NOTIFICATIONS ═══════════ */}
       <Snackbar
         open={toast.open}
         autoHideDuration={6000}
