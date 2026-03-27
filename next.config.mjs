@@ -14,7 +14,6 @@ const nextConfig = {
   // 👉 Permite servir tu mismo árbol de páginas bajo /en sin mover carpetas
   async rewrites() {
     return [
-      { source: '/en', destination: '/' },
       { source: '/en/:path*', destination: '/:path*' },
     ];
   },

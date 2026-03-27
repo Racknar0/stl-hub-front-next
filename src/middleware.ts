@@ -29,6 +29,7 @@ export function middleware(req: NextRequest) {
   if (pathname === '/en' || pathname.startsWith('/en/')) {
     const res = NextResponse.next();
     res.cookies.set('lang', 'en', { path: '/' });
+    res.headers.set('x-lang', 'en');
     return res;
   }
 

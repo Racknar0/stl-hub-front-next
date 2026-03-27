@@ -81,36 +81,70 @@ export async function generateMetadata({ params }) {
     if (asset?.unpublished) {
         return { title: 'Modelo no disponible', robots: { index: false, follow: false } };
     }
+
+    const site = 'https://stl-hub.com';
+
     // Para errores transitorios (500/red), evitar noindex para no desindexar por fallos puntuales.
     if (asset?.__error) {
-        const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
         return {
             title: 'STL HUB',
             description: 'Catálogo de modelos STL para impresión 3D.',
             alternates: { canonical: `${site}/asset/${params.slug}` },
         };
     }
+
+    // Detectar idioma desde header inyectado por middleware
+    let isEn = false;
+    try {
+        const { headers } = await import('next/headers');
+        const h = await headers();
+        isEn = h.get('x-lang') === 'en';
+    } catch {}
+
     const isPremium = !!asset.isPremium;
-    const baseTitle =
+    const titleEs =
         (isPremium ? 'Descargar STL premium ' : 'Descargar STL gratis ') +
         (asset.title || 'modelo 3D') +
         ' por MEGA';
-    const desc =
+    const titleEn =
+        (isPremium ? 'Download premium STL ' : 'Download free STL ') +
+        (asset.titleEn || asset.title || '3D model') +
+        ' via MEGA';
+    const descEs =
         (asset.description?.slice(0, 180) ||
             asset.title + ' STL para impresión 3D.') +
         (asset.tagsEs?.length
             ? ` Tags: ${asset.tagsEs.slice(0, 6).join(', ')}`
             : '');
-    const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
+    const descEn =
+        (asset.descriptionEn?.slice(0, 180) ||
+            (asset.titleEn || asset.title) + ' STL for 3D printing.') +
+        (asset.tagsEn?.length
+            ? ` Tags: ${asset.tagsEn.slice(0, 6).join(', ')}`
+            : '');
+
+    const baseTitle = isEn ? titleEn : titleEs;
+    const desc = isEn ? descEn : descEs;
+    const canonicalPath = isEn
+        ? `${site}/en/asset/${asset.slug}`
+        : `${site}/asset/${asset.slug}`;
+
     return {
         title: baseTitle,
         description: desc,
-        alternates: { canonical: `${site}/asset/${asset.slug}` },
+        alternates: {
+            canonical: canonicalPath,
+            languages: {
+                'es-ES': `${site}/asset/${asset.slug}`,
+                'en-US': `${site}/en/asset/${asset.slug}`,
+            },
+        },
         openGraph: {
             title: baseTitle,
             description: desc,
             type: 'article',
-            url: `${site}/asset/${asset.slug}`,
+            locale: isEn ? 'en_US' : 'es_ES',
+            url: canonicalPath,
             images: asset.images?.length
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
@@ -128,7 +162,7 @@ export default async function AssetPage({ params }) {
         if (asset?.unpublished) {
             notFound();
         }
-    const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com';
+    const site = 'https://stl-hub.com';
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
     const heroImage = imgList[0] || '/logo_horizontal.png';

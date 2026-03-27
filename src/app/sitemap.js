@@ -42,6 +42,7 @@ export default async function sitemap() {
           lastModified: r.updatedAt ? new Date(r.updatedAt) : now,
           changeFrequency: 'weekly',
           priority: 0.8,
+          alternates: { languages: { 'es-ES': `${base}/asset/${r.slug}`, 'en-US': `${base}/en/asset/${r.slug}` } },
         });
       }
     }

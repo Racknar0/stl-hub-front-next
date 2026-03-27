@@ -2,7 +2,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 import "../styles/bundle.scss";
-import { cookies } from "next/headers";
+import LangSetter from "./LangSetter";
 
 const SITE_URL = 'https://stl-hub.com';
 
@@ -47,13 +47,11 @@ export async function generateMetadata() {
   };
 }
 
-export default async  function RootLayout({ children }) {
-  const cookieStore = await cookies();
-  const lang = (cookieStore.get("lang")?.value || "es").toLowerCase();
-
+export default function RootLayout({ children }) {
   return (
-    <html lang={lang} suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
+        <LangSetter />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
