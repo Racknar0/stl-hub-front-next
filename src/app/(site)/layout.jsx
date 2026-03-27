@@ -1,13 +1,10 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
 import Layout from '../../components/layout/Layout/Layout';
 import { usePathname } from 'next/navigation';
 
 export default function SiteLayout({ children }) {
   const pathname = usePathname();
-
-  // Retornar siempre el componente Loader
-  // 
 
   const isDashboard = pathname?.startsWith('/dashboard');
 
@@ -18,8 +15,10 @@ export default function SiteLayout({ children }) {
 
   // Público: usar Layout con Header/Footer
   return (
-    <Layout>
-      {children}
-    </Layout>
+    <Suspense fallback={null}>
+      <Layout>
+        {children}
+      </Layout>
+    </Suspense>
   );
 }
