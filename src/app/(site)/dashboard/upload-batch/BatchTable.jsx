@@ -106,7 +106,26 @@ export default function BatchTable() {
     })
   }, [rows])
 
-  const visibleRows = useMemo(() => (reviewMode ? reviewRows : rows), [reviewMode, reviewRows, rows])
+  const visibleRows = useMemo(() => {
+    const base = reviewMode ? reviewRows : rows
+    // Sort active items (uploading/processing) to the top
+    return [...base].sort((a, b) => {
+      const priority = (r) => {
+        const st = String(r?.estado || '').toLowerCase()
+        const main = String(r?.mainStatus || '').toUpperCase()
+        const backup = String(r?.backupStatus || '').toUpperCase()
+        // Currently uploading or processing → top
+        if (st === 'procesando' || main === 'UPLOADING' || backup === 'UPLOADING') return 0
+        // Error → second
+        if (st === 'error') return 1
+        // Draft/pending → third
+        if (st === 'borrador') return 2
+        // Completed → bottom
+        return 3
+      }
+      return priority(a) - priority(b)
+    })
+  }, [reviewMode, reviewRows, rows])
 
   const rowIndexById = useMemo(() => {
     const m = new Map()
@@ -129,7 +148,7 @@ export default function BatchTable() {
 
   const virtualItems = virtualizer.getVirtualItems()
 
-  const visibleColumnCount = reviewMode ? 3 : 9
+  const visibleColumnCount = reviewMode ? 2 : 8
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -2323,8 +2342,7 @@ export default function BatchTable() {
         <Table size="medium" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>#</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Acciones</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}># / Acciones</TableCell>
               <TableCell sx={{ minWidth: 500, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset Info (Nombre, Cat, Tags)</TableCell>
               {!reviewMode && (
                 <>
