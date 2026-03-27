@@ -1038,259 +1038,247 @@ export default function BatchRow({
                 />
             </TableCell>
             <TableCell sx={{ borderBottom: cellBorder, color: primaryText }}>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    color="secondary"
-                    onClick={() => onOpenProfiles(idx)}
-                    disabled={isOk || isProcesso}
-                    sx={{
-                        textTransform: 'none',
-                        borderRadius: 4,
-                        minWidth: 90,
-                        color: '#f5e8ff',
-                        borderColor: 'rgba(221, 214, 254, 0.7)',
-                        backgroundColor: 'rgba(109, 40, 217, 0.28)',
-                        fontWeight: 700,
-                        '&:hover': {
-                            color: '#f5e8ff',
-                            borderColor: 'rgba(233, 213, 255, 0.92)',
-                            backgroundColor: 'rgba(126, 34, 206, 0.42)',
-                        },
-                        '&.Mui-disabled': {
-                            color: '#f5e8ff',
-                            borderColor: 'rgba(221, 214, 254, 0.55)',
-                            backgroundColor: 'rgba(109, 40, 217, 0.2)',
-                            opacity: 1,
-                        },
-                    }}
-                >
-                    {row.perfiles || 'Perfiles'}
-                </Button>
-            </TableCell>
-            <TableCell sx={{ borderBottom: cellBorder, color: primaryText }}>
-                <Select
-                    value={row.cuenta || ''}
-                    displayEmpty
-                    onChange={(e) => onCuentaChange(idx, e.target.value)}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                        minWidth: 120,
-                        bgcolor: 'rgba(51, 65, 85, 0.65)',
-                        color: primaryText,
-                        borderRadius: 1,
-                        '& .MuiSelect-icon': { color: primaryText },
-                        '& .MuiSelect-select': {
-                            color: '#f8fbff',
-                            fontWeight: 700,
-                        },
-                        '& .MuiSelect-select.Mui-disabled': {
-                            color: '#f8fbff',
-                            WebkitTextFillColor: '#f8fbff',
-                            opacity: 1,
-                        },
-                        '&.Mui-disabled': {
-                            color: '#f8fbff',
-                            opacity: 1,
-                        },
-                        '&.Mui-disabled .MuiSvgIcon-root': {
-                            color: '#e2e8f0',
-                            opacity: 1,
-                        },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(148,163,184,0.42)',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(191,219,254,0.7)',
-                        },
-                    }}
-                    disabled={isOk || isProcesso}
-                >
-                    <MenuItem value="" disabled sx={{ color: '#94a3b8' }}>
-                        Selecciona...
-                    </MenuItem>
-                    {cuentas.map((c) => (
-                        <MenuItem
-                            key={c.id}
-                            value={c.id}
-                            sx={{
-                                color: '#e2e8f0',
-                                bgcolor: '#0f172a',
+                <Stack spacing={1} alignItems="flex-start">
+                    <Select
+                        value={row.cuenta || ''}
+                        displayEmpty
+                        onChange={(e) => onCuentaChange(idx, e.target.value)}
+                        size="small"
+                        variant="outlined"
+                        fullWidth
+                        sx={{
+                            minWidth: 120,
+                            bgcolor: 'rgba(51, 65, 85, 0.65)',
+                            color: primaryText,
+                            borderRadius: 1,
+                            '& .MuiSelect-icon': { color: primaryText },
+                            '& .MuiSelect-select': {
+                                color: '#f8fbff',
                                 fontWeight: 700,
-                            }}
-                        >
-                            {c.alias}
+                            },
+                            '& .MuiSelect-select.Mui-disabled': {
+                                color: '#f8fbff',
+                                WebkitTextFillColor: '#f8fbff',
+                                opacity: 1,
+                            },
+                        }}
+                        disabled={isOk || isProcesso}
+                    >
+                        <MenuItem value="" disabled sx={{ color: '#94a3b8' }}>
+                            Cuenta...
                         </MenuItem>
-                    ))}
-                </Select>
+                        {cuentas.map((c) => (
+                            <MenuItem
+                                key={c.id}
+                                value={c.id}
+                                sx={{
+                                    color: '#e2e8f0',
+                                    bgcolor: '#0f172a',
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {c.alias}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                        onClick={() => onOpenProfiles(idx)}
+                        disabled={isOk || isProcesso}
+                        fullWidth
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 1,
+                            minWidth: 90,
+                            color: '#f5e8ff',
+                            borderColor: 'rgba(221, 214, 254, 0.7)',
+                            backgroundColor: 'rgba(109, 40, 217, 0.28)',
+                            fontWeight: 700,
+                        }}
+                    >
+                        {row.perfiles || 'Perfiles'}
+                    </Button>
+                </Stack>
             </TableCell>
-            {/* ─── Main Status ─── */}
+
+            {/* ─── Main & Backup Status ─── */}
             <TableCell
                 align="center"
                 sx={{ borderBottom: cellBorder, color: primaryText }}
             >
-                {(() => {
-                    const s = mainStatus;
-                    if (s === 'OK')
+                <Stack spacing={0.5} alignItems="center">
+                    {/* Main */}
+                    {(() => {
+                        const s = mainStatus;
+                        if (s === 'OK')
+                            return (
+                                <Chip
+                                    label="M: ✅ OK"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(22,163,74,0.35)',
+                                        color: '#dcfce7',
+                                        border: '1px solid rgba(134,239,172,0.7)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'UPLOADING')
+                            return (
+                                <Chip
+                                    label={`M: ⬆️ ${row.mainProgress || 0}%`}
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(14,165,233,0.35)',
+                                        color: '#e0f2fe',
+                                        border: '1px solid rgba(125,211,252,0.72)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'EXTRACTING')
+                            return (
+                                <Chip
+                                    label="M: 🔓 Extray"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(245,158,11,0.33)',
+                                        color: '#fff7ed',
+                                        border: '1px solid rgba(253,186,116,0.75)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'COMPRESSING')
+                            return (
+                                <Chip
+                                    label="M: 📦 Compri"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(249,115,22,0.33)',
+                                        color: '#fff7ed',
+                                        border: '1px solid rgba(251,146,60,0.75)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'ERROR')
+                            return (
+                                <Chip
+                                    label="M: ❌ Error"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(239,68,68,0.35)',
+                                        color: '#fee2e2',
+                                        border: '1px solid rgba(252,165,165,0.72)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
                         return (
                             <Chip
-                                label="✅ OK"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(22,163,74,0.35)',
-                                    color: '#dcfce7',
-                                    border: '1px solid rgba(134,239,172,0.7)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'UPLOADING')
-                        return (
-                            <Chip
-                                label={`⬆️ ${row.mainProgress || 0}%`}
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(14,165,233,0.35)',
-                                    color: '#e0f2fe',
-                                    border: '1px solid rgba(125,211,252,0.72)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'EXTRACTING')
-                        return (
-                            <Chip
-                                label="🔓 Extrayendo"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(245,158,11,0.33)',
-                                    color: '#fff7ed',
-                                    border: '1px solid rgba(253,186,116,0.75)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'COMPRESSING')
-                        return (
-                            <Chip
-                                label="📦 Comprimiendo"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(249,115,22,0.33)',
-                                    color: '#fff7ed',
-                                    border: '1px solid rgba(251,146,60,0.75)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'ERROR')
-                        return (
-                            <Chip
-                                label="❌ Error"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(239,68,68,0.35)',
-                                    color: '#fee2e2',
-                                    border: '1px solid rgba(252,165,165,0.72)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    return (
-                        <Chip
-                            label="⏳"
-                            size="small"
-                            sx={{
-                                bgcolor: 'rgba(100,116,139,0.32)',
-                                color: '#e2e8f0',
-                                border: '1px solid rgba(148,163,184,0.68)',
-                                fontSize: 11,
-                            }}
-                        />
-                    );
-                })()}
-            </TableCell>
-            {/* ─── Backup Status ─── */}
-            <TableCell
-                align="center"
-                sx={{ borderBottom: cellBorder, color: primaryText }}
-            >
-                {(() => {
-                    const s = backupStatus;
-                    if (s === 'OK')
-                        return (
-                            <Chip
-                                label="✅ OK"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(22,163,74,0.35)',
-                                    color: '#dcfce7',
-                                    border: '1px solid rgba(134,239,172,0.7)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'UPLOADING')
-                        return (
-                            <Chip
-                                label="⬆️ Subiendo"
-                                size="small"
-                                sx={{
-                                    bgcolor: 'rgba(14,165,233,0.35)',
-                                    color: '#e0f2fe',
-                                    border: '1px solid rgba(125,211,252,0.72)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
-                                }}
-                            />
-                        );
-                    if (s === 'N/A')
-                        return (
-                            <Chip
-                                label="— N/A"
+                                label="M: ⏳"
                                 size="small"
                                 sx={{
                                     bgcolor: 'rgba(100,116,139,0.32)',
                                     color: '#e2e8f0',
                                     border: '1px solid rgba(148,163,184,0.68)',
-                                    fontSize: 11,
+                                    fontSize: 10,
+                                    height: 20,
                                 }}
                             />
                         );
-                    if (s === 'ERROR')
+                    })()}
+
+                    {/* Backup */}
+                    {(() => {
+                        const s = backupStatus;
+                        if (s === 'OK')
+                            return (
+                                <Chip
+                                    label="B: ✅ OK"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(22,163,74,0.35)',
+                                        color: '#dcfce7',
+                                        border: '1px solid rgba(134,239,172,0.7)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'UPLOADING')
+                            return (
+                                <Chip
+                                    label="B: ⬆️ Sub"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(14,165,233,0.35)',
+                                        color: '#e0f2fe',
+                                        border: '1px solid rgba(125,211,252,0.72)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'N/A')
+                            return (
+                                <Chip
+                                    label="B: — N/A"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(100,116,139,0.32)',
+                                        color: '#e2e8f0',
+                                        border: '1px solid rgba(148,163,184,0.68)',
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
+                        if (s === 'ERROR')
+                            return (
+                                <Chip
+                                    label="B: ❌ Error"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(239,68,68,0.35)',
+                                        color: '#fee2e2',
+                                        border: '1px solid rgba(252,165,165,0.72)',
+                                        fontWeight: 700,
+                                        fontSize: 10,
+                                        height: 20,
+                                    }}
+                                />
+                            );
                         return (
                             <Chip
-                                label="❌ Error"
+                                label="B: ⏳"
                                 size="small"
                                 sx={{
-                                    bgcolor: 'rgba(239,68,68,0.35)',
-                                    color: '#fee2e2',
-                                    border: '1px solid rgba(252,165,165,0.72)',
-                                    fontWeight: 700,
-                                    fontSize: 11,
+                                    bgcolor: 'rgba(100,116,139,0.32)',
+                                    color: '#e2e8f0',
+                                    border: '1px solid rgba(148,163,184,0.68)',
+                                    fontSize: 10,
+                                    height: 20,
                                 }}
                             />
                         );
-                    return (
-                        <Chip
-                            label="⏳"
-                            size="small"
-                            sx={{
-                                bgcolor: 'rgba(100,116,139,0.32)',
-                                color: '#e2e8f0',
-                                border: '1px solid rgba(148,163,184,0.68)',
-                                fontSize: 11,
-                            }}
-                        />
-                    );
-                })()}
+                    })()}
+                </Stack>
             </TableCell>
             <TableCell
                 align="center"
