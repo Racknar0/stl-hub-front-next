@@ -476,7 +476,7 @@ export default function BatchTable() {
         .map(c => ({
           id: c.id,
           alias: c.alias || c.email || `Cuenta ${c.id}`,
-          limitMB: UI_ACCOUNT_LIMIT_MB,
+          limitMB: c.storageTotalMB > 0 ? Math.min(UI_ACCOUNT_LIMIT_MB, Number(c.storageTotalMB)) : UI_ACCOUNT_LIMIT_MB,
           usedMB: Number(c.storageUsedMB || 0),
           totalMB: Number(c.storageTotalMB || 0),
         }))
