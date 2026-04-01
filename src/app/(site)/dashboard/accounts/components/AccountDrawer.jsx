@@ -146,6 +146,26 @@ export default function AccountDrawer({
 
     async function handleSyncMainBackups() {
         if (!selected) return;
+
+        const mainSize = Number(selected.storageTotalMB || 0);
+        let outOfSync = false;
+        let warningText = '';
+        for (const b of (selected.backups || [])) {
+            const backupSize = Number(b.storageTotalMB || 0);
+            if (mainSize > 0 && backupSize > 0) {
+                const diff = Math.abs(mainSize - backupSize);
+                if (diff > 1024) {
+                    outOfSync = true;
+                    warningText = `El espacio de almacenamiento está desfasado.\nMain (${(mainSize/1024).toFixed(1)} GB) vs Backup "${b.alias}" (${(backupSize/1024).toFixed(1)} GB).\n¿Estás seguro de continuar con la sincronización?`;
+                    break;
+                }
+            }
+        }
+        if (outOfSync) {
+            const ok = await confirmAlert('Desfase de Almacenamiento', warningText, 'Continuar', 'Cancelar', 'warning');
+            if (!ok) return;
+        }
+
         setSyncLoading(true);
         setSyncResult(null);
         console.log('[FRONT][SYNC] Click main->backups account', selected.id);
@@ -161,6 +181,26 @@ export default function AccountDrawer({
 
     async function handleRestoreBackupsToMain() {
         if (!selected) return;
+
+        const mainSize = Number(selected.storageTotalMB || 0);
+        let outOfSync = false;
+        let warningText = '';
+        for (const b of (selected.backups || [])) {
+            const backupSize = Number(b.storageTotalMB || 0);
+            if (mainSize > 0 && backupSize > 0) {
+                const diff = Math.abs(mainSize - backupSize);
+                if (diff > 1024) {
+                    outOfSync = true;
+                    warningText = `El espacio de almacenamiento está desfasado.\nMain (${(mainSize/1024).toFixed(1)} GB) vs Backup "${b.alias}" (${(backupSize/1024).toFixed(1)} GB).\n¿Estás seguro de continuar con la restauración?`;
+                    break;
+                }
+            }
+        }
+        if (outOfSync) {
+            const ok = await confirmAlert('Desfase de Almacenamiento', warningText, 'Continuar', 'Cancelar', 'warning');
+            if (!ok) return;
+        }
+
         setRestoreLoading(true);
         setRestoreResult(null);
         console.log('[FRONT][RESTORE] Click backups->main account', selected.id);
