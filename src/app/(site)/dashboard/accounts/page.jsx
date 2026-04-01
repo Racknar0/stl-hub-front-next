@@ -11,6 +11,7 @@ import AccountsTabs from './components/AccountsTabs';
 import AccountCard from './components/AccountCard';
 import AccountDrawer from './components/AccountDrawer';
 import StatusChip from './components/StatusChip';
+import BulkAddAccountsModal from './components/BulkAddAccountsModal';
 
 const http = new HttpService();
 const API_BASE = '/accounts';
@@ -29,6 +30,7 @@ export default function AccountsOverviewPage() {
     const [addingBackup, setAddingBackup] = useState(false);
     const [selectedBackupCandidate, setSelectedBackupCandidate] = useState('');
     const [tab, setTab] = useState('main');
+    const [bulkOpen, setBulkOpen] = useState(false);
 
     // Estado del listado de assets en el modal derecho
     const [assets, setAssets] = useState([]);
@@ -333,7 +335,7 @@ export default function AccountsOverviewPage() {
 
     return (
         <div className="dashboard-content p-3">
-            <AddAccountForm form={form} setForm={setForm} onSubmit={addAccount} disabled={testing} />
+            <AddAccountForm form={form} setForm={setForm} onSubmit={addAccount} disabled={testing} onBulkOpen={() => setBulkOpen(true)} />
 
             {loading && <LinearProgress />}
 
@@ -396,6 +398,12 @@ export default function AccountsOverviewPage() {
               removeBackup={removeBackup}
                             onUpdateAccount={patchAccount}
                             onDeleteAccount={deleteAccount}
+            />
+
+            <BulkAddAccountsModal 
+                 open={bulkOpen} 
+                 onClose={() => setBulkOpen(false)} 
+                 onComplete={() => fetchAccounts()} 
             />
         </div>
     );

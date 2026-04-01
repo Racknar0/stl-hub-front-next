@@ -13,7 +13,7 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-export default function AddAccountForm({ form, setForm, onSubmit, disabled }) {
+export default function AddAccountForm({ form, setForm, onSubmit, disabled, onBulkOpen }) {
   const [showPassword, setShowPassword] = useState(false);
   return (
     <Card className="glass" sx={{ mb: 2 }}>
@@ -63,6 +63,7 @@ export default function AddAccountForm({ form, setForm, onSubmit, disabled }) {
           </Grid>
           <Grid item xs={12}>
             <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <MUIButton variant="contained" color="secondary" onClick={onBulkOpen} disabled={disabled} sx={{ background: '#7e22ce', '&:hover': { background: '#9333ea' } }}>+ Añadir Múltiples Cuentas</MUIButton>
               <MUIButton variant="outlined" onClick={onSubmit} disabled={disabled}>Crear</MUIButton>
             </Stack>
           </Grid>
