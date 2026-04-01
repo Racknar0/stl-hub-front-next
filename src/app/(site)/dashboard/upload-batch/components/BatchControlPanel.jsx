@@ -41,6 +41,7 @@ export default function BatchControlPanel({
   distributionAccountIds,
   handleDistributionAccountsChange,
   handleDistributionSelectorClose,
+  handleDistributionSelectorOpen,
   accountSelectionMeta,
   minPendingAssetMb,
   cuentas,
@@ -162,6 +163,7 @@ export default function BatchControlPanel({
             displayEmpty
             value={distributionAccountIds}
             onChange={handleDistributionAccountsChange}
+            onOpen={handleDistributionSelectorOpen}
             onClose={handleDistributionSelectorClose}
             renderValue={(selected) => {
               const ids = Array.isArray(selected) ? selected.map(Number) : []

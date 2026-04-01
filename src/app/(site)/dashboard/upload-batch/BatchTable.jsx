@@ -1509,6 +1509,10 @@ export default function BatchTable() {
     void handleAutoDistribute({ preferredAccountIds: selected })
   }
 
+  const handleDistributionSelectorOpen = () => {
+    void refreshBatchAccounts({ silent: true })
+  }
+
   const handleOpenPerfilModal = (rowIdx) => {
     setSelectedRowIdxPerfil(rowIdx)
     setProfilesModalOpen(true)
@@ -1804,6 +1808,7 @@ export default function BatchTable() {
         distributionAccountIds={distributionAccountIds}
         handleDistributionAccountsChange={handleDistributionAccountsChange}
         handleDistributionSelectorClose={handleDistributionSelectorClose}
+        handleDistributionSelectorOpen={handleDistributionSelectorOpen}
         accountSelectionMeta={accountSelectionMeta}
         minPendingAssetMb={minPendingAssetMb}
         cuentas={cuentas}
