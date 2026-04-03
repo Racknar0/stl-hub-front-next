@@ -42,7 +42,8 @@ export function middleware(req: NextRequest) {
 
   // Resto de rutas (base) → por defecto ES
   const res = NextResponse.next();
-  if (!req.cookies.get('lang')) res.cookies.set('lang', 'es', { path: '/' });
+  res.cookies.set('lang', 'es', { path: '/' });
+  res.headers.set('x-lang', 'es');
   return res;
 }
 
