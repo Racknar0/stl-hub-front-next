@@ -13,6 +13,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
+import useStore from '../../../store/useStore';
 
 const FeatureSection = ({
     title,
@@ -23,6 +24,8 @@ const FeatureSection = ({
     variantClass = '',
 }) => {
     const { t } = useI18n();
+    const language = useStore((s) => s.language);
+    const isEn = String(language || 'es').toLowerCase() === 'en';
     const finalTitle = title || t('sliders.feature.title');
     const finalSubtitle = subtitle || t('sliders.feature.subtitle');
     const finalCta = ctaLabel || t('sliders.feature.cta');
@@ -127,7 +130,7 @@ const FeatureSection = ({
                                                           <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                                                               {it.slug ? (
                                                                   <Link
-                                                                      href={`/asset/${it.slug}`}
+                                                                      href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
                                                                       onClick={(e)=>{ e.stopPropagation(); }}
                                                                       aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                                                                       style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}

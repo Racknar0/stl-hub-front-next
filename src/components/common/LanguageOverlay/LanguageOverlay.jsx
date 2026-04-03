@@ -1,23 +1,22 @@
 'use client'
-
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import useStore from '../../../store/useStore'
 import './LanguageOverlay.scss'
 
-// Reusar banderas disponibles en /public (32px)
 const FLAG_ES_64 = '/spain-flag-button-round-icon-32.png'
 const FLAG_EN_64 = '/united-states-of-america-flag-button-round-icon-32.png'
 
 export default function LanguageOverlay() {
-  const language = useStore((s) => s.language)
   const setLanguage = useStore((s) => s.setLanguage)
   const [show, setShow] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Mostrar sólo si no hay lang persistido
+  // Mostrar solo si no hay idioma guardado
   useEffect(() => {
     if (typeof window === 'undefined') return
     const saved = window.localStorage.getItem('lang')
@@ -27,9 +26,11 @@ export default function LanguageOverlay() {
   const choose = (lang) => {
     setLanguage(lang)
     setShow(false)
+    if (lang === 'en') router.push('/en')
+    // ES: ya está en /, no navega
   }
 
-  // bloquear scroll cuando está visible
+  // Bloquear scroll cuando está visible
   useEffect(() => {
     if (!mounted) return
     const html = document.documentElement

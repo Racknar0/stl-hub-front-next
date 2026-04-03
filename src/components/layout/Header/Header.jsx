@@ -156,16 +156,33 @@ const Header = () => {
     try {
       setLanguage(l);
       setLangOpen(false);
-      // Si hay token, actualizar en backend (ruta protegida)
+
+      // Navegar a la URL del idioma correcto
+      const isEnTarget = l === 'en';
+      let targetPath = pathname || '/';
+
+      if (isEnTarget) {
+        // Si no está ya en /en/*, añadir prefijo
+        if (!targetPath.startsWith('/en')) {
+          targetPath = '/en' + (targetPath === '/' ? '' : targetPath);
+        }
+      } else {
+        // Si está en /en/*, quitar el prefijo
+        if (targetPath.startsWith('/en/')) {
+          targetPath = targetPath.slice(3); // quita "/en"
+        } else if (targetPath === '/en') {
+          targetPath = '/';
+        }
+      }
+
+      router.push(targetPath);
+
+      // Si hay token, actualizar en backend
       if (token) {
-        // axiosInstance ya tiene interceptor con token
-        
-        console.log('Language updated on server');
-        await http.patchData('/me/language', '', { language: l });
+        await http.patchData('/me/language', '', { language: l }).catch(() => {});
       }
     } catch (e) {
-      console.error('Error updating language on server', e);
-      // No revertimos el cambio en UI; opcional: mostrar mensaje
+      console.error('Error updating language', e);
     }
   }
 

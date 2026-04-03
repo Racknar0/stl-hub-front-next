@@ -472,7 +472,7 @@ export default function SearchClient({ initialParams }) {
               <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 {it.slug ? (
                   <Link
-                    href={`/asset/${it.slug}`}
+                    href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
                     onClick={(e)=>{ e.stopPropagation(); void trackClick(it.id); }}
                     aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                     style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}

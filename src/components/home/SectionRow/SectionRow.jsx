@@ -11,9 +11,12 @@ import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import '../../common/GlobalLoader/GlobalLoader.scss';
+import useStore from '../../../store/useStore';
 
 const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '' }) => {
   const { t } = useI18n();
+  const language = useStore((s) => s.language);
+  const isEn = String(language || 'es').toLowerCase() === 'en';
   const finalLinkLabel = linkLabel || t('sliders.row.more');
   const Spinner = ({ size = 36 }) => (
     <div className="sk-circle" style={{ width: size, height: size }}>
@@ -103,7 +106,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                         <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           {it.slug ? (
                             <Link
-                              href={`/asset/${it.slug}`}
+                              href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
                               onClick={(e)=>{ e.stopPropagation(); }}
                               aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                               style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}

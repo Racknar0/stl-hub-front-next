@@ -705,7 +705,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                 </span>
                                                 {data?.slug && (
                                                     <Link
-                                                        href={`/asset/${data.slug}`}
+                                                        href={isEn ? `/en/asset/${data.slug}` : `/asset/${data.slug}`}
                                                         onClick={(e)=> e.stopPropagation()}
                                                         className="detail-link"
                                                     >
