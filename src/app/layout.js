@@ -22,11 +22,21 @@ export async function generateMetadata() {
     title,
     description,
     alternates: {
-      canonical: pathname,
+      canonical: `${SITE_URL}/`,
       languages: {
-        "es-ES": "/",
-        "en-US": "/en",
-        "x-default": "/", 
+        "es-ES": `${SITE_URL}/`,
+        "x-default": `${SITE_URL}/`,
+      },
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
       },
     },
     openGraph: {
@@ -35,7 +45,7 @@ export async function generateMetadata() {
       siteName: "STL HUB",
       type: "website",
       locale: "es_ES",
-      url: pathname,
+      url: `${SITE_URL}/`,
       images: ["/logo_horizontal.png"],
     },
     twitter: {

@@ -132,11 +132,23 @@ export async function generateMetadata({ params }) {
     return {
         title: baseTitle,
         description: desc,
+        robots: {
+            index: true,
+            follow: true,
+            googleBot: {
+                index: true,
+                follow: true,
+                'max-image-preview': 'large',
+                'max-snippet': -1,
+            },
+        },
         alternates: {
-            canonical: canonicalPath,
+            // Canonical siempre apunta a la versión ES (idioma primario del sitio)
+            canonical: `${site}/asset/${asset.slug}`,
             languages: {
                 'es-ES': `${site}/asset/${asset.slug}`,
                 'en-US': `${site}/en/asset/${asset.slug}`,
+                'x-default': `${site}/asset/${asset.slug}`,
             },
         },
         openGraph: {
@@ -144,7 +156,7 @@ export async function generateMetadata({ params }) {
             description: desc,
             type: 'article',
             locale: isEn ? 'en_US' : 'es_ES',
-            url: canonicalPath,
+            url: isEn ? `${site}/en/asset/${asset.slug}` : `${site}/asset/${asset.slug}`,
             images: asset.images?.length
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
@@ -188,6 +200,20 @@ export default async function AssetPage({ params }) {
     const descriptionEnRaw = String(asset.descriptionEn || '').trim();
     const descriptionEs = descriptionEsRaw || buildGenericDescriptionEs(asset.title, !!asset.isPremium);
     const descriptionEn = descriptionEnRaw || buildGenericDescriptionEn(asset.titleEn || asset.title, !!asset.isPremium);
+
+    // Detectar idioma desde header inyectado por middleware
+    let pageIsEn = false;
+    try {
+        const { headers } = await import('next/headers');
+        const h = await headers();
+        pageIsEn = h.get('x-lang') === 'en';
+    } catch {}
+
+    // Título y descripción según idioma
+    const displayTitle = pageIsEn ? (asset.titleEn || asset.title || 'STL Model') : (asset.title || 'Modelo STL');
+    const displayDesc = pageIsEn ? descriptionEn : descriptionEs;
+    const premiumLabel = pageIsEn ? 'Premium' : 'Premium';
+    const freeLabel = pageIsEn ? 'Free' : 'Gratis';
     const priceValidUntil = (() => {
         const d = new Date();
         d.setDate(d.getDate() + 365);
@@ -242,14 +268,14 @@ export default async function AssetPage({ params }) {
                         aria-hidden="true"
                     />
                     <div className={styles.heroInner}>
-                        <p className={styles.kicker}>STL HUB · Ficha de modelo 3D</p>
-                        <h1 className={styles.title}>{asset.title || 'Modelo STL'}</h1>
+                        <p className={styles.kicker}>STL HUB · {pageIsEn ? '3D Model Sheet' : 'Ficha de modelo 3D'}</p>
+                        <h1 className={styles.title}>{displayTitle}</h1>
                         <p className={styles.subtitle}>
-                            {descriptionEs}
+                            {displayDesc}
                         </p>
                         <div className={styles.badges}>
                             <span className={`${styles.badge} ${asset.isPremium ? styles.badgePremium : styles.badgeFree}`}>
-                                {asset.isPremium ? 'Premium' : 'Gratis'}
+                                {asset.isPremium ? premiumLabel : freeLabel}
                             </span>
                             {categories.slice(0, 3).map((cat, i) => (
                                 <span key={`${cat.slug || cat.es}-${i}`} className={styles.badgeMuted}>
@@ -263,31 +289,26 @@ export default async function AssetPage({ params }) {
 
                 <section className={styles.grid}>
                     <article className={styles.card}>
-                        <h2>Descripcion en espanol</h2>
-                        <p>{descriptionEs}</p>
+                        <h2>{pageIsEn ? 'Description' : 'Descripcion en espanol'}</h2>
+                        <p>{displayDesc}</p>
                     </article>
 
                     <article className={styles.card}>
-                        <h2>Description in English</h2>
-                        <p>{descriptionEn}</p>
-                    </article>
-
-                    <article className={styles.card}>
-                        <h2>Ficha tecnica</h2>
+                        <h2>{pageIsEn ? 'Technical Sheet' : 'Ficha tecnica'}</h2>
                         <dl className={styles.metaList}>
                             <div><dt>ID</dt><dd>{asset.id || 'N/A'}</dd></div>
                             <div><dt>Slug</dt><dd>{asset.slug || 'N/A'}</dd></div>
-                            <div><dt>Estado</dt><dd>{asset.isPremium ? 'Contenido premium' : 'Contenido gratuito'}</dd></div>
-                            <div><dt>Publicado</dt><dd>{formatDate(asset.createdAt)}</dd></div>
-                            <div><dt>Actualizado</dt><dd>{formatDate(asset.updatedAt)}</dd></div>
-                            <div><dt>Tamano archivo</dt><dd>{formatBytes(asset.archiveSizeB || asset.fileSizeB)}</dd></div>
-                            <div><dt>Categoria principal</dt><dd>{categories[0]?.es || 'N/A'}</dd></div>
+                            <div><dt>{pageIsEn ? 'Type' : 'Estado'}</dt><dd>{asset.isPremium ? (pageIsEn ? 'Premium content' : 'Contenido premium') : (pageIsEn ? 'Free content' : 'Contenido gratuito')}</dd></div>
+                            <div><dt>{pageIsEn ? 'Published' : 'Publicado'}</dt><dd>{formatDate(asset.createdAt)}</dd></div>
+                            <div><dt>{pageIsEn ? 'Updated' : 'Actualizado'}</dt><dd>{formatDate(asset.updatedAt)}</dd></div>
+                            <div><dt>{pageIsEn ? 'File size' : 'Tamano archivo'}</dt><dd>{formatBytes(asset.archiveSizeB || asset.fileSizeB)}</dd></div>
+                            <div><dt>{pageIsEn ? 'Category' : 'Categoria principal'}</dt><dd>{pageIsEn ? (categories[0]?.en || categories[0]?.es || 'N/A') : (categories[0]?.es || 'N/A')}</dd></div>
                         </dl>
                     </article>
 
                     <article className={styles.card}>
-                        <h2>Categorias y tags</h2>
-                        <p className={styles.metaHint}>Etiquetas tematicas para navegacion e indexacion:</p>
+                        <h2>{pageIsEn ? 'Categories & Tags' : 'Categorias y tags'}</h2>
+                        <p className={styles.metaHint}>{pageIsEn ? 'Thematic labels for navigation and indexing:' : 'Etiquetas tematicas para navegacion e indexacion:'}</p>
                         <div className={styles.tagWrap}>
                             {mergedTags.length === 0 ? <span className={styles.badgeMuted}>Sin tags</span> : null}
                             {mergedTags.map((t, i) => (
@@ -308,7 +329,7 @@ export default async function AssetPage({ params }) {
 
                 {imgList.length > 0 ? (
                     <section className={styles.galleryCard}>
-                        <h2>Galeria de imagenes del modelo STL</h2>
+                        <h2>{pageIsEn ? 'Model Image Gallery' : 'Galeria de imagenes del modelo STL'}</h2>
                         <div className={styles.gallery}>
                             {imgList.map((img, i) => (
                                 <figure key={`${img}-${i}`} className={styles.figure}>

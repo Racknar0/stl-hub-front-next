@@ -11,7 +11,7 @@ const nextConfig = {
     ],
   },
 
-  // 👉 Permite servir tu mismo árbol de páginas bajo /en sin mover carpetas
+  // 👉 Permite servir el árbol de páginas bajo /en (middleware gestiona x-lang para contenido EN)
   async rewrites() {
     return [
       { source: '/en/:path*', destination: '/:path*' },

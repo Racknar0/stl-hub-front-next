@@ -12,12 +12,23 @@ export const metadata = {
     'resin printable','fdm printable','3d printing files','free 3d models',
     'download stl mega',
   ],
+  // Canonical apunta a ES (idioma primario): así Google no crea duplicado
   alternates: {
-    canonical: `${SITE_URL}/en`,
+    canonical: `${SITE_URL}/`,
     languages: {
       'es-ES': `${SITE_URL}/`,
       'en-US': `${SITE_URL}/en`,
       'x-default': `${SITE_URL}/`,
+    },
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   openGraph: {
