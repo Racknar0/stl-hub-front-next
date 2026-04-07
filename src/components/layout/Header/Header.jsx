@@ -85,6 +85,10 @@ const Header = () => {
   const exploreRef = useRef(null)
   // Loading local para buscador (no bloquea toda la pantalla)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [searchMode, setSearchMode] = useState('normal')
+  const [aiVisualSearching, setAiVisualSearching] = useState(false)
+  const aiVisualTimerRef = useRef(null)
+  const isSearchBusy = searchLoading || aiVisualSearching
 
   useEffect(() => {
     let mounted = true
@@ -139,8 +143,18 @@ const Header = () => {
   const onSearchSubmit = async (e) => {
     try {
       e.preventDefault()
+      if (isSearchBusy) return
       const input = e.currentTarget.querySelector('input[type="text"]')
       const val = input?.value?.trim() || ''
+      if (searchMode === 'ai') {
+        if (aiVisualTimerRef.current) clearTimeout(aiVisualTimerRef.current)
+        setAiVisualSearching(true)
+        aiVisualTimerRef.current = setTimeout(() => {
+          setAiVisualSearching(false)
+          aiVisualTimerRef.current = null
+        }, 4000)
+        return
+      }
       setSearchLoading(true)
       // await router.push para poder resetear el loading aunque la URL no cambie
       await router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
@@ -151,6 +165,23 @@ const Header = () => {
       setSearchLoading(false)
     }
   }
+
+  const normalSearchTitle = isEn ? 'Normal search' : 'Búsqueda normal'
+  const aiSearchTitle = isEn ? 'AI search' : 'Búsqueda con IA'
+  const normalModeLabel = isEn ? 'Normal' : 'Normal'
+  const aiModeLabel = 'IA'
+  const searchModeTitle = isEn ? 'Search mode' : 'Modo de búsqueda'
+  const searchPlaceholder = searchMode === 'ai'
+    ? (isEn 
+      ? 'Ex: scene with carnivorous dinosaurs hunting...'
+      : 'Ej: escena con dinosaurios carnívoros...')
+    : t('header.searchPlaceholder');
+
+  useEffect(() => {
+    return () => {
+      if (aiVisualTimerRef.current) clearTimeout(aiVisualTimerRef.current)
+    }
+  }, [])
 
   const selectLang = async (l) => {
     try {
@@ -319,13 +350,41 @@ const Header = () => {
 
           {/* Búsqueda inline solo en desktop */}
           <div className="search-inline d-none d-lg-flex flex-grow-1 px-3" role="search">
-            <form className="search-form w-100" onSubmit={onSearchSubmit}>
+            <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
+              <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
+                <button
+                  type="button"
+                  className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                  aria-pressed={searchMode === 'normal'}
+                  title={normalSearchTitle}
+                  disabled={isSearchBusy}
+                  onClick={() => setSearchMode('normal')}
+                >
+                  {normalModeLabel}
+                </button>
+                <button
+                  type="button"
+                  className={`mode-btn ${searchMode === 'ai' ? 'active' : ''}`}
+                  aria-pressed={searchMode === 'ai'}
+                  title={aiSearchTitle}
+                  disabled={isSearchBusy}
+                  onClick={() => setSearchMode('ai')}
+                >
+                  {aiModeLabel}
+                </button>
+              </div>
               <input
                 type="text"
-                placeholder={t('header.searchPlaceholder')}
+                placeholder={searchPlaceholder}
                 aria-label={t('header.searchAria')}
               />
-              <button type="submit" className="search-btn" aria-label={t('header.searchAria')} disabled={searchLoading}>
+              <button
+                type="submit"
+                className="search-btn"
+                aria-label={t('header.searchAria')}
+                title={searchMode === 'ai' ? aiSearchTitle : normalSearchTitle}
+                disabled={isSearchBusy}
+              >
                 {searchLoading ? (
                   <SpinnerMini />
                 ) : (
@@ -449,13 +508,41 @@ const Header = () => {
 
         {/* Búsqueda móvil (debajo), visible solo en < lg */}
         <div className="search-panel d-lg-none" role="search">
-          <form className="search-form" onSubmit={onSearchSubmit}>
+          <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
+            <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
+              <button
+                type="button"
+                className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                aria-pressed={searchMode === 'normal'}
+                title={normalSearchTitle}
+                disabled={isSearchBusy}
+                onClick={() => setSearchMode('normal')}
+              >
+                {normalModeLabel}
+              </button>
+              <button
+                type="button"
+                className={`mode-btn ${searchMode === 'ai' ? 'active' : ''}`}
+                aria-pressed={searchMode === 'ai'}
+                title={aiSearchTitle}
+                disabled={isSearchBusy}
+                onClick={() => setSearchMode('ai')}
+              >
+                {aiModeLabel}
+              </button>
+            </div>
             <input
               type="text"
-              placeholder={t('header.searchPlaceholder')}
+              placeholder={searchPlaceholder}
               aria-label={t('header.searchAria')}
             />
-            <button type="submit" className="search-btn" aria-label={t('header.searchAria')} disabled={searchLoading}>
+            <button
+              type="submit"
+              className="search-btn"
+              aria-label={t('header.searchAria')}
+              title={searchMode === 'ai' ? aiSearchTitle : normalSearchTitle}
+              disabled={isSearchBusy}
+            >
               {searchLoading ? (
                 <SpinnerMini />
               ) : (
