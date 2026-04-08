@@ -44,6 +44,7 @@ export default function AccountDrawer({
 
     const [editAlias, setEditAlias] = useState('');
     const [editType, setEditType] = useState('main');
+    const [editIgnore, setEditIgnore] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -51,6 +52,7 @@ export default function AccountDrawer({
         if (!selected) return;
         setEditAlias(selected.alias || '');
         setEditType(selected.type || 'main');
+        setEditIgnore(selected.ignoreInUploadBatch || false);
     }, [selected?.id]);
 
     const canDelete = useMemo(() => {
@@ -90,9 +92,10 @@ export default function AccountDrawer({
         if (!selected) return false;
         return (
             String(editAlias || '').trim() !== String(selected.alias || '').trim() ||
-            String(editType || '') !== String(selected.type || '')
+            String(editType || '') !== String(selected.type || '') ||
+            Boolean(editIgnore) !== Boolean(selected.ignoreInUploadBatch)
         );
-    }, [selected, editAlias, editType]);
+    }, [selected, editAlias, editType, editIgnore]);
 
     async function handleSaveEdit() {
         if (!selected) return;
@@ -106,7 +109,7 @@ export default function AccountDrawer({
 
         setEditLoading(true);
         try {
-            await onUpdateAccount?.(selected.id, { alias: nextAlias, type: nextType });
+            await onUpdateAccount?.(selected.id, { alias: nextAlias, type: nextType, ignoreInUploadBatch: editIgnore });
             await timerAlert('OK', 'Cuenta actualizada', 900);
         } catch (e) {
             console.error('update account error', e);
@@ -265,6 +268,19 @@ export default function AccountDrawer({
                                 <option value="main">main</option>
                                 <option value="backup">backup</option>
                             </TextField>
+                            
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Ignorar en Upload Batch:
+                                </Typography>
+                                <input 
+                                    type="checkbox" 
+                                    checked={editIgnore}
+                                    onChange={(e) => setEditIgnore(e.target.checked)}
+                                    disabled={editLoading || deleteLoading}
+                                />
+                            </Stack>
+
                             <Stack direction="row" spacing={1} justifyContent="flex-end">
                                 <AppButton
                                     variant="purple"

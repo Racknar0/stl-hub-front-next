@@ -364,7 +364,7 @@ const Header = () => {
                 </button>
                 <button
                   type="button"
-                  className={`mode-btn ${searchMode === 'ai' ? 'active' : ''}`}
+                  className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
                   aria-pressed={searchMode === 'ai'}
                   title={aiSearchTitle}
                   disabled={isSearchBusy}
@@ -522,7 +522,7 @@ const Header = () => {
               </button>
               <button
                 type="button"
-                className={`mode-btn ${searchMode === 'ai' ? 'active' : ''}`}
+                className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
                 aria-pressed={searchMode === 'ai'}
                 title={aiSearchTitle}
                 disabled={isSearchBusy}
