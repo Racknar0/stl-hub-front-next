@@ -21,13 +21,16 @@ function SearchParamsWatcher({ onReset }) {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    onReset()
+    onReset({
+      isAiSearch: String(searchParams?.get('is_ai_search') || '').toLowerCase() === 'true'
+    })
   }, [pathname, searchParams?.toString()])
 
   return null
 }
 
 const Header = () => {
+  const SEARCH_MODE_STORAGE_KEY = 'stlhub:header-search-mode:v1'
   const token = useStore((s) => s.token)
   const roleId = useStore((s) => s.roleId)
   const logout = useStore((s) => s.logout)
@@ -104,6 +107,41 @@ const Header = () => {
     loadCats()
     return () => { mounted = false }
   }, [])
+
+  // Restaurar modo del buscador desde storage (persistencia entre rutas).
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const savedMode = String(window.localStorage.getItem(SEARCH_MODE_STORAGE_KEY) || '').toLowerCase()
+      if (savedMode === 'ai' || savedMode === 'normal') {
+        setSearchMode(savedMode)
+      }
+    } catch {
+      // noop
+    }
+  }, [])
+
+  // Persistir modo elegido por el usuario.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      window.localStorage.setItem(SEARCH_MODE_STORAGE_KEY, searchMode)
+    } catch {
+      // noop
+    }
+  }, [searchMode])
+
+  // Si la URL pide búsqueda IA, ese estado tiene prioridad sobre storage.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const params = new URLSearchParams(window.location.search)
+      const isAiFromUrl = String(params.get('is_ai_search') || '').toLowerCase() === 'true'
+      if (isAiFromUrl) setSearchMode('ai')
+    } catch {
+      // noop
+    }
+  }, [pathname])
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
@@ -111,7 +149,7 @@ const Header = () => {
       if (!langRef.current.contains(e.target)) setLangOpen(false)
     }
     if (langOpen) document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
+    return () => { document.removeEventListener('mousedown', onDocClick) }
   }, [langOpen])
 
   // Cerrar Explorar al hacer click fuera o presionar Escape
@@ -153,11 +191,25 @@ const Header = () => {
           setAiVisualSearching(false)
           aiVisualTimerRef.current = null
         }, 4000)
+
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(SEARCH_MODE_STORAGE_KEY, 'ai')
+          }
+        } catch {
+          // noop
+        }
+        
+        // Navegación para búsqueda IA
+        let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
+        url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
+        await router.push(url)
         return
       }
       setSearchLoading(true)
       // await router.push para poder resetear el loading aunque la URL no cambie
-      await router.push(val ? `/search?q=${encodeURIComponent(val)}` : '/search')
+      let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
+      await router.push(url)
     } catch (err) {
       console.error('Navigation error on search submit', err)
     } finally {
@@ -243,7 +295,12 @@ const Header = () => {
     <header className="app-header">
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
-        <SearchParamsWatcher onReset={() => setSearchLoading(false)} />
+        <SearchParamsWatcher
+          onReset={({ isAiSearch } = {}) => {
+            setSearchLoading(false)
+            if (isAiSearch) setSearchMode('ai')
+          }}
+        />
       </Suspense>
       <div className="container-narrow">
         <nav className="navbar d-flex align-items-center justify-content-between">

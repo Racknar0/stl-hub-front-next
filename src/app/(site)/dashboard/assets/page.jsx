@@ -69,6 +69,7 @@ import ToolbarBusqueda from './componentes/ToolbarBusqueda';
 import ModalDetalle from './componentes/ModalDetalle';
 import ModalEditar from './componentes/ModalEditar';
 import ModalResultadosDrop from './componentes/ModalResultadosDrop';
+import ModalSyncVectors from './componentes/ModalSyncVectors';
 import ProfilesModal from '../upload-batch/ProfilesModal';
 
 // Mapea estado a color de chip
@@ -113,6 +114,7 @@ export default function AssetsAdminPage() {
 
     // Estado: modales
     const [previewOpen, setPreviewOpen] = useState(false);
+    const [syncVectorsOpen, setSyncVectorsOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [dropResultsOpen, setDropResultsOpen] = useState(false);
     const [dropFound, setDropFound] = useState([]);
@@ -4330,6 +4332,22 @@ export default function AssetsAdminPage() {
                                     </span>
                                 </Tooltip>
 
+                                <Tooltip title="Sincronizar Vectores (Qdrant)">
+                                    <span>
+                                        <IconButton
+                                            onClick={() => setSyncVectorsOpen(true)}
+                                            disabled={metaBusy || loading}
+                                            sx={{
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 1.5,
+                                            }}
+                                        >
+                                            <CachedIcon color="secondary" fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+
                                 <Tooltip title="Generar descripciones IA faltantes">
                                     <span>
                                         <IconButton
@@ -5154,6 +5172,11 @@ export default function AssetsAdminPage() {
                             </TextField>
                         </Stack>
                     </Paper>
+
+                    <ModalSyncVectors
+                        open={syncVectorsOpen}
+                        onClose={() => setSyncVectorsOpen(false)}
+                    />
 
                     <ProfilesModal
                         open={metaProfilesOpen}

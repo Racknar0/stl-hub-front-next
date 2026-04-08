@@ -154,6 +154,7 @@ export default function SearchClient({ initialParams }) {
   const [order, setOrder] = useState(initialParams?.order || '');
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
+  const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
   const [page, setPage] = useState(0); // zero-based
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -218,7 +219,8 @@ export default function SearchClient({ initialParams }) {
     setTags(normalizeCsvList(initialParams?.tags || ''));
     setOrder(initialParams?.order || '');
     setPlan(initialParams?.plan || '');
-  }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order, initialParams?.plan]);
+    setIsAiSearch(initialParams?.is_ai_search === 'true');
+  }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order, initialParams?.plan, initialParams?.is_ai_search]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
@@ -229,7 +231,8 @@ export default function SearchClient({ initialParams }) {
     tags: normalizeCsvList(tags),
     order,
     plan,
-  }), [q, categories, tags, order, plan]);
+    is_ai_search: isAiSearch ? 'true' : undefined,
+  }), [q, categories, tags, order, plan, isAiSearch]);
 
   const catList = useMemo(() => normalizeCsvList(categories).split(',').map(s => s.trim()).filter(Boolean), [categories]);
   const tagList = useMemo(() => normalizeCsvList(tags).split(',').map(s => s.trim()).filter(Boolean), [tags]);
@@ -247,7 +250,7 @@ export default function SearchClient({ initialParams }) {
     hasMoreRef.current = true;
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
-  }, [params.q, params.categories, params.tags, params.order, params.plan]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search]);
 
   const trackSearchIfNeeded = useCallback(async (resultCount) => {
     try {
@@ -325,7 +328,7 @@ export default function SearchClient({ initialParams }) {
   // Carga inicial
   useEffect(() => {
     loadPageReal(0);
-  }, [params.q, params.categories, params.tags, params.order, params.plan, language]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language]);
 
   // Cargar más
   const loadMoreReal = useCallback(() => {
