@@ -56,6 +56,8 @@ import SellIcon from '@mui/icons-material/Sell';
 import SaveIcon from '@mui/icons-material/Save';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import ImagesSection from './uploader/ImagesSection';
 import HttpService from '@/services/HttpService';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -145,6 +147,7 @@ export default function AssetsAdminPage() {
     const [metaSelectedMap, setMetaSelectedMap] = useState({});
     const [metaBusy, setMetaBusy] = useState(false);
     const [metaImagePreview, setMetaImagePreview] = useState(null);
+    const [metaExpandedImagesMap, setMetaExpandedImagesMap] = useState({});
     const [metaProfilesOpen, setMetaProfilesOpen] = useState(false);
     const [metaProfileAssetId, setMetaProfileAssetId] = useState(null);
 
@@ -224,6 +227,8 @@ export default function AssetsAdminPage() {
     const hashBackfillPollRef = useRef(null);
     const similarLoadMoreRef = useRef(null);
     const nameSimilarLoadMoreRef = useRef(null);
+    const assetsRef = useRef([]);
+    const metaImageSaveQueueRef = useRef(new Map());
 
     // (Randomizar freebies se movió a otra pantalla del dashboard)
 
@@ -1563,6 +1568,10 @@ export default function AssetsAdminPage() {
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
 
+    useEffect(() => {
+        assetsRef.current = Array.isArray(assets) ? assets : [];
+    }, [assets]);
+
     // Detalle: cargar bilingüe al abrir modal de vista
     useEffect(() => {
         if (previewOpen && selected?.id) {
@@ -2428,6 +2437,63 @@ export default function AssetsAdminPage() {
         );
     }, []);
 
+    const toggleMetaExpandedImages = useCallback((assetId) => {
+        const id = Number(assetId);
+        if (!Number.isFinite(id) || id <= 0) return;
+        setMetaExpandedImagesMap((prev) => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    }, []);
+
+    const queueMetaImagesSave = useCallback(
+        (assetId, imagesSnapshot = null) => {
+            const id = Number(assetId);
+            if (!Number.isFinite(id) || id <= 0) return;
+
+            const previousTask =
+                metaImageSaveQueueRef.current.get(id) || Promise.resolve();
+
+            const currentTask = previousTask
+                .catch(() => {})
+                .then(async () => {
+                    const row = (Array.isArray(assetsRef.current)
+                        ? assetsRef.current
+                        : []
+                    ).find((it) => Number(it?.id || 0) === id);
+
+                    const sourceImages = Array.isArray(imagesSnapshot)
+                        ? imagesSnapshot
+                        : row?.images;
+
+                    const safeImages = Array.isArray(sourceImages)
+                        ? sourceImages
+                              .map((it) => String(it || '').trim())
+                              .filter(Boolean)
+                        : [];
+
+                    await http.putData('/assets', id, { images: safeImages });
+                });
+
+            metaImageSaveQueueRef.current.set(id, currentTask);
+
+            void currentTask
+                .catch(async (e) => {
+                    await errorAlert(
+                        'Error',
+                        e?.response?.data?.message ||
+                            `No se pudo guardar cambios de imagenes en #${id}`,
+                    );
+                })
+                .finally(() => {
+                    if (metaImageSaveQueueRef.current.get(id) === currentTask) {
+                        metaImageSaveQueueRef.current.delete(id);
+                    }
+                });
+        },
+        [errorAlert],
+    );
+
     const saveMetaImagesNow = useCallback(
         async (assetId, nextImages) => {
             const id = Number(assetId);
@@ -2487,52 +2553,29 @@ export default function AssetsAdminPage() {
     );
 
     const handleMetaDeleteImage = useCallback(
-        async (assetId, imgIndex) => {
+        (assetId, imgIndex) => {
             const id = Number(assetId);
             const idx = Number(imgIndex);
             if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(idx) || idx < 0)
                 return;
 
-            const row = (Array.isArray(metaRows) ? metaRows : []).find(
-                (it) => Number(it?.id || 0) === id,
-            );
+            const row =
+                (Array.isArray(assetsRef.current) ? assetsRef.current : []).find(
+                    (it) => Number(it?.id || 0) === id,
+                ) ||
+                (Array.isArray(metaRows) ? metaRows : []).find(
+                    (it) => Number(it?.id || 0) === id,
+                );
             const currentImages = Array.isArray(row?.images) ? row.images : [];
             if (!currentImages.length || idx >= currentImages.length) return;
 
-            const ok = await confirmAlert(
-                'Eliminar imagen',
-                `¿Deseas eliminar esta imagen del asset #${id}?`,
-                'Sí, eliminar',
-                'Cancelar',
-                'warning',
-            );
-            if (!ok) return;
-
             const nextImages = currentImages.filter((_, imagePos) => imagePos !== idx);
 
-            try {
-                setMetaBusy(true);
-                await saveMetaImagesNow(id, nextImages);
-                await fireAlert({
-                    toast: true,
-                    position: 'bottom',
-                    icon: 'success',
-                    title: `Imagen eliminada en #${id}`,
-                    showConfirmButton: false,
-                    timer: 1600,
-                    timerProgressBar: true,
-                    zIndex: 2000,
-                });
-            } catch (e) {
-                await errorAlert(
-                    'Error',
-                    e?.response?.data?.message || 'No se pudo eliminar la imagen',
-                );
-            } finally {
-                setMetaBusy(false);
-            }
+            // Borrado optimista: se actualiza UI primero y se persiste en segundo plano.
+            applyMetaImagesInRow(id, nextImages);
+            queueMetaImagesSave(id, nextImages);
         },
-        [confirmAlert, fireAlert, metaRows, saveMetaImagesNow],
+        [applyMetaImagesInRow, metaRows, queueMetaImagesSave],
     );
 
     const saveMetaRow = async (assetId, { silent = false } = {}) => {
@@ -4674,6 +4717,13 @@ export default function AssetsAdminPage() {
                                 {virtualItems.map((virtualRow) => {
                                     const row = metaRows[virtualRow.index];
                                     const id = Number(row?.id || 0);
+                                    const rowImages = Array.isArray(row?.images)
+                                        ? row.images
+                                        : [];
+                                    const metaExpanded = !!metaExpandedImagesMap[id];
+                                    const visibleImages = metaExpanded
+                                        ? rowImages
+                                        : rowImages.slice(0, 3);
                                     const draft = metaDraftMap[id] || {
                                         id,
                                         title: String(row?.title || ''),
@@ -4715,25 +4765,38 @@ export default function AssetsAdminPage() {
                                                     sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
+                                                        gap: metaExpanded ? 1 : 0,
+                                                        overflowX: metaExpanded
+                                                            ? 'auto'
+                                                            : 'visible',
+                                                        py: metaExpanded ? 0.5 : 0,
                                                     }}
                                                 >
-                                                    {(Array.isArray(row?.images)
-                                                        ? row.images
-                                                        : []
-                                                    )
-                                                        .slice(0, 3)
-                                                        .map((img, idx) => (
+                                                    {visibleImages.map((img, idx) => {
+                                                        const originalIndex = metaExpanded
+                                                            ? idx
+                                                            : idx;
+                                                        return (
                                                             <Box
-                                                                key={`meta-img-${id}-${idx}`}
+                                                                key={`meta-img-${id}-${originalIndex}`}
                                                                 sx={{
-                                                                    width: 250,
-                                                                    height: 250,
+                                                                    width: metaExpanded
+                                                                        ? 180
+                                                                        : 250,
+                                                                    height: metaExpanded
+                                                                        ? 180
+                                                                        : 250,
                                                                     position: 'relative',
                                                                     borderRadius: 1.5,
                                                                     border: '2px solid #1e293b',
                                                                     cursor: 'pointer',
-                                                                    ml: idx > 0 ? -20 : 0,
+                                                                    ml: metaExpanded
+                                                                        ? 0
+                                                                        : idx > 0
+                                                                          ? -20
+                                                                          : 0,
                                                                     overflow: 'hidden',
+                                                                    flexShrink: 0,
                                                                     zIndex: Math.max(1, 30 - idx),
                                                                     transition: 'transform 0.2s, z-index 0.2s',
                                                                     '&:hover': {
@@ -4748,7 +4811,7 @@ export default function AssetsAdminPage() {
                                                                 <Box
                                                                     component="img"
                                                                     src={imgUrl(img)}
-                                                                    alt={`asset-${id}-${idx + 1}`}
+                                                                    alt={`asset-${id}-${originalIndex + 1}`}
                                                                     onClick={() =>
                                                                         setMetaImagePreview(imgUrl(img))
                                                                     }
@@ -4778,8 +4841,8 @@ export default function AssetsAdminPage() {
                                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                         <Chip
                                                                             size="small"
-                                                                            label={idx === 0 ? 'Primera' : `#${idx + 1}`}
-                                                                            color={idx === 0 ? 'success' : 'default'}
+                                                                            label={originalIndex === 0 ? 'Primera' : `#${originalIndex + 1}`}
+                                                                            color={originalIndex === 0 ? 'success' : 'default'}
                                                                             sx={{ height: 22, '& .MuiChip-label': { px: 0.8, fontSize: 11 } }}
                                                                         />
 
@@ -4789,9 +4852,9 @@ export default function AssetsAdminPage() {
                                                                                     size="small"
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        void handleMetaSetFirstImage(id, idx);
+                                                                                        void handleMetaSetFirstImage(id, originalIndex);
                                                                                     }}
-                                                                                    disabled={metaBusy || loading || idx === 0}
+                                                                                    disabled={metaBusy || loading || originalIndex === 0}
                                                                                     sx={{
                                                                                         bgcolor: 'rgba(2,6,23,0.68)',
                                                                                         color: '#fff',
@@ -4811,9 +4874,9 @@ export default function AssetsAdminPage() {
                                                                                     size="small"
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        void handleMetaDeleteImage(id, idx);
+                                                                                        void handleMetaDeleteImage(id, originalIndex);
                                                                                     }}
-                                                                                    disabled={metaBusy || loading}
+                                                                                    disabled={loading}
                                                                                     sx={{
                                                                                         bgcolor: 'rgba(127,29,29,0.78)',
                                                                                         color: '#fff',
@@ -4827,12 +4890,59 @@ export default function AssetsAdminPage() {
                                                                     </Box>
                                                                 </Box>
                                                             </Box>
-                                                        ))}
-                                                    {(!Array.isArray(
-                                                        row?.images,
-                                                    ) ||
-                                                        row.images.length ===
-                                                            0) && (
+                                                        );
+                                                    })}
+
+                                                    {rowImages.length > 3 && (
+                                                        <Stack
+                                                            spacing={0.5}
+                                                            alignItems="center"
+                                                            sx={{ ml: 1, flexShrink: 0 }}
+                                                        >
+                                                            <Tooltip
+                                                                title={
+                                                                    metaExpanded
+                                                                        ? 'Mostrar solo 3'
+                                                                        : `Mostrar todas (${rowImages.length})`
+                                                                }
+                                                            >
+                                                                <span>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={() =>
+                                                                            toggleMetaExpandedImages(
+                                                                                id,
+                                                                            )
+                                                                        }
+                                                                        disabled={loading}
+                                                                        sx={{
+                                                                            bgcolor: 'rgba(15,23,42,0.72)',
+                                                                            color: '#fff',
+                                                                            '&:hover': {
+                                                                                bgcolor: 'rgba(30,41,59,0.95)',
+                                                                            },
+                                                                        }}
+                                                                    >
+                                                                        {metaExpanded ? (
+                                                                            <UnfoldLessIcon fontSize="small" />
+                                                                        ) : (
+                                                                            <UnfoldMoreIcon fontSize="small" />
+                                                                        )}
+                                                                    </IconButton>
+                                                                </span>
+                                                            </Tooltip>
+                                                            <Typography
+                                                                variant="caption"
+                                                                color="text.secondary"
+                                                            >
+                                                                {metaExpanded
+                                                                    ? `${rowImages.length}`
+                                                                    : `+${rowImages.length - 3}`}
+                                                            </Typography>
+                                                        </Stack>
+                                                    )}
+
+                                                    {!rowImages.length && (
                                                         <Box
                                                             sx={{
                                                                 width: 250,
