@@ -55,6 +55,7 @@ import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import SellIcon from '@mui/icons-material/Sell';
 import SaveIcon from '@mui/icons-material/Save';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import ImagesSection from './uploader/ImagesSection';
 import HttpService from '@/services/HttpService';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -2413,6 +2414,127 @@ export default function AssetsAdminPage() {
         });
     };
 
+    const applyMetaImagesInRow = useCallback((assetId, nextImages) => {
+        const id = Number(assetId);
+        if (!Number.isFinite(id) || id <= 0) return;
+        const safeImages = Array.isArray(nextImages)
+            ? nextImages.map((it) => String(it || '').trim()).filter(Boolean)
+            : [];
+
+        setAssets((prev) =>
+            (Array.isArray(prev) ? prev : []).map((row) =>
+                Number(row?.id || 0) === id ? { ...row, images: safeImages } : row,
+            ),
+        );
+    }, []);
+
+    const saveMetaImagesNow = useCallback(
+        async (assetId, nextImages) => {
+            const id = Number(assetId);
+            if (!Number.isFinite(id) || id <= 0) return false;
+
+            const safeImages = Array.isArray(nextImages)
+                ? nextImages.map((it) => String(it || '').trim()).filter(Boolean)
+                : [];
+
+            await http.putData('/assets', id, { images: safeImages });
+            applyMetaImagesInRow(id, safeImages);
+            return true;
+        },
+        [applyMetaImagesInRow],
+    );
+
+    const handleMetaSetFirstImage = useCallback(
+        async (assetId, imgIndex) => {
+            const id = Number(assetId);
+            const from = Number(imgIndex);
+            if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(from) || from < 0)
+                return;
+
+            const row = (Array.isArray(metaRows) ? metaRows : []).find(
+                (it) => Number(it?.id || 0) === id,
+            );
+            const currentImages = Array.isArray(row?.images) ? row.images : [];
+            if (!currentImages.length || from >= currentImages.length || from === 0) return;
+
+            const reordered = [...currentImages];
+            const [picked] = reordered.splice(from, 1);
+            reordered.unshift(picked);
+
+            try {
+                setMetaBusy(true);
+                await saveMetaImagesNow(id, reordered);
+                await fireAlert({
+                    toast: true,
+                    position: 'bottom',
+                    icon: 'success',
+                    title: `Imagen principal actualizada en #${id}`,
+                    showConfirmButton: false,
+                    timer: 1400,
+                    timerProgressBar: true,
+                    zIndex: 2000,
+                });
+            } catch (e) {
+                await errorAlert(
+                    'Error',
+                    e?.response?.data?.message || 'No se pudo actualizar el orden de imágenes',
+                );
+            } finally {
+                setMetaBusy(false);
+            }
+        },
+        [fireAlert, metaRows, saveMetaImagesNow],
+    );
+
+    const handleMetaDeleteImage = useCallback(
+        async (assetId, imgIndex) => {
+            const id = Number(assetId);
+            const idx = Number(imgIndex);
+            if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(idx) || idx < 0)
+                return;
+
+            const row = (Array.isArray(metaRows) ? metaRows : []).find(
+                (it) => Number(it?.id || 0) === id,
+            );
+            const currentImages = Array.isArray(row?.images) ? row.images : [];
+            if (!currentImages.length || idx >= currentImages.length) return;
+
+            const ok = await confirmAlert(
+                'Eliminar imagen',
+                `¿Deseas eliminar esta imagen del asset #${id}?`,
+                'Sí, eliminar',
+                'Cancelar',
+                'warning',
+            );
+            if (!ok) return;
+
+            const nextImages = currentImages.filter((_, imagePos) => imagePos !== idx);
+
+            try {
+                setMetaBusy(true);
+                await saveMetaImagesNow(id, nextImages);
+                await fireAlert({
+                    toast: true,
+                    position: 'bottom',
+                    icon: 'success',
+                    title: `Imagen eliminada en #${id}`,
+                    showConfirmButton: false,
+                    timer: 1600,
+                    timerProgressBar: true,
+                    zIndex: 2000,
+                });
+            } catch (e) {
+                await errorAlert(
+                    'Error',
+                    e?.response?.data?.message || 'No se pudo eliminar la imagen',
+                );
+            } finally {
+                setMetaBusy(false);
+            }
+        },
+        [confirmAlert, fireAlert, metaRows, saveMetaImagesNow],
+    );
+
     const saveMetaRow = async (assetId, { silent = false } = {}) => {
         const id = Number(assetId);
         const draft = metaDraftMap[id];
@@ -4603,40 +4725,108 @@ export default function AssetsAdminPage() {
                                                         .map((img, idx) => (
                                                             <Box
                                                                 key={`meta-img-${id}-${idx}`}
-                                                                component="img"
-                                                                src={imgUrl(
-                                                                    img,
-                                                                )}
-                                                                alt={`asset-${id}-${idx + 1}`}
-                                                                onClick={() =>
-                                                                    setMetaImagePreview(
-                                                                        imgUrl(
-                                                                            img,
-                                                                        ),
-                                                                    )
-                                                                }
                                                                 sx={{
                                                                     width: 250,
                                                                     height: 250,
-                                                                    objectFit:
-                                                                        'cover',
+                                                                    position: 'relative',
                                                                     borderRadius: 1.5,
                                                                     border: '2px solid #1e293b',
                                                                     cursor: 'pointer',
-                                                                    ml:
-                                                                        idx > 0
-                                                                            ? -20
-                                                                            : 0,
-                                                                    transition:
-                                                                        'transform 0.2s, z-index 0.2s',
-                                                                    zIndex: 1,
+                                                                    ml: idx > 0 ? -20 : 0,
+                                                                    overflow: 'hidden',
+                                                                    zIndex: Math.max(1, 30 - idx),
+                                                                    transition: 'transform 0.2s, z-index 0.2s',
                                                                     '&:hover': {
-                                                                        transform:
-                                                                            'scale(1.15)',
-                                                                        zIndex: 10,
+                                                                        transform: 'scale(1.12)',
+                                                                        zIndex: 80,
+                                                                    },
+                                                                    '&:hover .meta-image-actions': {
+                                                                        opacity: 1,
                                                                     },
                                                                 }}
-                                                            />
+                                                            >
+                                                                <Box
+                                                                    component="img"
+                                                                    src={imgUrl(img)}
+                                                                    alt={`asset-${id}-${idx + 1}`}
+                                                                    onClick={() =>
+                                                                        setMetaImagePreview(imgUrl(img))
+                                                                    }
+                                                                    sx={{
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        objectFit: 'cover',
+                                                                        display: 'block',
+                                                                    }}
+                                                                />
+
+                                                                <Box
+                                                                    className="meta-image-actions"
+                                                                    sx={{
+                                                                        position: 'absolute',
+                                                                        inset: 0,
+                                                                        display: 'flex',
+                                                                        flexDirection: 'column',
+                                                                        justifyContent: 'space-between',
+                                                                        p: 0.5,
+                                                                        opacity: 0,
+                                                                        transition: 'opacity 0.18s ease',
+                                                                        background:
+                                                                            'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))',
+                                                                    }}
+                                                                >
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={idx === 0 ? 'Primera' : `#${idx + 1}`}
+                                                                            color={idx === 0 ? 'success' : 'default'}
+                                                                            sx={{ height: 22, '& .MuiChip-label': { px: 0.8, fontSize: 11 } }}
+                                                                        />
+
+                                                                        <Tooltip title="Poner de primera">
+                                                                            <span>
+                                                                                <IconButton
+                                                                                    size="small"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        void handleMetaSetFirstImage(id, idx);
+                                                                                    }}
+                                                                                    disabled={metaBusy || loading || idx === 0}
+                                                                                    sx={{
+                                                                                        bgcolor: 'rgba(2,6,23,0.68)',
+                                                                                        color: '#fff',
+                                                                                        '&:hover': { bgcolor: 'rgba(15,23,42,0.9)' },
+                                                                                    }}
+                                                                                >
+                                                                                    <VerticalAlignTopIcon fontSize="small" />
+                                                                                </IconButton>
+                                                                            </span>
+                                                                        </Tooltip>
+                                                                    </Box>
+
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                        <Tooltip title="Eliminar imagen">
+                                                                            <span>
+                                                                                <IconButton
+                                                                                    size="small"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        void handleMetaDeleteImage(id, idx);
+                                                                                    }}
+                                                                                    disabled={metaBusy || loading}
+                                                                                    sx={{
+                                                                                        bgcolor: 'rgba(127,29,29,0.78)',
+                                                                                        color: '#fff',
+                                                                                        '&:hover': { bgcolor: 'rgba(153,27,27,0.95)' },
+                                                                                    }}
+                                                                                >
+                                                                                    <DeleteIcon fontSize="small" />
+                                                                                </IconButton>
+                                                                            </span>
+                                                                        </Tooltip>
+                                                                    </Box>
+                                                                </Box>
+                                                            </Box>
                                                         ))}
                                                     {(!Array.isArray(
                                                         row?.images,

@@ -1,164 +1,117 @@
-yarn dev
-# STL HUB — Frontend
+# STL HUB Frontend
 
-Frontend moderno y robusto para la plataforma STL HUB, desarrollado en **Next.js**. Permite la gestión, visualización y descarga de assets digitales premium y gratuitos, con flujos avanzados de autenticación, administración y experiencia de usuario.
+Aplicacion web en Next.js para explorar, buscar y gestionar modelos STL con experiencia premium, panel administrativo y busqueda semantica asistida por IA.
 
----
+## Resumen
 
-## 🚀 Características principales
+El frontend de STL HUB esta orientado a dos perfiles:
 
-- **Next.js 14+** con App Router y estructura modular
-- **Autenticación y registro** con activación por email y recuperación de contraseña
-- **Gestión de assets**: subida, edición, categorías, tags, control de descargas y links MEGA
-- **Panel de administración** con tablas avanzadas (Material React Table)
-- **Sistema de notificaciones** y reportes de links caídos
-- **Integración con pagos** (PayPal, Stripe, etc.)
-- **Soporte para cuentas premium y suscripciones**
-- **Internacionalización (i18n)**: Español e Inglés
-- **UI moderna y responsiva** (SCSS modular, componentes propios)
-- **Alertas y modales personalizados** (SweetAlert2, SimplyModal)
-- **Integración con MEGA.nz** para descargas seguras y chequeo de links
+- usuario final: descubrimiento de modelos, detalle de asset, descarga y suscripcion
+- administrador: gestion de catalogo, carga batch, monitoreo y herramientas operativas
 
----
+Integra UX moderna, estado global eficiente y un flujo de busqueda que combina modo normal y modo IA.
 
-## 📁 Estructura del proyecto
+## Stack Tecnologico
 
+- Framework: Next.js 15 (App Router)
+- UI: React 19 + MUI + SCSS
+- Estado global: Zustand
+- Networking: Axios
+- Virtualizacion: `@tanstack/react-virtual`
+- UX complementaria: SweetAlert2, Swiper, Radix Dialog
+
+## Arquitectura de Carpetas
+
+- `src/app`: rutas y paginas (App Router)
+- `src/components`: componentes reutilizables de UI y layout
+- `src/services`: capa HTTP y clientes de API
+- `src/store`: estado global con Zustand
+- `src/i18n`: internacionalizacion ES/EN
+- `src/styles`: estilos globales y modulares
+- `public`: assets estaticos
+
+## Funcionalidades Destacadas
+
+### 1) Busqueda y Descubrimiento
+
+- buscador global con modo normal y modo IA
+- listado virtualizado para escalar a grandes resultados
+- filtros por categorias, tags y plan (free/premium)
+- pagina de resultados con paginacion incremental
+
+### 2) Experiencia de Asset
+
+- detalle del modelo con galeria e informacion enriquecida
+- soporte multiidioma para contenido visible
+- rutas amigables por slug
+
+### 3) Dashboard Admin
+
+- gestion de assets y metadata
+- herramientas de upload batch
+- sincronizacion de vectores faltantes con feedback en vivo
+- monitoreo de estados y operaciones largas
+
+### 4) Integracion con Backend
+
+- consumo de API REST para auth, assets, pagos y metricas
+- propagacion de parametros de busqueda IA
+- manejo centralizado de token y errores HTTP
+
+## Variables de Entorno Clave
+
+Crear/configurar variables en entorno del frontend:
+
+- `NEXT_PUBLIC_API_BASE_URL` (recomendada)
+- `NEXT_PUBLIC_API_BASE` (compatibilidad)
+- `NEXT_PUBLIC_UPLOADS_BASE` (opcional para resolver imagenes)
+
+Ejemplo local:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_UPLOADS_BASE=http://localhost:3001/uploads
 ```
-front_next/
-│
-├── public/                # Imágenes, logos y archivos estáticos
-├── src/
-│   ├── app/               # Rutas y páginas principales (Next.js App Router)
-│   │   ├── (site)/        # Rutas del sitio (login, register, dashboard, etc.)
-│   │   ├── layout.js      # Layout global
-│   │   └── globals.css    # Estilos globales
-│   ├── components/        # Componentes reutilizables (modales, tablas, botones, etc.)
-│   ├── helpers/           # Utilidades y helpers (alertas, manejo de errores, etc.)
-│   ├── services/          # Servicios para llamadas HTTP y lógica de negocio
-│   ├── store/             # Estado global (Zustand)
-│   ├── i18n/              # Archivos de traducción y configuración de idiomas
-│   └── styles/            # SCSS modular y estilos base
-├── .env                   # Variables de entorno (API URLs, claves, etc.)
-├── package.json           # Dependencias y scripts
-└── README.md              # Este archivo
+
+## Scripts
+
+Desde la carpeta `front_next/`:
+
+```bash
+npm install
+npm run dev
 ```
 
----
+Scripts disponibles:
 
-## ⚙️ Instalación y ejecución
+- `npm run dev`: desarrollo con Turbopack
+- `npm run build`: build de produccion
+- `npm run start`: servir build
+- `npm run lint`: lint del proyecto
 
-1. **Clona el repositorio:**
-	```bash
-	git clone https://github.com/tuusuario/stlhub-front.git
-	cd stlhub-front
-	```
+## Flujo de Desarrollo
 
-2. **Instala las dependencias:**
-	```bash
-	npm install
-	# o
-	yarn install
-	```
+1. Levantar backend
+2. Configurar variables de entorno del frontend
+3. Iniciar app en `localhost:3000`
+4. Validar flujos publicos y de dashboard
 
-3. **Configura las variables de entorno:**
-	- Crea un archivo `.env.local` basado en `.env.example` (si existe).
-	- Ejemplo de variables:
-	  ```env
-	  NEXT_PUBLIC_API_URL=http://localhost:3001/api
-	  NEXT_PUBLIC_FRONT_URL=http://localhost:3000
-	  ```
+## Enfoque de Producto y Portafolio
 
-4. **Ejecuta el servidor de desarrollo:**
-	```bash
-	npm run dev
-	# o
-	yarn dev
-	```
+Este frontend refleja una implementacion orientada a producto real:
 
-5. **Abre la app en tu navegador:**
-	[http://localhost:3000](http://localhost:3000)
+- UX pensada para catalogos grandes
+- interfaz administrativa para operaciones complejas
+- integracion de IA sin sacrificar rendimiento de UI
+- codigo modular y mantenible para evolucion continua
 
----
+## Capturas y Demo
 
-## 🧩 Principales módulos y rutas
+Se recomienda agregar en este README:
 
-- `/login` — Inicio de sesión de usuario
-- `/register` — Registro y activación de cuenta
-- `/forgot-password` — Recuperación de contraseña
-- `/dashboard/assets` — Gestión de assets (admin)
-- `/dashboard/users` — Gestión de usuarios (admin)
-- `/premium` — Página de suscripción premium
-- `/` — Home pública
+- captura de Home
+- captura de Busqueda IA
+- captura del Dashboard de Assets
+- enlace a demo en produccion
 
----
-
-## 🛠️ Tecnologías y librerías clave
-
-- **Next.js** — Framework React para SSR y SSG
-- **Material UI** — Componentes visuales y tablas avanzadas
-- **SweetAlert2** — Alertas y diálogos modernos
-- **Zustand** — Estado global simple y eficiente
-- **SCSS** — Estilos modulares y personalizables
-- **Axios** — Llamadas HTTP centralizadas
-- **MEGA.nz** — Integración para descargas seguras
-
----
-
-## 🌐 Internacionalización
-
-- Español e Inglés
-- Cambia el idioma desde el menú o automáticamente según preferencia del usuario
-
----
-
-## 💡 Consejos de desarrollo
-
-- **Componentiza**: Usa los componentes de `/src/components/common` para mantener consistencia visual.
-- **Centraliza llamadas HTTP**: Usa `HttpService` para todas las peticiones al backend.
-- **Traduce textos**: Usa los helpers de `/src/i18n` para soportar ambos idiomas.
-- **Personaliza estilos**: Modifica los archivos SCSS en `/src/styles` para adaptar la UI a tu marca.
-
----
-
-## 📝 Contribuciones
-
-¡Las contribuciones son bienvenidas!  
-Abre un issue o un pull request con tu mejora o corrección.
-
----
-
-## 🛡️ Seguridad
-
-- Nunca subas tus archivos `.env` ni claves privadas al repositorio.
-- Usa HTTPS en producción.
-- Revisa los permisos de usuario y la protección de rutas en el backend.
-
----
-
-## 📦 Despliegue
-
-Puedes desplegar fácilmente en [Vercel](https://vercel.com/) o cualquier plataforma compatible con Next.js.
-
----
-
-## 📚 Recursos útiles
-
-- [Documentación Next.js](https://nextjs.org/docs)
-- [Material UI](https://mui.com/)
-- [SweetAlert2](https://sweetalert2.github.io/)
-- [MEGAcmd](https://mega.nz/cmd)
-
----
-
-**STL HUB** — Tu plataforma para assets digitales premium, segura y escalable.
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+(Seccion lista para portfolio personal.)
