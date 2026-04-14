@@ -90,6 +90,7 @@ const Home = () => {
   const globalLoading = useStore((s)=>s.globalLoading);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
+  const [modalList, setModalList] = useState([]); // lista de assets de donde vino el asset actual
   // Guardar respuesta cruda
   const [latestRaw, setLatestRaw] = useState([]);
   const [topRaw, setTopRaw] = useState([]);
@@ -308,8 +309,34 @@ const Home = () => {
     })
   ), [catOrder, catMap, cats, language, CAT_SLIDER_LIMIT]);
 
-  const handleOpen = (asset) => { setModalAsset(asset); setModalOpen(true); };
-  const handleClose = () => { setModalOpen(false); setModalAsset(null); };
+  // Build a flat list of all visible assets for modal navigation
+  const allVisibleAssets = useMemo(() => {
+    const all = [...latest, ...free, ...top];
+    catSliders.forEach(cs => all.push(...cs.items));
+    // Deduplicate by id
+    const seen = new Set();
+    return all.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+  }, [latest, free, top, catSliders]);
+
+  const handleOpen = (asset) => {
+    setModalAsset(asset);
+    setModalList(allVisibleAssets);
+    setModalOpen(true);
+  };
+  const handleClose = () => { setModalOpen(false); setModalAsset(null); setModalList([]); };
+
+  const handlePrev = () => {
+    if (!modalList.length || !modalAsset) return;
+    const idx = modalList.findIndex(a => a.id === modalAsset.id);
+    const prevIdx = (idx - 1 + modalList.length) % modalList.length;
+    setModalAsset(modalList[prevIdx]);
+  };
+  const handleNext = () => {
+    if (!modalList.length || !modalAsset) return;
+    const idx = modalList.findIndex(a => a.id === modalAsset.id);
+    const nextIdx = (idx + 1) % modalList.length;
+    setModalAsset(modalList[nextIdx]);
+  };
 
   return (
     <div>
@@ -377,7 +404,7 @@ const Home = () => {
 
 
       {/* Modal */}
-      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} descriptionLimit={200} />
+      <AssetModal open={modalOpen} onClose={handleClose} asset={modalAsset} descriptionLimit={200} onPrev={modalList.length > 1 ? handlePrev : undefined} onNext={modalList.length > 1 ? handleNext : undefined} />
     </div>
   );
 }

@@ -25,6 +25,7 @@ export async function generateMetadata() {
       canonical: `${SITE_URL}/`,
       languages: {
         "es-ES": `${SITE_URL}/`,
+        "en-US": `${SITE_URL}/en/`,
         "x-default": `${SITE_URL}/`,
       },
     },

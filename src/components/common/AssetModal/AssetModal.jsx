@@ -18,7 +18,7 @@ import { Dialog, IconButton, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 
-export default function AssetModal({ open, onClose, asset, descriptionLimit = null }) {
+export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
     const token = useStore((s) => s.token);
     const language = useStore((s) => s.language);
@@ -39,6 +39,8 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     const [reporting, setReporting] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [fullOpen, setFullOpen] = useState(false);
+    const [slideDir, setSlideDir] = useState(''); // 'slide-left' | 'slide-right' | ''
+    const navBusyRef = useRef(false);
 
     const formatDateShort = (value) => {
         if (!value) return 'N/A';
@@ -80,11 +82,19 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     // Estado local para enriquecer datos (categorías, etc.)
     const [data, setData] = useState(asset);
     const loadedDetail = useRef(false);
+    const mainSwiperRef = useRef(null);
 
     useEffect(() => {
         setData(asset);
         loadedDetail.current = false;
     }, [asset?.id]);
+
+    // Clear slide animation class after it plays
+    useEffect(() => {
+        if (!slideDir) return;
+        const timer = setTimeout(() => setSlideDir(''), 400);
+        return () => clearTimeout(timer);
+    }, [slideDir, data?.id]);
 
     useEffect(() => {
         const onEsc = (e) => {
@@ -130,6 +140,27 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     }, [open, data?.id, http]);
 
     if (!data) return null;
+
+    const galleryImages = Array.isArray(data?.images)
+        ? data.images.filter(Boolean)
+        : [];
+    const canSlideGallery = galleryImages.length > 1;
+
+    const triggerAssetSlide = (dir, navFn) => {
+        if (navBusyRef.current || typeof navFn !== 'function') return;
+        navBusyRef.current = true;
+        setSlideDir('');
+        requestAnimationFrame(() => {
+            setSlideDir(dir);
+            setTimeout(() => {
+                navFn();
+            }, 45);
+            setTimeout(() => {
+                navBusyRef.current = false;
+                setSlideDir('');
+            }, 430);
+        });
+    };
 
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -526,7 +557,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     return (
         <>
             <div
-                className={`asset-modal modal fade ${open ? 'show' : ''}`}
+                className={`asset-modal modal fade ${open ? 'show' : ''} ${slideDir}`}
                 style={{ display: open ? 'block' : 'none' }}
                 tabIndex={-1}
                 role="dialog"
@@ -535,6 +566,33 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                 onMouseDown={handleBackdropClick}
             >
                 <div className="modal-dialog modal-dialog-centered">
+                    {/* External prev/next asset arrows */}
+                    {onPrev && (
+                        <button
+                            type="button"
+                            className="asset-nav-prev"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                triggerAssetSlide('slide-right', onPrev);
+                            }}
+                            aria-label={isEn ? 'Previous asset' : 'Asset anterior'}
+                        >
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                    )}
+                    {onNext && (
+                        <button
+                            type="button"
+                            className="asset-nav-next"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                triggerAssetSlide('slide-left', onNext);
+                            }}
+                            aria-label={isEn ? 'Next asset' : 'Siguiente asset'}
+                        >
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                    )}
                     <div className="modal-content asset-modal__content">
                         <div className="topbar">
                             <Link href="/" className="brand" aria-label="Ir al inicio">
@@ -578,6 +636,33 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                
                                 <div className="slider-container" style={{ position: 'relative' }}>
 
+                                    {canSlideGallery && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className="gallery-nav gallery-nav--prev"
+                                                aria-label={isEn ? 'Previous image' : 'Imagen anterior'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    mainSwiperRef.current?.slidePrev();
+                                                }}
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="gallery-nav gallery-nav--next"
+                                                aria-label={isEn ? 'Next image' : 'Siguiente imagen'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    mainSwiperRef.current?.slideNext();
+                                                }}
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                            </button>
+                                        </>
+                                    )}
+
                                      {/* Botón pantalla completa */}
                                     <IconButton
                                         onClick={() => setFullOpen(true)}
@@ -590,12 +675,14 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                     </IconButton>
                                     <Swiper
                                         modules={[Navigation, Pagination, Zoom]}
-                                        navigation
                                         pagination
-                                        loop
+                                        loop={canSlideGallery}
                                         zoom={{ maxRatio: 3 }}
+                                        onSwiper={(swiper) => {
+                                            mainSwiperRef.current = swiper;
+                                        }}
                                     >
-                                        {(data.images || [])
+                                        {galleryImages
                                             .map((src, idx) => (
                                                 <SwiperSlide key={idx}>
                                                     <div className="swiper-zoom-container">
@@ -661,10 +748,10 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                     modules={[Navigation, Pagination, Zoom]}
                                     navigation
                                     pagination
-                                    loop
+                                    loop={canSlideGallery}
                                     zoom={{ maxRatio: 3 }}
                                 >
-                                    {(data.images || []).map((src, idx) => (
+                                    {galleryImages.map((src, idx) => (
                                         <SwiperSlide key={`full-${idx}`}>
                                             <div className="swiper-zoom-container">
                                                 <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
