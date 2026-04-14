@@ -113,5 +113,3 @@ Se recomienda agregar en este README:
 - captura de Busqueda IA
 - captura del Dashboard de Assets
 - enlace a demo en produccion
-
-(Seccion lista para portfolio personal.)
