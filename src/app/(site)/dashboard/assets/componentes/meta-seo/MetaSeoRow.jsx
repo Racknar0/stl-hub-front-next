@@ -98,87 +98,27 @@ export default function MetaSeoRow({
                                     },
                                 }}
                             >
-                                <Box
-                                    component="img"
-                                    src={imgUrl(img)}
-                                    alt={`asset-${id}-${originalIndex + 1}`}
-                                    onClick={() => onOpenImagePreview(imgUrl(img))}
-                                    sx={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        display: 'block',
-                                    }}
-                                />
+                                <Box component="img" src={imgUrl(img)} alt={`asset-${id}-${originalIndex + 1}`} onClick={() => onOpenImagePreview(imgUrl(img))} sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', }} />
 
                                 <Box
                                     className="meta-image-actions"
-                                    sx={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'space-between',
-                                        p: 0.5,
-                                        opacity: 0,
-                                        transition: 'opacity 0.18s ease',
-                                        background:
-                                            'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))',
-                                    }}
+                                    sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease', background: 'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))', }}
                                 >
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                        }}
-                                    >
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', }} >
                                         <Chip
                                             size="small"
-                                            label={
-                                                originalIndex === 0
-                                                    ? 'Primera'
-                                                    : `#${originalIndex + 1}`
-                                            }
-                                            color={
-                                                originalIndex === 0
-                                                    ? 'success'
-                                                    : 'default'
-                                            }
-                                            sx={{
-                                                height: 22,
-                                                '& .MuiChip-label': {
-                                                    px: 0.8,
-                                                    fontSize: 11,
-                                                },
-                                            }}
+                                            label={ originalIndex === 0 ? 'Primera' : `#${originalIndex + 1}` }
+                                            color={ originalIndex === 0 ? 'success' : 'default' }
+                                            sx={{ height: 22, '& .MuiChip-label': { px: 0.8, fontSize: 11, }, }}
                                         />
 
                                         <Tooltip title="Poner de primera">
                                             <span>
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void onSetFirstImage(
-                                                            id,
-                                                            originalIndex,
-                                                        );
-                                                    }}
-                                                    disabled={
-                                                        metaBusy ||
-                                                        loading ||
-                                                        originalIndex === 0
-                                                    }
-                                                    sx={{
-                                                        bgcolor:
-                                                            'rgba(2,6,23,0.68)',
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            bgcolor:
-                                                                'rgba(15,23,42,0.9)',
-                                                        },
-                                                    }}
+                                                    onClick={(e) => { e.stopPropagation(); void onSetFirstImage( id, originalIndex, ); }}
+                                                    disabled={ metaBusy || loading || originalIndex === 0 }
+                                                    sx={{ bgcolor: 'rgba(2,6,23,0.68)', color: '#fff', '&:hover': { bgcolor: 'rgba(15,23,42,0.9)', }, }}
                                                 >
                                                     <VerticalAlignTopIcon fontSize="small" />
                                                 </IconButton>
@@ -186,33 +126,14 @@ export default function MetaSeoRow({
                                         </Tooltip>
                                     </Box>
 
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'flex-end',
-                                        }}
-                                    >
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', }} >
                                         <Tooltip title="Eliminar imagen">
                                             <span>
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void onDeleteImage(
-                                                            id,
-                                                            originalIndex,
-                                                        );
-                                                    }}
+                                                    onClick={(e) => { e.stopPropagation(); void onDeleteImage( id, originalIndex, ); }}
                                                     disabled={loading}
-                                                    sx={{
-                                                        bgcolor:
-                                                            'rgba(127,29,29,0.78)',
-                                                        color: '#fff',
-                                                        '&:hover': {
-                                                            bgcolor:
-                                                                'rgba(153,27,27,0.95)',
-                                                        },
-                                                    }}
+                                                    sx={{ bgcolor: 'rgba(127,29,29,0.78)', color: '#fff', '&:hover': { bgcolor: 'rgba(153,27,27,0.95)', }, }}
                                                 >
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
@@ -225,34 +146,10 @@ export default function MetaSeoRow({
                     })}
 
                     {rowImages.length > 3 && (
-                        <Stack
-                            spacing={0.5}
-                            alignItems="center"
-                            sx={{ ml: 1, flexShrink: 0 }}
-                        >
-                            <Tooltip
-                                title={
-                                    metaExpanded
-                                        ? 'Mostrar solo 3'
-                                        : `Mostrar todas (${rowImages.length})`
-                                }
-                            >
+                        <Stack spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }} >
+                            <Tooltip title={ metaExpanded ? 'Mostrar solo 3' : `Mostrar todas (${rowImages.length})` } >
                                 <span>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() =>
-                                            onToggleExpandedImages(id)
-                                        }
-                                        disabled={loading}
-                                        sx={{
-                                            bgcolor: 'rgba(15,23,42,0.72)',
-                                            color: '#fff',
-                                            '&:hover': {
-                                                bgcolor:
-                                                    'rgba(30,41,59,0.95)',
-                                            },
-                                        }}
-                                    >
+                                    <IconButton size="small" onClick={() => onToggleExpandedImages(id) } disabled={loading} sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)', }, }} >
                                         {metaExpanded ? (
                                             <UnfoldLessIcon fontSize="small" />
                                         ) : (
@@ -261,10 +158,7 @@ export default function MetaSeoRow({
                                     </IconButton>
                                 </span>
                             </Tooltip>
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                            >
+                            <Typography variant="caption" color="text.secondary" >
                                 {metaExpanded
                                     ? `${rowImages.length}`
                                     : `+${rowImages.length - 3}`}
@@ -273,17 +167,7 @@ export default function MetaSeoRow({
                     )}
 
                     {!rowImages.length && (
-                        <Box
-                            sx={{
-                                width: 250,
-                                height: 250,
-                                borderRadius: 1.5,
-                                display: 'grid',
-                                placeItems: 'center',
-                                bgcolor: 'rgba(120,120,120,0.15)',
-                                border: '1px dashed rgba(120,120,120,0.3)',
-                            }}
-                        >
+                        <Box sx={{ width: 250, height: 250, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
                             <Typography variant="caption" color="text.secondary">
                                 N/A
                             </Typography>
@@ -305,18 +189,7 @@ export default function MetaSeoRow({
                         }
                         disabled={metaBusy || loading}
                     />
-                    <TextField
-                        size="small"
-                        fullWidth
-                        value={draft.titleEn}
-                        placeholder="Name EN"
-                        onChange={(e) =>
-                            onUpdateDraft(id, {
-                                titleEn: e.target.value,
-                            })
-                        }
-                        disabled={metaBusy || loading}
-                    />
+                    <TextField size="small" fullWidth value={draft.titleEn} placeholder="Name EN" onChange={(e) => onUpdateDraft(id, { titleEn: e.target.value, }) } disabled={metaBusy || loading} />
                 </Stack>
             </TableCell>
             <TableCell>
@@ -340,16 +213,7 @@ export default function MetaSeoRow({
                             })
                         }
                         disabled={metaBusy || loading}
-                        sx={{
-                            '& .MuiInputBase-root': {
-                                alignItems: 'stretch',
-                            },
-                            '& .MuiInputBase-inputMultiline': {
-                                overflow: 'auto !important',
-                                resize: 'vertical',
-                                minHeight: '40px',
-                            },
-                        }}
+                        sx={{ '& .MuiInputBase-root': { alignItems: 'stretch', }, '& .MuiInputBase-inputMultiline': { overflow: 'auto !important', resize: 'vertical', minHeight: '25px', }, }}
                     />
                     <TextField
                         size="small"
@@ -364,16 +228,7 @@ export default function MetaSeoRow({
                             })
                         }
                         disabled={metaBusy || loading}
-                        sx={{
-                            '& .MuiInputBase-root': {
-                                alignItems: 'stretch',
-                            },
-                            '& .MuiInputBase-inputMultiline': {
-                                overflow: 'auto !important',
-                                resize: 'vertical',
-                                minHeight: '40px',
-                            },
-                        }}
+                        sx={{ '& .MuiInputBase-root': { alignItems: 'stretch', }, '& .MuiInputBase-inputMultiline': { overflow: 'auto !important', resize: 'vertical', minHeight: '25px', }, }}
                     />
                 </Stack>
             </TableCell>
@@ -449,11 +304,7 @@ export default function MetaSeoRow({
                             .toLowerCase();
                         return !!aSlug && !!bSlug && aSlug === bSlug;
                     }}
-                    onChange={(_, value) =>
-                        onUpdateDraft(id, {
-                            tags: normalizeMetaTagList(value),
-                        })
-                    }
+                    onChange={(_, value) => onUpdateDraft(id, { tags: normalizeMetaTagList(value), }) }
                     renderInput={(params) => (
                         <TextField {...params} size="small" placeholder="Tags" />
                     )}
@@ -462,36 +313,11 @@ export default function MetaSeoRow({
                         value.map((option, index) => {
                             const { key, ...tagProps } = getTagProps({ index });
                             return (
-                                <Chip
-                                    key={key}
-                                    size="small"
-                                    label={
-                                        option.name ||
-                                        option.es ||
-                                        option.nameEn ||
-                                        option.en ||
-                                        option.slug ||
-                                        option
-                                    }
-                                    {...tagProps}
-                                    sx={{ m: '2px' }}
-                                />
+                                <Chip key={key} size="small" label={ option.name || option.es || option.nameEn || option.en || option.slug || option } {...tagProps} sx={{ m: '2px' }} />
                             );
                         })
                     }
-                    sx={{
-                        '& .MuiInputBase-root': {
-                            maxHeight: 110,
-                            minHeight: 110,
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            alignItems: 'flex-start',
-                            alignContent: 'flex-start',
-                            p: '4px 34px 4px 4px !important',
-                        },
-                    }}
+                    sx={{ '& .MuiInputBase-root': { maxHeight: 110, minHeight: 110, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', p: '4px 34px 4px 4px !important', }, }}
                 />
             </TableCell>
             <TableCell align="right">
@@ -515,16 +341,7 @@ export default function MetaSeoRow({
 
                     <Tooltip title="Generar descripción IA">
                         <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => onGenerateSingleDescription(id)}
-                                disabled={metaBusy || loading}
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1.5,
-                                }}
-                            >
+                            <IconButton size="small" onClick={() => onGenerateSingleDescription(id)} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, }} >
                                 <AutoAwesomeIcon fontSize="small" />
                             </IconButton>
                         </span>
@@ -532,19 +349,7 @@ export default function MetaSeoRow({
 
                     <Tooltip title="Guardar fila">
                         <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => {
-                                    void onSaveRow(id);
-                                }}
-                                disabled={metaBusy || loading}
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1.5,
-                                    color: '#16a34a',
-                                }}
-                            >
+                            <IconButton size="small" onClick={() => { void onSaveRow(id); }} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, color: '#16a34a', }} >
                                 <SaveIcon fontSize="small" />
                             </IconButton>
                         </span>

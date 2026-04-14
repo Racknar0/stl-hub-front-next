@@ -1,9 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-// Importar directamente el componente cliente (puede usarse dentro de un Server Component)
-import AssetModalPageClient from './AssetModalPageClient';
 import styles from './AssetSeoBackground.module.css';
+import ImageLightbox from './ImageLightbox';
 
 export const revalidate = 3600; // ISR 1h
 
@@ -261,89 +260,126 @@ export default async function AssetPage({ params }) {
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
 
             <main className={styles.page}>
+                {/* ── Back Button ── */}
+                <div className={styles.backBar}>
+                    <Link href="/" className={styles.backBtn}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {pageIsEn ? 'Back to catalog' : 'Volver al catálogo'}
+                    </Link>
+                </div>
+
+                {/* ── Hero ── */}
                 <section className={styles.hero}>
                     <div
                         className={styles.heroBackground}
-                        style={{ backgroundImage: `linear-gradient(120deg, rgba(9, 14, 29, 0.88), rgba(11, 16, 32, 0.62)), url('${heroImage}')` }}
+                        style={{ backgroundImage: `linear-gradient(180deg, rgba(7,11,21,0.15) 0%, rgba(7,11,21,0.6) 50%, rgba(7,11,21,0.95) 100%), url('${heroImage}')` }}
                         aria-hidden="true"
                     />
                     <div className={styles.heroInner}>
                         <p className={styles.kicker}>STL HUB · {pageIsEn ? '3D Model Sheet' : 'Ficha de modelo 3D'}</p>
                         <h1 className={styles.title}>{displayTitle}</h1>
                         <p className={styles.subtitle}>
-                            {displayDesc}
+                            {displayDesc.length > 200 ? displayDesc.slice(0, 200) + '…' : displayDesc}
                         </p>
                         <div className={styles.badges}>
                             <span className={`${styles.badge} ${asset.isPremium ? styles.badgePremium : styles.badgeFree}`}>
-                                {asset.isPremium ? premiumLabel : freeLabel}
+                                {asset.isPremium ? '⭐ ' + premiumLabel : '✓ ' + freeLabel}
                             </span>
                             {categories.slice(0, 3).map((cat, i) => (
                                 <span key={`${cat.slug || cat.es}-${i}`} className={styles.badgeMuted}>
-                                    {cat.es}
+                                    {pageIsEn ? (cat.en || cat.es) : cat.es}
                                 </span>
                             ))}
-                            {asset.slug ? <span className={styles.badgeMuted}>Slug: {asset.slug}</span> : null}
+                            {Number(asset.downloads) > 0 && (
+                                <span className={styles.downloadsBadge}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    {asset.downloads} downloads
+                                </span>
+                            )}
                         </div>
                     </div>
                 </section>
 
-                <section className={styles.grid}>
-                    <article className={styles.card}>
-                        <h2>{pageIsEn ? 'Description' : 'Descripcion en espanol'}</h2>
-                        <p>{displayDesc}</p>
-                    </article>
-
-                    <article className={styles.card}>
-                        <h2>{pageIsEn ? 'Technical Sheet' : 'Ficha tecnica'}</h2>
-                        <dl className={styles.metaList}>
-                            <div><dt>ID</dt><dd>{asset.id || 'N/A'}</dd></div>
-                            <div><dt>Slug</dt><dd>{asset.slug || 'N/A'}</dd></div>
-                            <div><dt>{pageIsEn ? 'Type' : 'Estado'}</dt><dd>{asset.isPremium ? (pageIsEn ? 'Premium content' : 'Contenido premium') : (pageIsEn ? 'Free content' : 'Contenido gratuito')}</dd></div>
-                            <div><dt>{pageIsEn ? 'Published' : 'Publicado'}</dt><dd>{formatDate(asset.createdAt)}</dd></div>
-                            <div><dt>{pageIsEn ? 'Updated' : 'Actualizado'}</dt><dd>{formatDate(asset.updatedAt)}</dd></div>
-                            <div><dt>{pageIsEn ? 'File size' : 'Tamano archivo'}</dt><dd>{formatBytes(asset.archiveSizeB || asset.fileSizeB)}</dd></div>
-                            <div><dt>{pageIsEn ? 'Category' : 'Categoria principal'}</dt><dd>{pageIsEn ? (categories[0]?.en || categories[0]?.es || 'N/A') : (categories[0]?.es || 'N/A')}</dd></div>
-                        </dl>
-                    </article>
-
-                    <article className={styles.card}>
-                        <h2>{pageIsEn ? 'Categories & Tags' : 'Categorias y tags'}</h2>
-                        <p className={styles.metaHint}>{pageIsEn ? 'Thematic labels for navigation and indexing:' : 'Etiquetas tematicas para navegacion e indexacion:'}</p>
-                        <div className={styles.tagWrap}>
-                            {mergedTags.length === 0 ? <span className={styles.badgeMuted}>Sin tags</span> : null}
-                            {mergedTags.map((t, i) => (
-                                <Link key={`${t.slug}-${i}`} href={`/tags/${encodeURIComponent(t.slug)}`} className={styles.tagLink}>
-                                    {t.label}
-                                </Link>
-                            ))}
-                        </div>
-                        <div className={styles.categoryWrap}>
-                            {categories.map((cat, i) => (
-                                <span key={`${cat.slug || cat.es}-${i}`} className={styles.categoryChip}>
-                                    {cat.es}{cat.en && cat.en !== cat.es ? ` / ${cat.en}` : ''}
+                {/* ── Content ── */}
+                <div className={styles.contentWrap}>
+                    <section className={styles.grid}>
+                        {/* Technical Sheet */}
+                        <article className={styles.card}>
+                            <h2>
+                                <span className={styles.cardIcon}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 14l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </span>
-                            ))}
-                        </div>
-                    </article>
-                </section>
+                                {pageIsEn ? 'Technical Sheet' : 'Ficha técnica'}
+                            </h2>
+                            <dl className={styles.metaList}>
+                                <div><dt>ID</dt><dd>{asset.id || 'N/A'}</dd></div>
+                                <div><dt>{pageIsEn ? 'Type' : 'Tipo'}</dt><dd>{asset.isPremium ? (pageIsEn ? 'Premium content' : 'Contenido premium') : (pageIsEn ? 'Free content' : 'Contenido gratuito')}</dd></div>
+                                <div><dt>{pageIsEn ? 'Published' : 'Publicado'}</dt><dd>{formatDate(asset.createdAt)}</dd></div>
+                                <div><dt>{pageIsEn ? 'Updated' : 'Actualizado'}</dt><dd>{formatDate(asset.updatedAt)}</dd></div>
+                                <div><dt>{pageIsEn ? 'File size' : 'Tamaño archivo'}</dt><dd>{formatBytes(asset.archiveSizeB || asset.fileSizeB)}</dd></div>
+                                <div><dt>{pageIsEn ? 'Category' : 'Categoría principal'}</dt><dd>{pageIsEn ? (categories[0]?.en || categories[0]?.es || 'N/A') : (categories[0]?.es || 'N/A')}</dd></div>
+                            </dl>
+                        </article>
 
-                {imgList.length > 0 ? (
-                    <section className={styles.galleryCard}>
-                        <h2>{pageIsEn ? 'Model Image Gallery' : 'Galeria de imagenes del modelo STL'}</h2>
-                        <div className={styles.gallery}>
-                            {imgList.map((img, i) => (
-                                <figure key={`${img}-${i}`} className={styles.figure}>
-                                    <img loading={i === 0 ? 'eager' : 'lazy'} src={img} alt={`${asset.title} render ${i + 1}`} />
-                                    <figcaption>Vista {i + 1}</figcaption>
-                                </figure>
-                            ))}
-                        </div>
+                        {/* Categories & Tags */}
+                        <article className={styles.card}>
+                            <h2>
+                                <span className={styles.cardIcon}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </span>
+                                {pageIsEn ? 'Categories & Tags' : 'Categorías y Tags'}
+                            </h2>
+                            <p className={styles.metaHint}>{pageIsEn ? 'Thematic labels for navigation and indexing:' : 'Etiquetas temáticas para navegación e indexación:'}</p>
+                            <div className={styles.tagWrap}>
+                                {mergedTags.length === 0 ? <span className={styles.badgeMuted}>Sin tags</span> : null}
+                                {mergedTags.map((t, i) => (
+                                    <Link key={`${t.slug}-${i}`} href={`/tags/${encodeURIComponent(t.slug)}`} className={styles.tagLink}>
+                                        #{t.label}
+                                    </Link>
+                                ))}
+                            </div>
+                            <div className={styles.categoryWrap}>
+                                {categories.map((cat, i) => (
+                                    <span key={`${cat.slug || cat.es}-${i}`} className={styles.categoryChip}>
+                                        {pageIsEn ? (cat.en || cat.es) : cat.es}{cat.en && cat.en !== cat.es ? ` / ${cat.en}` : ''}
+                                    </span>
+                                ))}
+                            </div>
+                        </article>
                     </section>
+                </div>
+
+                {/* ── Description ── */}
+                {displayDesc && (
+                    <div className={styles.contentWrap}>
+                        <section className={styles.descriptionCard}>
+                            <h2>{pageIsEn ? 'Description' : 'Descripción'}</h2>
+                            <p>{displayDesc}</p>
+                        </section>
+                    </div>
+                )}
+
+                {/* ── Gallery ── */}
+                {imgList.length > 0 ? (
+                    <div className={styles.contentWrap}>
+                        <section className={styles.galleryCard}>
+                            <h2>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#00e7ff' }}>
+                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                                    <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                {pageIsEn ? 'Model Image Gallery' : 'Galería de imágenes del modelo STL'}
+                            </h2>
+                            <div className={styles.gallery}>
+                                <ImageLightbox images={imgList} alt={asset.title || 'STL Model'} />
+                            </div>
+                        </section>
+                    </div>
                 ) : null}
             </main>
-
-            {/* Modal visual interactivo */}
-            <AssetModalPageClient asset={asset} />
         </>
     );
 }
