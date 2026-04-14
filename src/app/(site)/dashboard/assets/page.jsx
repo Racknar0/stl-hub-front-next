@@ -1679,49 +1679,23 @@ export default function AssetsAdminPage() {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 600 }}
-                            >
-                                <Typography
-                                    component="span"
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{ mr: 0.5 }}
-                                >
+                            <Typography variant="body2" sx={{ fontWeight: 600 }} >
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
                                     es:
                                 </Typography>
                                 {titleEs}
                             </Typography>
                             {titleEn ? (
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block', mt: 0.3 }}
-                                >
-                                    <Typography
-                                        component="span"
-                                        variant="caption"
-                                        color="text.secondary"
-                                        sx={{ mr: 0.5 }}
-                                    >
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }} >
+                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
                                         en:
                                     </Typography>
                                     {titleEn}
                                 </Typography>
                             ) : null}
                             {archiveName ? (
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block', mt: 0.3 }}
-                                >
-                                    <Typography
-                                        component="span"
-                                        variant="caption"
-                                        color="text.secondary"
-                                        sx={{ mr: 0.5 }}
-                                    >
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }} >
+                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
                                         file:
                                     </Typography>
                                     {archiveName}
@@ -1774,22 +1748,8 @@ export default function AssetsAdminPage() {
                     const bg = isPrem ? '#ffeb3b33' : '#4caf5033'; // amarillo suave para P, verde suave para F
                     const fg = isPrem ? '#fbc02d' : '#43a047';
                     return (
-                        <Box
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: 26,
-                                height: 22,
-                                px: 0.5,
-                                borderRadius: 8,
-                                bgcolor: bg,
-                            }}
-                        >
-                            <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 700, color: fg }}
-                            >
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 26, height: 22, px: 0.5, borderRadius: 8, bgcolor: bg, }} >
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: fg }} >
                                 {isPrem ? 'P' : 'F'}
                             </Typography>
                         </Box>
@@ -1806,30 +1766,14 @@ export default function AssetsAdminPage() {
                 id: 'sizeB',
                 header: 'Tamaño',
                 accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
-                Cell: ({ cell }) => (
-                    <Typography variant="body2">
-                        {formatMBfromB(cell.getValue())}
-                    </Typography>
-                ),
+                Cell: ({ cell }) => ( <Typography variant="body2"> {formatMBfromB(cell.getValue())} </Typography> ),
                 size: 100,
             },
             {
                 header: 'Cuenta',
                 accessorFn: (row) => row.account?.alias || row.accountId,
                 size: 140,
-                Cell: ({ row }) => (
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            maxWidth: 120,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
-                        {row.original.account?.alias || row.original.accountId}
-                    </Typography>
-                ),
+                Cell: ({ row }) => ( <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }} > {row.original.account?.alias || row.original.accountId} </Typography> ),
             },
             {
                 header: 'Subido',
@@ -1837,12 +1781,7 @@ export default function AssetsAdminPage() {
                 size: 150,
                 Cell: ({ cell }) => {
                     const v = cell.getValue();
-                    if (!v)
-                        return (
-                            <Typography variant="body2" color="text.secondary">
-                                -
-                            </Typography>
-                        );
+                    if (!v) return ( <Typography variant="body2" color="text.secondary"> - </Typography> );
                     const d = new Date(v);
                     const text = Number.isNaN(d.getTime())
                         ? String(v)
@@ -1857,16 +1796,8 @@ export default function AssetsAdminPage() {
                 Cell: ({ cell }) =>
                     cell.getValue() ? (
                         <Typography variant="body2">
-                            <LinkIcon
-                                fontSize="small"
-                                style={{ verticalAlign: 'middle' }}
-                            />{' '}
-                            <MUILink
-                                href={cell.getValue()}
-                                target="_blank"
-                                rel="noreferrer"
-                                underline="hover"
-                            >
+                            <LinkIcon fontSize="small" style={{ verticalAlign: 'middle' }} />{' '}
+                            <MUILink href={cell.getValue()} target="_blank" rel="noreferrer" underline="hover" >
                                 Abrir
                             </MUILink>
                         </Typography>
@@ -1900,34 +1831,12 @@ export default function AssetsAdminPage() {
             }
         },
         state: { isLoading: loading, pagination: { pageIndex, pageSize } },
-        muiPaginationProps: {
-            rowsPerPageOptions: [10, 25, 50, 100, 200, 300, 400, 500, 1000],
-        },
+        muiPaginationProps: { rowsPerPageOptions: [10, 25, 50, 100, 200, 300, 400, 500, 1000], },
         muiTableContainerProps: {
-            sx: {
-                height: {
-                    xs: 'calc(100vh - 220px)',
-                    md: 'calc(100vh - 240px)',
-                },
-                overflowX: 'auto',
-            },
+            sx: { height: { xs: 'calc(100vh - 220px)', md: 'calc(100vh - 240px)', }, overflowX: 'auto', },
         },
-        muiTopToolbarProps: {
-            sx: {
-                position: 'sticky',
-                top: 0,
-                zIndex: 2,
-                bgcolor: 'background.default',
-            },
-        },
-        muiBottomToolbarProps: {
-            sx: {
-                position: 'sticky',
-                bottom: 0,
-                zIndex: 2,
-                bgcolor: 'background.default',
-            },
-        },
+        muiTopToolbarProps: { sx: { position: 'sticky', top: 0, zIndex: 2, bgcolor: 'background.default', }, },
+        muiBottomToolbarProps: { sx: { position: 'sticky', bottom: 0, zIndex: 2, bgcolor: 'background.default', }, },
         muiTablePaperProps: { sx: { width: '100%' } },
         enableColumnFilters: false,
         enableGlobalFilter: false,
@@ -2624,28 +2533,80 @@ export default function AssetsAdminPage() {
 
     const saveMetaSelected = async () => {
         if (!metaSelectedIds.length) return;
-        let okCount = 0;
-        let failCount = 0;
         setMetaBusy(true);
-        for (const id of metaSelectedIds) {
-            try {
-                // eslint-disable-next-line no-await-in-loop
-                await saveMetaRow(id, { silent: true });
-                okCount += 1;
-            } catch {
-                failCount += 1;
+        try {
+            const items = metaSelectedIds
+                .map((assetId) => {
+                    const id = Number(assetId);
+                    const draft = metaDraftMap[id];
+                    if (!Number.isFinite(id) || id <= 0 || !draft) return null;
+
+                    const categoriesPayload = normalizeMetaCategoryList(
+                        draft.categories,
+                    )
+                        .map((c) =>
+                            String(c.slug || c.name || '')
+                                .trim()
+                                .toLowerCase(),
+                        )
+                        .filter(Boolean);
+
+                    const tagsPayload = normalizeMetaTagList(draft.tags)
+                        .map((t) =>
+                            String(t.slug || t.name || '')
+                                .trim()
+                                .toLowerCase(),
+                        )
+                        .filter(Boolean);
+
+                    return {
+                        id,
+                        title: String(draft.title || '').trim(),
+                        titleEn: String(draft.titleEn || '').trim(),
+                        description: String(draft.description || '').trim(),
+                        descriptionEn: String(draft.descriptionEn || '').trim(),
+                        categories: categoriesPayload,
+                        tags: tagsPayload,
+                    };
+                })
+                .filter(Boolean);
+
+            if (!items.length) {
+                await errorAlert(
+                    'Sin cambios',
+                    'No hay borradores válidos para guardar en selección.',
+                );
+                return;
             }
-        }
-        setMetaBusy(false);
-        setRefreshTick((n) => n + 1);
-        if (okCount > 0) {
-            await successAlert('Guardado', `Se actualizaron ${okCount} assets`);
-        }
-        if (failCount > 0) {
+
+            const res = await http.postData('/assets/meta/save-selected', {
+                items,
+            });
+
+            const okCount = Number(res?.data?.updated || 0);
+            const failCount = Number(res?.data?.failed || 0);
+
+            setRefreshTick((n) => n + 1);
+            if (okCount > 0) {
+                await successAlert(
+                    'Guardado',
+                    `Se actualizaron ${okCount} assets`,
+                );
+            }
+            if (failCount > 0) {
+                await errorAlert(
+                    'Parcial',
+                    `Fallaron ${failCount} assets al guardar`,
+                );
+            }
+        } catch (e) {
             await errorAlert(
-                'Parcial',
-                `Fallaron ${failCount} assets al guardar`,
+                'Error',
+                e?.response?.data?.message ||
+                    'No se pudo guardar la selección',
             );
+        } finally {
+            setMetaBusy(false);
         }
     };
 
@@ -2995,64 +2956,31 @@ export default function AssetsAdminPage() {
                             justifyContent="space-between"
                         >
                             <Box>
-                                <Typography
-                                    variant="h6"
-                                    sx={{ fontWeight: 800 }}
-                                >
+                                <Typography variant="h6" sx={{ fontWeight: 800 }} >
                                     SIMILAR-IMAGES
                                 </Typography>
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
+                                <Typography variant="body2" color="text.secondary" >
                                     Vista preliminar por bloques para detectar
                                     posibles duplicados y decidir qué eliminar.
                                 </Typography>
                             </Box>
 
-                            <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
-                                spacing={1}
-                            >
-                                <Button
-                                    variant="contained"
-                                    onClick={analyzeSimilarAssets}
-                                    disabled={similarLoading}
-                                >
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} >
+                                <Button variant="contained" onClick={analyzeSimilarAssets} disabled={similarLoading} >
                                     Analizar todos los assets
                                 </Button>
-                                <Button
-                                    variant="outlined"
-                                    onClick={analyzeSimilarAssets}
-                                    disabled={similarLoading}
-                                >
+                                <Button variant="outlined" onClick={analyzeSimilarAssets} disabled={similarLoading} >
                                     Reanalizar
                                 </Button>
-                                <Button
-                                    variant="outlined"
-                                    color="secondary"
-                                    onClick={startHashBackfill}
-                                    disabled={
-                                        similarLoading ||
-                                        similarBackfill.running
-                                    }
-                                >
+                                <Button variant="outlined" color="secondary" onClick={startHashBackfill} disabled={ similarLoading || similarBackfill.running } >
                                     Generar hash faltantes
                                 </Button>
                             </Stack>
                         </Stack>
 
-                        <Stack
-                            direction={{ xs: 'column', md: 'row' }}
-                            spacing={2}
-                            alignItems={{ xs: 'stretch', md: 'center' }}
-                            sx={{ mt: 2 }}
-                        >
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mt: 2 }} >
                             <Box sx={{ minWidth: { xs: '100%', md: 280 } }}>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                >
+                                <Typography variant="caption" color="text.secondary" >
                                     Umbral de similitud: {similarThreshold}%
                                 </Typography>
                                 <Slider
@@ -3068,62 +2996,19 @@ export default function AssetsAdminPage() {
                                 />
                             </Box>
 
-                            <Stack
-                                direction="row"
-                                spacing={1}
-                                flexWrap="wrap"
-                                useFlexGap
-                            >
-                                <Chip
-                                    label={`Grupos: ${similarGroups.length}`}
-                                />
-                                <Chip
-                                    label={`Mostrando: ${visibleSimilarGroups.length}/${similarGroups.length}`}
-                                />
-                                <Chip
-                                    label={`Pares descartados: ${ignoredPairsCount}`}
-                                    color={
-                                        ignoredPairsCount
-                                            ? 'default'
-                                            : 'default'
-                                    }
-                                />
-                                <Chip
-                                    label={`Seleccionados: ${selectedSimilarIds.length}`}
-                                    color={
-                                        selectedSimilarIds.length
-                                            ? 'warning'
-                                            : 'default'
-                                    }
-                                />
-                                <Chip
-                                    label={`Espacio estimado: ${formatMBfromB(selectedSimilarBytes)}`}
-                                    color="info"
-                                />
-                                <Chip
-                                    label={`Assets: ${similarHashStats.assetsTotal}`}
-                                />
-                                <Chip
-                                    label={`Hashes: ${similarHashStats.hashRows}`}
-                                    color="secondary"
-                                />
-                                <Chip
-                                    label={`Backfill: ${similarBackfill.running ? 'ejecutando' : 'idle'}`}
-                                    color={
-                                        similarBackfill.running
-                                            ? 'warning'
-                                            : 'default'
-                                    }
-                                />
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap >
+                                <Chip label={`Grupos: ${similarGroups.length}`} />
+                                <Chip label={`Mostrando: ${visibleSimilarGroups.length}/${similarGroups.length}`} />
+                                <Chip label={`Pares descartados: ${ignoredPairsCount}`} color={ ignoredPairsCount ? 'default' : 'default' } />
+                                <Chip label={`Seleccionados: ${selectedSimilarIds.length}`} color={ selectedSimilarIds.length ? 'warning' : 'default' } />
+                                <Chip label={`Espacio estimado: ${formatMBfromB(selectedSimilarBytes)}`} color="info" />
+                                <Chip label={`Assets: ${similarHashStats.assetsTotal}`} />
+                                <Chip label={`Hashes: ${similarHashStats.hashRows}`} color="secondary" />
+                                <Chip label={`Backfill: ${similarBackfill.running ? 'ejecutando' : 'idle'}`} color={ similarBackfill.running ? 'warning' : 'default' } />
                             </Stack>
 
                             {ignoredPairsCount > 0 && (
-                                <Button
-                                    variant="text"
-                                    size="small"
-                                    onClick={reactivateDismissedGroups}
-                                    disabled={similarLoading}
-                                >
+                                <Button variant="text" size="small" onClick={reactivateDismissedGroups} disabled={similarLoading} >
                                     Reactivar descartes
                                 </Button>
                             )}
@@ -3131,11 +3016,7 @@ export default function AssetsAdminPage() {
 
                         {similarLoading && <LinearProgress sx={{ mt: 2 }} />}
                         {!!similarProgress.total && (
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ mt: 1, display: 'block' }}
-                            >
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }} >
                                 Procesados: {similarProgress.done} /{' '}
                                 {similarProgress.total}
                             </Typography>
@@ -3143,15 +3024,7 @@ export default function AssetsAdminPage() {
                         {(similarBackfill.running ||
                             similarBackfill.processedAssets > 0 ||
                             similarBackfill.lastError) && (
-                            <Typography
-                                variant="caption"
-                                color={
-                                    similarBackfill.lastError
-                                        ? 'error'
-                                        : 'text.secondary'
-                                }
-                                sx={{ mt: 1, display: 'block' }}
-                            >
+                            <Typography variant="caption" color={ similarBackfill.lastError ? 'error' : 'text.secondary' } sx={{ mt: 1, display: 'block' }} >
                                 Hash backfill: assets{' '}
                                 {similarBackfill.processedAssets}/
                                 {similarBackfill.totalAssets || '...'} ·
@@ -3168,40 +3041,20 @@ export default function AssetsAdminPage() {
                             </Typography>
                         )}
                         {similarError && (
-                            <Typography
-                                variant="caption"
-                                color="error"
-                                sx={{ mt: 1, display: 'block' }}
-                            >
+                            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }} >
                                 {similarError}
                             </Typography>
                         )}
                     </Paper>
 
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                                xs: '1fr',
-                                lg: 'minmax(0, 1fr) 320px',
-                            },
-                            gap: 2,
-                            alignItems: 'start',
-                        }}
-                    >
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 320px', }, gap: 2, alignItems: 'start', }} >
                         <Stack spacing={2}>
                             {!similarGroups.length && !similarLoading && (
                                 <Paper sx={{ p: 3, borderRadius: 2 }}>
-                                    <Typography
-                                        variant="body1"
-                                        sx={{ fontWeight: 600, mb: 0.5 }}
-                                    >
+                                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }} >
                                         No hay grupos para mostrar todavía
                                     </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
+                                    <Typography variant="body2" color="text.secondary" >
                                         Ejecuta Analizar todos los assets para
                                         construir los bloques de similitud.
                                     </Typography>
@@ -3214,67 +3067,23 @@ export default function AssetsAdminPage() {
                                         group.items?.[0]?.asset?.id,
                                 );
                                 return (
-                                    <Paper
-                                        key={group.id}
-                                        sx={{ p: 2, borderRadius: 2 }}
-                                    >
-                                        <Stack
-                                            direction={{
-                                                xs: 'column',
-                                                sm: 'row',
-                                            }}
-                                            spacing={1.5}
-                                            justifyContent="space-between"
-                                            alignItems={{
-                                                xs: 'flex-start',
-                                                sm: 'center',
-                                            }}
-                                        >
+                                    <Paper key={group.id} sx={{ p: 2, borderRadius: 2 }} >
+                                        <Stack direction={{ xs: 'column', sm: 'row', }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center', }} >
                                             <Box>
-                                                <Typography
-                                                    variant="subtitle1"
-                                                    sx={{ fontWeight: 700 }}
-                                                >
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700 }} >
                                                     Grupo #{groupIndex + 1}
                                                 </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="text.secondary"
-                                                >
+                                                <Typography variant="caption" color="text.secondary" >
                                                     Firma: {group.signature}
                                                 </Typography>
                                             </Box>
                                             <Stack direction="row" spacing={1}>
-                                                <Chip
-                                                    size="small"
-                                                    label={`${group.items.length} assets`}
-                                                />
-                                                <Chip
-                                                    size="small"
-                                                    color="success"
-                                                    label={`Confianza ${group.confidence}%`}
-                                                />
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() =>
-                                                        selectGroupDuplicates(
-                                                            group,
-                                                        )
-                                                    }
-                                                >
+                                                <Chip size="small" label={`${group.items.length} assets`} />
+                                                <Chip size="small" color="success" label={`Confianza ${group.confidence}%`} />
+                                                <Button size="small" variant="outlined" onClick={() => selectGroupDuplicates( group, ) } >
                                                     Sugerir duplicados
                                                 </Button>
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="inherit"
-                                                    onClick={() =>
-                                                        dismissSimilarGroup(
-                                                            group,
-                                                        )
-                                                    }
-                                                >
+                                                <Button size="small" variant="outlined" color="inherit" onClick={() => dismissSimilarGroup( group, ) } >
                                                     No son duplicados
                                                 </Button>
                                             </Stack>
@@ -3282,17 +3091,7 @@ export default function AssetsAdminPage() {
 
                                         <Divider sx={{ my: 1.5 }} />
 
-                                        <Box
-                                            sx={{
-                                                display: 'grid',
-                                                gridTemplateColumns: {
-                                                    xs: '1fr',
-                                                    sm: 'repeat(2, minmax(0, 1fr))',
-                                                    xl: 'repeat(3, minmax(0, 1fr))',
-                                                },
-                                                gap: 1.5,
-                                            }}
-                                        >
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))', }, gap: 1.5, }} >
                                             {group.items.map((entry) => {
                                                 const asset = entry.asset || {};
                                                 const id = Number(asset.id);
@@ -3322,17 +3121,7 @@ export default function AssetsAdminPage() {
                                                         }}
                                                     >
                                                         {assetImages.length ? (
-                                                            <Box
-                                                                sx={{
-                                                                    width: '100%',
-                                                                    display:
-                                                                        'grid',
-                                                                    gridTemplateColumns:
-                                                                        'repeat(auto-fill, minmax(100px, 1fr))',
-                                                                    gap: 0.6,
-                                                                    mb: 1,
-                                                                }}
-                                                            >
+                                                            <Box sx={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 0.6, mb: 1, }} >
                                                                 {assetImages.map(
                                                                     (
                                                                         img,
@@ -3402,79 +3191,32 @@ export default function AssetsAdminPage() {
                                                             </Box>
                                                         )}
 
-                                                        <Typography
-                                                            variant="body2"
-                                                            sx={{
-                                                                fontWeight: 700,
-                                                            }}
-                                                            noWrap
-                                                        >
+                                                        <Typography variant="body2" sx={{ fontWeight: 700, }} noWrap >
                                                             {asset.title ||
                                                                 asset.archiveName ||
                                                                 `Asset #${id}`}
                                                         </Typography>
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                display:
-                                                                    'block',
-                                                            }}
-                                                        >
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', }} >
                                                             ID: {id} •
                                                             Similitud:{' '}
                                                             {entry.similarity}%
                                                             • Dist:{' '}
                                                             {entry.distance}
                                                         </Typography>
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                display:
-                                                                    'block',
-                                                                mb: 0.8,
-                                                            }}
-                                                        >
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8, }} >
                                                             Cuenta:{' '}
                                                             {asset.account
                                                                 ?.alias ||
                                                                 asset.accountId ||
                                                                 '-'}
                                                         </Typography>
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                display:
-                                                                    'block',
-                                                                mb: 0.8,
-                                                            }}
-                                                        >
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8, }} >
                                                             Imágenes:{' '}
                                                             {assetImages.length}
                                                         </Typography>
 
-                                                        <Stack
-                                                            direction="row"
-                                                            spacing={1}
-                                                            justifyContent="space-between"
-                                                            alignItems="center"
-                                                        >
-                                                            <Button
-                                                                size="small"
-                                                                variant={
-                                                                    isPrimary
-                                                                        ? 'contained'
-                                                                        : 'outlined'
-                                                                }
-                                                                onClick={() =>
-                                                                    setPrimaryInGroup(
-                                                                        group.id,
-                                                                        id,
-                                                                    )
-                                                                }
-                                                            >
+                                                        <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center" >
+                                                            <Button size="small" variant={ isPrimary ? 'contained' : 'outlined' } onClick={() => setPrimaryInGroup( group.id, id, ) } >
                                                                 {isPrimary
                                                                     ? 'Principal'
                                                                     : 'Marcar principal'}
@@ -5014,13 +4756,16 @@ export default function AssetsAdminPage() {
                                             <TableCell>
                                                 <Stack
                                                     spacing={1}
-                                                    sx={{ width: '100%' }}
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                    }}
                                                 >
                                                     <TextField
                                                         size="small"
                                                         fullWidth
                                                         multiline
-                                                        rows={2}
+                                                        rows={6}
                                                         value={String(
                                                             draft.description ||
                                                                 '',
@@ -5039,12 +4784,22 @@ export default function AssetsAdminPage() {
                                                         disabled={
                                                             metaBusy || loading
                                                         }
+                                                        sx={{
+                                                            '& .MuiInputBase-root': {
+                                                                alignItems: 'stretch',
+                                                            },
+                                                            '& .MuiInputBase-inputMultiline': {
+                                                                overflow: 'auto !important',
+                                                                resize: 'vertical',
+                                                                minHeight: '40px',
+                                                            },
+                                                        }}
                                                     />
                                                     <TextField
                                                         size="small"
                                                         fullWidth
                                                         multiline
-                                                        rows={2}
+                                                        rows={6}
                                                         value={String(
                                                             draft.descriptionEn ||
                                                                 '',
@@ -5063,6 +4818,16 @@ export default function AssetsAdminPage() {
                                                         disabled={
                                                             metaBusy || loading
                                                         }
+                                                        sx={{
+                                                            '& .MuiInputBase-root': {
+                                                                alignItems: 'stretch',
+                                                            },
+                                                            '& .MuiInputBase-inputMultiline': {
+                                                                overflow: 'auto !important',
+                                                                resize: 'vertical',
+                                                                minHeight: '40px',
+                                                            },
+                                                        }}
                                                     />
                                                 </Stack>
                                             </TableCell>
