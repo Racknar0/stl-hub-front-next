@@ -148,6 +148,81 @@
   gap: 10px;
   align-items: center;
 }
+
+.heroActions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.downloadCta {
+  border: 0;
+  border-radius: 999px;
+  min-height: 46px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.downloadCtaFree {
+  background: linear-gradient(135deg, #00c9ff, #00a6d8);
+  box-shadow: 0 10px 26px rgba(0, 199, 255, 0.3);
+}
+
+.downloadCtaPremium {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 10px 26px rgba(124, 58, 237, 0.33);
+}
+
+.downloadCta:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+}
+
+.downloadCtaFree:hover {
+  box-shadow: 0 12px 30px rgba(0, 199, 255, 0.42);
+}
+
+.downloadCtaPremium:hover {
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.45);
+}
+
+.downloadCta:active {
+  transform: translateY(0);
+}
+
+.downloadCta:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.downloadCta:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+}
+
+.downloadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.downloadHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(221, 232, 255, 0.82);
+}
 .badge, .badgeMuted {
   display: inline-flex;
   align-items: center;
@@ -508,6 +583,13 @@
   .heroInner {
     padding: 24px 18px 28px;
     min-height: 260px;
+  }
+  .heroActions {
+    align-items: stretch;
+  }
+  .downloadCta {
+    justify-content: center;
+    width: 100%;
   }
   .hero {
     margin-left: 12px;

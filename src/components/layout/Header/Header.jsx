@@ -222,6 +222,7 @@ const Header = () => {
   const aiSearchTitle = isEn ? 'AI search' : 'Búsqueda con IA'
   const normalModeLabel = isEn ? 'Normal' : 'Normal'
   const aiModeLabel = 'IA'
+  const accountHref = isEn ? '/en/account' : '/account'
   const searchModeTitle = isEn ? 'Search mode' : 'Modo de búsqueda'
   const searchPlaceholder = searchMode === 'ai'
     ? (isEn 
@@ -487,7 +488,7 @@ const Header = () => {
                       
                       <Button 
                         styles={{width: '100%'}} 
-                        as={Link} href="/account" 
+                        as={Link} href={accountHref} 
                         variant="cyan" 
                         width="lg" 
                         aria-label={t('header.account')} 

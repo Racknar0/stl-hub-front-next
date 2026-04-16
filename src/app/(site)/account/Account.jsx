@@ -9,7 +9,13 @@ import useStore from '../../../store/useStore';
 
 const Account = () => {
   const token = useStore(s=>s.token);
+  const language = useStore((s) => s.language);
+  const isEn = String(language || 'es').toLowerCase() === 'en';
   const router = useRouter();
+  const homeHref = isEn ? '/en' : '/';
+  const accountPath = isEn ? '/en/account' : '/account';
+  const subscriptionHref = isEn ? '/en/suscripcion' : '/suscripcion';
+  const dateLocale = isEn ? 'en-US' : 'es-ES';
   const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
   const imgUrl = (rel) => {
     if (!rel) return '';
@@ -59,40 +65,44 @@ const Account = () => {
 
     // Navegar a /suscripcion sin refrescar (Next Router)
     const onOpenPlans = () => {
-      router.push('/suscripcion');
+      router.push(subscriptionHref);
     };
 
   return (
     <section className="account container-narrow">
       <div className="account-breadcrumb">
-        <Button as="a" href="/" variant="purple" styles={{width:'auto', padding:'0 .9rem'}}>Inicio</Button>
-        <span className="path">/account</span>
+        <Button as="a" href={homeHref} variant="purple" styles={{width:'auto', padding:'0 .9rem'}}>
+          {isEn ? 'Home' : 'Inicio'}
+        </Button>
+        <span className="path">{accountPath}</span>
       </div>
 
       <div className="account-grid">
         <div className="card">
-          <h4>Mi suscripción</h4>
-          {loading && <p>Cargando...</p>}
+          <h4>{isEn ? 'My subscription' : 'Mi suscripción'}</h4>
+          {loading && <p>{isEn ? 'Loading...' : 'Cargando...'}</p>}
           {profile && (
             <>
-              <p><strong>Email:</strong> {profile.email}</p>
-              <p><strong>Registro:</strong> {new Date(profile.createdAt).toLocaleDateString()}</p>
-              <p><strong>Estado:</strong> {profile.subscription?.status}</p>
-              <p><strong>Expira:</strong> {profile.subscription?.currentPeriodEnd ? new Date(profile.subscription.currentPeriodEnd).toLocaleString() : '-'}</p>
-              <p><strong>Días restantes:</strong> {profile.subscription?.daysRemaining ?? 0}</p>
+              <p><strong>{isEn ? 'Email' : 'Email'}:</strong> {profile.email}</p>
+              <p><strong>{isEn ? 'Registered' : 'Registro'}:</strong> {new Date(profile.createdAt).toLocaleDateString(dateLocale)}</p>
+              <p><strong>{isEn ? 'Status' : 'Estado'}:</strong> {profile.subscription?.status}</p>
+              <p><strong>{isEn ? 'Expires' : 'Expira'}:</strong> {profile.subscription?.currentPeriodEnd ? new Date(profile.subscription.currentPeriodEnd).toLocaleString(dateLocale) : '-'}</p>
+              <p><strong>{isEn ? 'Days remaining' : 'Días restantes'}:</strong> {profile.subscription?.daysRemaining ?? 0}</p>
               <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
-                <button className="btn-pill fill mt-4" onClick={onOpenPlans}>Recargar días</button>
+                <button className="btn-pill fill mt-4" onClick={onOpenPlans}>
+                  {isEn ? 'Top up days' : 'Recargar días'}
+                </button>
               </div>
             </>
           )}
         </div>
 
         <div className="card">
-          <h4>Actividad</h4>
+          <h4>{isEn ? 'Activity' : 'Actividad'}</h4>
           <div className="kpis">
-            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>{stats.totalDownloads}</div><div>Total descargas</div></div>
-            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>{profile?.subscription?.daysRemaining ?? 0}</div><div>Días restantes</div></div>
-            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>—</div><div>Top categorías</div></div>
+            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>{stats.totalDownloads}</div><div>{isEn ? 'Total downloads' : 'Total descargas'}</div></div>
+            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>{profile?.subscription?.daysRemaining ?? 0}</div><div>{isEn ? 'Days remaining' : 'Días restantes'}</div></div>
+            <div className="kpi"><div style={{fontWeight:800, fontSize:'1.3rem'}}>—</div><div>{isEn ? 'Top categories' : 'Top categorías'}</div></div>
           </div>
 
           {stats.topCategories?.length ? (
@@ -103,7 +113,7 @@ const Account = () => {
             </ul>
           ) : null}
 
-          <h5 style={{marginTop:'1rem'}}>Historial de descargas</h5>
+          <h5 style={{marginTop:'1rem'}}>{isEn ? 'Download history' : 'Historial de descargas'}</h5>
           {downloads?.length ? (
             <ul>
               {downloads.map((it, index) => (
@@ -112,15 +122,17 @@ const Account = () => {
                     {it.image ? <img src={imgUrl(it.image)} alt={it.title} style={{width:48, height:48, objectFit:'cover', borderRadius:8}}/> : <div style={{width:48, height:48, background:'#eee', borderRadius:8}}/>}
                     <div>
                       <div style={{fontWeight:600}}>{it.title}</div>
-                      <div style={{color:'#818199', fontSize:'.85rem'}}>{new Date(it.downloadedAt).toLocaleString()}</div>
+                      <div style={{color:'#818199', fontSize:'.85rem'}}>{new Date(it.downloadedAt).toLocaleString(dateLocale)}</div>
                     </div>
                   </div>
-                  <button className="btn-pill outline w-25" onClick={()=>onClickSeeAsset(it.id)}>Ver</button>
+                  <button className="btn-pill outline w-25" onClick={()=>onClickSeeAsset(it.id)}>
+                    {isEn ? 'View' : 'Ver'}
+                  </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p style={{color:'#818199'}}>Sin descargas disponibles.</p>
+            <p style={{color:'#818199'}}>{isEn ? 'No downloads available.' : 'Sin descargas disponibles.'}</p>
           )}
         </div>
       </div>

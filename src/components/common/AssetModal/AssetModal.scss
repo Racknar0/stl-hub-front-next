@@ -103,23 +103,24 @@
         );
 
         .report-btn {
-            margin-left: auto; /* empuja el botón a la derecha */
-            color: #dc3545;
-            background: transparent;
-            border: 0;
-            padding: 0 6px;
+            margin-left: auto; /* push right */
+            background: #6c5ce7;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
             font-size: 13px;
-            line-height: 1.1;
+            line-height: 1.2;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
-
+            transition: background 0.2s ease;
             &:hover {
-                text-decoration: underline;
+                background: #5a4bcf;
             }
             &:disabled {
-                opacity: .6;
+                opacity: 0.6;
                 pointer-events: none;
             }
         }
@@ -267,6 +268,61 @@
         color: #f8fbff;
         border-color: rgba(191, 219, 254, 0.75);
         background: rgba(96, 165, 250, 0.22);
+    }
+
+    .report-btn-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.38rem;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 0.2rem 0.56rem;
+        line-height: 1;
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: #ffe7ef;
+        cursor: pointer;
+        background-image: linear-gradient(rgba(190, 24, 93, 0.32), rgba(190, 24, 93, 0.18)),
+            linear-gradient(120deg, rgba(244, 63, 94, 0.9), rgba(236, 72, 153, 0.86));
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 8px 18px rgba(190, 24, 93, 0.24);
+        transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+    }
+
+    .report-btn-inline .report-btn-icon {
+        width: 0.9rem;
+        height: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+    }
+
+    .report-btn-inline:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(190, 24, 93, 0.34);
+        filter: saturate(1.08);
+    }
+
+    .report-btn-inline:active {
+        transform: translateY(0);
+        box-shadow: 0 6px 14px rgba(190, 24, 93, 0.28);
+    }
+
+    .report-btn-inline:focus-visible {
+        outline: 2px solid rgba(244, 114, 182, 0.92);
+        outline-offset: 2px;
+    }
+
+    .report-btn-inline:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        filter: grayscale(0.18);
+        box-shadow: 0 6px 14px rgba(190, 24, 93, 0.18);
     }
 
     .head-badges {

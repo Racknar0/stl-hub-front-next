@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import styles from './AssetSeoBackground.module.css';
 import ImageLightbox from './ImageLightbox';
+import AssetDownloadCtaClient from './AssetDownloadCtaClient';
 
 export const revalidate = 3600; // ISR 1h
 
@@ -299,6 +300,11 @@ export default async function AssetPage({ params }) {
                                 </span>
                             )}
                         </div>
+                        <AssetDownloadCtaClient
+                            assetId={asset.id}
+                            isPremium={!!asset.isPremium}
+                            isEn={pageIsEn}
+                        />
                     </div>
                 </section>
 

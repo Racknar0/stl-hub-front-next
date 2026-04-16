@@ -715,7 +715,12 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                             aria-label={isEn ? 'Report broken link' : 'Reportar link caído'}
                                                             title={isEn ? 'Report broken link' : 'Reportar link caído'}
                                                         >
-                                                            <span aria-hidden>🚩</span>
+                                                            <span className="report-btn-icon" aria-hidden>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path d="M6 3v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                                                    <path d="M7 4h10l-2.5 4L17 12H7V4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                                                </svg>
+                                                            </span>
                                                             <span>{isEn ? 'Report' : 'Reportar'}</span>
                                                         </button>
                                                     )}
