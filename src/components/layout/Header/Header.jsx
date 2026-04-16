@@ -83,6 +83,7 @@ const Header = () => {
   const [categories, setCategories] = useState([])
   const [megaMenuLoaded, setMegaMenuLoaded] = useState(false)
   const [mostDownloadedItems, setMostDownloadedItems] = useState([])
+  const [seasonalCollections, setSeasonalCollections] = useState([])
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
   // Nuevo: estado para abrir/cerrar Explorar (soporta mobile por click)
@@ -102,9 +103,13 @@ const Header = () => {
         const res = await http.getData('/assets/menu/mega')
         const nextCategories = Array.isArray(res?.data?.categories) ? res.data.categories : []
         const nextMostDownloaded = Array.isArray(res?.data?.mostDownloaded) ? res.data.mostDownloaded : []
+        const nextSeasonalCollections = Array.isArray(res?.data?.seasonalCollections)
+          ? res.data.seasonalCollections
+          : []
         if (!mounted) return
         setCategories(nextCategories)
         setMostDownloadedItems(nextMostDownloaded)
+        setSeasonalCollections(nextSeasonalCollections)
       } catch (e) {
         console.error('header mega menu load error', e)
       } finally {
@@ -385,14 +390,34 @@ const Header = () => {
                   <div className="col-title">{t('header.collectionsNow')}</div>
                   <ul>
                     {megaMenuLoaded ? (
-                      <li className={mostDownloadedItems.length ? '' : 'is-empty'}>
-                        <a
-                          href="/search?order=downloads"
-                          onClick={() => setExploreOpen(false)}
-                        >
-                          {t('header.mostDownloaded')}
-                        </a>
-                      </li>
+                      <>
+                        <li className={mostDownloadedItems.length ? '' : 'is-empty'}>
+                          <a
+                            href={(isEn ? '/en/search' : '/search') + '?order=downloads'}
+                            onClick={() => setExploreOpen(false)}
+                          >
+                            {t('header.mostDownloaded')}
+                          </a>
+                        </li>
+                        {seasonalCollections.slice(0, 6).map((it, idx) => {
+                          const label = isEn
+                            ? (it?.labelEn || it?.labelEs || it?.slug || '')
+                            : (it?.labelEs || it?.labelEn || it?.slug || '');
+                          const query = encodeURIComponent(label);
+                          const href = `${isEn ? '/en/search' : '/search'}?q=${query}&is_ai_search=true`;
+
+                          return (
+                            <li key={`${it?.slug || 'seasonal'}-${idx}`}>
+                              <a
+                                href={href}
+                                onClick={() => setExploreOpen(false)}
+                              >
+                                {label}
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </>
                     ) : (
                       <li>{t('header.loading')}</li>
                     )}
