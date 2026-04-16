@@ -593,97 +593,70 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </button>
                     )}
-                    <div className="modal-content asset-modal__content">
-                        <div className="topbar">
-                            <Link href="/" className="brand" aria-label="Ir al inicio">
-                                STL Hub
-                            </Link>
-                            {showReportButton && (
-                                <button
-                                    type="button"
-                                    className="report-btn"
-                                    onClick={handleReportBroken}
-                                    disabled={reporting}
-                                    aria-label={
-                                        isEn
-                                            ? 'Report broken link'
-                                            : 'Reportar link caído'
-                                    }
-                                    title={
-                                        isEn
-                                            ? 'Report broken link'
-                                            : 'Reportar link caído'
-                                    }
-                                >
-                                    <span aria-hidden>🚩</span>
-                                    <span>
-                                        {isEn
-                                            ? 'Report broken link'
-                                            : 'Reportar link caído'}
-                                    </span>
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                className="btn-close "
-                                aria-label="Cerrar"
-                                onClick={onClose}
-                            />
-                        </div>
+                    <div className="modal-dialog" role="document">
+                        {/* Floating Close Button - Outside content to avoid overflow:hidden clipping */}
+                        <button
+                            type="button"
+                            className="floating-modal-close"
+                            aria-label="Cerrar"
+                            onClick={onClose}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                        <div className="modal-content asset-modal__content">
+                            <div className="modal-body dialog-body">
+                                <div className="gallery">
+                                    <div className="slider-container" style={{ position: 'relative' }}>
+                                        {canSlideGallery && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    className="gallery-nav gallery-nav--prev"
+                                                    aria-label={isEn ? 'Previous image' : 'Imagen anterior'}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        mainSwiperRef.current?.slidePrev();
+                                                    }}
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="gallery-nav gallery-nav--next"
+                                                    aria-label={isEn ? 'Next image' : 'Siguiente imagen'}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        mainSwiperRef.current?.slideNext();
+                                                    }}
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                            </>
+                                        )}
 
-                        <div className="modal-body dialog-body">
-                            <div className="gallery">
-                               
-                                <div className="slider-container" style={{ position: 'relative' }}>
+                                        {/* Botón pantalla completa */}
+                                        <IconButton
+                                            onClick={() => setFullOpen(true)}
+                                            aria-label={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                            size="small"
+                                            sx={{ position: 'absolute', right: 8, bottom: 8, zIndex: 2, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' } }}
+                                            title={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                        >
+                                            <FullscreenIcon fontSize="large" />
+                                        </IconButton>
 
-                                    {canSlideGallery && (
-                                        <>
-                                            <button
-                                                type="button"
-                                                className="gallery-nav gallery-nav--prev"
-                                                aria-label={isEn ? 'Previous image' : 'Imagen anterior'}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    mainSwiperRef.current?.slidePrev();
-                                                }}
-                                            >
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="gallery-nav gallery-nav--next"
-                                                aria-label={isEn ? 'Next image' : 'Siguiente imagen'}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    mainSwiperRef.current?.slideNext();
-                                                }}
-                                            >
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                            </button>
-                                        </>
-                                    )}
-
-                                     {/* Botón pantalla completa */}
-                                    <IconButton
-                                        onClick={() => setFullOpen(true)}
-                                        aria-label={isEn ? 'Fullscreen' : 'Pantalla completa'}
-                                        size="small"
-                                        sx={{ position: 'absolute', right: 8, bottom: 8, zIndex: 2, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' } }}
-                                        title={isEn ? 'Fullscreen' : 'Pantalla completa'}
-                                    >
-                                        <FullscreenIcon fontSize="large" />
-                                    </IconButton>
-                                    <Swiper
-                                        modules={[Navigation, Pagination, Zoom]}
-                                        pagination
-                                        loop={canSlideGallery}
-                                        zoom={{ maxRatio: 3 }}
-                                        onSwiper={(swiper) => {
-                                            mainSwiperRef.current = swiper;
-                                        }}
-                                    >
-                                        {galleryImages
-                                            .map((src, idx) => (
+                                        <Swiper
+                                            modules={[Navigation, Pagination, Zoom]}
+                                            pagination
+                                            loop={canSlideGallery}
+                                            zoom={{ maxRatio: 3 }}
+                                            onSwiper={(swiper) => {
+                                                mainSwiperRef.current = swiper;
+                                            }}
+                                        >
+                                            {galleryImages.map((src, idx) => (
                                                 <SwiperSlide key={idx}>
                                                     <div className="swiper-zoom-container">
                                                         <img
@@ -693,249 +666,195 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                     </div>
                                                 </SwiperSlide>
                                             ))}
-                                    </Swiper>
-                                </div>
-                            </div>
-
-                            <div className="meta">
-                                <div
-                                    className="meta-content"
-                                    style={{ position: 'relative' }}
-                                >
-
-                    {/* Dialog a pantalla completa con el mismo slider (sin AppBar) */}
-                    <Dialog fullScreen open={fullOpen} onClose={() => setFullOpen(false)}>
-                        <Box sx={{ position: 'relative', p: 0, bgcolor: 'black', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-                            {/* Botón cerrar flotante */}
-                            <IconButton
-                                onClick={() => setFullOpen(false)}
-                                aria-label={isEn ? 'Close' : 'Cerrar'}
-                                sx={{ position: 'absolute', right: 16, top: 16, zIndex: 3, color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', width: 56, height: 56, '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
-                                title={isEn ? 'Close' : 'Cerrar'}
-                            >
-                                <CloseIcon sx={{ fontSize: 30 }} />
-                            </IconButton>
-                            <Box sx={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                '& .swiper': {
-                                    width: '100vw',
-                                    height: '100vh',
-                                    overflow: 'hidden'
-                                },
-                                '& .swiper-wrapper': {
-                                    alignItems: 'center'
-                                },
-                                '& .swiper-slide': {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                },
-                                '& img': {
-                                    maxWidth: '100vw',
-                                    maxHeight: '100vh',
-                                    width: 'auto',
-                                    height: 'auto',
-                                    objectFit: 'contain',
-                                    display: 'block',
-                                    margin: '0 auto'
-                                }
-                            }}>
-                                <Swiper
-                                    modules={[Navigation, Pagination, Zoom]}
-                                    navigation
-                                    pagination
-                                    loop={canSlideGallery}
-                                    zoom={{ maxRatio: 3 }}
-                                >
-                                    {galleryImages.map((src, idx) => (
-                                        <SwiperSlide key={`full-${idx}`}>
-                                            <div className="swiper-zoom-container">
-                                                <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
-                                            </div>
-                                        </SwiperSlide>
-                                    ))}
-                                </Swiper>
-                            </Box>
-                        </Box>
-                    </Dialog>
-                                    <div className="meta-header">
-                                        <Link
-                                            href="/"
-                                            aria-label="Ir al inicio"
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="brand-link"
-                                        >
-                                            <img
-                                                className="brand-logo"
-                                                src="/nuevo_horizontal.png"
-                                                alt="STL Hub"
-                                            />
-                                        </Link>
-
-                                        <div className="meta-headlines">
-                                            <div className="title-row">
-                                                <h3
-                                                    id="asset-modal-title"
-                                                    className="title"
-                                                >
-                                                    {displayTitle}
-                                                </h3>
-                                            </div>
-
-                                            <div className="head-badges">
-                                                <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
-                                                    {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
-                                                </span>
-                                                {data?.slug && (
-                                                    <Link
-                                                        href={isEn ? `/en/asset/${data.slug}` : `/asset/${data.slug}`}
-                                                        onClick={(e)=> e.stopPropagation()}
-                                                        className="detail-link"
-                                                    >
-                                                        {isEn ? 'open page' : 'ver página'}
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        </div>
+                                        </Swiper>
                                     </div>
+                                </div>
 
-                                    <div className="meta-details">
-                                        {/* Descripción (autogenerada del backend si existe) */}
-                                        {(() => {
-                                            const rawDesc = isEn
-                                                ? (data.descriptionEn || data.description)
-                                                : (data.description || data.descriptionEn);
-                                            const baseDesc = rawDesc && rawDesc.trim().length ? rawDesc : buildAutoDescription(isEn ? 'en' : 'es');
-                                            if (!baseDesc) return null;
-                                            const safeLimit = Number(descriptionLimit);
-                                            const shouldLimit = Number.isFinite(safeLimit) && safeLimit > 0;
-                                            const finalDesc = shouldLimit && baseDesc.length > safeLimit
-                                                ? `${baseDesc.slice(0, safeLimit).trimEnd()}...`
-                                                : baseDesc;
-                                            return (
-                                                <p className="asset-desc" title={baseDesc}>{finalDesc}</p>
-                                            );
-                                        })()}
+                                <div className="meta">
+                                    <div className="meta-content" style={{ position: 'relative' }}>
+                                        <div className="meta-header">
+                                            <Link
+                                                href="/"
+                                                aria-label="Ir al inicio"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="brand-link"
+                                            >
+                                                <img
+                                                    className="brand-logo"
+                                                    src="/nuevo_horizontal.png"
+                                                    alt="STL Hub"
+                                                />
+                                            </Link>
 
-                                        <div className="meta-block compact">
-                                            <div className="block-title">
-                                                {isEn ? 'Technical details' : 'Ficha técnica'}
-                                            </div>
-                                            <div className="facts-grid">
-                                                {technicalFacts.map((f) => (
-                                                    <div className="fact" key={f.key}>
-                                                        <span className="fact-label">{f.label}</span>
-                                                        <span className="fact-value">{String(f.value || 'N/A')}</span>
-                                                    </div>
-                                                ))}
+                                            <div className="meta-headlines">
+                                                <div className="title-row">
+                                                    <h3 id="asset-modal-title" className="title">
+                                                        {displayTitle}
+                                                    </h3>
+                                                </div>
+
+                                                <div className="head-badges">
+                                                    <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
+                                                        {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
+                                                    </span>
+                                                    {data?.slug && (
+                                                        <Link
+                                                            href={isEn ? `/en/asset/${data.slug}` : `/asset/${data.slug}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="detail-link"
+                                                        >
+                                                            {isEn ? 'open page' : 'ver página'}
+                                                        </Link>
+                                                    )}
+                                                    {showReportButton && (
+                                                        <button
+                                                            type="button"
+                                                            className="report-btn report-btn-inline"
+                                                            onClick={(e) => { e.stopPropagation(); handleReportBroken(); }}
+                                                            disabled={reporting}
+                                                            aria-label={isEn ? 'Report broken link' : 'Reportar link caído'}
+                                                            title={isEn ? 'Report broken link' : 'Reportar link caído'}
+                                                        >
+                                                            <span aria-hidden>🚩</span>
+                                                            <span>{isEn ? 'Report' : 'Reportar'}</span>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Categorías */}
-                                        <div className="meta-block">
-                                            <div className="block-title">
-                                                {isEn
-                                                    ? 'Categories'
-                                                    : 'Categorías'}
+                                        <div className="meta-details">
+                                            {(() => {
+                                                const rawDesc = isEn
+                                                    ? (data.descriptionEn || data.description)
+                                                    : (data.description || data.descriptionEn);
+                                                const baseDesc = rawDesc && rawDesc.trim().length ? rawDesc : buildAutoDescription(isEn ? 'en' : 'es');
+                                                if (!baseDesc) return null;
+                                                const safeLimit = Number(descriptionLimit);
+                                                const shouldLimit = Number.isFinite(safeLimit) && safeLimit > 0;
+                                                const finalDesc = shouldLimit && baseDesc.length > safeLimit
+                                                    ? `${baseDesc.slice(0, safeLimit).trimEnd()}...`
+                                                    : baseDesc;
+                                                return (
+                                                    <p className="asset-desc" title={baseDesc}>{finalDesc}</p>
+                                                );
+                                            })()}
+
+                                            <div className="meta-block compact">
+                                                <div className="block-title">
+                                                    {isEn ? 'Technical details' : 'Ficha técnica'}
+                                                </div>
+                                                <div className="facts-grid">
+                                                    {technicalFacts.map((f) => (
+                                                        <div className="fact" key={f.key}>
+                                                            <span className="fact-label">{f.label}</span>
+                                                            <span className="fact-value">{String(f.value || 'N/A')}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            {displayCategories.length ? (
-                                                <div className="chips center chips-compact">
-                                                    {displayCategories.map(
-                                                        (c) => (
+
+                                            <div className="meta-block">
+                                                <div className="block-title">
+                                                    {isEn ? 'Categories' : 'Categorías'}
+                                                </div>
+                                                {displayCategories.length ? (
+                                                    <div className="chips center chips-compact">
+                                                        {displayCategories.map((c) => (
                                                             <Link
-                                                                key={
-                                                                    c.id ||
-                                                                    c.slug ||
-                                                                    c.label
-                                                                }
+                                                                key={c.id || c.slug || c.label}
                                                                 className="chip chip--link"
-                                                                href={catHref(
-                                                                    c
-                                                                )}
+                                                                href={catHref(c)}
                                                             >
                                                                 #{c.label}
                                                             </Link>
-                                                        )
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="chips center">
-                                                    <span className="chip chip--disabled">
-                                                        {isEn
-                                                            ? 'Uncategorized'
-                                                            : 'Sin categoría'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Tags */}
-                                        <div
-                                            className="meta-block"
-                                            style={{ marginTop: '.75rem' }}
-                                        >
-                                            <div className="block-title">
-                                                {isEn ? 'Tags' : 'Etiquetas'}
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="chips center">
+                                                        <span className="chip chip--disabled">
+                                                            {isEn ? 'Uncategorized' : 'Sin categoría'}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {chips?.length ? (
-                                                <div className="chips center chips-compact">
-                                                    {chips.map((c, i) => (
-                                                        <Link
-                                                            key={i}
-                                                            className="chip chip--link"
-                                                            href={`/search?tags=${encodeURIComponent(
-                                                                tagSlugs[i] ?? c
-                                                            )}`}
-                                                        >
-                                                            #{c}
-                                                        </Link>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="chips center">
-                                                    <span className="chip chip--disabled">
-                                                        {isEn
-                                                            ? 'No tags'
-                                                            : 'Sin etiquetas'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
 
-                                    <div className="actions center">
-                                        <Button
-                                            onClick={handleDownload}
-                                            disabled={downloading}
-                                            variant={
-                                                data.isPremium
-                                                    ? 'purple'
-                                                    : 'cyan'
-                                            }
-                                            className="btn-big"
-                                        >
-                                            {downloading && (
-                                                <span
-                                                    className="btn-spinner"
-                                                    aria-hidden
-                                                />
-                                            )}
-                                            {downloading
-                                                ? t('asset.modal.processing')
-                                                : data.isPremium
-                                                ? t(
-                                                      'asset.modal.downloadPremium'
-                                                  )
-                                                : t('asset.modal.downloadNow')}
-                                        </Button>
+                                            <div className="meta-block" style={{ marginTop: '.75rem' }}>
+                                                <div className="block-title">
+                                                    {isEn ? 'Tags' : 'Etiquetas'}
+                                                </div>
+                                                {chips?.length ? (
+                                                    <div className="chips center chips-compact">
+                                                        {chips.map((c, i) => (
+                                                            <Link
+                                                                key={i}
+                                                                className="chip chip--link"
+                                                                href={`/search?tags=${encodeURIComponent(tagSlugs[i] ?? c)}`}
+                                                            >
+                                                                #{c}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="chips center">
+                                                        <span className="chip chip--disabled">
+                                                            {isEn ? 'No tags' : 'Sin etiquetas'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="actions center">
+                                            <Button
+                                                onClick={handleDownload}
+                                                disabled={downloading}
+                                                variant={data.isPremium ? 'purple' : 'cyan'}
+                                                className="btn-big"
+                                            >
+                                                {downloading && <span className="btn-spinner" aria-hidden />}
+                                                {downloading
+                                                    ? t('asset.modal.processing')
+                                                    : data.isPremium
+                                                    ? t('asset.modal.downloadPremium')
+                                                    : t('asset.modal.downloadNow')}
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Fullscreen Lightbox - Root level relative to content */}
+                        <Dialog fullScreen open={fullOpen} onClose={() => setFullOpen(false)}>
+                            <Box sx={{ position: 'relative', p: 0, bgcolor: 'black', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+                                <IconButton
+                                    onClick={() => setFullOpen(false)}
+                                    aria-label={isEn ? 'Close' : 'Cerrar'}
+                                    sx={{ position: 'absolute', right: 16, top: 16, zIndex: 3, color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', width: 56, height: 56, '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+                                    title={isEn ? 'Close' : 'Cerrar'}
+                                >
+                                    <CloseIcon sx={{ fontSize: 30 }} />
+                                </IconButton>
+                                <Box sx={{
+                                    width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    '& .swiper': { width: '100vw', height: '100vh', overflow: 'hidden' },
+                                    '& .swiper-wrapper': { alignItems: 'center' },
+                                    '& .swiper-slide': { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+                                    '& img': { maxWidth: '100vw', maxHeight: '100vh', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto' }
+                                }}>
+                                    <Swiper modules={[Navigation, Pagination, Zoom]} navigation pagination loop={canSlideGallery} zoom={{ maxRatio: 3 }}>
+                                        {galleryImages.map((src, idx) => (
+                                            <SwiperSlide key={`full-${idx}`}>
+                                                <div className="swiper-zoom-container">
+                                                    <img src={imgUrl(src)} alt={`${displayTitle} ${idx + 1}`} />
+                                                </div>
+                                            </SwiperSlide>
+                                        ))}
+                                    </Swiper>
+                                </Box>
+                            </Box>
+                        </Dialog>
                     </div>
                 </div>
             </div>

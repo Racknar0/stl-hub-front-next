@@ -13,6 +13,57 @@
         position: relative;
         overflow: visible;
         pointer-events: auto;
+
+        /* Floating Close Button - Positioned relative to dialog */
+        .floating-modal-close {
+            position: absolute;
+            top: -15px;      /* Slightly above the content */
+            right: -15px;    /* Slightly outside to the right */
+            width: 42px;
+            height: 42px;
+            background: #7c6bff; /* Purple brand color for high visibility */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(124, 107, 255, 0.6), 0 4px 15px rgba(0, 0, 0, 0.5);
+            padding: 0;
+            outline: none;
+
+            svg {
+                stroke: #ffffff;
+                width: 22px;
+                height: 22px;
+                stroke-width: 3px;
+                display: block;
+                transition: transform 300ms ease;
+            }
+
+            &:hover {
+                background: #6a59ff;
+                transform: scale(1.1) rotate(90deg);
+                box-shadow: 0 0 30px rgba(124, 107, 255, 0.8), 0 6px 20px rgba(0, 0, 0, 0.6);
+                
+                svg {
+                    transform: scale(1.1);
+                }
+            }
+
+            &:active {
+                transform: scale(0.95);
+            }
+
+            @media (max-width: 991.98px) {
+                top: 5px;
+                right: 5px;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(4px);
+            }
+        }
     }
 
     @media (min-width: 992px) {
@@ -74,23 +125,20 @@
         }
 
         .btn-close {
-            /* asegurar X blanca */
+            /* mantener estilo original para compatibilidad */
             filter: invert(1) grayscale(100%) brightness(200%);
             opacity: .9;
             margin-left: 4px;
             transition: filter 120ms ease, opacity 120ms ease;
             width: 32px;
             height: 32px;
-
-            /* mejorar visibilidad en hover/focus */
-            &:hover {
-                opacity: 1;
-            }
-            &:focus {
-                box-shadow: none;
-                opacity: 1;
-            }
+            border: none;
+            cursor: pointer;
+            &:hover { opacity: 1; }
+            &:focus { box-shadow: none; opacity: 1; }
         }
+
+        .topbar { display: none; }
     }
     .brand {
         font-weight: 800;
@@ -100,15 +148,19 @@
 
     .dialog-body {
         display: grid;
-        grid-template-columns: 1fr minmax(320px, 480px); /* imagen toma todo el espacio restante */
+        grid-template-columns: minmax(400px, 1fr) minmax(320px, 480px);
         align-items: stretch;
         gap: 0.9rem;
         padding: 0.85rem;
-        overflow: auto;
+        /* Fixed height so the gallery column knows how tall to be */
+        height: calc(90vh - 70px);
+        overflow: hidden;
 
         @media (max-width: 991.98px) {
             display: flex;
             flex-direction: column;
+            height: auto;
+            overflow-y: auto;
             max-height: calc(100vh - 96px);
         }
     }
@@ -358,40 +410,55 @@
         
     }
 
-    /* Galería cuadrada */
+    /* ── Gallery (la columna izquierda del modal) ── */
     .gallery {
         overflow: hidden;
         display: flex;
-        justify-content: center;
-        /* Altura del contenedor para que los hijos puedan usar 100% */
+        flex-direction: column;
+        width: 100%;
         height: 100%;
+        min-height: 0;
 
         @media (max-width: 991.98px) {
-            aspect-ratio: 1 / 1;
-            width: 100%;
-
-            .swiper,
-            .swiper-wrapper,
-            .swiper-slide {
-                height: 100%;
-            }
+            height: 55vw;
+            min-height: 240px;
+            max-height: 55vw;
+            flex-shrink: 0;
         }
     }
-    .gallery .swiper {
-        width: 100%; /* ocupa todo el ancho disponible de la columna */
-        height: 100%;
-        border-radius: 14px;
-    }
+
+    /* slider-container rellena toda la galería */
     .gallery .slider-container {
         width: 100%;
         height: 100%;
+        min-height: 0;
         position: relative;
+        display: flex;
+        flex-direction: column;
     }
-    .gallery .swiper-wrapper,
-    .gallery .swiper-slide {
+
+    /* Swiper ocupa 100% del slider-container */
+    .gallery .swiper {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        flex: 1 1 0;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #0a0e1a;
+    }
+    .gallery .swiper-wrapper {
         height: 100%;
     }
-    /* asegurar que el contenedor del zoom también centre la imagen */
+    .gallery .swiper-slide {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+    }
+    /* zoom-container rellena el slide */
     .gallery .swiper-zoom-container {
         width: 100%;
         height: 100%;
@@ -399,21 +466,18 @@
         align-items: center;
         justify-content: center;
     }
-    /* Centrado perfecto de las imágenes dentro del slide */
-    .gallery .swiper-slide {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-    }
+    /*
+     * CLAVE: la imagen debe llenar todo el espacio disponible
+     * manteniendo la relación de aspecto (object-fit: contain).
+     * width y height = 100% para que ocupe todo el alto Y el ancho del slide,
+     * el navegador elige la dimensión limitante → sin barras de color visible.
+     */
     .gallery img {
-        max-width: 100%;
-        max-height: 100%;
-        width: auto;
-        height: auto;
-        object-fit: contain;
         display: block;
-        border-radius: 14px;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 10px;
     }
 
     /* Swiper navigation arrows inside gallery */
