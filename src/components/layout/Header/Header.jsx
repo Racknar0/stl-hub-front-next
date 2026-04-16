@@ -82,7 +82,6 @@ const Header = () => {
 
   const [categories, setCategories] = useState([])
   const [megaMenuLoaded, setMegaMenuLoaded] = useState(false)
-  const [mostDownloadedItems, setMostDownloadedItems] = useState([])
   const [seasonalCollections, setSeasonalCollections] = useState([])
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
@@ -102,13 +101,11 @@ const Header = () => {
       try {
         const res = await http.getData('/assets/menu/mega')
         const nextCategories = Array.isArray(res?.data?.categories) ? res.data.categories : []
-        const nextMostDownloaded = Array.isArray(res?.data?.mostDownloaded) ? res.data.mostDownloaded : []
         const nextSeasonalCollections = Array.isArray(res?.data?.seasonalCollections)
           ? res.data.seasonalCollections
           : []
         if (!mounted) return
         setCategories(nextCategories)
-        setMostDownloadedItems(nextMostDownloaded)
         setSeasonalCollections(nextSeasonalCollections)
       } catch (e) {
         console.error('header mega menu load error', e)
@@ -391,14 +388,6 @@ const Header = () => {
                   <ul>
                     {megaMenuLoaded ? (
                       <>
-                        <li className={mostDownloadedItems.length ? '' : 'is-empty'}>
-                          <a
-                            href={(isEn ? '/en/search' : '/search') + '?order=downloads'}
-                            onClick={() => setExploreOpen(false)}
-                          >
-                            {t('header.mostDownloaded')}
-                          </a>
-                        </li>
                         {seasonalCollections.slice(0, 6).map((it, idx) => {
                           const label = isEn
                             ? (it?.labelEn || it?.labelEs || it?.slug || '')
@@ -427,23 +416,55 @@ const Header = () => {
                 <div className="col">
                   <div className="col-title">{t('header.tops')}</div>
                   <ul>
-                    <li>{t('header.pick')}</li>
-                    <li>{t('header.popularDesigns')}</li>
-                    <li>{t('header.topDesigns')}</li>
-                    <li>{t('header.bestSellers')}</li>
-                    <li>{t('header.mostDownloaded')}</li>
+                    <li>
+                      <a
+                        href={(isEn ? '/en/search' : '/search') + '?order=downloads'}
+                        onClick={() => setExploreOpen(false)}
+                      >
+                        {isEn ? 'Most downloaded' : 'Mas descargados'}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href={(isEn ? '/en/search' : '/search')}
+                        onClick={() => setExploreOpen(false)}
+                      >
+                        {isEn ? 'Latest 3D models' : 'Latest 3D models'}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`}
+                        onClick={() => setExploreOpen(false)}
+                      >
+                        Anime
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('video game')}&is_ai_search=true`}
+                        onClick={() => setExploreOpen(false)}
+                      >
+                        Video game
+                      </a>
+                    </li>
                   </ul>
                 </div>
 
                 <div className="col">
                   <div className="col-title">{t('header.exploreTitle')}</div>
                   <ul>
-                    <li>{t('header.exploreIdeas')}</li>
-                    <li>{t('header.frequentSearches')}</li>
-                    <li>{t('header.glossary')}</li>
-                    <li>{t('header.trendingModels')}</li>
-                    <li>{t('header.latestModels')}</li>
-                    <li>{t('header.random')}</li>
+                    <li>
+                      <a
+                        href={`${isEn ? '/en/search' : '/search'}?randomizer=true`}
+                        onClick={() => setExploreOpen(false)}
+                      >
+                        Randomizer
+                      </a>
+                    </li>
+                    <li>
+                      <span>{isEn ? 'Guides' : 'Guias'}</span>
+                    </li>
                   </ul>
                 </div>
               </div>

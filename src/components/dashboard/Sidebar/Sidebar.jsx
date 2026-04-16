@@ -144,6 +144,11 @@ const Sidebar = () => {
                     Notificaciones
                   </Link>
                 </li>
+                <li>
+                  <Link href="/dashboard?tab=campaigns" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Campanas publicitarias
+                  </Link>
+                </li>
               </ul>
             </li>
           </ul>
