@@ -81,6 +81,8 @@ const Header = () => {
   const { t } = useI18n()
 
   const [categories, setCategories] = useState([])
+  const [megaMenuLoaded, setMegaMenuLoaded] = useState(false)
+  const [mostDownloadedItems, setMostDownloadedItems] = useState([])
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
   // Nuevo: estado para abrir/cerrar Explorar (soporta mobile por click)
@@ -95,16 +97,21 @@ const Header = () => {
 
   useEffect(() => {
     let mounted = true
-    const loadCats = async () => {
+    const loadMegaMenu = async () => {
       try {
-        const res = await http.getData('/categories')
-        const items = res.data?.items || []
-        if (mounted) setCategories(items)
+        const res = await http.getData('/assets/menu/mega')
+        const nextCategories = Array.isArray(res?.data?.categories) ? res.data.categories : []
+        const nextMostDownloaded = Array.isArray(res?.data?.mostDownloaded) ? res.data.mostDownloaded : []
+        if (!mounted) return
+        setCategories(nextCategories)
+        setMostDownloadedItems(nextMostDownloaded)
       } catch (e) {
-        console.error('header categories load error', e)
+        console.error('header mega menu load error', e)
+      } finally {
+        if (mounted) setMegaMenuLoaded(true)
       }
     }
-    loadCats()
+    loadMegaMenu()
     return () => { mounted = false }
   }, [])
 
@@ -377,11 +384,18 @@ const Header = () => {
                 <div className="col">
                   <div className="col-title">{t('header.collectionsNow')}</div>
                   <ul>
-                    <li>{t('header.wallHooks')}</li>
-                    <li>{t('header.furniture')}</li>
-                    <li>{t('header.cosplay')}</li>
-                    <li>{t('header.frames')}</li>
-                    <li>{t('header.halloween')}</li>
+                    {megaMenuLoaded ? (
+                      <li className={mostDownloadedItems.length ? '' : 'is-empty'}>
+                        <a
+                          href="/search?order=downloads"
+                          onClick={() => setExploreOpen(false)}
+                        >
+                          {t('header.mostDownloaded')}
+                        </a>
+                      </li>
+                    ) : (
+                      <li>{t('header.loading')}</li>
+                    )}
                   </ul>
                 </div>
 

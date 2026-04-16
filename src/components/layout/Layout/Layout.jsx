@@ -36,7 +36,7 @@ const Layout = ({ children }) => {
 
       <Header />
       <main className="app-main">{children}</main>
-      {!token && !isDashboard && <SubscribeBar />}
+      {!isDashboard && <SubscribeBar />}
       {!isDashboard && <Footer />}
     </div>
   )

@@ -808,22 +808,22 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                     </div>
                                                 )}
                                             </div>
-                                        </div>
 
-                                        <div className="actions center">
-                                            <Button
-                                                onClick={handleDownload}
-                                                disabled={downloading}
-                                                variant={data.isPremium ? 'purple' : 'cyan'}
-                                                className="btn-big"
-                                            >
-                                                {downloading && <span className="btn-spinner" aria-hidden />}
-                                                {downloading
-                                                    ? t('asset.modal.processing')
-                                                    : data.isPremium
-                                                    ? t('asset.modal.downloadPremium')
-                                                    : t('asset.modal.downloadNow')}
-                                            </Button>
+                                            <div className="actions center actions-after-tags">
+                                                <Button
+                                                    onClick={handleDownload}
+                                                    disabled={downloading}
+                                                    variant={data.isPremium ? 'purple' : 'cyan'}
+                                                    className="btn-big"
+                                                >
+                                                    {downloading && <span className="btn-spinner" aria-hidden />}
+                                                    {downloading
+                                                        ? t('asset.modal.processing')
+                                                        : data.isPremium
+                                                        ? t('asset.modal.downloadPremium')
+                                                        : t('asset.modal.downloadNow')}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

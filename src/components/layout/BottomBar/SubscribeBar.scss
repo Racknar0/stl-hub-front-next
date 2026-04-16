@@ -4,33 +4,97 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 12px;
+    bottom: 10px;
     z-index: 1050;
     pointer-events: none; /* solo el contenido clickable */
 }
 .subscribe-bar .container-narrow {
     pointer-events: auto;
     background: rgba(15, 20, 32, 0.9);
-    border: 1px solid rgb(160, 245, 3);
+    border: 1px solid rgba(0, 231, 255, 0.34);
     backdrop-filter: blur(8px) saturate(140%);
-    border-radius: 999px;
-    padding: 1rem 2rem;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    border-radius: 14px;
+    padding: 0.48rem 0.72rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
 }
+.subscribe-shell {
+    max-width: min(1200px, calc(100vw - 24px));
+}
+
+.subscribe-sections {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.section {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.48rem;
+}
+
+.divider {
+    width: 1px;
+    height: 26px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 231, 255, 0.45), rgba(255, 255, 255, 0.1));
+}
+
 .msg {
+    margin: 0;
     color: #e9efff;
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 0.86rem;
+    line-height: 1.12;
+}
+
+.bar-btn {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 34px;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+    width: auto !important;
 }
 
 /* Mobile */
+@media (max-width: 900px) {
+  .subscribe-sections {
+    grid-template-columns: 1fr;
+    gap: .52rem;
+  }
+  .divider {
+    display: none;
+  }
+}
+
 @media (max-width: 576px) {
   .subscribe-bar { bottom: 0; }
   .subscribe-bar .container-narrow {
-    border-radius: 0; /* barra completa */
-    border-left: 0; border-right: 0; border-bottom: 0;
-    padding: .6rem .8rem;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding: .4rem .62rem;
   }
-  .subscribe-bar .container-narrow { display:flex; gap:.6rem; }
-  .subscribe-bar .app-btn { flex:1; width: 100%; height: 46px; }
+  .subscribe-shell {
+    max-width: 100%;
+  }
+  .msg {
+    font-size: .73rem;
+    line-height: 1.12;
+    font-weight: 700;
+    max-width: calc(100% - 108px);
+  }
+  .section {
+    gap: .42rem;
+  }
+  .bar-btn {
+    min-height: 32px;
+    padding: 0 .56rem;
+    font-size: .74rem;
+  }
 }
