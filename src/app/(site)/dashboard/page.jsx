@@ -205,6 +205,16 @@ export default function Page() {
     return `${((p / t) * 100).toFixed(1)}%`;
   };
 
+  const formatCop = (value) => {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const InfoLabel = ({ label, tip }) => (
     <span className="field-head">
       <span>{label}</span>
@@ -393,7 +403,7 @@ export default function Page() {
             </section>
 
             <section className="campaign-card">
-              <h3>Campanas creadas</h3>
+              <h3>Campañas creadas</h3>
               {campaignsLoading && <p>Cargando campanas...</p>}
               {!campaignsLoading && campaigns.length === 0 && <p>No hay campanas todavia.</p>}
               {!campaignsLoading && campaigns.length > 0 && (
@@ -425,7 +435,7 @@ export default function Page() {
                         <span>Unicos: {item?.stats?.uniqueVisitors || 0}</span>
                         <span>Registros: {item?.stats?.registrations || 0}</span>
                         <span>Compras: {item?.stats?.purchases || 0}</span>
-                        <span>Ingresos: ${(item?.stats?.revenue || 0).toFixed(2)}</span>
+                        <span>Ingresos: {formatCop(item?.stats?.revenue || 0)}</span>
                       </div>
                       <div className="campaign-rates">
                         <span>Visita {'->'} Registro: {toPct(registrations, visits)}</span>
