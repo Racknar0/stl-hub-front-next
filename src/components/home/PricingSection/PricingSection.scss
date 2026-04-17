@@ -170,30 +170,6 @@
   gap: 12px;
 }
 
-.payment-topbar-icons {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.payment-topbar-icon-wrap {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.08);
-  flex: 0 0 auto;
-}
-
-.payment-topbar-icon {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
 .payment-method-btn {
   width: 100%;
   text-align: left;
@@ -220,33 +196,33 @@
 }
 
 .payment-method-logo {
-  flex: 0 0 136px;
+  flex: 0 0 84px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 136px;
-  min-width: 136px;
-  height: 52px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.1);
-  padding: 8px 12px;
+  width: 50px;
+  min-width: 50px;
+  height: 50px;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .payment-method-logo img {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: 36px;
-  max-height: 100%;
+  width: 50px;
+  max-width: 50px;
+  height: 50px;
+  max-height: 50px;
   object-fit: contain;
+  border-radius: 8px;
 }
 
 .payment-method-logo.is-paypal {
-  background: #ffffff;
-  border-radius: 12px;
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 3px 12px rgba(2, 6, 23, 0.2);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .payment-method-btn:hover {
@@ -281,32 +257,68 @@
   text-align: center;
 }
 
+.payment-summary-icons {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.payment-summary-icon {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+
+  &.secure {
+    width: 125px;
+    height: 64px;
+  }
+}
+
 @media (max-width: 720px) {
-  .payment-topbar-icon-wrap {
-    width: 32px;
-    height: 32px;
+  .payment-method-btn {
+    text-align: center;
   }
 
-  .payment-topbar-icon {
-    width: 20px;
-    height: 20px;
+  .payment-summary-icons {
+    gap: 16px;
+  }
+
+  .payment-summary-icon {
+    width: 48px;
+    height: 48px;
+
+      &.secure {
+      width: 110px;
+      height: 64px;
+    }
   }
 
   .payment-method-content {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     gap: 10px;
+  }
+
+  .payment-method-text {
+    justify-items: center;
+    text-align: center;
   }
 
   .payment-method-logo {
     order: -1;
-    flex-basis: 124px;
-    width: 124px;
-    min-width: 124px;
-    height: 48px;
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    height: 74px;
   }
 
   .payment-method-logo img {
-    height: 32px;
+    width: 74px;
+    max-width: 74px;
+    height: 74px;
+    max-height: 74px;
   }
 }

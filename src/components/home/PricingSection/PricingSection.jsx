@@ -237,24 +237,6 @@ const PricingSection = ({
                 onClose={() => setShowModal(false)}
                 title={ isEn ? 'Select payment method' : 'Selecciona un método de pago' }
                 brand="STL Hub"
-                topbarContent={
-                    <div className="payment-topbar-icons" aria-hidden>
-                        <span className="payment-topbar-icon-wrap">
-                            <img
-                                className="payment-topbar-icon"
-                                src="/payments_logos/100-secure.png"
-                                alt=""
-                            />
-                        </span>
-                        <span className="payment-topbar-icon-wrap">
-                            <img
-                                className="payment-topbar-icon"
-                                src="/payments_logos/warranty.png"
-                                alt=""
-                            />
-                        </span>
-                    </div>
-                }
             >
                 <div className="payment-method-list">
                     <button
@@ -322,6 +304,18 @@ const PricingSection = ({
                             {currency(selectedPlan.total, locale)}
                         </>
                     )}
+                </div>
+                <div className="payment-summary-icons" aria-hidden>
+                    <img
+                        className="payment-summary-icon secure"
+                        src="/payments_logos/100-secure.png"
+                        alt=""
+                    />
+                    <img
+                        className="payment-summary-icon"
+                        src="/payments_logos/warranty.png"
+                        alt=""
+                    />
                 </div>
             </SimplyModal>
 
