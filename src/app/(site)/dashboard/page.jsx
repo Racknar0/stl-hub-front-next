@@ -216,9 +216,9 @@ export default function Page() {
   );
 
   return (
-    <>
-      <h1 className="mb-3">Dashboard</h1>
-      <div className="p-3" style={{ display: 'grid', gap: 12 }}>
+    <section className="dashboard-page-theme">
+      <h1 className="dashboard-title mb-3">Dashboard</h1>
+      <div className="dashboard-page-content">
         <div className="dashboard-tabs" role="tablist" aria-label="Dashboard tabs">
           <button
             className={`dashboard-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
@@ -240,7 +240,7 @@ export default function Page() {
 
         {activeTab === 'overview' && (
           <>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="dashboard-randomize-row">
               <label htmlFor="free-count">Cantidad FREE aleatoria:</label>
               <input
                 id="free-count"
@@ -248,14 +248,14 @@ export default function Page() {
                 min={0}
                 value={count}
                 onChange={(e)=>setCount(e.target.value)}
-                style={{ width: 120 }}
+                className="dashboard-randomize-input"
               />
               <button className="btn btn-secondary" onClick={randomize} disabled={loading}>
                 {loading ? 'Procesando…' : 'Randomizar FREE'}
               </button>
             </div>
 
-            <div style={{display:'flex',gap:8,marginBottom:8,justifyContent:'center',flexWrap:'wrap'}}>
+            <div className="dashboard-kpi-row">
               <AssetsSubidos />
               <TotalArchivo value={1234} />
               <TotalUsers />
@@ -459,6 +459,6 @@ export default function Page() {
           </div>
         )}
       </div>
-    </>
+    </section>
   );
 }

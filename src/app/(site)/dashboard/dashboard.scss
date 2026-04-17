@@ -10,6 +10,59 @@
   justify-content: flex-start;
 }
 
+.dashboard-page-theme {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background:
+    radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.15), transparent 32%),
+    radial-gradient(circle at 5% 95%, rgba(14, 165, 233, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.92), rgba(15, 23, 42, 0.9));
+  box-shadow: 0 16px 30px rgba(2, 6, 23, 0.42);
+}
+
+.dashboard-title {
+  margin: 0;
+  color: #f8fbff;
+  font-weight: 800;
+}
+
+.dashboard-page-content {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-randomize-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: #e2e8f0;
+}
+
+.dashboard-randomize-input {
+  width: 120px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #f8fafc;
+}
+
+.dashboard-randomize-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.88);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.24);
+}
+
+.dashboard-kpi-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .dashboard-card-cell {
   /* Ancho responsivo, pero sin “huecos raros” */
   flex: 1 1 320px;
@@ -34,19 +87,19 @@
 }
 
 .dashboard-tab-btn {
-  border: 1px solid #d0d7e2;
+  border: 1px solid rgba(148, 163, 184, 0.46);
   border-radius: 10px;
-  background: #f4f7fb;
-  color: #23324a;
+  background: rgba(15, 23, 42, 0.68);
+  color: #d6e4f5;
   font-weight: 700;
   padding: 8px 14px;
   cursor: pointer;
 }
 
 .dashboard-tab-btn.is-active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #ffffff;
+  background: rgba(14, 165, 233, 0.22);
+  border-color: rgba(56, 189, 248, 0.72);
+  color: #bae6fd;
 }
 
 .campaigns-grid {
@@ -55,26 +108,31 @@
   gap: 14px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid #2f67ff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
   background:
-    radial-gradient(circle at 12% 12%, rgba(76, 180, 255, 0.26), transparent 34%),
-    linear-gradient(135deg, #0a41c6 0%, #0e68ff 52%, #0f83ff 100%);
-  box-shadow: 0 18px 30px rgba(12, 57, 173, 0.32);
+    radial-gradient(circle at 92% 8%, rgba(56, 189, 248, 0.14), transparent 36%),
+    radial-gradient(circle at 5% 90%, rgba(34, 211, 238, 0.1), transparent 38%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.86), rgba(15, 23, 42, 0.84));
+  box-shadow: 0 16px 30px rgba(2, 6, 23, 0.4);
 }
 
 .campaign-card {
-  border: 1px solid rgba(141, 203, 255, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.36);
   border-radius: 14px;
-  background: rgba(5, 24, 84, 0.72);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(15, 23, 42, 0.58));
   padding: 14px;
-  box-shadow: 0 14px 24px rgba(2, 12, 48, 0.42);
-  color: #e6f2ff;
+  box-shadow: 0 12px 22px rgba(2, 6, 23, 0.36);
+  color: #e2e8f0;
 }
 
 .campaign-card h3 {
   margin: 0 0 10px;
   font-size: 1.05rem;
-  color: #ffffff;
+  color: #f8fafc;
+}
+
+.campaign-card p {
+  color: rgba(226, 232, 240, 0.85);
 }
 
 .campaign-form {
@@ -87,7 +145,7 @@
   gap: 6px;
   font-size: 0.88rem;
   font-weight: 600;
-  color: #d8e8ff;
+  color: #d8e3f0;
 }
 
 .field-head {
@@ -111,7 +169,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #30a9ff;
+  background: #0ea5e9;
   color: #ffffff;
   font-size: 11px;
   font-weight: 900;
@@ -127,8 +185,8 @@
   max-width: 70vw;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(122, 192, 255, 0.34);
-  background: #0a1b4e;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  background: #020617;
   color: #f8fafc;
   font-size: 12px;
   line-height: 1.45;
@@ -153,19 +211,19 @@
 .campaign-form input,
 .campaign-form textarea {
   width: 100%;
-  border: 1px solid #7ab9ff;
+  border: 1px solid rgba(148, 163, 184, 0.5);
   border-radius: 9px;
   padding: 8px 10px;
   font-size: 0.92rem;
   outline: none;
-  background: #f7fbff;
-  color: #11284d;
+  background: rgba(15, 23, 42, 0.66);
+  color: #f8fafc;
 }
 
 .campaign-form input:focus,
 .campaign-form textarea:focus {
-  border-color: #2498ff;
-  box-shadow: 0 0 0 3px rgba(56, 163, 255, 0.25);
+  border-color: rgba(56, 189, 248, 0.88);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.22);
 }
 
 .campaign-list {
@@ -174,10 +232,10 @@
 }
 
 .campaign-item {
-  border: 1px solid rgba(141, 206, 255, 0.34);
+  border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 10px;
   padding: 10px;
-  background: rgba(8, 31, 94, 0.78);
+  background: rgba(2, 6, 23, 0.46);
 }
 
 .campaign-item-head {
@@ -194,7 +252,7 @@
   gap: 8px;
   flex-wrap: wrap;
   font-size: 0.84rem;
-  color: #d4e9ff;
+  color: #d6e4f5;
   margin-bottom: 7px;
 }
 
@@ -203,13 +261,13 @@
   gap: 8px;
   flex-wrap: wrap;
   font-size: 0.82rem;
-  color: #0a3b8f;
+  color: #e0f2fe;
   margin-bottom: 8px;
 }
 
 .campaign-rates span {
-  border: 1px solid #90d6ff;
-  background: #dff4ff;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  background: rgba(14, 116, 144, 0.2);
   border-radius: 999px;
   padding: 3px 9px;
 }
@@ -223,12 +281,12 @@
 .campaign-url input {
   flex: 1 1 auto;
   min-width: 160px;
-  border: 1px solid #7ab9ff;
+  border: 1px solid rgba(148, 163, 184, 0.48);
   border-radius: 8px;
   padding: 7px 8px;
   font-size: 0.84rem;
-  background: #eff8ff;
-  color: #173466;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
 }
 
 .campaign-status-btn {
@@ -264,9 +322,9 @@
 }
 
 .copy-url-btn {
-  border: 1px solid #7fc3ff;
+  border: 1px solid rgba(56, 189, 248, 0.74);
   border-radius: 8px;
-  background: linear-gradient(135deg, #0a56d6 0%, #0f79ff 100%);
+  background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%);
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -276,7 +334,7 @@
 }
 
 .copy-url-btn:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.07);
 }
 
 .copy-url-tooltip {
@@ -322,4 +380,117 @@
     top: 24px;
     width: min(320px, 86vw);
   }
+}
+
+/* =========================================================
+   Dashboard Overview Theme (alineado a Upload Batch)
+   ========================================================= */
+
+.dashboard-page-theme .stat-card,
+.dashboard-page-theme .top-downloads-card,
+.dashboard-page-theme .reports-card,
+.dashboard-page-theme .taxonomy-counts-card,
+.dashboard-page-theme .search-insights-card,
+.dashboard-page-theme .last-checks-card {
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.52)) !important;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.35) !important;
+  color: #e2e8f0;
+}
+
+.dashboard-page-theme .stat-card .label,
+.dashboard-page-theme .stat-card .sub,
+.dashboard-page-theme .top-downloads-card .label,
+.dashboard-page-theme .reports-card .meta,
+.dashboard-page-theme .search-insights-card .item-row .row-sub,
+.dashboard-page-theme .last-checks-card .lc-meta,
+.dashboard-page-theme .last-checks-card .lc-footer,
+.dashboard-page-theme .last-checks-card .lc-count,
+.dashboard-page-theme .last-checks-card .lc-meta-type {
+  color: rgba(203, 213, 225, 0.84) !important;
+}
+
+.dashboard-page-theme .stat-card .value,
+.dashboard-page-theme .top-downloads-card .summary-value,
+.dashboard-page-theme .top-downloads-card .download-item .count,
+.dashboard-page-theme .reports-card .report-item .count,
+.dashboard-page-theme .taxonomy-counts-card .summary-value,
+.dashboard-page-theme .taxonomy-counts-card .item-row .count,
+.dashboard-page-theme .search-insights-card .summary-value,
+.dashboard-page-theme .search-insights-card .item-row .count,
+.dashboard-page-theme .last-checks-card .lc-title,
+.dashboard-page-theme .last-checks-card .lc-alias,
+.dashboard-page-theme .last-checks-card .lc-meta-rel {
+  color: #f8fafc !important;
+}
+
+.dashboard-page-theme .top-downloads-card .card-header h6,
+.dashboard-page-theme .reports-card .card-header h6,
+.dashboard-page-theme .taxonomy-counts-card .card-header h6,
+.dashboard-page-theme .search-insights-card .card-header h6,
+.dashboard-page-theme .reports-card .report-item .name,
+.dashboard-page-theme .taxonomy-counts-card .item-row .name,
+.dashboard-page-theme .search-insights-card .item-row .name,
+.dashboard-page-theme .top-downloads-card .download-item .name {
+  color: #e2e8f0 !important;
+}
+
+.dashboard-page-theme .stat-card .range-btn,
+.dashboard-page-theme .top-downloads-card .range-btn,
+.dashboard-page-theme .taxonomy-counts-card .range-btn,
+.dashboard-page-theme .search-insights-card .range-btn,
+.dashboard-page-theme .last-checks-card .lc-tab,
+.dashboard-page-theme .last-checks-card .lc-refresh {
+  background: rgba(2, 6, 23, 0.4) !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  color: #cbd5e1 !important;
+}
+
+.dashboard-page-theme .stat-card .range-btn.active,
+.dashboard-page-theme .top-downloads-card .range-btn.active,
+.dashboard-page-theme .taxonomy-counts-card .range-btn.active,
+.dashboard-page-theme .search-insights-card .range-btn.active,
+.dashboard-page-theme .last-checks-card .lc-tab.active {
+  background: rgba(14, 165, 233, 0.24) !important;
+  border-color: rgba(56, 189, 248, 0.75) !important;
+  color: #bae6fd !important;
+}
+
+.dashboard-page-theme .top-downloads-card .card-header .collapse-btn,
+.dashboard-page-theme .reports-card .collapse-btn,
+.dashboard-page-theme .taxonomy-counts-card .card-header .collapse-btn,
+.dashboard-page-theme .search-insights-card .card-header .collapse-btn {
+  color: #94a3b8 !important;
+}
+
+.dashboard-page-theme .top-downloads-card .download-item,
+.dashboard-page-theme .reports-card .report-item,
+.dashboard-page-theme .taxonomy-counts-card .item-row,
+.dashboard-page-theme .search-insights-card .item-row {
+  background: rgba(2, 6, 23, 0.52) !important;
+  border: 1px solid rgba(148, 163, 184, 0.26) !important;
+}
+
+.dashboard-page-theme .last-checks-card .lc-list {
+  border-top: 1px solid rgba(148, 163, 184, 0.22) !important;
+}
+
+.dashboard-page-theme .last-checks-card .lc-item {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+.dashboard-page-theme .last-checks-card .lc-alert-dot {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+.dashboard-page-theme .reports-card .report-item .btn-solve {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  background: rgba(2, 132, 199, 0.18) !important;
+  color: #bae6fd !important;
+}
+
+.dashboard-page-theme .reports-card .report-item .btn-check {
+  border-color: rgba(34, 197, 94, 0.42) !important;
+  background: rgba(21, 128, 61, 0.18) !important;
+  color: #bbf7d0 !important;
 }
