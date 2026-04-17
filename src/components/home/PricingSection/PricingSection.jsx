@@ -6,6 +6,11 @@ import PayButton from '../../common/PaypalButton/PayButton';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
 import Button from '@/components/layout/Buttons/Button';
+import HttpService from '@/services/HttpService';
+import {
+    getTrackingFromMiddlewareCookie,
+    getVisitIdentityFromMiddlewareCookie,
+} from '../../../helpers/attributionCookie';
 
 const getFeatures = (t, isEn) => {
     if (typeof t === 'function') {
@@ -97,6 +102,8 @@ const PricingSection = ({
     const [paymentMethod, setPaymentMethod] = React.useState(null); // 'mercadopago' | 'paypal' | 'card' | 'pse'
     const userId = useStore((s) => s.userId);
     const [notLoggedInModal, setNotLoggedInModal] = React.useState(false);
+    const [isMercadoPagoLoading, setIsMercadoPagoLoading] = React.useState(false);
+    const httpService = React.useMemo(() => new HttpService(), []);
 
     const title =
         (typeof t === 'function' && t('pricing.title')) ||
@@ -138,6 +145,45 @@ const PricingSection = ({
     const chooseTpl =
         (typeof t === 'function' && t('pricing.buttons.choose')) ||
         (isEn ? 'Choose {name}' : 'Elegir {name}');
+
+    const handleMercadoPagoCheckout = React.useCallback(async () => {
+        if (!selectedPlan || !userId || isMercadoPagoLoading) return;
+
+        try {
+            setIsMercadoPagoLoading(true);
+            const tracking = getTrackingFromMiddlewareCookie('last');
+            const { anonId, sessionId } = getVisitIdentityFromMiddlewareCookie();
+
+            const response = await httpService.postData('payments/mercadopago/preference', {
+                planId: selectedPlan.id,
+                userId,
+                tracking,
+                anonId,
+                sessionId,
+            });
+
+            const initPoint = response?.data?.initPoint;
+            if (!initPoint) {
+                alert(
+                    isEn
+                        ? 'Could not start Mercado Pago checkout. Please try again.'
+                        : 'No se pudo iniciar el checkout de Mercado Pago. Intenta de nuevo.'
+                );
+                return;
+            }
+
+            window.location.href = initPoint;
+        } catch (error) {
+            console.error('Error iniciando checkout de MercadoPago:', error);
+            alert(
+                isEn
+                    ? 'There was an error connecting to Mercado Pago.'
+                    : 'Hubo un error al conectar con Mercado Pago.'
+            );
+        } finally {
+            setIsMercadoPagoLoading(false);
+        }
+    }, [selectedPlan, userId, isMercadoPagoLoading, httpService, isEn]);
 
     return (
         <section className={`pricing ${containerClass} px-4 p-xl-0`}>
@@ -347,7 +393,9 @@ const PricingSection = ({
                     {paymentMethod === 'mercadopago' && (
                         <div style={{ minWidth: 320, maxWidth: '100%' }}>
                             <p style={{ color: '#333', textAlign: 'center' }}>
-                                MercadoPago / Latam-Colombia (UI lista). Integración funcional en el siguiente paso.
+                                {isEn
+                                    ? 'Pay securely with Mercado Pago, PSE, Nequi and cards.'
+                                    : 'Paga de forma segura con Mercado Pago, PSE, Nequi y tarjetas.'}
                             </p>
                             <div
                                 style={{
@@ -358,10 +406,17 @@ const PricingSection = ({
                             >
                                 <button
                                     className="btn-pill fill"
-                                    disabled
+                                    disabled={isMercadoPagoLoading}
+                                    onClick={handleMercadoPagoCheckout}
                                     style={{ minWidth: 220 }}
                                 >
-                                    MercadoPago (próximamente)
+                                    {isMercadoPagoLoading
+                                        ? isEn
+                                            ? 'Redirecting...'
+                                            : 'Redirigiendo...'
+                                        : isEn
+                                        ? 'Continue with Mercado Pago'
+                                        : 'Continuar con Mercado Pago'}
                                 </button>
                             </div>
                         </div>
