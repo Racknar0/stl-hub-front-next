@@ -1,7 +1,6 @@
 const STORAGE_KEY = 'stlhub:attribution:v1';
 const ANON_ID_KEY = 'stlhub:anon-id:v1';
 const SESSION_ID_KEY = 'stlhub:session-id:v1';
-const SENT_KEY_PREFIX = 'stlhub:visit-sent:v1:';
 const DEBUG_KEY = 'stlhub:utm-debug';
 const MAX_TEXT = 191;
 const MAX_URL = 512;
@@ -48,30 +47,6 @@ const getOrCreateLocalId = (key, { session = false } = {}) => {
   }
 };
 
-const getVisitStateInSession = (signature) => {
-  try {
-    if (typeof window === 'undefined') return null;
-    const key = `${SENT_KEY_PREFIX}${signature}`;
-    return window.sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const setVisitStateInSession = (signature, value) => {
-  try {
-    if (typeof window === 'undefined') return;
-    const key = `${SENT_KEY_PREFIX}${signature}`;
-    if (!value) {
-      window.sessionStorage.removeItem(key);
-      return;
-    }
-    window.sessionStorage.setItem(key, String(value));
-  } catch {
-    // noop
-  }
-};
-
 const isDebugEnabled = () => {
   try {
     if (typeof window === 'undefined') return false;
@@ -83,18 +58,10 @@ const isDebugEnabled = () => {
   }
 };
 
-const postCampaignVisit = async (payload, signature, debug = false) => {
+const postCampaignVisit = async (payload, debug = false) => {
   try {
     const url = `${getApiBase()}/metrics/campaign-visit`;
     const body = JSON.stringify(payload);
-
-    const currentState = getVisitStateInSession(signature);
-    if (currentState === 'sent' || currentState === 'pending') {
-      if (debug) console.info('[ATTRIBUTION] skip visit send (state):', currentState);
-      return;
-    }
-
-    setVisitStateInSession(signature, 'pending');
 
     const response = await fetch(url, {
       method: 'POST',
@@ -104,15 +71,12 @@ const postCampaignVisit = async (payload, signature, debug = false) => {
     });
 
     if (response.ok) {
-      setVisitStateInSession(signature, 'sent');
-      if (debug) console.info('[ATTRIBUTION] visit sent:', { status: response.status, url, signature });
+      if (debug) console.info('[ATTRIBUTION] visit sent:', { status: response.status, url });
       return;
     }
 
-    setVisitStateInSession(signature, null);
-    if (debug) console.warn('[ATTRIBUTION] visit send failed (non-ok):', { status: response.status, url, signature });
+    if (debug) console.warn('[ATTRIBUTION] visit send failed (non-ok):', { status: response.status, url });
   } catch {
-    setVisitStateInSession(signature, null);
     if (debug) console.warn('[ATTRIBUTION] visit send failed (exception)');
   }
 };
@@ -199,8 +163,6 @@ export const bootstrapAttributionFromUrl = () => {
   }
 
   if (incoming) {
-    const campaignKey = safeText(incoming.utmCampaign || 'no-campaign', 120);
-    const signature = `${campaignKey}|${safeText(window.location.pathname || '/', 160)}|${safeText(window.location.search || '', 220)}`;
     const anonId = getOrCreateLocalId(ANON_ID_KEY);
     const sessionId = getOrCreateLocalId(SESSION_ID_KEY, { session: true });
     void postCampaignVisit({
@@ -212,7 +174,9 @@ export const bootstrapAttributionFromUrl = () => {
       anonId,
       sessionId,
       pagePath: safeText(window.location.pathname || '/', 255),
-    }, signature, debug);
+    }, debug);
+  } else if (debug) {
+    console.info('[ATTRIBUTION] no incoming utm params detected in URL');
   }
 
   return next;
