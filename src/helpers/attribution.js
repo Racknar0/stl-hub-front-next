@@ -2,6 +2,7 @@ const STORAGE_KEY = 'stlhub:attribution:v1';
 const ANON_ID_KEY = 'stlhub:anon-id:v1';
 const SESSION_ID_KEY = 'stlhub:session-id:v1';
 const SENT_KEY_PREFIX = 'stlhub:visit-sent:v1:';
+const DEBUG_KEY = 'stlhub:utm-debug';
 const MAX_TEXT = 191;
 const MAX_URL = 512;
 const TTL_MS = 1000 * 60 * 60 * 24 * 120;
@@ -47,44 +48,72 @@ const getOrCreateLocalId = (key, { session = false } = {}) => {
   }
 };
 
-const markVisitSentInSession = (signature) => {
+const getVisitStateInSession = (signature) => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const key = `${SENT_KEY_PREFIX}${signature}`;
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setVisitStateInSession = (signature, value) => {
+  try {
+    if (typeof window === 'undefined') return;
+    const key = `${SENT_KEY_PREFIX}${signature}`;
+    if (!value) {
+      window.sessionStorage.removeItem(key);
+      return;
+    }
+    window.sessionStorage.setItem(key, String(value));
+  } catch {
+    // noop
+  }
+};
+
+const isDebugEnabled = () => {
   try {
     if (typeof window === 'undefined') return false;
-    const key = `${SENT_KEY_PREFIX}${signature}`;
-    if (window.sessionStorage.getItem(key)) return true;
-    window.sessionStorage.setItem(key, '1');
-    return false;
+    const params = new URLSearchParams(window.location.search || '');
+    if (params.get('utm_debug') === '1') return true;
+    return window.localStorage.getItem(DEBUG_KEY) === '1';
   } catch {
     return false;
   }
 };
 
-const postCampaignVisit = (payload) => {
+const postCampaignVisit = async (payload, signature, debug = false) => {
   try {
     const url = `${getApiBase()}/metrics/campaign-visit`;
     const body = JSON.stringify(payload);
 
-    // Beacon primero para no bloquear navegación.
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      try {
-        const blob = new Blob([body], { type: 'application/json' });
-        const queued = navigator.sendBeacon(url, blob);
-        if (queued) return;
-      } catch {
-        // Si falla beacon, hacemos fallback a fetch.
-      }
+    const currentState = getVisitStateInSession(signature);
+    if (currentState === 'sent' || currentState === 'pending') {
+      if (debug) console.info('[ATTRIBUTION] skip visit send (state):', currentState);
+      return;
     }
 
-    void fetch(url, {
+    setVisitStateInSession(signature, 'pending');
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
       keepalive: true,
-    }).catch(() => {
-      // noop: tracking no debe romper la UX
     });
+
+    if (response.ok) {
+      setVisitStateInSession(signature, 'sent');
+      if (debug) console.info('[ATTRIBUTION] visit sent:', { status: response.status, url, signature });
+      return;
+    }
+
+    setVisitStateInSession(signature, null);
+    if (debug) console.warn('[ATTRIBUTION] visit send failed (non-ok):', { status: response.status, url, signature });
   } catch {
-    // noop
+    setVisitStateInSession(signature, null);
+    if (debug) console.warn('[ATTRIBUTION] visit send failed (exception)');
   }
 };
 
@@ -138,6 +167,7 @@ const writeStorage = (payload) => {
 
 export const bootstrapAttributionFromUrl = () => {
   if (typeof window === 'undefined') return null;
+  const debug = isDebugEnabled();
 
   const params = new URLSearchParams(window.location.search || '');
   const incoming = extractFromParams(params);
@@ -159,26 +189,30 @@ export const bootstrapAttributionFromUrl = () => {
   };
 
   writeStorage(next);
+  if (debug) {
+    console.info('[ATTRIBUTION] bootstrap:', {
+      incoming,
+      hasStored: !!current,
+      firstTouch: next.firstTouch,
+      lastTouch: next.lastTouch,
+    });
+  }
 
   if (incoming) {
     const campaignKey = safeText(incoming.utmCampaign || 'no-campaign', 120);
     const signature = `${campaignKey}|${safeText(window.location.pathname || '/', 160)}|${safeText(window.location.search || '', 220)}`;
-    const alreadySent = markVisitSentInSession(signature);
-
-    if (!alreadySent) {
-      const anonId = getOrCreateLocalId(ANON_ID_KEY);
-      const sessionId = getOrCreateLocalId(SESSION_ID_KEY, { session: true });
-      postCampaignVisit({
-        tracking: {
-          ...incoming,
-          landingUrl: safeUrl(window.location.href),
-          referrer: safeUrl(document?.referrer || null),
-        },
-        anonId,
-        sessionId,
-        pagePath: safeText(window.location.pathname || '/', 255),
-      });
-    }
+    const anonId = getOrCreateLocalId(ANON_ID_KEY);
+    const sessionId = getOrCreateLocalId(SESSION_ID_KEY, { session: true });
+    void postCampaignVisit({
+      tracking: {
+        ...incoming,
+        landingUrl: safeUrl(window.location.href),
+        referrer: safeUrl(document?.referrer || null),
+      },
+      anonId,
+      sessionId,
+      pagePath: safeText(window.location.pathname || '/', 255),
+    }, signature, debug);
   }
 
   return next;
