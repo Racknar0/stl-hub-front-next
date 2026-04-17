@@ -8,7 +8,6 @@ import Link from 'next/link';
 import useStore from '../../../store/useStore';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
-import { getAttributionPayload } from '../../../helpers/attribution';
 
 const Register = () => {
     // ⚠️ mantener instancia estable de HttpService
@@ -99,12 +98,10 @@ const Register = () => {
         }
         setLoading(true);
         try {
-            const tracking = getAttributionPayload('first');
             const data = {
                 email,
                 password,
                 language: isEn ? 'en' : 'es',
-                tracking,
             };
 
             const response = await httpService.postData('/auth/register', data);

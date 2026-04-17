@@ -7,6 +7,7 @@ import { timerAlert } from '@/helpers/alerts';
 const axiosInstance = axios.create({
   // baseURL: "http://localhost:3001/api",
   baseURL: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api`,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

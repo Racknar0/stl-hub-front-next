@@ -1,7 +1,6 @@
 import React from 'react';
 import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
 import HttpService from '@/services/HttpService'; 
-import { getAttributionPayload } from '../../../helpers/attribution';
 
 const PayButton = ({
     plan,
@@ -22,22 +21,18 @@ const PayButton = ({
                 }}
                 createOrder={async () => {
                     // Llamar a tu backend para crear la orden
-                    const tracking = getAttributionPayload('last');
                     const response = await httpService.postData('payments/paypal/order', {
                         planId : plan.id,
                         userId,
-                        tracking,
                     });
                     const { id } = await response.data; // Aca se extrae el id
                     return id;
                 }}
                 onApprove={async (data) => {
-                    const tracking = getAttributionPayload('last');
                     const response = await httpService.postData('payments/paypal/capture', {
                         orderID: data.orderID,
                         planId: plan.id, 
                         userId: userId,
-                        tracking,
                     });
                     console.log('onApprove response', response);
                     if (response.data?.success) {
