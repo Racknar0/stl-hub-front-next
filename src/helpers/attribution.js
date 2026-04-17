@@ -66,9 +66,13 @@ const postCampaignVisit = (payload) => {
 
     // Beacon primero para no bloquear navegación.
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const blob = new Blob([body], { type: 'application/json' });
-      navigator.sendBeacon(url, blob);
-      return;
+      try {
+        const blob = new Blob([body], { type: 'application/json' });
+        const queued = navigator.sendBeacon(url, blob);
+        if (queued) return;
+      } catch {
+        // Si falla beacon, hacemos fallback a fetch.
+      }
     }
 
     void fetch(url, {
@@ -76,6 +80,8 @@ const postCampaignVisit = (payload) => {
       headers: { 'Content-Type': 'application/json' },
       body,
       keepalive: true,
+    }).catch(() => {
+      // noop: tracking no debe romper la UX
     });
   } catch {
     // noop
