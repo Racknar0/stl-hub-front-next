@@ -237,25 +237,25 @@ const PricingSection = ({
                 onClose={() => setShowModal(false)}
                 title={ isEn ? 'Select payment method' : 'Selecciona un método de pago' }
                 brand="STL Hub"
-            >
-                <div className="payment-method-header-icons">
-                    <div className="payment-method-header-pill">
-                        <img
-                            src="/payments_logos/100-secure.png"
-                            alt={isEn ? '100% secure payment' : 'Pago 100% seguro'}
-                        />
-                        <span>
-                            {isEn ? '100% Secure Payment' : 'Pago 100% seguro'}
+                topbarContent={
+                    <div className="payment-topbar-icons" aria-hidden>
+                        <span className="payment-topbar-icon-wrap">
+                            <img
+                                className="payment-topbar-icon"
+                                src="/payments_logos/100-secure.png"
+                                alt=""
+                            />
+                        </span>
+                        <span className="payment-topbar-icon-wrap">
+                            <img
+                                className="payment-topbar-icon"
+                                src="/payments_logos/warranty.png"
+                                alt=""
+                            />
                         </span>
                     </div>
-                    <div className="payment-method-header-pill">
-                        <img
-                            src="/payments_logos/warranty.png"
-                            alt={isEn ? 'Warranty included' : 'Garantia incluida'}
-                        />
-                        <span>{isEn ? 'Warranty Included' : 'Garantia incluida'}</span>
-                    </div>
-                </div>
+                }
+            >
                 <div className="payment-method-list">
                     <button
                         className="payment-method-btn is-primary"

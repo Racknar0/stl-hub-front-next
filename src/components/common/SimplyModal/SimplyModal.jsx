@@ -8,6 +8,7 @@ export default function SimplyModal({
     title,
     children,
     brand = 'STL Hub',
+    topbarContent = null,
     ariaLabelledBy = 'simply-modal-title',
     bodyStyles = {},
     titleStyles = {},
@@ -48,7 +49,12 @@ export default function SimplyModal({
                 <div className="modal-dialog modal-dialog-centered">
                     <div className="modal-content simply-modal__content">
                         <div className="topbar">
-                            <span className="brand">{brand}</span>
+                            <div className="topbar-main">
+                                <span className="brand">{brand}</span>
+                                {topbarContent ? (
+                                    <div className="topbar-content">{topbarContent}</div>
+                                ) : null}
+                            </div>
                             <button
                                 type="button"
                                 className="btn-close"
