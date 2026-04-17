@@ -51,7 +51,10 @@ const isDebugEnabled = () => {
   try {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search || '');
-    if (params.get('utm_debug') === '1') return true;
+    if (params.get('utm_debug') === '1') {
+      window.localStorage.setItem(DEBUG_KEY, '1');
+      return true;
+    }
     return window.localStorage.getItem(DEBUG_KEY) === '1';
   } catch {
     return false;
@@ -60,7 +63,7 @@ const isDebugEnabled = () => {
 
 const postCampaignVisit = async (payload, debug = false) => {
   try {
-    const url = `${getApiBase()}/metrics/campaign-visit`;
+    const url = `${getApiBase()}/track/campaign-visit`;
     const body = JSON.stringify(payload);
 
     const response = await fetch(url, {
@@ -71,7 +74,7 @@ const postCampaignVisit = async (payload, debug = false) => {
     });
 
     if (response.ok) {
-      if (debug) console.info('[ATTRIBUTION] visit sent:', { status: response.status, url });
+      if (debug) console.info('[ATTRIBUTION] visit sent:', { status: response.status, url, payload });
       return;
     }
 
