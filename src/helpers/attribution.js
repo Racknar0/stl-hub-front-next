@@ -2,6 +2,7 @@ const STORAGE_KEY = 'stlhub:attribution:v1';
 const ANON_ID_KEY = 'stlhub:anon-id:v1';
 const SESSION_ID_KEY = 'stlhub:session-id:v1';
 const DEBUG_KEY = 'stlhub:utm-debug';
+const MIDDLEWARE_VISIT_COOKIE = 'mkt_visit_queued';
 const MAX_TEXT = 191;
 const MAX_URL = 512;
 const TTL_MS = 1000 * 60 * 60 * 24 * 120;
@@ -56,6 +57,16 @@ const isDebugEnabled = () => {
       return true;
     }
     return window.localStorage.getItem(DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const hasMiddlewareQueuedVisit = () => {
+  try {
+    if (typeof document === 'undefined') return false;
+    const raw = String(document.cookie || '');
+    return raw.split(';').some((part) => part.trim().startsWith(`${MIDDLEWARE_VISIT_COOKIE}=`));
   } catch {
     return false;
   }
@@ -166,18 +177,23 @@ export const bootstrapAttributionFromUrl = () => {
   }
 
   if (incoming) {
-    const anonId = getOrCreateLocalId(ANON_ID_KEY);
-    const sessionId = getOrCreateLocalId(SESSION_ID_KEY, { session: true });
-    void postCampaignVisit({
-      tracking: {
-        ...incoming,
-        landingUrl: safeUrl(window.location.href),
-        referrer: safeUrl(document?.referrer || null),
-      },
-      anonId,
-      sessionId,
-      pagePath: safeText(window.location.pathname || '/', 255),
-    }, debug);
+    // Si middleware ya encoló la visita, evitamos doble conteo desde cliente.
+    if (hasMiddlewareQueuedVisit()) {
+      if (debug) console.info('[ATTRIBUTION] visit skipped: middleware already queued it');
+    } else {
+      const anonId = getOrCreateLocalId(ANON_ID_KEY);
+      const sessionId = getOrCreateLocalId(SESSION_ID_KEY, { session: true });
+      void postCampaignVisit({
+        tracking: {
+          ...incoming,
+          landingUrl: safeUrl(window.location.href),
+          referrer: safeUrl(document?.referrer || null),
+        },
+        anonId,
+        sessionId,
+        pagePath: safeText(window.location.pathname || '/', 255),
+      }, debug);
+    }
   } else if (debug) {
     console.info('[ATTRIBUTION] no incoming utm params detected in URL');
   }

@@ -7,6 +7,7 @@ const CANONICAL_HOST = 'stl-hub.com';
 const BLOCKED_IP_HOSTS = new Set(['77.237.239.254']);
 const TRACK_ANON_COOKIE = 'mkt_anon_id';
 const TRACK_SESSION_COOKIE = 'mkt_session_id';
+const TRACK_QUEUED_COOKIE = 'mkt_visit_queued';
 const TRACK_API_BASE = String(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stl-hub.com').replace(/\/$/, '');
 
 function normalizeHost(host: string) {
@@ -65,6 +66,13 @@ function getOrSetCookieId(req: NextRequest, res: NextResponse, name: string, max
 function queueCampaignVisit(req: NextRequest, event: NextFetchEvent, res: NextResponse) {
   const tracking = getTrackingFromSearch(req.nextUrl.searchParams);
   if (!tracking) return;
+
+  res.cookies.set(TRACK_QUEUED_COOKIE, '1', {
+    path: '/',
+    sameSite: 'lax',
+    secure: true,
+    maxAge: 60 * 10,
+  });
 
   const anonId = getOrSetCookieId(req, res, TRACK_ANON_COOKIE, 60 * 60 * 24 * 365);
   const sessionId = getOrSetCookieId(req, res, TRACK_SESSION_COOKIE, 60 * 60 * 2);
