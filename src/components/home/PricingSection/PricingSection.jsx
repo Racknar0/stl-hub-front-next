@@ -94,7 +94,7 @@ const PricingSection = ({
     const [showModal, setShowModal] = React.useState(false);
     const [selectedPlan, setSelectedPlan] = React.useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
-    const [paymentMethod, setPaymentMethod] = React.useState(null); // 'paypal' | 'card' | 'pse'
+    const [paymentMethod, setPaymentMethod] = React.useState(null); // 'mercadopago' | 'paypal' | 'card' | 'pse'
     const userId = useStore((s) => s.userId);
     const [notLoggedInModal, setNotLoggedInModal] = React.useState(false);
 
@@ -238,17 +238,53 @@ const PricingSection = ({
                 title={ isEn ? 'Select payment method' : 'Selecciona un método de pago' }
                 brand="STL Hub"
             >
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 18,
-                        alignItems: 'center',
-                    }}
-                >
+                <div className="payment-method-header-icons">
+                    <div className="payment-method-header-pill">
+                        <img
+                            src="/payments_logos/100-secure.png"
+                            alt={isEn ? '100% secure payment' : 'Pago 100% seguro'}
+                        />
+                        <span>
+                            {isEn ? '100% Secure Payment' : 'Pago 100% seguro'}
+                        </span>
+                    </div>
+                    <div className="payment-method-header-pill">
+                        <img
+                            src="/payments_logos/warranty.png"
+                            alt={isEn ? 'Warranty included' : 'Garantia incluida'}
+                        />
+                        <span>{isEn ? 'Warranty Included' : 'Garantia incluida'}</span>
+                    </div>
+                </div>
+                <div className="payment-method-list">
                     <button
-                        className="btn-pill fill mt-3"
-                        style={{ fontSize: 18, minWidth: 220 }}
+                        className="payment-method-btn is-primary"
+                        type="button"
+                        onClick={() => {
+                            if (!selectedPlan) setSelectedPlan(plans[0]);
+                            setShowModal(false);
+                            setPaymentMethod('mercadopago');
+                            setPaymentModalOpen(true);
+                        }}
+                    >
+                        <span className="payment-method-content">
+                            <span className="payment-method-text">
+                                <span className="payment-method-title">
+                                    {isEn ? 'Latin America & Colombia' : 'Latinoamérica & Colombia'}
+                                </span>
+                                <span className="payment-method-subtitle">
+                                    {isEn
+                                        ? 'Mercado Pago, PSE, Nequi and Credit Cards'
+                                        : 'Mercado Pago, PSE, Nequi y Tarjetas de crédito'}
+                                </span>
+                            </span>
+                            <span className="payment-method-logo" aria-hidden>
+                                <img src="/payments_logos/mercado-pago-logo.png" alt="Mercado Pago" />
+                            </span>
+                        </span>
+                    </button>
+                    <button
+                        className="payment-method-btn"
                         type="button"
                         onClick={() => {
                             if (!selectedPlan) setSelectedPlan(plans[0]);
@@ -257,31 +293,25 @@ const PricingSection = ({
                             setPaymentModalOpen(true);
                         }}
                     >
-                        {isEn
-                            ? 'Credit Card / PayPal'
-                            : 'Tarjeta de crédito / PayPal'}
-                    </button>
-                    <button
-                        className="btn-pill outline"
-                        style={{ fontSize: 18, minWidth: 220 }}
-                        type="button"
-                        onClick={() => {
-                            if (!selectedPlan) setSelectedPlan(plans[0]);
-                            setShowModal(false);
-                            setPaymentMethod('card');
-                            setPaymentModalOpen(true);
-                        }}
-                    >
-                        {isEn ? 'Otro' : 'Otro'}
+                        <span className="payment-method-content">
+                            <span className="payment-method-text">
+                                <span className="payment-method-title">
+                                    {isEn ? 'Card / PayPal' : 'Tarjeta / PayPal'}
+                                </span>
+                                <span className="payment-method-subtitle">
+                                    {isEn
+                                        ? 'Accept payments with PayPal and credit cards'
+                                        : 'Recibe pagos con PayPal y tarjeta de crédito'}
+                                </span>
+                            </span>
+                            <span className="payment-method-logo is-paypal" aria-hidden>
+                                <img src="/payments_logos/paypal-logo.png" alt="PayPal" />
+                            </span>
+                        </span>
                     </button>
                 </div>
                 <div
-                    style={{
-                        marginTop: 32,
-                        color: '#f7f7f7',
-                        fontSize: 17,
-                        textAlign: 'center',
-                    }}
+                    className="payment-method-plan-summary"
                 >
                     {selectedPlan && (
                         <>
@@ -300,7 +330,9 @@ const PricingSection = ({
                 open={paymentModalOpen}
                 onClose={() => setPaymentModalOpen(false)}
                 title={
-                    paymentMethod === 'paypal'
+                    paymentMethod === 'mercadopago'
+                        ? 'MercadoPago'
+                        : paymentMethod === 'paypal'
                         ? isEn
                             ? 'Pay with PayPal'
                             : 'Pagar con PayPal'
@@ -318,6 +350,29 @@ const PricingSection = ({
                 }}
             >
                 <div style={{}}>
+                    {paymentMethod === 'mercadopago' && (
+                        <div style={{ minWidth: 320, maxWidth: '100%' }}>
+                            <p style={{ color: '#333', textAlign: 'center' }}>
+                                MercadoPago / Latam-Colombia (UI lista). Integración funcional en el siguiente paso.
+                            </p>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    marginTop: 12,
+                                }}
+                            >
+                                <button
+                                    className="btn-pill fill"
+                                    disabled
+                                    style={{ minWidth: 220 }}
+                                >
+                                    MercadoPago (próximamente)
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {paymentMethod === 'paypal' && (
                         <div
                             style={{
