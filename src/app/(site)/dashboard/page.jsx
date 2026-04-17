@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useStore from '../../../store/useStore';
 import HttpService from '@/services/HttpService';
@@ -33,6 +33,8 @@ export default function Page() {
   const [campaigns, setCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignSaving, setCampaignSaving] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(null);
+  const copyTimerRef = useRef(null);
   const [campaignForm, setCampaignForm] = useState({
     name: '',
     slug: '',
@@ -128,14 +130,52 @@ export default function Page() {
     }
   };
 
-  const copyTrackingUrl = async (url) => {
+  const copyTrackingUrl = async (campaignId, url) => {
+    if (!url) {
+      setCopyFeedback({ id: campaignId, ok: false });
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopyFeedback(null), 1400);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(url);
-      await successAlert('Copiado', 'URL de seguimiento copiada al portapapeles');
+      setCopyFeedback({ id: campaignId, ok: true });
     } catch {
-      await errorAlert('Error', 'No se pudo copiar la URL');
+      setCopyFeedback({ id: campaignId, ok: false });
     }
+
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopyFeedback(null), 1400);
   };
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
+  const getCopyTooltipText = (campaignId) => {
+    if (!copyFeedback || copyFeedback.id !== campaignId) return '';
+    return copyFeedback.ok ? 'Copiado' : 'No se pudo copiar';
+  };
+
+  const isCopyFeedbackVisible = (campaignId) => {
+    return Boolean(copyFeedback && copyFeedback.id === campaignId);
+  };
+
+  const getCopyFeedbackClass = (campaignId) => {
+    if (!copyFeedback || copyFeedback.id !== campaignId) return '';
+    return copyFeedback.ok ? 'is-success' : 'is-error';
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'campaigns') {
+      setCopyFeedback(null);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'campaigns') {
@@ -368,7 +408,7 @@ export default function Page() {
                       <div className="campaign-item-head">
                         <strong>{item.name}</strong>
                         <button
-                          className="btn btn-sm btn-outline-secondary"
+                          className={`campaign-status-btn ${item.isActive ? 'is-active' : 'is-inactive'}`}
                           type="button"
                           onClick={() => onToggleCampaignActive(item)}
                         >
@@ -394,13 +434,22 @@ export default function Page() {
                       </div>
                       <div className="campaign-url">
                         <input type="text" readOnly value={item.trackingUrl || ''} />
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          type="button"
-                          onClick={() => copyTrackingUrl(item.trackingUrl || '')}
-                        >
-                          Copiar URL
-                        </button>
+                        <div className="copy-url-wrap">
+                          <button
+                            className="copy-url-btn"
+                            type="button"
+                            onClick={() => copyTrackingUrl(item.id, item.trackingUrl || '')}
+                          >
+                            Copiar URL
+                          </button>
+                          <span
+                            className={`copy-url-tooltip ${isCopyFeedbackVisible(item.id) ? 'is-visible' : ''} ${getCopyFeedbackClass(item.id)}`}
+                            role="status"
+                            aria-live="polite"
+                          >
+                            {getCopyTooltipText(item.id)}
+                          </span>
+                        </div>
                       </div>
                     </article>
                   )})}

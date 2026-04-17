@@ -8,6 +8,7 @@ import Link from 'next/link';
 import useStore from '../../../store/useStore';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
+import { getTrackingFromMiddlewareCookie, getVisitIdentityFromMiddlewareCookie } from '../../../helpers/attributionCookie';
 
 const Register = () => {
     // ⚠️ mantener instancia estable de HttpService
@@ -98,10 +99,15 @@ const Register = () => {
         }
         setLoading(true);
         try {
+            const tracking = getTrackingFromMiddlewareCookie('first');
+            const { anonId, sessionId } = getVisitIdentityFromMiddlewareCookie();
             const data = {
                 email,
                 password,
                 language: isEn ? 'en' : 'es',
+                tracking,
+                anonId,
+                sessionId,
             };
 
             const response = await httpService.postData('/auth/register', data);

@@ -70,6 +70,13 @@ function getCookieDomain(req: NextRequest) {
   return undefined;
 }
 
+function isLocalHost(req: NextRequest) {
+  const host = String(req.headers.get('host') || req.nextUrl.host || '')
+    .toLowerCase()
+    .replace(/:\d+$/, '');
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
 function setCookie(
   req: NextRequest,
   res: NextResponse,
@@ -78,10 +85,11 @@ function setCookie(
   maxAge: number
 ) {
   const domain = getCookieDomain(req);
+  const secure = !isLocalHost(req);
   res.cookies.set(name, value, {
     path: '/',
     sameSite: 'lax',
-    secure: true,
+    secure,
     maxAge,
     ...(domain ? { domain } : {}),
   });
