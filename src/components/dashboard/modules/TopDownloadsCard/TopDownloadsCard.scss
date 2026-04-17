@@ -91,6 +91,16 @@
   text-overflow:ellipsis;
 }
 
+.top-downloads-card .download-item .sales-meta{
+  font-size:0.73rem;
+  line-height:1.2;
+}
+
+.top-downloads-card .download-item .sales-meta .sale-date{
+  color:#4f46e5;
+  font-weight:600;
+}
+
 .top-downloads-card .summary-value{
   font-weight:700;
   font-size:16px;

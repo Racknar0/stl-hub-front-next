@@ -19,21 +19,6 @@ const formatCop = (value) => {
   }).format(amount)
 }
 
-const formatOriginal = (value, currency) => {
-  const amount = Number(value || 0)
-  const code = String(currency || 'USD').toUpperCase()
-  try {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount)
-  } catch {
-    return `${amount.toFixed(2)} ${code}`
-  }
-}
-
 const formatDate = (value) => {
   try {
     return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(value))
@@ -125,10 +110,8 @@ export default function TotalVentas() {
             <li key={`${it.id || 'p'}-${idx}`} className="download-item d-flex justify-content-between align-items-center">
               <div className="d-flex flex-column">
                 <div className="name">{it.method}</div>
-                <div className="meta text-muted small">
-                  {formatDate(it.createdAt || it.date)}
-                  {' • '}
-                  {formatOriginal(it.amountOriginal, it.currency)}
+                <div className="meta sales-meta">
+                  <span className="sale-date">{formatDate(it.createdAt || it.date)}</span>
                 </div>
               </div>
               <div className="d-flex align-items-center gap-2">
