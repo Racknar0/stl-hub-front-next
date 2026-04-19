@@ -7,7 +7,13 @@
 import React from 'react'
 import { Box, Stack, Typography, LinearProgress, Chip } from '@mui/material'
 
-export default function BatchSummaryBar({ tableSummary }) {
+export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', onSummaryFilterChange }) {
+  const triggerFilter = (filter) => {
+    if (typeof onSummaryFilterChange === 'function') {
+      onSummaryFilterChange(filter)
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -17,10 +23,18 @@ export default function BatchSummaryBar({ tableSummary }) {
       }}
     >
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
-        <Typography variant="body2" sx={{ color: '#e2e8f0', fontWeight: 700 }}>
+        <Typography
+          variant="body2"
+          onClick={() => triggerFilter('all')}
+          sx={{ color: '#e2e8f0', fontWeight: 700, cursor: 'pointer' }}
+        >
           Resumen de Tabla: {tableSummary.total} archivos
         </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.8)' }}>
+        <Typography
+          variant="caption"
+          onClick={() => triggerFilter('ready')}
+          sx={{ color: 'rgba(226,232,240,0.8)', cursor: 'pointer' }}
+        >
           Listos para subir: {tableSummary.ready}/{tableSummary.retryable} · {tableSummary.readyGb.toFixed(2)} GB
         </Typography>
       </Stack>
@@ -40,12 +54,54 @@ export default function BatchSummaryBar({ tableSummary }) {
       />
 
       <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-        <Chip size="small" label={`Total: ${tableSummary.total}`} sx={{ bgcolor: 'rgba(148,163,184,0.2)', color: '#e2e8f0' }} />
-        <Chip size="small" label={`Listos: ${tableSummary.ready}`} sx={{ bgcolor: 'rgba(34,197,94,0.2)', color: '#bbf7d0' }} />
-        <Chip size="small" label={`Pendientes: ${tableSummary.missing}`} sx={{ bgcolor: 'rgba(245,158,11,0.2)', color: '#fde68a' }} />
-        <Chip size="small" label={`En proceso: ${tableSummary.processing}`} sx={{ bgcolor: 'rgba(56,189,248,0.2)', color: '#bae6fd' }} />
-        <Chip size="small" label={`Completados: ${tableSummary.completed}`} sx={{ bgcolor: 'rgba(16,185,129,0.2)', color: '#a7f3d0' }} />
-        <Chip size="small" label={`Error: ${tableSummary.error}`} sx={{ bgcolor: 'rgba(239,68,68,0.2)', color: '#fecaca' }} />
+        <Chip
+          size="small"
+          clickable
+          label={`Total: ${tableSummary.total}`}
+          onClick={() => triggerFilter('all')}
+          aria-pressed={summaryFilter === 'all'}
+          sx={{ bgcolor: 'rgba(148,163,184,0.2)', color: '#e2e8f0' }}
+        />
+        <Chip
+          size="small"
+          clickable
+          label={`Listos: ${tableSummary.ready}`}
+          onClick={() => triggerFilter('ready')}
+          aria-pressed={summaryFilter === 'ready'}
+          sx={{ bgcolor: 'rgba(34,197,94,0.2)', color: '#bbf7d0' }}
+        />
+        <Chip
+          size="small"
+          clickable
+          label={`Pendientes: ${tableSummary.missing}`}
+          onClick={() => triggerFilter('pending')}
+          aria-pressed={summaryFilter === 'pending'}
+          sx={{ bgcolor: 'rgba(245,158,11,0.2)', color: '#fde68a' }}
+        />
+        <Chip
+          size="small"
+          clickable
+          label={`En proceso: ${tableSummary.processing}`}
+          onClick={() => triggerFilter('processing')}
+          aria-pressed={summaryFilter === 'processing'}
+          sx={{ bgcolor: 'rgba(56,189,248,0.2)', color: '#bae6fd' }}
+        />
+        <Chip
+          size="small"
+          clickable
+          label={`Completados: ${tableSummary.completed}`}
+          onClick={() => triggerFilter('completed')}
+          aria-pressed={summaryFilter === 'completed'}
+          sx={{ bgcolor: 'rgba(16,185,129,0.2)', color: '#a7f3d0' }}
+        />
+        <Chip
+          size="small"
+          clickable
+          label={`Error: ${tableSummary.error}`}
+          onClick={() => triggerFilter('error')}
+          aria-pressed={summaryFilter === 'error'}
+          sx={{ bgcolor: 'rgba(239,68,68,0.2)', color: '#fecaca' }}
+        />
       </Stack>
     </Box>
   )

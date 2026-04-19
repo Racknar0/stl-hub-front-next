@@ -73,6 +73,7 @@ export default function BatchTable() {
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
   const [reviewMode, setReviewMode] = useState(false)
+  const [summaryFilter, setSummaryFilter] = useState('all')
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
 
@@ -100,6 +101,47 @@ export default function BatchTable() {
     whiteSpace: 'nowrap',
   }
 
+  const hasRowCategories = useCallback((row) => {
+    return Array.isArray(row?.categorias) && row.categorias.some((c) => {
+      const id = Number(c?.id || 0)
+      const key = String(c?.slug || c?.name || '').trim()
+      return (Number.isFinite(id) && id > 0) || !!key
+    })
+  }, [])
+
+  const hasRowTags = useCallback((row) => {
+    return Array.isArray(row?.tags) && row.tags.some((t) => {
+      if (typeof t === 'string') return !!String(t).trim()
+      const id = Number(t?.id || 0)
+      const key = String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || '').trim()
+      return (Number.isFinite(id) && id > 0) || !!key
+    })
+  }, [])
+
+  const isRowReadyForQueue = useCallback((row) => {
+    const accountId = Number(row?.cuenta || 0)
+    return Number.isFinite(accountId) && accountId > 0 && hasRowCategories(row) && hasRowTags(row)
+  }, [hasRowCategories, hasRowTags])
+
+  const matchesSummaryFilter = useCallback((row, filter) => {
+    const currentFilter = String(filter || 'all').toLowerCase()
+    const st = String(row?.estado || '').toLowerCase()
+    const retryable = st === 'borrador' || st === 'error'
+
+    if (currentFilter === 'all') return true
+    if (currentFilter === 'ready') return retryable && isRowReadyForQueue(row)
+    if (currentFilter === 'pending') return retryable && !isRowReadyForQueue(row)
+    if (currentFilter === 'processing') return st === 'procesando'
+    if (currentFilter === 'completed') return st === 'completado'
+    if (currentFilter === 'error') return st === 'error'
+    return true
+  }, [isRowReadyForQueue])
+
+  const handleSummaryFilterChange = useCallback((nextFilter) => {
+    const normalized = String(nextFilter || 'all').toLowerCase()
+    setSummaryFilter((prev) => (prev === normalized ? 'all' : normalized))
+  }, [])
+
   const reviewRows = useMemo(() => {
     return rows.filter((r) => {
       const st = String(r?.estado || '').toLowerCase()
@@ -109,8 +151,9 @@ export default function BatchTable() {
 
   const visibleRows = useMemo(() => {
     const base = reviewMode ? reviewRows : rows
+    const filtered = base.filter((r) => matchesSummaryFilter(r, summaryFilter))
     // Sort active items (uploading/processing) to the top
-    return [...base].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const priority = (r) => {
         const st = String(r?.estado || '').toLowerCase()
         const main = String(r?.mainStatus || '').toUpperCase()
@@ -126,7 +169,7 @@ export default function BatchTable() {
       }
       return priority(a) - priority(b)
     })
-  }, [reviewMode, reviewRows, rows])
+  }, [reviewMode, reviewRows, rows, matchesSummaryFilter, summaryFilter])
 
   const rowIndexById = useMemo(() => {
     const m = new Map()
@@ -1533,28 +1576,6 @@ export default function BatchTable() {
     setSelectedRowIdxPerfil(null)
   }
 
-  const hasRowCategories = (row) => {
-    return Array.isArray(row?.categorias) && row.categorias.some((c) => {
-      const id = Number(c?.id || 0)
-      const key = String(c?.slug || c?.name || '').trim()
-      return (Number.isFinite(id) && id > 0) || !!key
-    })
-  }
-
-  const hasRowTags = (row) => {
-    return Array.isArray(row?.tags) && row.tags.some((t) => {
-      if (typeof t === 'string') return !!String(t).trim()
-      const id = Number(t?.id || 0)
-      const key = String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || '').trim()
-      return (Number.isFinite(id) && id > 0) || !!key
-    })
-  }
-
-  const isRowReadyForQueue = (row) => {
-    const accountId = Number(row?.cuenta || 0)
-    return Number.isFinite(accountId) && accountId > 0 && hasRowCategories(row) && hasRowTags(row)
-  }
-
   const handleProcessBatch = async () => {
     const retryableRows = rows.filter(r => r.estado === 'borrador' || r.estado === 'error')
     if (retryableRows.length === 0) return
@@ -1692,29 +1713,7 @@ export default function BatchTable() {
     const retryableRows = rows.filter((r) => r.estado === 'borrador' || r.estado === 'error')
     const retryable = retryableRows.length
 
-    const hasCategories = (row) => {
-      const arr = Array.isArray(row?.categorias) ? row.categorias : []
-      return arr.some((c) => {
-        const id = Number(c?.id || 0)
-        const key = String(c?.slug || c?.name || '').trim()
-        return (Number.isFinite(id) && id > 0) || !!key
-      })
-    }
-
-    const hasTags = (row) => {
-      const arr = Array.isArray(row?.tags) ? row.tags : []
-      return arr.some((t) => {
-        if (typeof t === 'string') return !!String(t).trim()
-        const id = Number(t?.id || 0)
-        const key = String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || '').trim()
-        return (Number.isFinite(id) && id > 0) || !!key
-      })
-    }
-
-    const readyRows = retryableRows.filter((row) => {
-      const accountId = Number(row?.cuenta || 0)
-      return Number.isFinite(accountId) && accountId > 0 && hasCategories(row) && hasTags(row)
-    })
+    const readyRows = retryableRows.filter(isRowReadyForQueue)
 
     const ready = readyRows.length
     const missing = Math.max(0, retryable - ready)
@@ -1735,7 +1734,7 @@ export default function BatchTable() {
       readyPct,
       readyGb,
     }
-  }, [rows])
+  }, [rows, isRowReadyForQueue])
 
   const distributionSelectionSummary = useMemo(() => {
     const selectedIds = Array.from(new Set(
@@ -1840,7 +1839,11 @@ export default function BatchTable() {
       <BatchStorageBars rows={rows} cuentas={cuentas} />
 
       {/* ═══════════ RESUMEN DE TABLA ═══════════ */}
-      <BatchSummaryBar tableSummary={tableSummary} />
+      <BatchSummaryBar
+        tableSummary={tableSummary}
+        summaryFilter={summaryFilter}
+        onSummaryFilterChange={handleSummaryFilterChange}
+      />
 
       {/* ═══════════ TABLA DE DATOS VIRTUALIZADA ═══════════ */}
       <BatchDataTable
