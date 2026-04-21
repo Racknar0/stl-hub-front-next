@@ -138,6 +138,9 @@ function toDisplayItem(a, lang) {
     categoryEn: a.categoryEn,
     categories: Array.isArray(a.categories) ? a.categories : [],
     createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+    archiveSizeB: a.archiveSizeB,
+    fileSizeB: a.fileSizeB,
     slug: a.slug,
   };
 }
@@ -501,6 +504,19 @@ export default function SearchClient({ initialParams }) {
     return `/search?categories=${encodeURIComponent(s || '')}`
   }
 
+  const handlePrev = () => {
+    if (!items.length || !modalAsset) return;
+    const idx = items.findIndex(a => a.id === modalAsset.id);
+    const prevIdx = (idx - 1 + items.length) % items.length;
+    setModalAsset(items[prevIdx]);
+  };
+  const handleNext = () => {
+    if (!items.length || !modalAsset) return;
+    const idx = items.findIndex(a => a.id === modalAsset.id);
+    const nextIdx = (idx + 1) % items.length;
+    setModalAsset(items[nextIdx]);
+  };
+
   return (
     <section className="search-page">
       <div className="container-narrow" style={{ maxWidth: '100%' }}>
@@ -586,7 +602,7 @@ export default function SearchClient({ initialParams }) {
         )}
       </div>
 
-      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} />
+      <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} onPrev={items.length > 1 ? handlePrev : undefined} onNext={items.length > 1 ? handleNext : undefined} />
     </section>
   );
 }

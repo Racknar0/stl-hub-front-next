@@ -113,12 +113,6 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     // Enriquecer categorías si no vienen
     useEffect(() => {
         if (!open || !data?.id || loadedDetail.current) return;
-        const needCategories =
-            !Array.isArray(data?.categories) || data.categories.length === 0;
-        const needDescriptionEs = !String(data?.description || '').trim();
-        const needDescriptionEn = !String(data?.descriptionEn || '').trim();
-        const needDescription = needDescriptionEs || needDescriptionEn;
-        if (!needCategories && !needDescription) return;
         (async () => {
             try {
                 const res = await http.getData(`/assets/${data.id}`);
@@ -133,6 +127,9 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                     titleEn: d.titleEn ?? prev?.titleEn,
                     tagsEn: Array.isArray(d.tagsEn) ? d.tagsEn : prev?.tagsEn,
                     tagsEs: Array.isArray(d.tagsEs) ? d.tagsEs : prev?.tagsEs,
+                    archiveSizeB: d.archiveSizeB ?? prev?.archiveSizeB,
+                    fileSizeB: d.fileSizeB ?? prev?.fileSizeB,
+                    updatedAt: d.updatedAt ?? prev?.updatedAt,
                 }));
                 loadedDetail.current = true;
             } catch {}
@@ -745,6 +742,22 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                 );
                                             })()}
 
+                                            <div className="actions center actions-top">
+                                                <Button
+                                                    onClick={handleDownload}
+                                                    disabled={downloading}
+                                                    variant={data.isPremium ? 'purple' : 'cyan'}
+                                                    className="btn-big"
+                                                >
+                                                    {downloading && <span className="btn-spinner" aria-hidden />}
+                                                    {downloading
+                                                        ? t('asset.modal.processing')
+                                                        : data.isPremium
+                                                        ? t('asset.modal.downloadPremium')
+                                                        : t('asset.modal.downloadNow')}
+                                                </Button>
+                                            </div>
+
                                             <div className="meta-block compact">
                                                 <div className="block-title">
                                                     {isEn ? 'Technical details' : 'Ficha técnica'}
@@ -809,21 +822,6 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                 )}
                                             </div>
 
-                                            <div className="actions center actions-after-tags">
-                                                <Button
-                                                    onClick={handleDownload}
-                                                    disabled={downloading}
-                                                    variant={data.isPremium ? 'purple' : 'cyan'}
-                                                    className="btn-big"
-                                                >
-                                                    {downloading && <span className="btn-spinner" aria-hidden />}
-                                                    {downloading
-                                                        ? t('asset.modal.processing')
-                                                        : data.isPremium
-                                                        ? t('asset.modal.downloadPremium')
-                                                        : t('asset.modal.downloadNow')}
-                                                </Button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

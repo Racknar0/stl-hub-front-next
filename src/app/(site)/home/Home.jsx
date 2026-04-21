@@ -165,6 +165,9 @@ const Home = () => {
       categoryEn: a.categoryEn,
       categories: Array.isArray(a.categories) ? a.categories : [],
       createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
+      archiveSizeB: a.archiveSizeB,
+      fileSizeB: a.fileSizeB,
     }
   }
 

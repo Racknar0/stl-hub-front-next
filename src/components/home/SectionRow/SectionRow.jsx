@@ -90,35 +90,37 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                     <div className="info">
                       {/* it.title ya viene en el idioma derivado por Home */}
                       <div className="title">{it.title || '-'}</div>
-                      <div className="chips">
-                        {it.chips?.map((c, idx) => (
-                          <Link
-                            className="chip chip--link"
-                            key={idx}
-                            href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            #{c}
-                          </Link>
-                        ))}
-                      </div>
-                      {(uploadDate || it.slug) && (
-                        <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {it.slug ? (
+                      <div className="fbottom">
+                        <div className="chips">
+                          {it.chips?.map((c, idx) => (
                             <Link
-                              href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
-                              onClick={(e)=>{ e.stopPropagation(); }}
-                              aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
-                              style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                              className="chip chip--link"
+                              key={idx}
+                              href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {uploadDate && <span>upload · {uploadDate} · detail</span>}
-                              <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
+                              #{c}
                             </Link>
-                          ) : (
-                            uploadDate && <span>upload: {uploadDate}</span>
-                          )}
+                          ))}
                         </div>
-                      )}
+                        {(uploadDate || it.slug) && (
+                          <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {it.slug ? (
+                              <Link
+                                href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
+                                onClick={(e)=>{ e.stopPropagation(); }}
+                                aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
+                                style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                              >
+                                {uploadDate && <span>upload · {uploadDate} · detail</span>}
+                                <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
+                              </Link>
+                            ) : (
+                              uploadDate && <span>upload: {uploadDate}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </article>
                 </SwiperSlide>

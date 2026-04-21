@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import styles from './AssetSeoBackground.module.css';
 import ImageLightbox from './ImageLightbox';
@@ -102,13 +103,15 @@ export async function generateMetadata({ params }) {
     } catch {}
 
     const isPremium = !!asset.isPremium;
+    const safeTitleEs = (asset.title || 'modelo 3D').length > 35 ? (asset.title || 'modelo 3D').substring(0, 35) + '...' : (asset.title || 'modelo 3D');
     const titleEs =
         (isPremium ? 'Descargar STL premium ' : 'Descargar STL gratis ') +
-        (asset.title || 'modelo 3D') +
+        safeTitleEs +
         ' por MEGA';
+    const safeTitleEn = (asset.titleEn || asset.title || '3D model').length > 35 ? (asset.titleEn || asset.title || '3D model').substring(0, 35) + '...' : (asset.titleEn || asset.title || '3D model');
     const titleEn =
         (isPremium ? 'Download premium STL ' : 'Download free STL ') +
-        (asset.titleEn || asset.title || '3D model') +
+        safeTitleEn +
         ' via MEGA';
     const descEs =
         (asset.description?.slice(0, 180) ||
@@ -273,11 +276,17 @@ export default async function AssetPage({ params }) {
 
                 {/* ── Hero ── */}
                 <section className={styles.hero}>
-                    <div
-                        className={styles.heroBackground}
-                        style={{ backgroundImage: `linear-gradient(180deg, rgba(7,11,21,0.15) 0%, rgba(7,11,21,0.6) 50%, rgba(7,11,21,0.95) 100%), url('${heroImage}')` }}
-                        aria-hidden="true"
-                    />
+                    <div className={styles.heroBackground} aria-hidden="true">
+                        <Image
+                            src={heroImage}
+                            alt={displayTitle}
+                            fill
+                            priority
+                            sizes="(max-width: 1280px) 100vw, 1280px"
+                            style={{ objectFit: 'cover' }}
+                        />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,11,21,0.15) 0%, rgba(7,11,21,0.6) 50%, rgba(7,11,21,0.95) 100%)' }} />
+                    </div>
                     <div className={styles.heroInner}>
                         <p className={styles.kicker}>STL HUB · {pageIsEn ? '3D Model Sheet' : 'Ficha de modelo 3D'}</p>
                         <h1 className={styles.title}>{displayTitle}</h1>
@@ -317,7 +326,7 @@ export default async function AssetPage({ params }) {
                                 <span className={styles.cardIcon}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 14l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </span>
-                                {pageIsEn ? 'Technical Sheet' : 'Ficha técnica'}
+                                {pageIsEn ? `Technical Sheet of ${displayTitle}` : `Ficha técnica de ${displayTitle}`}
                             </h2>
                             <dl className={styles.metaList}>
                                 <div><dt>ID</dt><dd>{asset.id || 'N/A'}</dd></div>
@@ -335,7 +344,7 @@ export default async function AssetPage({ params }) {
                                 <span className={styles.cardIcon}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </span>
-                                {pageIsEn ? 'Categories & Tags' : 'Categorías y Tags'}
+                                {pageIsEn ? `Categories & Tags for ${displayTitle}` : `Categorías y Tags de ${displayTitle}`}
                             </h2>
                             <p className={styles.metaHint}>{pageIsEn ? 'Thematic labels for navigation and indexing:' : 'Etiquetas temáticas para navegación e indexación:'}</p>
                             <div className={styles.tagWrap}>
@@ -361,7 +370,7 @@ export default async function AssetPage({ params }) {
                 {displayDesc && (
                     <div className={styles.contentWrap}>
                         <section className={styles.descriptionCard}>
-                            <h2>{pageIsEn ? 'Description' : 'Descripción'}</h2>
+                            <h2>{pageIsEn ? `Description of ${displayTitle}` : `Descripción de ${displayTitle}`}</h2>
                             <p>{displayDesc}</p>
                         </section>
                     </div>
@@ -377,7 +386,7 @@ export default async function AssetPage({ params }) {
                                     <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                                     <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                {pageIsEn ? 'Model Image Gallery' : 'Galería de imágenes del modelo STL'}
+                                {pageIsEn ? `Image Gallery for ${displayTitle}` : `Galería de imágenes de ${displayTitle} para impresión 3D`}
                             </h2>
                             <div className={styles.gallery}>
                                 <ImageLightbox images={imgList} alt={asset.title || 'STL Model'} />

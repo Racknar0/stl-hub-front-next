@@ -75,18 +75,28 @@
 
 /* Reutiliza estilos de FeatureSection (fcard) */
 .fcard {
-    background: #171d2a;
-    border-radius: 16px;
+    background: rgba(10, 10, 12, 0.4);
+    border-radius: 20px;
     height: 370px;
     width: 100%;
     min-width: 0;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     position: relative;
     display: flex;
     flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: border-color 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    overflow: hidden;
 
     @media screen and (max-width: 992px) {
         height: 390px;
+    }
+
+    &:hover {
+        cursor: pointer;
+        border-color: rgba(255, 255, 255, 0.12);
+        transform: translateY(-4px);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
     }
 
     .thumb {
@@ -94,8 +104,8 @@
         height: 250px;
         background-size: cover;
         background-position: center;
-        border-top-left-radius: 16px;
-        border-top-right-radius: 16px;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
         overflow: hidden;
 
         .thumb-img {
@@ -103,7 +113,14 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            opacity: 0.85;
+            transition: opacity 0.4s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
+    }
+
+    &:hover .thumb .thumb-img {
+        opacity: 1;
+        transform: scale(1.03);
     }
 
     .finfo {
@@ -118,7 +135,10 @@
         }
 
         .ftitle {
-            font-weight: 800;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 2;

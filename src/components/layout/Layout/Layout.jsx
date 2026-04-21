@@ -29,6 +29,15 @@ const Layout = ({ children }) => {
 
   return (
     <div className="app-layout">
+      {/* Ambient Background */}
+      {!isDashboard && (
+        <div className="ambient-bg">
+          <div className="glow-orb orb-1"></div>
+          <div className="glow-orb orb-2"></div>
+          <div className="grid-overlay"></div>
+        </div>
+      )}
+
       {/* Loader global eliminado (no se llama) */}
 
       {/* Overlay de idioma (primera visita) */}

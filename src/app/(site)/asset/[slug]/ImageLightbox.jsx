@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Zoom } from 'swiper/modules';
 import 'swiper/css';
@@ -28,18 +29,16 @@ export default function ImageLightbox({ images, alt }) {
           style={{ margin: 0, cursor: 'zoom-in', position: 'relative' }}
           onClick={() => openFull(i)}
         >
-          <img
-            loading={i === 0 ? 'eager' : 'lazy'}
-            src={img}
-            alt={`${alt} render ${i + 1}`}
-            style={{
-              display: 'block',
-              width: '100%',
-              aspectRatio: '1/1',
-              objectFit: 'cover',
-              borderRadius: 0,
-            }}
-          />
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
+            <Image
+              src={img}
+              alt={`${alt} render ${i + 1}`}
+              fill
+              priority={i === 0}
+              sizes="(max-width: 640px) 50vw, (max-width: 1080px) 33vw, 25vw"
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
           {/* Fullscreen icon overlay */}
           <div style={{
             position: 'absolute',

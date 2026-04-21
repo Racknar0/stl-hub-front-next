@@ -59,10 +59,11 @@
     gap: 0.6rem;
 }
 .intro-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 900;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
     font-size: clamp(1.6rem, 3vw, 2.4rem);
-    line-height: 1.05;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
 }
 .intro-subtitle {
     opacity: 0.8;
@@ -89,35 +90,45 @@
 }
 
 .fcard {
-    background: #171d2a;
-    border-radius: 16px;
+    background: rgba(10, 10, 12, 0.4);
+    border-radius: 20px;
     min-width: 240px;
     max-width: 240px;
-    height: 375px; /* altura uniforme */
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    height: 375px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     position: relative;
     display: flex;
     flex-direction: column;
     pointer-events: auto;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: border-color 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    overflow: hidden;
 
-    &:hover{
-    cursor: pointer;
-  }
-
-  
+    &:hover {
+        cursor: pointer;
+        border-color: rgba(255, 255, 255, 0.12);
+        transform: translateY(-4px);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+    }
 }
 .fcard .thumb {
-    position: relative; /* para Image fill */
-    flex: 0 0 230px; /* fija altura de imagen */
+    position: relative;
+    flex: 0 0 230px;
     height: 250px;
     background-size: cover;
     background-position: center;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
     overflow: hidden;
 }
 .fcard .thumb .thumb-img {
     object-fit: cover;
+    opacity: 0.85;
+    transition: opacity 0.4s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fcard:hover .thumb .thumb-img {
+    opacity: 1;
+    transform: scale(1.03);
 }
 .finfo {
     flex: 1 1 auto; /* que rellene restante para igualar alturas */
@@ -127,14 +138,17 @@
     min-height: 0;
 }
 .ftitle {
-    font-weight: 800;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2; /* recortar a 2 líneas */
-    line-clamp: 2; /* estándar */
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-height: 2.6em; /* reservar espacio para 2 líneas */
+    min-height: 2.6em;
     line-height: 1.3;
 }
 .finfo .chips {
