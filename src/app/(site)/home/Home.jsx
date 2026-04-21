@@ -220,13 +220,8 @@ const Home = () => {
     load();
   }, []);
 
-  useEffect(() => {
-    if (!Array.isArray(topRaw) || topRaw.length < 2) return undefined;
-    const timer = setInterval(() => {
-      setTopRotationStep((prev) => prev + 1);
-    }, 7000);
-    return () => clearInterval(timer);
-  }, [topRaw]);
+  // El auto-rotate de "Lo más descargado" ha sido removido para evitar que el slider
+  // se reinicie mientras el usuario interactúa con él o navega hacia la derecha.
 
   // Cargar primer lote de categorías cuando ya tengamos listado
   useEffect(() => {
