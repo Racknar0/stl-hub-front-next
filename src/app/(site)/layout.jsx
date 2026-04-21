@@ -3,7 +3,7 @@ import React, { Suspense, useEffect } from 'react';
 import Layout from '../../components/layout/Layout/Layout';
 import { usePathname } from 'next/navigation';
 import HttpService from '@/services/HttpService';
-import useStore from '../../../store/useStore';
+import useStore from '@/store/useStore';
 
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
