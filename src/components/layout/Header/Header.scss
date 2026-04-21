@@ -4,9 +4,10 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: #171d2a;
-    backdrop-filter: saturate(150%) blur(8px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 10, 12, 0.4);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Language dropdown (in header-cta) */

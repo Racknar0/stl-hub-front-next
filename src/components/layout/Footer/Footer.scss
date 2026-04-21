@@ -1,8 +1,10 @@
 @use '../../../styles/base/variables' as *;
 
 .app-footer { 
-  border-top: 1px solid rgba(255,255,255,.08); 
-  background: #171d2a; 
+  border-top: 1px solid rgba(255, 255, 255, 0.06); 
+  background: rgba(10, 10, 12, 0.4); 
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   color: #cfd6ff; 
 }
 
