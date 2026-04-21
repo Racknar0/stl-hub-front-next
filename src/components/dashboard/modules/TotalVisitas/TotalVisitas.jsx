@@ -16,7 +16,11 @@ export default function TotalVisitas({ value }) {
       try {
         const res = await http.getData('/metrics/site-visits')
         if (!mounted) return
-        setData(res.data || { '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: 0 })
+        if (res.data && res.data.pv) {
+          setData(res.data.pv)
+        } else {
+          setData({ '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: 0 })
+        }
       } catch (e) {
         console.error('TotalVisitas fetch error', e)
       } finally {

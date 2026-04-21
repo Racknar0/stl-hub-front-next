@@ -18,6 +18,7 @@ import TotalVentas from '@/components/dashboard/modules/TotalVentas/TotalVentas'
 import LastChecksCard from '@/components/dashboard/modules/LastChecksCard/LastChecksCard';
 import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCard/TaxonomyCountsCard';
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
+import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic';
 import './dashboard.scss';
 
 export default function Page() {
@@ -64,6 +65,7 @@ export default function Page() {
       if (typeof window === 'undefined') return;
       const tab = String(new URLSearchParams(window.location.search).get('tab') || '').toLowerCase();
       if (tab === 'campaigns') setActiveTab('campaigns');
+      if (tab === 'traffic') setActiveTab('traffic');
     } catch {
       // noop
     }
@@ -246,7 +248,21 @@ export default function Page() {
           >
             Campanas publicitarias
           </button>
+          <button
+            className={`dashboard-tab-btn ${activeTab === 'traffic' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'traffic'}
+            onClick={() => setActiveTab('traffic')}
+          >
+            Tráfico
+          </button>
         </div>
+
+        {activeTab === 'traffic' && (
+          <div className="dashboard-traffic-tab">
+            <SiteTraffic />
+          </div>
+        )}
 
         {activeTab === 'overview' && (
           <>

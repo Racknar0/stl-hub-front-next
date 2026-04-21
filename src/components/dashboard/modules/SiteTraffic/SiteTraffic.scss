@@ -1,0 +1,98 @@
+.site-traffic-module {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+
+  .traffic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: var(--text-color);
+      font-weight: 600;
+    }
+
+    .range-controls {
+      display: flex;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      padding: 4px;
+      border-radius: 8px;
+
+      .range-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: var(--text-color);
+          background: rgba(255,255,255,0.1);
+        }
+
+        &.active {
+          background: var(--primary-color, #ff3366);
+          color: white;
+        }
+      }
+    }
+  }
+
+  .traffic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+
+    .traffic-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        border-color: rgba(255,255,255,0.15);
+      }
+
+      .label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 8px;
+        line-height: 1;
+      }
+
+      .desc {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        opacity: 0.7;
+      }
+
+      &.pv .value { color: #4facfe; }
+      &.sessions .value { color: #00f2fe; }
+      &.visitors .value { color: #ff0844; }
+    }
+  }
+}
