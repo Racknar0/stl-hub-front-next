@@ -249,7 +249,7 @@ const Home = () => {
       results.forEach((res, idx) => {
         if (res.status === 'fulfilled') {
           const items = Array.isArray(res.value?.data?.items) ? res.value.data.items : [];
-          if (items.length > 0) {
+          if (items.length >= 15) {
             const slug = slice[idx].slug;
             nextMap[slug] = items;
             nextOrder.push(slug);
