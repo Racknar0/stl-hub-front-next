@@ -8,7 +8,7 @@ import '../../common/GlobalLoader/GlobalLoader.scss';
 import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
 // Slider
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
+import { Navigation, Virtual } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
@@ -76,8 +76,9 @@ const FeatureSection = ({
                                                 ) : (
                           <Swiper
                               className="cards"
-                              modules={[Navigation]}
+                              modules={[Navigation, Virtual]}
                               navigation
+                              virtual
                               key={`len-${list.length}`}
                               slidesPerView="auto"
                               spaceBetween={16}
@@ -85,7 +86,7 @@ const FeatureSection = ({
                               loop={list.length > 1}
                               loopAdditionalSlides={Math.min(4, list.length)}
                           >
-                              {list.map((it) => {
+                              {list.map((it, index) => {
                                   const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/vite.svg';
                                   const formatUploadDate = (raw) => {
                                       if (!raw) return null;
@@ -100,7 +101,7 @@ const FeatureSection = ({
                                   const rawDate = it.createdAt; // solo usamos createdAt del backend
                                   const uploadDate = formatUploadDate(rawDate);
                                   return (
-                                      <SwiperSlide key={it.id}>
+                                      <SwiperSlide key={it.id} virtualIndex={index}>
                                           <article className="fcard" onClick={() => onItemClick?.(it)}>
                                               <div className="thumb">
                                                   <CardImageSlider

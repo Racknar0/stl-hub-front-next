@@ -105,8 +105,8 @@ const Home = () => {
   const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
   const [catsLoadOrder, setCatsLoadOrder] = useState([]); // mismo shape, pero barajado para carga
   const [catPage, setCatPage] = useState(0);
-  const BATCH_SIZE = 6;
-  const CAT_SLIDER_LIMIT = 50;
+  const BATCH_SIZE = 4;
+  const CAT_SLIDER_LIMIT = 20;
   const [catMap, setCatMap] = useState({}); // slug -> raw items
   const [catOrder, setCatOrder] = useState([]); // slugs con resultados en orden de carga
   const [loadingMoreCats, setLoadingMoreCats] = useState(false);
