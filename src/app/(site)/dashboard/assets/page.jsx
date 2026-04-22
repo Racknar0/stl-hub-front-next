@@ -2580,24 +2580,22 @@ export default function AssetsAdminPage() {
 
     const handleSaveMetaRow = async (assetId) => {
         try {
-            setMetaBusy(true);
-            await saveMetaRow(assetId);
-            setRefreshTick((n) => n + 1);
-        } catch (e) {
-            await fireAlert({
-                toast: true,
-                position: 'bottom',
-                icon: 'error',
-                title:
-                    e?.response?.data?.message ||
-                    'No se pudo guardar el asset',
-                showConfirmButton: false,
-                timer: 2200,
-                timerProgressBar: true,
-                zIndex: 2000,
+            // Guardado en segundo plano sin bloquear (sin setMetaBusy)
+            saveMetaRow(assetId).catch(async (e) => {
+                await fireAlert({
+                    toast: true,
+                    position: 'bottom',
+                    icon: 'error',
+                    title: e?.response?.data?.message || 'No se pudo guardar el asset',
+                    showConfirmButton: false,
+                    timer: 2200,
+                    timerProgressBar: true,
+                    zIndex: 2000,
+                });
             });
-        } finally {
-            setMetaBusy(false);
+            // NOTA: Eliminamos setRefreshTick para evitar que la tabla se recargue y pierdas el foco
+        } catch (e) {
+            console.error('Error in handleSaveMetaRow dispatch:', e);
         }
     };
 
