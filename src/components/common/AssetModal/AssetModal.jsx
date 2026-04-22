@@ -17,6 +17,8 @@ import ReportBrokenModal from '../ReportBrokenModal/ReportBrokenModal';
 import { Dialog, IconButton, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import { useNSFW } from '../../../hooks/useNSFW';
+import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
 export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
@@ -83,6 +85,10 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     const [data, setData] = useState(asset);
     const loadedDetail = useRef(false);
     const mainSwiperRef = useRef(null);
+
+    const { isConfirmed, confirmAge } = useNSFW();
+    const isAdult = useMemo(() => isAssetNSFW(data), [data]);
+    const showNsfwGate = isAdult && !isConfirmed;
 
     useEffect(() => {
         setData(asset);
@@ -605,7 +611,24 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                         <div className="modal-content asset-modal__content">
                             <div className="modal-body dialog-body">
                                 <div className="gallery">
-                                    <div className="slider-container" style={{ position: 'relative' }}>
+                                    <div className={`slider-container ${showNsfwGate ? 'nsfw-active' : ''}`} style={{ position: 'relative' }}>
+                                        {showNsfwGate && (
+                                            <div className="nsfw-overlay-gate">
+                                                <div className="nsfw-gate-content">
+                                                    <span className="nsfw-icon-large">🔞</span>
+                                                    <h4>{isEn ? 'Adult Content (+18)' : 'Contenido para Adultos (+18)'}</h4>
+                                                    <p>{isEn ? 'This model contains explicit material. You must be 18 or older to view it.' : 'Este modelo contiene material explícito. Debes confirmar tu edad para visualizarlo.'}</p>
+                                                    <div className="nsfw-gate-actions">
+                                                        <Button variant="cyan" onClick={confirmAge}>
+                                                            {isEn ? 'I am 18+ (Show Content)' : 'Tengo +18 años (Mostrar Contenido)'}
+                                                        </Button>
+                                                        <Button variant="outline" onClick={onClose}>
+                                                            {isEn ? 'Go Back' : 'Volver'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {canSlideGallery && (
                                             <>
                                                 <button
@@ -634,15 +657,17 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                         )}
 
                                         {/* Botón pantalla completa */}
-                                        <IconButton
-                                            onClick={() => setFullOpen(true)}
-                                            aria-label={isEn ? 'Fullscreen' : 'Pantalla completa'}
-                                            size="small"
-                                            sx={{ position: 'absolute', right: 8, bottom: 8, zIndex: 2, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' } }}
-                                            title={isEn ? 'Fullscreen' : 'Pantalla completa'}
-                                        >
-                                            <FullscreenIcon fontSize="large" />
-                                        </IconButton>
+                                        {!showNsfwGate && (
+                                            <IconButton
+                                                onClick={() => setFullOpen(true)}
+                                                aria-label={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                                size="small"
+                                                sx={{ position: 'absolute', right: 8, bottom: 8, zIndex: 2, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' } }}
+                                                title={isEn ? 'Fullscreen' : 'Pantalla completa'}
+                                            >
+                                                <FullscreenIcon fontSize="large" />
+                                            </IconButton>
+                                        )}
 
                                         <Swiper
                                             modules={[Navigation, Pagination, Zoom]}

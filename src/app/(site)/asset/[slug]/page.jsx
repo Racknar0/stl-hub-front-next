@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation';
 import styles from './AssetSeoBackground.module.css';
 import ImageLightbox from './ImageLightbox';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
+import { isAssetNSFW } from '../../../../../helpers/nsfwHelper';
+import NsfwPageWrapper from './NsfwPageWrapper';
 
 export const revalidate = 3600; // ISR 1h
 
@@ -132,6 +134,8 @@ export async function generateMetadata({ params }) {
         ? `${site}/en/asset/${asset.slug}`
         : `${site}/asset/${asset.slug}`;
 
+    const isAdult = isAssetNSFW(asset);
+
     return {
         title: baseTitle,
         description: desc,
@@ -164,6 +168,11 @@ export async function generateMetadata({ params }) {
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
         },
+        ...(isAdult && {
+            other: {
+                rating: 'adult',
+            },
+        }),
     };
 }
 
@@ -217,6 +226,8 @@ export default async function AssetPage({ params }) {
     const displayDesc = pageIsEn ? descriptionEn : descriptionEs;
     const premiumLabel = pageIsEn ? 'Premium' : 'Premium';
     const freeLabel = pageIsEn ? 'Free' : 'Gratis';
+    const isAdult = isAssetNSFW(asset);
+    
     const priceValidUntil = (() => {
         const d = new Date();
         d.setDate(d.getDate() + 365);
@@ -263,8 +274,9 @@ export default async function AssetPage({ params }) {
             {/* JSON-LD enriquecido */}
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
 
-            <main className={styles.page}>
-                {/* ── Back Button ── */}
+            <NsfwPageWrapper isAdult={isAdult} isEn={pageIsEn}>
+                <main className={styles.page}>
+                    {/* ── Back Button ── */}
                 <div className={styles.backBar}>
                     <Link href="/" className={styles.backBtn}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -394,7 +406,8 @@ export default async function AssetPage({ params }) {
                         </section>
                     </div>
                 ) : null}
-            </main>
+                </main>
+            </NsfwPageWrapper>
         </>
     );
 }

@@ -58,3 +58,36 @@
     font-size: 18px;
   }
 }
+
+.nsfw-blur {
+  filter: blur(25px) brightness(0.7);
+  transform: scale(1.1); /* Prevent blurred edges from leaking */
+}
+
+.nsfw-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  
+  background: rgba(10, 10, 15, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 50, 80, 0.4);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 10px rgba(255, 50, 80, 0.2);
+  letter-spacing: 0.5px;
+  pointer-events: none; /* Let clicks pass through to the slider/card */
+}
+
+.nsfw-icon {
+  font-size: 16px;
+}

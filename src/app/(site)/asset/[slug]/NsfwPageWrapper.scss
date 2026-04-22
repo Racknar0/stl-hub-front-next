@@ -1,0 +1,114 @@
+.nsfw-page-container {
+    position: relative;
+    width: 100%;
+}
+
+.nsfw-active-page {
+    /* Prevent scrolling when gate is active */
+    height: 100vh;
+    overflow: hidden;
+}
+
+.nsfw-active-page .nsfw-content-wrapper {
+    /* Blur everything inside the page */
+    filter: blur(25px) brightness(0.6) grayscale(0.5);
+    pointer-events: none;
+    user-select: none;
+    transform: scale(1.02); /* Hide blurred edges */
+    transform-origin: center top;
+    transition: filter 0.4s ease, transform 0.4s ease;
+    height: 100vh; /* Lock height to prevent scrolling down past the blur */
+    overflow: hidden;
+}
+
+.nsfw-full-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 10, 16, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: overlayShow 0.5s ease forwards;
+}
+
+.nsfw-full-overlay .nsfw-gate-content {
+    background: rgba(18, 22, 34, 0.85);
+    border: 1px solid rgba(255, 50, 80, 0.35);
+    padding: 2.5rem 2rem;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 420px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 20px rgba(255, 50, 80, 0.15);
+}
+
+.nsfw-full-overlay .nsfw-icon-large {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 12px rgba(255, 50, 80, 0.4));
+}
+
+.nsfw-full-overlay h4 {
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.nsfw-full-overlay p {
+    color: rgba(240, 240, 245, 0.55);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1.8rem;
+}
+
+.nsfw-gate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.nsfw-btn-confirm {
+    width: 100%;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 0.8rem;
+    background: #00e7ff;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.nsfw-btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 231, 255, 0.3);
+}
+
+.nsfw-btn-back {
+    width: 100%;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 0.8rem;
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nsfw-btn-back:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes overlayShow {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

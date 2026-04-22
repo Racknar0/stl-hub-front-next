@@ -14,6 +14,7 @@ import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import useStore from '../../../store/useStore';
+import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
 const FeatureSection = ({
     title,
@@ -108,6 +109,7 @@ const FeatureSection = ({
                                                       alt={it.title || 'asset'}
                                                       sizes="(max-width: 992px) 88vw, 240px"
                                                       className="thumb-img"
+                                                      isAdult={isAssetNSFW(it)}
                                                   />
                                               </div>
                                               <div className="finfo">

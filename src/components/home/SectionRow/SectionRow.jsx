@@ -12,6 +12,7 @@ import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import '../../common/GlobalLoader/GlobalLoader.scss';
 import useStore from '../../../store/useStore';
+import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
 const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '' }) => {
   const { t } = useI18n();
@@ -85,6 +86,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                         alt={it.title || 'asset'}
                         sizes="220px"
                         className="thumb-img"
+                        isAdult={isAssetNSFW(it)}
                       />
                     </div>
                     <div className="info">

@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { HOME_CARD_IMAGE_SLIDER_ENABLED } from '../../../helpers/featureFlags';
+import { useNSFW } from '../../../hooks/useNSFW';
 import './CardImageSlider.scss';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -75,10 +76,13 @@ const CardImageSlider = ({
   enabled,
   sizes,
   className = 'card-image-slider-img',
+  isAdult = false,
 }) => {
   const instanceId = useId().replace(/:/g, '');
   const prefersReducedMotion = usePrefersReducedMotion();
   const isEnabled = (enabled ?? HOME_CARD_IMAGE_SLIDER_ENABLED) && !prefersReducedMotion;
+  const { isConfirmed } = useNSFW();
+  const applyBlur = isAdult && !isConfirmed;
 
   const list = useMemo(() => normalizeImages(images, fallback), [images, fallback]);
 
@@ -145,14 +149,21 @@ const CardImageSlider = ({
 
   if (!isEnabled || list.length <= 1) {
     return (
-      <Image
-        src={safeSrc}
-        alt={alt}
-        fill
-        sizes={sizes}
-        className={`${className} card-image-slider-img`}
-        priority={false}
-      />
+      <div className="card-image-slider-root single-image" aria-label="Imagen">
+        <Image
+          src={safeSrc}
+          alt={alt}
+          fill
+          sizes={sizes}
+          className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
+          priority={false}
+        />
+        {applyBlur && (
+          <div className="nsfw-badge">
+            <span className="nsfw-icon">🔞</span> NSFW
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -194,13 +205,19 @@ const CardImageSlider = ({
                   alt={alt}
                   fill
                   sizes={sizes}
-                  className={`${className} card-image-slider-img`}
+                  className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
                   priority={false}
                 />
               </div>
             </SwiperSlide>
           );
         })}
+
+        {applyBlur && (
+          <div className="nsfw-badge">
+            <span className="nsfw-icon">🔞</span> NSFW
+          </div>
+        )}
 
         <button
           type="button"
