@@ -102,7 +102,8 @@ export default function MetaSeoRow({
 
                                 <Box
                                     className="meta-image-actions"
-                                    sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease', background: 'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))', }}
+                                    onClick={() => onOpenImagePreview(imgUrl(img))}
+                                    sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease', background: 'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))', cursor: 'pointer' }}
                                 >
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', }} >
                                         <Chip
