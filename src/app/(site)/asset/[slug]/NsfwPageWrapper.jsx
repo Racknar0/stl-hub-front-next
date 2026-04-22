@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useNSFW } from '../../../../../hooks/useNSFW';
+import { useNSFW } from '../../../../hooks/useNSFW';
 import './NsfwPageWrapper.scss';
 
 export default function NsfwPageWrapper({ children, isAdult, isEn }) {

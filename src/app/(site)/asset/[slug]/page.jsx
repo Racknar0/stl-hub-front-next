@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import styles from './AssetSeoBackground.module.css';
 import ImageLightbox from './ImageLightbox';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
-import { isAssetNSFW } from '../../../../../helpers/nsfwHelper';
+import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
 
 export const revalidate = 3600; // ISR 1h
