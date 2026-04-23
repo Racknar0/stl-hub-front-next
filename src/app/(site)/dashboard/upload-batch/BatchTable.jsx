@@ -1175,6 +1175,29 @@ export default function BatchTable() {
     })
   }, [])
 
+  const handleDeleteImage = useCallback((rowIdx, imageIdx) => {
+    const targetRowIdx = Number(rowIdx)
+    const targetImageIdx = Number(imageIdx)
+    if (!Number.isInteger(targetRowIdx) || !Number.isInteger(targetImageIdx)) return
+
+    setRows((prev) => {
+      if (!Array.isArray(prev) || targetRowIdx < 0 || targetRowIdx >= prev.length) return prev
+      const row = prev[targetRowIdx]
+      const images = Array.isArray(row?.imagenes) ? row.imagenes : []
+      if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length) return prev
+
+      const nextImages = [...images]
+      nextImages.splice(targetImageIdx, 1)
+
+      const nextRows = [...prev]
+      nextRows[targetRowIdx] = {
+        ...row,
+        imagenes: nextImages,
+      }
+      return nextRows
+    })
+  }, [])
+
   const handleRemoverFila = async (idx, options = {}) => {
     const nextFocusId = Number(options?.nextFocusId || 0)
     const row = rows[idx]
@@ -1868,6 +1891,7 @@ export default function BatchTable() {
         handleOpenPerfilModal={handleOpenPerfilModal}
         setPreviewImage={setPreviewImage}
         handleSetPrimaryImage={handleSetPrimaryImage}
+        handleDeleteImage={handleDeleteImage}
         handleOpenSimilar={handleOpenSimilar}
         handleRemoverFila={handleRemoverFila}
       />

@@ -38,6 +38,7 @@ export default function BatchDataTable({
   handleOpenPerfilModal,
   setPreviewImage,
   handleSetPrimaryImage,
+  handleDeleteImage,
   handleOpenSimilar,
   handleRemoverFila,
 }) {
@@ -129,6 +130,7 @@ export default function BatchDataTable({
                 onOpenProfiles={handleOpenPerfilModal}
                 onOpenImagePreview={setPreviewImage}
                 onSetPrimaryImage={handleSetPrimaryImage}
+                onDeleteImage={handleDeleteImage}
                 onOpenSimilar={handleOpenSimilar}
                 onRemoverFila={handleRemoverFila}
               />

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     TableRow,
     TableCell,
@@ -24,6 +24,9 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 
 export default function BatchRow({
     row,
@@ -45,11 +48,13 @@ export default function BatchRow({
     onOpenProfiles = () => {},
     onOpenImagePreview = () => {},
     onSetPrimaryImage = () => {},
+    onDeleteImage = () => {},
     onOpenSimilar = () => {},
     onRemoverFila = () => {},
     measureElement = null,
     virtualIndex = undefined,
 }) {
+    const [reviewExpanded, setReviewExpanded] = useState(false);
     const isProcesso = row.estado === 'procesando';
     const isOk = row.estado === 'completado';
     const isError = row.estado === 'error';
@@ -160,65 +165,107 @@ export default function BatchRow({
                     }}
                 >
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <Stack
-                            direction="row"
-                            spacing={-3}
+                        <Box
                             sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: reviewExpanded ? 1 : 0,
+                                overflowX: reviewExpanded ? 'auto' : 'visible',
+                                py: reviewExpanded ? 0.5 : 0,
                                 mr: 1,
-                                '&:hover .MuiAvatar-root': { zIndex: 1 },
+                                flexShrink: 0,
                             }}
                         >
-                            {Array.isArray(row.imagenes) &&
-                            row.imagenes.length > 0 ? (
-                                row.imagenes.slice(0, 3).map((img, i) => {
-                                    const srcUrl = img.startsWith('http')
-                                        ? img
-                                        : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
-                                    const isPrimary = i === 0;
-                                    return (
-                                        <Avatar
-                                            key={i}
-                                            src={srcUrl}
-                                            variant="rounded"
-                                            sx={{
-                                                width: reviewThumbSize,
-                                                height: reviewThumbSize,
-                                                border: isPrimary
-                                                    ? '3px solid #facc15'
-                                                    : '2px solid rgba(255,255,255,0.15)',
-                                                boxShadow: isPrimary
-                                                    ? '0 0 0 2px rgba(250,204,21,0.25)'
-                                                    : 'none',
+                            {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? (
+                                <>
+                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 3)).map((img, i) => {
+                                        const srcUrl = img.startsWith('http')
+                                            ? img
+                                            : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
+                                        const isPrimary = i === 0;
+                                        return (
+                                            <Box key={i} sx={{
+                                                width: reviewExpanded ? 180 : reviewThumbSize,
+                                                height: reviewExpanded ? 180 : reviewThumbSize,
+                                                position: 'relative',
+                                                borderRadius: 1.5,
+                                                border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
+                                                boxShadow: isPrimary ? '0 0 0 2px rgba(250,204,21,0.25)' : 'none',
                                                 cursor: 'pointer',
-                                                transition: 'transform 0.2s',
-                                                '&:hover': {
-                                                    transform: 'scale(1.12)',
-                                                    zIndex: 10,
-                                                },
-                                                '& .MuiAvatar-img': {
-                                                    objectFit: 'cover',
-                                                },
-                                            }}
-                                            onClick={() =>
-                                                onSetPrimaryImage?.(idx, i)
-                                            }
-                                            onDoubleClick={() =>
-                                                onOpenImagePreview?.(srcUrl)
-                                            }
-                                        />
-                                    );
-                                })
+                                                ml: reviewExpanded ? 0 : i > 0 ? -20 : 0,
+                                                overflow: 'hidden',
+                                                flexShrink: 0,
+                                                zIndex: Math.max(1, 30 - i),
+                                                transition: 'transform 0.2s, z-index 0.2s',
+                                                '&:hover': { transform: 'scale(1.12)', zIndex: 80 },
+                                                '&:hover .batch-image-actions': { opacity: 1 },
+                                            }}>
+                                                <Box component="img" src={srcUrl} alt={`asset-${idx}-${i + 1}`}
+                                                    onClick={() => onOpenImagePreview?.(srcUrl)}
+                                                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                                />
+                                                <Box className="batch-image-actions" sx={{
+                                                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                                                    justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease',
+                                                    background: 'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))',
+                                                }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Chip size="small" label={isPrimary ? 'Primera' : `#${i + 1}`}
+                                                            color={isPrimary ? 'success' : 'default'}
+                                                            sx={{ height: 22, '& .MuiChip-label': { px: 0.8, fontSize: 11 } }}
+                                                        />
+                                                        <Tooltip title="Poner de primera">
+                                                            <span>
+                                                                <IconButton size="small"
+                                                                    onClick={(e) => { e.stopPropagation(); onSetPrimaryImage?.(idx, i); }}
+                                                                    disabled={isOk || isProcesso || isPrimary}
+                                                                    sx={{ bgcolor: 'rgba(2,6,23,0.68)', color: '#fff', '&:hover': { bgcolor: 'rgba(15,23,42,0.9)' } }}
+                                                                >
+                                                                    <VerticalAlignTopIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                        <Tooltip title="Eliminar imagen">
+                                                            <span>
+                                                                <IconButton size="small"
+                                                                    onClick={(e) => { e.stopPropagation(); onDeleteImage?.(idx, i); }}
+                                                                    disabled={isOk || isProcesso}
+                                                                    sx={{ bgcolor: 'rgba(127,29,29,0.78)', color: '#fff', '&:hover': { bgcolor: 'rgba(153,27,27,0.95)' } }}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        );
+                                    })}
+                                    {row.imagenes.length > 3 && (
+                                        <Stack spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }}>
+                                            <Tooltip title={reviewExpanded ? 'Mostrar solo 3' : `Mostrar todas (${row.imagenes.length})`}>
+                                                <span>
+                                                    <IconButton size="small" onClick={() => setReviewExpanded(!reviewExpanded)}
+                                                        sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' } }}
+                                                    >
+                                                        {reviewExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 3}`}
+                                            </Typography>
+                                        </Stack>
+                                    )}
+                                </>
                             ) : (
-                                <Avatar
-                                    sx={{
-                                        width: reviewThumbSize,
-                                        height: reviewThumbSize,
-                                        border: '2px solid rgba(255,255,255,0.1)',
-                                    }}
-                                    variant="rounded"
-                                />
+                                <Box sx={{ width: reviewThumbSize, height: reviewThumbSize, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)' }}>
+                                    <Typography variant="caption" color="text.secondary">N/A</Typography>
+                                </Box>
                             )}
-                        </Stack>
+                        </Box>
                         <Box flex={1}>
                             <Typography
                                 variant="body2"
