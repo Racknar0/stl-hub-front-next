@@ -204,7 +204,7 @@ export default function BatchRow({
                                                     onClick={() => onOpenImagePreview?.(srcUrl)}
                                                     sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                                 />
-                                                <Box className="batch-image-actions" sx={{
+                                                <Box className="batch-image-actions" onClick={() => onOpenImagePreview?.(srcUrl)} sx={{
                                                     position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                                                     justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease',
                                                     background: 'linear-gradient(to bottom, rgba(2,6,23,0.45), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.45))',
