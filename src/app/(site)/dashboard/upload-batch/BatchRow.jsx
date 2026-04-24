@@ -77,7 +77,6 @@ export default function BatchRow({
         return (
             <TableRow
                 key={idx}
-                hover
                 ref={measureElement}
                 data-index={virtualIndex}
                 sx={{
@@ -89,11 +88,7 @@ export default function BatchRow({
                         : 'none',
                     transition:
                         'background-color 160ms ease, box-shadow 160ms ease',
-                    '&:hover': {
-                        backgroundColor: isSimilarityFocused
-                            ? 'rgba(14, 165, 233, 0.32)'
-                            : 'rgba(51, 65, 85, 0.42)',
-                    },
+                    '&:hover': { backgroundColor: 'inherit' },
                 }}
             >
                 <TableCell
@@ -254,7 +249,7 @@ export default function BatchRow({
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" sx={{ color: '#7dd3fc', fontWeight: 700 }}>
                                                 {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 3}`}
                                             </Typography>
                                         </Stack>
@@ -523,7 +518,6 @@ export default function BatchRow({
     return (
         <TableRow
             key={idx}
-            hover
             ref={measureElement}
             data-index={virtualIndex}
             sx={{
@@ -533,11 +527,7 @@ export default function BatchRow({
                     : 'none',
                 transition:
                     'background-color 160ms ease, box-shadow 160ms ease',
-                '&:hover': {
-                    backgroundColor: isSimilarityFocused
-                        ? 'rgba(14, 165, 233, 0.32)'
-                        : 'rgba(51, 65, 85, 0.42)',
-                },
+                '&:hover': { backgroundColor: 'inherit' },
             }}
         >
             <TableCell

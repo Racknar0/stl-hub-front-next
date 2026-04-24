@@ -1808,64 +1808,70 @@ export default function BatchTable() {
       }}
     >
       {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}
-      <BatchControlPanel
-        scpPickerRef={scpPickerRef}
-        scpDropActive={scpDropActive}
-        scpIndexedFile={scpIndexedFile}
-        formatBytes={formatBytes}
-        handleScpPick={handleScpPick}
-        handleScpDrop={handleScpDrop}
-        setScpDropActive={setScpDropActive}
-        isScanning={isScanning}
-        isApplyingAiMetadata={isApplyingAiMetadata}
-        isRetryingAi={isRetryingAi}
-        isProcessing={isProcessing}
-        isStoppingAll={isStoppingAll}
-        aiRetryCandidateIds={aiRetryCandidateIds}
-        handleScanLocal={handleScanLocal}
-        handleApplyAiMetadata={handleApplyAiMetadata}
-        handleRetryFailedAi={handleRetryFailedAi}
-        handleAutoDistribute={handleAutoDistribute}
-        distributionAccountIdsRef={distributionAccountIdsRef}
-        distributionAccountIds={distributionAccountIds}
-        handleDistributionAccountsChange={handleDistributionAccountsChange}
-        handleDistributionSelectorClose={handleDistributionSelectorClose}
-        handleDistributionSelectorOpen={handleDistributionSelectorOpen}
-        accountSelectionMeta={accountSelectionMeta}
-        minPendingAssetMb={minPendingAssetMb}
-        cuentas={cuentas}
-        activeUploadingRow={activeUploadingRow}
-        handleRotateProxyGlobal={handleRotateProxyGlobal}
-        rows={rows}
-        handleStopAndResetToDraft={handleStopAndResetToDraft}
-        reviewMode={reviewMode}
-        setReviewMode={setReviewMode}
-        http={http}
-        setToast={setToast}
-        setRows={setRows}
-        fetchQueue={fetchQueue}
-        compactActionBtnSx={compactActionBtnSx}
-      />
+      {!reviewMode && (
+        <BatchControlPanel
+          scpPickerRef={scpPickerRef}
+          scpDropActive={scpDropActive}
+          scpIndexedFile={scpIndexedFile}
+          formatBytes={formatBytes}
+          handleScpPick={handleScpPick}
+          handleScpDrop={handleScpDrop}
+          setScpDropActive={setScpDropActive}
+          isScanning={isScanning}
+          isApplyingAiMetadata={isApplyingAiMetadata}
+          isRetryingAi={isRetryingAi}
+          isProcessing={isProcessing}
+          isStoppingAll={isStoppingAll}
+          aiRetryCandidateIds={aiRetryCandidateIds}
+          handleScanLocal={handleScanLocal}
+          handleApplyAiMetadata={handleApplyAiMetadata}
+          handleRetryFailedAi={handleRetryFailedAi}
+          handleAutoDistribute={handleAutoDistribute}
+          distributionAccountIdsRef={distributionAccountIdsRef}
+          distributionAccountIds={distributionAccountIds}
+          handleDistributionAccountsChange={handleDistributionAccountsChange}
+          handleDistributionSelectorClose={handleDistributionSelectorClose}
+          handleDistributionSelectorOpen={handleDistributionSelectorOpen}
+          accountSelectionMeta={accountSelectionMeta}
+          minPendingAssetMb={minPendingAssetMb}
+          cuentas={cuentas}
+          activeUploadingRow={activeUploadingRow}
+          handleRotateProxyGlobal={handleRotateProxyGlobal}
+          rows={rows}
+          handleStopAndResetToDraft={handleStopAndResetToDraft}
+          reviewMode={reviewMode}
+          setReviewMode={setReviewMode}
+          http={http}
+          setToast={setToast}
+          setRows={setRows}
+          fetchQueue={fetchQueue}
+          compactActionBtnSx={compactActionBtnSx}
+        />
+      )}
 
       {/* ═══════════ BARRAS DE PROGRESO (IA, Escaneo, Main/Backup) ═══════════ */}
-      <BatchProgressBars
-        isApplyingAiMetadata={isApplyingAiMetadata}
-        isRetryingAi={isRetryingAi}
-        isScanning={isScanning}
-        scanStatusUi={scanStatusUi}
-        mainProgressStats={mainProgressStats}
-        backupProgressStats={backupProgressStats}
-        distributionSelectionSummary={distributionSelectionSummary}
-      />
+      {!reviewMode && (
+        <BatchProgressBars
+          isApplyingAiMetadata={isApplyingAiMetadata}
+          isRetryingAi={isRetryingAi}
+          isScanning={isScanning}
+          scanStatusUi={scanStatusUi}
+          mainProgressStats={mainProgressStats}
+          backupProgressStats={backupProgressStats}
+          distributionSelectionSummary={distributionSelectionSummary}
+        />
+      )}
 
       {/* ═══════════ BARRAS DE ALMACENAMIENTO POR CUENTA ═══════════ */}
-      <BatchStorageBars rows={rows} cuentas={cuentas} />
+      {!reviewMode && <BatchStorageBars rows={rows} cuentas={cuentas} />}
 
       {/* ═══════════ RESUMEN DE TABLA ═══════════ */}
       <BatchSummaryBar
         tableSummary={tableSummary}
         summaryFilter={summaryFilter}
         onSummaryFilterChange={handleSummaryFilterChange}
+        reviewMode={reviewMode}
+        setReviewMode={setReviewMode}
       />
 
       {/* ═══════════ TABLA DE DATOS VIRTUALIZADA ═══════════ */}
@@ -1897,12 +1903,14 @@ export default function BatchTable() {
       />
 
       {/* ═══════════ PIE: TOTAL GB + BOTÓN SUBIR ═══════════ */}
-      <BatchFooter
-        rows={rows}
-        isProcessing={isProcessing}
-        isStoppingAll={isStoppingAll}
-        handleProcessBatch={handleProcessBatch}
-      />
+      {!reviewMode && (
+        <BatchFooter
+          rows={rows}
+          isProcessing={isProcessing}
+          isStoppingAll={isStoppingAll}
+          handleProcessBatch={handleProcessBatch}
+        />
+      )}
 
       {/* ═══════════ MODALES ═══════════ */}
       <MetaCreateDialog

@@ -5,9 +5,10 @@
 'use client'
 
 import React from 'react'
-import { Box, Stack, Typography, LinearProgress, Chip } from '@mui/material'
+import { Box, Stack, Typography, LinearProgress, Chip, Button } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 
-export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', onSummaryFilterChange }) {
+export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', onSummaryFilterChange, reviewMode = false, setReviewMode }) {
   const triggerFilter = (filter) => {
     if (typeof onSummaryFilterChange === 'function') {
       onSummaryFilterChange(filter)
@@ -30,13 +31,40 @@ export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', o
         >
           Resumen de Tabla: {tableSummary.total} archivos
         </Typography>
-        <Typography
-          variant="caption"
-          onClick={() => triggerFilter('ready')}
-          sx={{ color: 'rgba(226,232,240,0.8)', cursor: 'pointer' }}
-        >
-          Listos para subir: {tableSummary.ready}/{tableSummary.retryable} · {tableSummary.readyGb.toFixed(2)} GB
-        </Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography
+            variant="caption"
+            onClick={() => triggerFilter('ready')}
+            sx={{ color: 'rgba(226,232,240,0.8)', cursor: 'pointer' }}
+          >
+            Listos para subir: {tableSummary.ready}/{tableSummary.retryable} · {tableSummary.readyGb.toFixed(2)} GB
+          </Typography>
+          {reviewMode && (
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<CloseIcon fontSize="small" />}
+              onClick={() => setReviewMode?.(false)}
+              sx={{
+                ml: 1,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: 12,
+                px: 1.5,
+                py: 0.4,
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: '#fff',
+                boxShadow: '0 2px 8px rgba(239,68,68,0.35)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                },
+              }}
+            >
+              Salir de Revisión
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       <LinearProgress

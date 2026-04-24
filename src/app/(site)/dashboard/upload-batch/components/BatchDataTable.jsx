@@ -49,7 +49,7 @@ export default function BatchDataTable({
       variant="outlined"
       ref={reviewScrollRef}
       sx={{
-        maxHeight: reviewMode ? REVIEW_VIEWPORT_HEIGHT : 'calc(100vh - 280px)',
+        maxHeight: reviewMode ? 'calc(100vh - 160px)' : 'calc(100vh - 280px)',
         overflowY: 'scroll',
         overflowAnchor: 'none',
         borderRadius: 2,
