@@ -19,6 +19,10 @@ import {
     Switch,
     Tabs,
     Tab,
+    Paper,
+    LinearProgress,
+    Slider,
+    Dialog,
 } from '@mui/material';
 import {
     useMaterialReactTable,
