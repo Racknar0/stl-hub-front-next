@@ -661,3 +661,283 @@
     flex-direction: column;
     gap: 8px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AI Image Search — Dropzone Expandido Inline
+   ═══════════════════════════════════════════════════════════════════ */
+
+.search-inline.ai-dropzone-open,
+.search-panel.ai-dropzone-open {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.ai-image-dropzone {
+    position: relative;
+    margin-top: 8px;
+    border-radius: 16px;
+    border: 2px dashed transparent;
+    overflow: hidden;
+    background: rgba(15, 20, 32, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background-image:
+        linear-gradient(rgba(15, 20, 32, 0.88), rgba(15, 20, 32, 0.88)),
+        linear-gradient(135deg, #00e7ff, #6a5cff, #00e7ff);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    animation: dropzoneSlideIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 231, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.ai-image-dropzone:not(.has-image) {
+    cursor: pointer;
+}
+
+.ai-image-dropzone:not(.has-image):hover {
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 231, 255, 0.18),
+        0 0 20px rgba(0, 231, 255, 0.06);
+}
+
+.ai-image-dropzone.drag-active {
+    background-image:
+        linear-gradient(rgba(0, 231, 255, 0.07), rgba(106, 92, 255, 0.05)),
+        linear-gradient(135deg, #00e7ff, #6a5cff, #00e7ff);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 24px rgba(0, 231, 255, 0.28),
+        0 0 60px rgba(106, 92, 255, 0.12);
+    transform: scale(1.008);
+}
+
+.ai-image-dropzone:not(.drag-active):not(.has-image) {
+    animation:
+        dropzoneSlideIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+        dropzoneBorderPulse 2.8s ease-in-out infinite 0.6s;
+}
+
+/* ── Dropzone Empty State ── */
+.dropzone-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 18px 24px;
+}
+
+.dropzone-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(0, 231, 255, 0.1), rgba(106, 92, 255, 0.1));
+    border: 1px solid rgba(0, 231, 255, 0.18);
+    animation: float 3s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.dropzone-icon svg {
+    color: #00e7ff;
+    filter: drop-shadow(0 0 8px rgba(0, 231, 255, 0.45));
+}
+
+.dropzone-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.dropzone-text .dropzone-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e9efff;
+    letter-spacing: 0.2px;
+}
+
+.dropzone-text .dropzone-subtitle {
+    font-size: 0.78rem;
+    color: rgba(233, 239, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dropzone-text .browse-link {
+    color: #00e7ff;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 150ms ease, text-shadow 150ms ease;
+}
+
+.dropzone-text .browse-link:hover {
+    color: #5eead4;
+    text-shadow: 0 0 12px rgba(0, 231, 255, 0.6);
+}
+
+/* ── Preview State ── */
+.ai-image-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    animation: previewFadeIn 350ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.ai-image-preview img {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid rgba(0, 231, 255, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 12px rgba(0, 231, 255, 0.12);
+    flex-shrink: 0;
+}
+
+.preview-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-info .preview-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e9efff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-info .preview-size {
+    display: block;
+    font-size: 0.73rem;
+    color: rgba(233, 239, 255, 0.5);
+    margin-top: 1px;
+}
+
+.preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(0, 231, 255, 0.1), rgba(106, 92, 255, 0.1));
+    border: 1px solid rgba(0, 231, 255, 0.18);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #00e7ff;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.preview-badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.preview-remove {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 107, 107, 0.35);
+    background: rgba(255, 107, 107, 0.06);
+    color: #ff6b6b;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 180ms ease;
+    flex-shrink: 0;
+}
+
+.preview-remove:hover {
+    background: rgba(255, 107, 107, 0.18);
+    border-color: rgba(255, 107, 107, 0.65);
+    transform: scale(1.1);
+}
+
+/* ── Keyframes ── */
+@keyframes dropzoneSlideIn {
+    0% {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-6px) scaleY(0.88);
+    }
+    100% {
+        opacity: 1;
+        max-height: 200px;
+        transform: translateY(0) scaleY(1);
+    }
+}
+
+@keyframes dropzoneBorderPulse {
+    0%, 100% {
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(0, 231, 255, 0.08);
+    }
+    50% {
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(0, 231, 255, 0.22),
+            0 0 18px rgba(0, 231, 255, 0.07);
+    }
+}
+
+@keyframes previewFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* ── Responsive dropzone ── */
+@media (max-width: 992px) {
+    .ai-image-dropzone {
+        margin-top: 6px;
+        border-radius: 12px;
+    }
+    .dropzone-content {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+    .dropzone-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }
+    .ai-image-preview img {
+        width: 44px;
+        height: 44px;
+    }
+}

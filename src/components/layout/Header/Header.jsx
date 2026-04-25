@@ -93,6 +93,10 @@ const Header = () => {
   const [searchMode, setSearchMode] = useState('normal')
   const [aiVisualSearching, setAiVisualSearching] = useState(false)
   const aiVisualTimerRef = useRef(null)
+  const [imageSearchFile, setImageSearchFile] = useState(null)
+  const [imageSearchPreview, setImageSearchPreview] = useState('')
+  const [imageDragActive, setImageDragActive] = useState(false)
+  const imagePickerRef = useRef(null)
   const isSearchBusy = searchLoading || aiVisualSearching
 
   useEffect(() => {
@@ -151,6 +155,15 @@ const Header = () => {
       // noop
     }
   }, [pathname])
+
+  // Limpiar imagen al salir de modo IA
+  useEffect(() => {
+    if (searchMode !== 'ai') {
+      setImageSearchFile(null)
+      setImageSearchPreview('')
+      setImageDragActive(false)
+    }
+  }, [searchMode])
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
@@ -287,6 +300,78 @@ const Header = () => {
     ? 'Hello, I am contacting you from stl-hub.com and I would like more information.'
     : 'Hola, te contacto desde stl-hub.com y quiero mas informacion.'
   const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
+
+  const handleImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    setImageSearchFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setImageSearchPreview(ev.target?.result || '')
+    reader.readAsDataURL(file)
+  }
+
+  const handleImageDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setImageDragActive(false)
+    const file = e.dataTransfer?.files?.[0]
+    if (file) handleImageFile(file)
+  }
+
+  const handleImagePick = (e) => {
+    const file = e.target?.files?.[0]
+    if (file) handleImageFile(file)
+    if (e.target) e.target.value = ''
+  }
+
+  const handleImageRemove = () => {
+    setImageSearchFile(null)
+    setImageSearchPreview('')
+  }
+
+  const ImageDropzone = () => (
+    <div
+      className={`ai-image-dropzone ${imageDragActive ? 'drag-active' : ''} ${imageSearchPreview ? 'has-image' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setImageDragActive(true) }}
+      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setImageDragActive(false) }}
+      onDrop={handleImageDrop}
+      onClick={() => !imageSearchPreview && imagePickerRef.current?.click()}
+    >
+      <input ref={imagePickerRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImagePick} />
+      {!imageSearchPreview ? (
+        <div className="dropzone-content">
+          <div className="dropzone-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="dropzone-text">
+            <span className="dropzone-title">{isEn ? 'Search by image' : 'Busca por imagen'}</span>
+            <span className="dropzone-subtitle">
+              {isEn ? 'Drag here or ' : 'Arrastra aquí o '}
+              <button type="button" className="browse-link" onClick={(e) => { e.stopPropagation(); imagePickerRef.current?.click() }}>
+                {isEn ? 'browse' : 'examinar'}
+              </button>
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="ai-image-preview">
+          <img src={imageSearchPreview} alt="preview" />
+          <div className="preview-info">
+            <span className="preview-name">{imageSearchFile?.name}</span>
+            <span className="preview-size">{((imageSearchFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB</span>
+          </div>
+          <span className="preview-badge">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" /></svg>
+            {isEn ? 'Visual AI' : 'IA Visual'}
+          </span>
+          <button type="button" className="preview-remove" onClick={(e) => { e.stopPropagation(); handleImageRemove() }} aria-label="Remove">✕</button>
+        </div>
+      )}
+    </div>
+  )
 
   const SpinnerMini = () => (
     <div className="sk-circle" style={{ width: 16, height: 16 }}>
@@ -472,7 +557,7 @@ const Header = () => {
           </div>
 
           {/* Búsqueda inline solo en desktop */}
-          <div className="search-inline d-none d-lg-flex flex-grow-1 px-3" role="search">
+          <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
             <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
               <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
                 <button
@@ -498,7 +583,7 @@ const Header = () => {
               </div>
               <input
                 type="text"
-                placeholder={searchPlaceholder}
+                placeholder={imageSearchPreview ? (isEn ? 'Add context... (optional)' : 'Agrega contexto... (opcional)') : searchPlaceholder}
                 aria-label={t('header.searchAria')}
               />
               <button
@@ -517,6 +602,7 @@ const Header = () => {
                 )}
               </button>
             </form>
+            {searchMode === 'ai' && <ImageDropzone />}
           </div>
 
           <div className="header-cta d-flex gap-2 align-items-center">
@@ -657,7 +743,7 @@ const Header = () => {
         </nav>
 
         {/* Búsqueda móvil (debajo), visible solo en < lg */}
-        <div className="search-panel d-lg-none" role="search">
+        <div className={`search-panel d-lg-none ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
           <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
             <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
               <button
@@ -683,7 +769,7 @@ const Header = () => {
             </div>
             <input
               type="text"
-              placeholder={searchPlaceholder}
+              placeholder={imageSearchPreview ? (isEn ? 'Add context... (optional)' : 'Agrega contexto... (opcional)') : searchPlaceholder}
               aria-label={t('header.searchAria')}
             />
             <button
@@ -702,6 +788,7 @@ const Header = () => {
               )}
             </button>
           </form>
+          {searchMode === 'ai' && <ImageDropzone />}
         </div>
       </div>
     </header>
