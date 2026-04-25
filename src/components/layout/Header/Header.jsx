@@ -98,6 +98,47 @@ const Header = () => {
   const [imageSearchFile, setImageSearchFile] = useState(null)
   const [imageSearchPreview, setImageSearchPreview] = useState('')
   const [imageDragActive, setImageDragActive] = useState(false)
+  const [globalDragActive, setGlobalDragActive] = useState(false)
+  const dragCounterRef = useRef(0)
+
+  useEffect(() => {
+    const handleGlobalDragEnter = (e) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        dragCounterRef.current += 1;
+        if (dragCounterRef.current === 1) setGlobalDragActive(true);
+      }
+    };
+    const handleGlobalDragOver = (e) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+      }
+    };
+    const handleGlobalDragLeave = (e) => {
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0;
+        setGlobalDragActive(false);
+      }
+    };
+    const handleGlobalDrop = (e) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setGlobalDragActive(false);
+    };
+
+    window.addEventListener('dragenter', handleGlobalDragEnter);
+    window.addEventListener('dragover', handleGlobalDragOver);
+    window.addEventListener('dragleave', handleGlobalDragLeave);
+    window.addEventListener('drop', handleGlobalDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleGlobalDragEnter);
+      window.removeEventListener('dragover', handleGlobalDragOver);
+      window.removeEventListener('dragleave', handleGlobalDragLeave);
+      window.removeEventListener('drop', handleGlobalDrop);
+    };
+  }, []);
   const imagePickerRef = useRef(null)
   const isSearchBusy = searchLoading || aiVisualSearching
 
@@ -407,7 +448,75 @@ const Header = () => {
 
 
   return (
-    <header className="app-header">
+    <>
+      {globalDragActive && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 999999,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            color: 'white',
+            transition: 'all 0.2s ease',
+            pointerEvents: 'all',
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setGlobalDragActive(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setGlobalDragActive(false);
+            const file = e.dataTransfer?.files?.[0];
+            if (file && file.type.startsWith('image/')) {
+              setSearchMode('ai');
+              handleImageFile(file);
+            }
+          }}
+        >
+          <div style={{
+            width: '280px',
+            height: '280px',
+            borderRadius: '50%',
+            border: '3px dashed rgba(255, 75, 130, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: '32px',
+            background: 'radial-gradient(circle, rgba(255, 75, 130, 0.08) 0%, transparent 70%)',
+            animation: 'globalDropPulse 2s ease-in-out infinite',
+          }}>
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: '#ff4b82', filter: 'drop-shadow(0 0 20px rgba(255, 75, 130, 0.5))' }}>
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 8px 0', textShadow: '0 4px 20px rgba(0,0,0,0.8)', letterSpacing: '-0.02em' }}>
+            {isEn ? 'Drop your image here' : 'Suelta tu imagen aqu\u00ed'}
+          </h2>
+          <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.55)', fontWeight: 500, margin: 0 }}>
+            {isEn ? 'AI Multimodal Search will start automatically' : 'La B\u00fasqueda Multimodal (IA) se activar\u00e1 autom\u00e1ticamente'}
+          </p>
+          <style>{`@keyframes globalDropPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }`}</style>
+        </div>
+      )}
+      <header className="app-header">
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
         <SearchParamsWatcher
@@ -815,6 +924,7 @@ const Header = () => {
         </div>
       </div>
     </header>
+    </>
   )
 }
 
