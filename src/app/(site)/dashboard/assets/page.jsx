@@ -86,6 +86,7 @@ export default function AssetsAdminPage() {
     // Estado: modales
     const [previewOpen, setPreviewOpen] = useState(false);
     const [syncVectorsOpen, setSyncVectorsOpen] = useState(false);
+    const [syncMultimodalVectorsOpen, setSyncMultimodalVectorsOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [dropResultsOpen, setDropResultsOpen] = useState(false);
     const [dropFound, setDropFound] = useState([]);
@@ -3034,6 +3035,9 @@ export default function AssetsAdminPage() {
                     metaPageOptions={metaPageOptions}
                     metaTotalPages={metaTotalPages}
                     syncVectorsOpen={syncVectorsOpen}
+                    setSyncVectorsOpen={setSyncVectorsOpen}
+                    syncMultimodalVectorsOpen={syncMultimodalVectorsOpen}
+                    setSyncMultimodalVectorsOpen={setSyncMultimodalVectorsOpen}
                     metaProfilesOpen={metaProfilesOpen}
                     setMetaProfilesOpen={setMetaProfilesOpen}
                     setMetaProfileAssetId={setMetaProfileAssetId}

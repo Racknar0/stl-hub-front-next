@@ -72,6 +72,8 @@ export default function MetaSeoTab({
     metaPageOptions,
     metaTotalPages,
     syncVectorsOpen,
+    syncMultimodalVectorsOpen,
+    setSyncMultimodalVectorsOpen,
     metaProfilesOpen,
     setMetaProfilesOpen,
     setMetaProfileAssetId,
@@ -133,6 +135,25 @@ export default function MetaSeoTab({
                                 >
                                     <CachedIcon
                                         color="secondary"
+                                        fontSize="small"
+                                    />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title="Sincronizar Vectores Multimodal (IA)">
+                            <span>
+                                <IconButton
+                                    onClick={() => setSyncMultimodalVectorsOpen(true)}
+                                    disabled={metaBusy || loading}
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                    }}
+                                >
+                                    <CachedIcon
+                                        color="primary"
                                         fontSize="small"
                                     />
                                 </IconButton>
@@ -458,6 +479,8 @@ export default function MetaSeoTab({
             <MetaSeoDialogs
                 syncVectorsOpen={syncVectorsOpen}
                 setSyncVectorsOpen={setSyncVectorsOpen}
+                syncMultimodalVectorsOpen={syncMultimodalVectorsOpen}
+                setSyncMultimodalVectorsOpen={setSyncMultimodalVectorsOpen}
                 metaProfilesOpen={metaProfilesOpen}
                 setMetaProfilesOpen={setMetaProfilesOpen}
                 setMetaProfileAssetId={setMetaProfileAssetId}

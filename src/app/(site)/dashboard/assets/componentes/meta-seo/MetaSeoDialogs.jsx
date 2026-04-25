@@ -2,11 +2,14 @@
 
 import { Box, Dialog } from '@mui/material';
 import ModalSyncVectors from '../ModalSyncVectors';
+import ModalSyncMultimodalVectors from '../ModalSyncMultimodalVectors';
 import ProfilesModal from '../../../upload-batch/ProfilesModal';
 
 export default function MetaSeoDialogs({
     syncVectorsOpen,
     setSyncVectorsOpen,
+    syncMultimodalVectorsOpen,
+    setSyncMultimodalVectorsOpen,
     metaProfilesOpen,
     setMetaProfilesOpen,
     setMetaProfileAssetId,
@@ -20,6 +23,11 @@ export default function MetaSeoDialogs({
             <ModalSyncVectors
                 open={syncVectorsOpen}
                 onClose={() => setSyncVectorsOpen(false)}
+            />
+
+            <ModalSyncMultimodalVectors
+                open={syncMultimodalVectorsOpen}
+                onClose={() => setSyncMultimodalVectorsOpen(false)}
             />
 
             <ProfilesModal
