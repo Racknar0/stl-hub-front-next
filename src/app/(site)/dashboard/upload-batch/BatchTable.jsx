@@ -78,6 +78,7 @@ export default function BatchTable() {
   const reviewScrollRef = React.useRef(null)
 
   // SIMILARS SIDEBAR STATES
+  const [searchSidebarOpen, setSearchSidebarOpen] = useState(true)
   const [searchSidebarSide, setSearchSidebarSide] = useState('right')
   const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
   const [similarityMap, setSimilarityMap] = useState({})
@@ -1803,7 +1804,7 @@ export default function BatchTable() {
     <Box
       sx={{
         pb: 10,
-        pr: searchSidebarSide === 'right' ? `${RIGHT_SIDEBAR_WIDTH}px` : 0,
+        pr: searchSidebarSide === 'right' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
         transition: 'padding 180ms ease'
       }}
     >
@@ -1951,6 +1952,8 @@ export default function BatchTable() {
 
       {/* ═══════════ SIDEBAR DE SIMILARES ═══════════ */}
       <SimilaritySidebar
+        searchSidebarOpen={searchSidebarOpen}
+        setSearchSidebarOpen={setSearchSidebarOpen}
         searchSidebarSide={searchSidebarSide}
         toggleSearchSidebarSide={toggleSearchSidebarSide}
         similaritySelectedId={similaritySelectedId}

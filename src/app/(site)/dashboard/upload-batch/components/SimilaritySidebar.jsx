@@ -8,7 +8,9 @@
 'use client'
 
 import React from 'react'
-import { Box, Button, Stack, Typography, Divider, CircularProgress } from '@mui/material'
+import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, Tooltip } from '@mui/material'
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
+import CloseIcon from '@mui/icons-material/Close'
 import RightSidebar from '../../assets/uploader/RightSidebar'
 import {
   RIGHT_SIDEBAR_WIDTH,
@@ -17,6 +19,8 @@ import {
 } from '../constants'
 
 export default function SimilaritySidebar({
+  searchSidebarOpen,
+  setSearchSidebarOpen,
   searchSidebarSide,
   toggleSearchSidebarSide,
   similaritySelectedId,
@@ -30,19 +34,25 @@ export default function SimilaritySidebar({
   return (
     <RightSidebar
       side={searchSidebarSide}
-      collapsible={false}
+      collapsedWidth={52}
+      collapsible={true}
+      open={searchSidebarOpen}
+      onToggle={() => setSearchSidebarOpen(!searchSidebarOpen)}
       inFlow={false}
-      open
       width={RIGHT_SIDEBAR_WIDTH}
       title="Búsqueda Similares"
       headerAction={
-        <Stack direction="row" spacing={1}>
-          <Button size="small" variant="outlined" onClick={toggleSearchSidebarSide} sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1, color: '#adafb8', borderColor: 'rgba(173,175,184,0.35)' }}>
-            {searchSidebarSide === 'right' ? 'A Izquierda' : 'A Derecha'}
-          </Button>
-          <Button size="small" variant="contained" color="error" onClick={() => setSimilaritySelectedId(null)} sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}>
-            Cerrar
-          </Button>
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title={searchSidebarSide === 'right' ? 'Mover a Izquierda' : 'Mover a Derecha'}>
+            <IconButton size="small" onClick={toggleSearchSidebarSide} sx={{ border: '1px solid rgba(173,175,184,0.35)', color: '#adafb8', p: 0.5, borderRadius: 2 }}>
+              <SwapHorizIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Cerrar Búsqueda">
+            <IconButton size="small" color="error" onClick={() => setSimilaritySelectedId(null)} sx={{ border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', p: 0.5, borderRadius: 2 }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       }
     >

@@ -63,7 +63,7 @@ export default function RightSidebar({
         )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          {headerAction}
+          {effectiveOpen && headerAction}
           {collapsible ? (
             <IconButton
               size="small"
