@@ -85,7 +85,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                         images={it.images}
                         fallback={it.thumb}
                         alt={it.title || 'asset'}
-                        sizes="220px"
+                        sizes="(max-width: 992px) 88vw, 240px"
                         className="thumb-img"
                         isAdult={isAssetNSFW(it)}
                       />

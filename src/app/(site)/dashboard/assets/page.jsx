@@ -41,6 +41,7 @@ import ToolbarBusqueda from './componentes/ToolbarBusqueda';
 import AssetsListTab from './componentes/tabs/AssetsListTab';
 import ImageSimilarTab from './componentes/tabs/ImageSimilarTab';
 import NameSimilarTab from './componentes/tabs/NameSimilarTab';
+import VisualSimilarTab from './componentes/tabs/VisualSimilarTab';
 import MetaSeoTab from './componentes/tabs/MetaSeoTab';
 
 // Mapea estado a color de chip
@@ -176,6 +177,24 @@ export default function AssetsAdminPage() {
     const [nameSimilarSelectedMap, setNameSimilarSelectedMap] = useState({});
     const [nameSimilarPrimaryMap, setNameSimilarPrimaryMap] = useState({});
     const [nameSimilarDeleteProgress, setNameSimilarDeleteProgress] = useState({
+        running: false,
+        total: 0,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        currentAssetId: null,
+    });
+    const [visualSimilarThreshold, setVisualSimilarThreshold] = useState(85);
+    const [visualSimilarLoading, setVisualSimilarLoading] = useState(false);
+    const [visualSimilarError, setVisualSimilarError] = useState('');
+    const [visualSimilarProgress, setVisualSimilarProgress] = useState({
+        done: 0,
+        total: 0,
+    });
+    const [visualSimilarGroups, setVisualSimilarGroups] = useState([]);
+    const [visualSimilarSelectedMap, setVisualSimilarSelectedMap] = useState({});
+    const [visualSimilarPrimaryMap, setVisualSimilarPrimaryMap] = useState({});
+    const [visualSimilarDeleteProgress, setVisualSimilarDeleteProgress] = useState({
         running: false,
         total: 0,
         processed: 0,
@@ -1253,6 +1272,270 @@ export default function AssetsAdminPage() {
             );
         }
     };
+
+    // ==========================================
+    // LÓGICA SIMILAR-VISUAL
+    // ==========================================
+
+    const analyzeVisualSimilarAssets = async () => {
+        setVisualSimilarLoading(true);
+        setVisualSimilarError('');
+        setVisualSimilarGroups([]);
+        setVisualSimilarSelectedMap({});
+        setVisualSimilarPrimaryMap({});
+        setVisualSimilarProgress({ done: 0, total: 0 });
+
+        try {
+            const pageSize = 50;
+            let pageIndexScan = 0;
+            let allGroups = [];
+
+            while (true) {
+                const res = await http.getData(
+                    `/ai/similar-visual-batch?pageIndex=${pageIndexScan}&pageSize=${pageSize}&threshold=${visualSimilarThreshold}`,
+                );
+                
+                const { groups, totalProcessed } = res.data;
+
+                if (!totalProcessed || totalProcessed === 0) {
+                    break;
+                }
+
+                if (groups && groups.length > 0) {
+                    allGroups.push(...groups);
+                    setVisualSimilarGroups([...allGroups]);
+                }
+
+                setVisualSimilarProgress(prev => ({
+                    done: (pageIndexScan + 1) * pageSize,
+                    total: '...' 
+                }));
+
+                pageIndexScan += 1;
+                
+                if (totalProcessed < pageSize || pageIndexScan > 500) {
+                    setVisualSimilarProgress(prev => ({
+                        done: prev.done,
+                        total: prev.done 
+                    }));
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error('Visual similarity error:', error);
+            setVisualSimilarError(error?.response?.data?.message || error?.message || 'Error analizando similitud visual');
+        } finally {
+            setVisualSimilarLoading(false);
+        }
+    };
+
+    const toggleVisualSimilarSelection = (id) => {
+        setVisualSimilarSelectedMap((prev) => {
+            const next = { ...prev };
+            if (next[id]) delete next[id];
+            else next[id] = true;
+            return next;
+        });
+    };
+
+    const setVisualPrimaryInGroup = (groupId, primaryId) => {
+        setVisualSimilarPrimaryMap((prev) => ({
+            ...prev,
+            [groupId]: primaryId,
+        }));
+        setVisualSimilarSelectedMap((prev) => {
+            const next = { ...prev };
+            delete next[primaryId];
+            return next;
+        });
+    };
+
+    const selectVisualGroupDuplicates = (group) => {
+        const primaryId = Number(
+            visualSimilarPrimaryMap[group.id] || group.items?.[0]?.asset?.id,
+        );
+        if (!primaryId) return;
+
+        setVisualSimilarSelectedMap((prev) => {
+            const next = { ...prev };
+            group.items.forEach((entry) => {
+                const id = Number(entry?.asset?.id);
+                if (!Number.isFinite(id)) return;
+                if (id === primaryId) delete next[id];
+                else next[id] = true;
+            });
+            return next;
+        });
+    };
+
+    const clearVisualSimilarSelection = () => setVisualSimilarSelectedMap({});
+
+    const dismissVisualSimilarGroup = async (group) => {
+        if (!group?.id) return;
+
+        const assetIds = Array.isArray(group?.items)
+            ? group.items
+                  .map((entry) => Number(entry?.asset?.id))
+                  .filter((n) => Number.isFinite(n) && n > 0)
+            : [];
+
+        const pairs = [];
+        for (let i = 0; i < assetIds.length; i += 1) {
+            for (let j = i + 1; j < assetIds.length; j += 1) {
+                const a = assetIds[i];
+                const b = assetIds[j];
+                if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
+                    const key = buildPairKey(a, b);
+                    if (key)
+                        pairs.push({
+                            assetAId: Math.min(a, b),
+                            assetBId: Math.max(a, b),
+                            key,
+                        });
+                }
+            }
+        }
+        if (!pairs.length) return;
+
+        setSimilarIgnoredPairMap((prev) => {
+            const next = { ...prev };
+            pairs.forEach((p) => {
+                next[p.key] = true;
+            });
+            return next;
+        });
+
+        setVisualSimilarGroups((prev) => prev.filter((g) => g.id !== group.id));
+        setVisualSimilarPrimaryMap((prev) => {
+            const next = { ...prev };
+            delete next[group.id];
+            return next;
+        });
+        setVisualSimilarSelectedMap((prev) => {
+            const next = { ...prev };
+            (group?.items || []).forEach((entry) => {
+                const id = Number(entry?.asset?.id);
+                if (Number.isFinite(id)) delete next[id];
+            });
+            return next;
+        });
+
+        try {
+            await http.postData('/assets/similar/ignored-pairs', {
+                pairs: pairs.map((p) => ({
+                    assetAId: p.assetAId,
+                    assetBId: p.assetBId,
+                })),
+            });
+        } catch (e) {
+            await errorAlert(
+                'Error',
+                e?.response?.data?.message ||
+                    'No se pudo guardar el descarte en base de datos',
+            );
+        }
+    };
+
+    const reactivateVisualDismissedGroups = async () => {
+        try {
+            await http.deleteRaw('/assets/similar/ignored-pairs');
+        } catch (e) {
+            await errorAlert(
+                'Error',
+                e?.response?.data?.message ||
+                    'No se pudieron reactivar los descartes',
+            );
+            return;
+        }
+        setSimilarIgnoredPairMap({});
+        await analyzeVisualSimilarAssets();
+    };
+
+    const handleDeleteSelectedVisualSimilar = async () => {
+        const idsToDelete = Object.keys(visualSimilarSelectedMap)
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0);
+            
+        if (!idsToDelete.length) return;
+
+        const ok = await confirmAlert(
+            'Eliminar seleccionados',
+            `Se eliminarán ${idsToDelete.length} assets seleccionados del resultado multimodal.`,
+            'Sí, eliminar',
+            'Cancelar',
+            'warning',
+        );
+        if (!ok) return;
+
+        let successCount = 0;
+        let failedCount = 0;
+        setVisualSimilarLoading(true);
+        setVisualSimilarDeleteProgress({
+            running: true,
+            total: idsToDelete.length,
+            processed: 0,
+            success: 0,
+            failed: 0,
+            currentAssetId: null,
+        });
+
+        for (const id of idsToDelete) {
+            setVisualSimilarDeleteProgress((prev) => ({
+                ...prev,
+                currentAssetId: id,
+            }));
+            try {
+                await http.deleteData('/assets', id);
+                successCount += 1;
+                setVisualSimilarDeleteProgress((prev) => ({
+                    ...prev,
+                    processed: prev.processed + 1,
+                    success: prev.success + 1,
+                }));
+            } catch (e) {
+                failedCount += 1;
+                setVisualSimilarDeleteProgress((prev) => ({
+                    ...prev,
+                    processed: prev.processed + 1,
+                    failed: prev.failed + 1,
+                }));
+            }
+        }
+
+        const deletedSet = new Set(idsToDelete);
+        setVisualSimilarGroups((prev) => {
+            return prev
+                .map((group) => ({
+                    ...group,
+                    items: group.items.filter(
+                        (entry) => !deletedSet.has(Number(entry?.asset?.id)),
+                    ),
+                }))
+                .filter((group) => group.items.length > 1);
+        });
+        setVisualSimilarSelectedMap({});
+        setRefreshTick((n) => n + 1);
+        setVisualSimilarLoading(false);
+        setVisualSimilarDeleteProgress((prev) => ({
+            ...prev,
+            running: false,
+            currentAssetId: null,
+        }));
+
+        if (successCount > 0) {
+            await successAlert(
+                'Eliminados',
+                `Se eliminaron ${successCount} assets correctamente.`,
+            );
+        }
+        if (failedCount > 0) {
+            await errorAlert(
+                'Parcial',
+                `No se pudieron eliminar ${failedCount} assets.`,
+            );
+        }
+    };
+
 
     useEffect(() => {
         if (tab !== 1) return;
@@ -2859,6 +3142,13 @@ export default function AssetsAdminPage() {
                     }}
                 />
                 <Tab
+                    label="SIMILAR-VISUAL"
+                    sx={{
+                        color: (theme) =>
+                            theme.palette.mode === 'dark' ? '#fff' : undefined,
+                    }}
+                />
+                <Tab
                     label="META-SEO"
                     sx={{
                         color: (theme) =>
@@ -2980,6 +3270,60 @@ export default function AssetsAdminPage() {
                 />
             )}
             {tab === 3 && (
+                <VisualSimilarTab
+                    analyzeVisualSimilarAssets={analyzeVisualSimilarAssets}
+                    visualSimilarLoading={visualSimilarLoading}
+                    visualSimilarThreshold={visualSimilarThreshold}
+                    setVisualSimilarThreshold={setVisualSimilarThreshold}
+                    visualSimilarGroups={visualSimilarGroups}
+                    ignoredPairsCount={Object.keys(similarIgnoredPairMap).length}
+                    selectedVisualSimilarIds={Object.keys(visualSimilarSelectedMap)}
+                    formatMBfromB={formatMBfromB}
+                    selectedVisualSimilarBytes={Object.keys(visualSimilarSelectedMap).reduce(
+                        (acc, id) => {
+                            const group = visualSimilarGroups.find((g) =>
+                                g.items.some(
+                                    (i) => String(i?.asset?.id) === String(id),
+                                ),
+                            );
+                            const size = Number(
+                                group?.items?.find(
+                                    (i) => String(i?.asset?.id) === String(id),
+                                )?.asset?.archiveSize,
+                            );
+                            return acc + (Number.isFinite(size) ? size : 0);
+                        },
+                        0,
+                    )}
+                    reactivateVisualDismissedGroups={reactivateVisualDismissedGroups}
+                    visualSimilarProgress={visualSimilarProgress}
+                    visualSimilarError={visualSimilarError}
+                    visualSimilarPrimaryMap={visualSimilarPrimaryMap}
+                    selectVisualGroupDuplicates={selectVisualGroupDuplicates}
+                    dismissVisualSimilarGroup={dismissVisualSimilarGroup}
+                    visualSimilarSelectedMap={visualSimilarSelectedMap}
+                    imgUrl={imgUrl}
+                    openSimilarViewer={openSimilarViewer}
+                    setVisualPrimaryInGroup={setVisualPrimaryInGroup}
+                    toggleVisualSimilarSelection={toggleVisualSimilarSelection}
+                    selectedVisualSimilarAssets={Object.keys(visualSimilarSelectedMap)
+                        .map((id) => {
+                            const group = visualSimilarGroups.find((g) =>
+                                g.items.some(
+                                    (i) => String(i?.asset?.id) === String(id),
+                                ),
+                            );
+                            return group?.items?.find(
+                                (i) => String(i?.asset?.id) === String(id),
+                            )?.asset;
+                        })
+                        .filter(Boolean)}
+                    visualSimilarDeleteProgress={visualSimilarDeleteProgress}
+                    handleDeleteSelectedVisualSimilar={handleDeleteSelectedVisualSimilar}
+                    clearVisualSimilarSelection={clearVisualSimilarSelection}
+                />
+            )}
+            {tab === 4 && (
                 <MetaSeoTab
                     metaBusy={metaBusy}
                     loading={loading}
