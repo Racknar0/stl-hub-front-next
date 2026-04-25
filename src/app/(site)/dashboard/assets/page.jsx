@@ -3399,6 +3399,44 @@ export default function AssetsAdminPage() {
                     metaImagePreview={metaImagePreview}
                 />
             )}
+
+            <Dialog
+                open={similarViewer.open}
+                onClose={closeSimilarViewer}
+                maxWidth="lg"
+                PaperProps={{
+                    sx: {
+                        background: 'transparent',
+                        boxShadow: 'none',
+                        m: 0,
+                    },
+                }}
+            >
+                {similarViewer.image && (
+                    <Box
+                        onClick={closeSimilarViewer}
+                        sx={{
+                            cursor: 'zoom-out',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <Box
+                            component="img"
+                            src={imgUrl(similarViewer.image)}
+                            alt="Preview"
+                            sx={{
+                                maxWidth: '100%',
+                                maxHeight: '90vh',
+                                objectFit: 'contain',
+                                borderRadius: 2,
+                            }}
+                        />
+                    </Box>
+                )}
+            </Dialog>
         </div>
     );
 }
