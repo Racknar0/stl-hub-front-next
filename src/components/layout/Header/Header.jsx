@@ -123,16 +123,10 @@ const Header = () => {
     return () => { mounted = false }
   }, [])
 
-  // Si la URL pide búsqueda IA, ese estado tiene prioridad sobre default.
+  // useEffect para detectar cambios de ruta y resetear si es necesario (limpio)
   useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return
-      const params = new URLSearchParams(window.location.search)
-      const isAiFromUrl = String(params.get('is_ai_search') || '').toLowerCase() === 'true'
-      if (isAiFromUrl) setSearchMode('ai')
-    } catch {
-      // noop
-    }
+    // Si queremos que el buscador siempre empiece cerrado en nuevas navegaciones:
+    // setSearchMode('normal')
   }, [pathname])
 
   // Limpiar imagen al salir de modo IA
@@ -240,6 +234,7 @@ const Header = () => {
         }
         
         // Navegación para búsqueda IA (solo texto)
+        setSearchMode('normal')
         let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
         url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
         await router.push(url)
