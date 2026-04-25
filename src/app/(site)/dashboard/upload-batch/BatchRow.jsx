@@ -88,7 +88,11 @@ export default function BatchRow({
                         : 'none',
                     transition:
                         'background-color 160ms ease, box-shadow 160ms ease',
-                    '&:hover': { backgroundColor: 'inherit' },
+                    '&:hover': {
+                        backgroundColor: isSimilarityFocused
+                            ? `${focusedBg} !important`
+                            : `${baseRowBg} !important`,
+                    },
                 }}
             >
                 <TableCell
@@ -527,7 +531,11 @@ export default function BatchRow({
                     : 'none',
                 transition:
                     'background-color 160ms ease, box-shadow 160ms ease',
-                '&:hover': { backgroundColor: 'inherit' },
+                '&:hover': {
+                    backgroundColor: isSimilarityFocused
+                        ? `${focusedBg} !important`
+                        : `${baseRowBg} !important`,
+                },
             }}
         >
             <TableCell
