@@ -101,7 +101,7 @@ const FeatureSection = ({
                                   const rawDate = it.createdAt; // solo usamos createdAt del backend
                                   const uploadDate = formatUploadDate(rawDate);
                                   return (
-                                      <SwiperSlide key={it.id} virtualIndex={index}>
+                                      <SwiperSlide key={`${it.id}-${index}`} virtualIndex={index}>
                                           <article className="fcard" onClick={() => onItemClick?.(it)}>
                                               <div className="thumb">
                                                   <CardImageSlider

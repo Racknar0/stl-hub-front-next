@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef, Suspense } from 'react'
+import React, { useEffect, useState, useRef, Suspense, useCallback } from 'react'
 import Link from 'next/link'
 import Tooltip from '@mui/material/Tooltip'
 import './Header.scss'
@@ -99,44 +99,44 @@ const Header = () => {
   const [imageSearchPreview, setImageSearchPreview] = useState('')
   const [imageDragActive, setImageDragActive] = useState(false)
   const [globalDragActive, setGlobalDragActive] = useState(false)
-  const dragCounterRef = useRef(0)
+
+  const onDropGlobal = useCallback((acceptedFiles) => {
+    const file = acceptedFiles?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSearchMode('ai');
+      handleImageFile(file);
+    }
+  }, []);
 
   useEffect(() => {
-    const handleGlobalDragEnter = (e) => {
-      if (e.dataTransfer?.types?.includes('Files')) {
-        e.preventDefault();
-        dragCounterRef.current += 1;
-        if (dragCounterRef.current === 1) setGlobalDragActive(true);
-      }
-    };
-    const handleGlobalDragOver = (e) => {
-      if (e.dataTransfer?.types?.includes('Files')) {
-        e.preventDefault();
-      }
-    };
-    const handleGlobalDragLeave = (e) => {
-      dragCounterRef.current -= 1;
-      if (dragCounterRef.current <= 0) {
-        dragCounterRef.current = 0;
-        setGlobalDragActive(false);
-      }
-    };
-    const handleGlobalDrop = (e) => {
+    let dragCounter = 0;
+    const onEnter = (e) => {
+      if (!e.dataTransfer?.types?.includes('Files')) return;
       e.preventDefault();
-      dragCounterRef.current = 0;
+      dragCounter++;
+      if (dragCounter === 1) setGlobalDragActive(true);
+    };
+    const onOver = (e) => {
+      if (e.dataTransfer?.types?.includes('Files')) e.preventDefault();
+    };
+    const onLeave = () => {
+      dragCounter--;
+      if (dragCounter <= 0) { dragCounter = 0; setGlobalDragActive(false); }
+    };
+    const onDrop = (e) => {
+      e.preventDefault();
+      dragCounter = 0;
       setGlobalDragActive(false);
     };
-
-    window.addEventListener('dragenter', handleGlobalDragEnter);
-    window.addEventListener('dragover', handleGlobalDragOver);
-    window.addEventListener('dragleave', handleGlobalDragLeave);
-    window.addEventListener('drop', handleGlobalDrop);
-
+    document.addEventListener('dragenter', onEnter);
+    document.addEventListener('dragover', onOver);
+    document.addEventListener('dragleave', onLeave);
+    document.addEventListener('drop', onDrop);
     return () => {
-      window.removeEventListener('dragenter', handleGlobalDragEnter);
-      window.removeEventListener('dragover', handleGlobalDragOver);
-      window.removeEventListener('dragleave', handleGlobalDragLeave);
-      window.removeEventListener('drop', handleGlobalDrop);
+      document.removeEventListener('dragenter', onEnter);
+      document.removeEventListener('dragover', onOver);
+      document.removeEventListener('dragleave', onLeave);
+      document.removeEventListener('drop', onDrop);
     };
   }, []);
   const imagePickerRef = useRef(null)
@@ -449,8 +449,19 @@ const Header = () => {
 
   return (
     <>
-      {globalDragActive && (
-        <div
+      <div
+          {...{
+            onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); },
+            onDrop: (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setGlobalDragActive(false);
+              const file = e.dataTransfer?.files?.[0];
+              if (file && file.type.startsWith('image/')) {
+                onDropGlobal([file]);
+              }
+            },
+          }}
           style={{
             position: 'fixed',
             top: 0,
@@ -465,27 +476,9 @@ const Header = () => {
             justifyContent: 'center',
             alignItems: 'center',
             color: 'white',
-            transition: 'all 0.2s ease',
-            pointerEvents: 'all',
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setGlobalDragActive(false);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setGlobalDragActive(false);
-            const file = e.dataTransfer?.files?.[0];
-            if (file && file.type.startsWith('image/')) {
-              setSearchMode('ai');
-              handleImageFile(file);
-            }
+            transition: 'opacity 0.2s ease',
+            opacity: globalDragActive ? 1 : 0,
+            pointerEvents: globalDragActive ? 'all' : 'none',
           }}
         >
           <div style={{
@@ -499,7 +492,7 @@ const Header = () => {
             alignItems: 'center',
             marginBottom: '32px',
             background: 'radial-gradient(circle, rgba(255, 75, 130, 0.08) 0%, transparent 70%)',
-            animation: 'globalDropPulse 2s ease-in-out infinite',
+            animation: globalDragActive ? 'globalDropPulse 2s ease-in-out infinite' : 'none',
           }}>
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: '#ff4b82', filter: 'drop-shadow(0 0 20px rgba(255, 75, 130, 0.5))' }}>
               <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
@@ -515,7 +508,6 @@ const Header = () => {
           </p>
           <style>{`@keyframes globalDropPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }`}</style>
         </div>
-      )}
       <header className="app-header">
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
