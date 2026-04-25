@@ -244,7 +244,7 @@ export default function SearchClient({ initialParams }) {
 
   const searchEventKey = useMemo(() => buildSearchEventKey(params), [params]);
 
-  // Reset y carga inicial cuando cambian filtros
+  // Reset y carga inicial cuando cambian filtros o resultados de imagen
   useEffect(() => {
     setItems([]);
     setPage(0);
@@ -255,7 +255,7 @@ export default function SearchClient({ initialParams }) {
     hasMoreRef.current = true;
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
-  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, imageSearchResults]);
 
   const trackSearchIfNeeded = useCallback(async (resultCount) => {
     try {
@@ -301,19 +301,28 @@ export default function SearchClient({ initialParams }) {
       await sleep(0);
 
       // Check for image search results in Zustand store
-      const isImageSearch = params.is_ai_search === 'true' && typeof window !== 'undefined'
+      const isImageSearch = typeof window !== 'undefined'
         && new URLSearchParams(window.location.search).get('image_search') === 'true';
 
-      if (isImageSearch && nextPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
-        const list = imageSearchResults.items.map(a => toDisplayItem(a, language));
-        setItems(list);
-        setHasMore(false);
-        hasMoreRef.current = false;
-        pageRef.current = 1;
-        setPage(1);
-        if (list.length > 0) void trackSearchIfNeeded(list.length);
-        clearImageSearchResults();
-        return;
+      if (isImageSearch) {
+        if (nextPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
+          const list = imageSearchResults.items.map(a => toDisplayItem(a, language));
+          setItems(list);
+          setHasMore(false);
+          hasMoreRef.current = false;
+          pageRef.current = 1;
+          setPage(1);
+          if (list.length > 0) void trackSearchIfNeeded(list.length);
+        } else if (nextPage === 0 && !items.length) {
+          // If state is lost (e.g. refresh), just show empty
+          setItems([]);
+          setHasMore(false);
+          hasMoreRef.current = false;
+        }
+        isLoadingRef.current = false;
+        if (nextPage === 0) setLoading(false);
+        if (nextPage > 0) setIsLoadingMore(false);
+        return; // Skip normal API call
       }
 
       const res = await axios.get('/assets/search', {
@@ -344,12 +353,12 @@ export default function SearchClient({ initialParams }) {
       if (nextPage === 0) setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [params, language, trackSearchIfNeeded]);
+  }, [params, language, trackSearchIfNeeded, imageSearchResults]);
 
   // Carga inicial
   useEffect(() => {
     loadPageReal(0);
-  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language, imageSearchResults]);
 
   // Cargar más
   const loadMoreReal = useCallback(() => {

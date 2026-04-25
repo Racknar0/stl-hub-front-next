@@ -123,30 +123,7 @@ const Header = () => {
     return () => { mounted = false }
   }, [])
 
-  // Restaurar modo del buscador desde storage (persistencia entre rutas).
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return
-      const savedMode = String(window.localStorage.getItem(SEARCH_MODE_STORAGE_KEY) || '').toLowerCase()
-      if (savedMode === 'ai' || savedMode === 'normal') {
-        setSearchMode(savedMode)
-      }
-    } catch {
-      // noop
-    }
-  }, [])
-
-  // Persistir modo elegido por el usuario.
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return
-      window.localStorage.setItem(SEARCH_MODE_STORAGE_KEY, searchMode)
-    } catch {
-      // noop
-    }
-  }, [searchMode])
-
-  // Si la URL pide búsqueda IA, ese estado tiene prioridad sobre storage.
+  // Si la URL pide búsqueda IA, ese estado tiene prioridad sobre default.
   useEffect(() => {
     try {
       if (typeof window === 'undefined') return
@@ -217,14 +194,6 @@ const Header = () => {
           aiVisualTimerRef.current = null
         }, 8000)
 
-        try {
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(SEARCH_MODE_STORAGE_KEY, 'ai')
-          }
-        } catch {
-          // noop
-        }
-
         // Si hay imagen cargada, hacer búsqueda visual por API
         if (imageSearchFile) {
           try {
@@ -247,7 +216,11 @@ const Header = () => {
                 total: data.total || data.items.length,
                 query: val || imageSearchFile.name,
               })
-              let url = `/search?image_search=true&is_ai_search=true`
+              // 1-second delay for elegance so the user sees the animation and success state
+              await new Promise(r => setTimeout(r, 1000))
+              
+              setSearchMode('normal')
+              let url = `/search?image_search=true`
               if (val) url += `&q=${encodeURIComponent(val)}`
               await router.push(url)
             } else {
