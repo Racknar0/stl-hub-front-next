@@ -372,7 +372,7 @@ export default function VisualSimilarTab({
                                                                                                 objectFit:
                                                                                                     'cover',
                                                                                                 borderRadius: 1,
-                                                                                                cursor: 'zoom-in',
+                                                                                                cursor: 'pointer',
                                                                                                 border: '1px solid rgba(127,127,127,0.35)',
                                                                                                 transition:
                                                                                                     'transform 120ms ease',

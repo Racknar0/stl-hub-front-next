@@ -184,7 +184,7 @@ export default function AssetsAdminPage() {
         failed: 0,
         currentAssetId: null,
     });
-    const [visualSimilarThreshold, setVisualSimilarThreshold] = useState(85);
+    const [visualSimilarThreshold, setVisualSimilarThreshold] = useState(90);
     const [visualSimilarLoading, setVisualSimilarLoading] = useState(false);
     const [visualSimilarError, setVisualSimilarError] = useState('');
     const [visualSimilarProgress, setVisualSimilarProgress] = useState({
@@ -1286,29 +1286,42 @@ export default function AssetsAdminPage() {
         setVisualSimilarProgress({ done: 0, total: 0 });
 
         try {
-            const pageSize = 50;
             let pageIndexScan = 0;
-            let allGroups = [];
+            const pageSize = 50;
+            const allGroups = [];
+            const seenAssetIds = new Set();
 
             while (true) {
                 const res = await http.getData(
                     `/ai/similar-visual-batch?pageIndex=${pageIndexScan}&pageSize=${pageSize}&threshold=${visualSimilarThreshold}`,
                 );
                 
-                const { groups, totalProcessed } = res.data;
+                const { groups, totalProcessed, totalAssets } = res.data;
 
                 if (!totalProcessed || totalProcessed === 0) {
                     break;
                 }
 
                 if (groups && groups.length > 0) {
-                    allGroups.push(...groups);
-                    setVisualSimilarGroups([...allGroups]);
+                    const uniqueGroups = groups.filter(g => {
+                        // Si el principal ya fue procesado, saltar el grupo entero
+                        const primaryId = Number(g.id.replace('group-vis-', ''));
+                        if (seenAssetIds.has(primaryId)) return false;
+
+                        // Marcar todos los elementos de este grupo como vistos
+                        g.items.forEach(i => seenAssetIds.add(Number(i.asset.id)));
+                        return true;
+                    });
+
+                    if (uniqueGroups.length > 0) {
+                        allGroups.push(...uniqueGroups);
+                        setVisualSimilarGroups([...allGroups]);
+                    }
                 }
 
                 setVisualSimilarProgress(prev => ({
                     done: (pageIndexScan + 1) * pageSize,
-                    total: '...' 
+                    total: totalAssets || '...' 
                 }));
 
                 pageIndexScan += 1;
@@ -3330,7 +3343,6 @@ export default function AssetsAdminPage() {
                     handleGenerateAllDescriptions={
                         handleGenerateAllDescriptions
                     }
-                    setSyncVectorsOpen={setSyncVectorsOpen}
                     handleGenerateMissingDescriptions={
                         handleGenerateMissingDescriptions
                     }
