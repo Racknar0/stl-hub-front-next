@@ -666,21 +666,28 @@
    AI Image Search — Dropzone Expandido Inline
    ═══════════════════════════════════════════════════════════════════ */
 
-.search-inline.ai-dropzone-open,
+.search-inline.ai-dropzone-open {
+    position: relative;
+}
+
 .search-panel.ai-dropzone-open {
     flex-direction: column;
     align-items: stretch;
 }
 
 .ai-image-dropzone {
-    position: relative;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
     margin-top: 8px;
     border-radius: 16px;
     border: 2px dashed transparent;
     overflow: hidden;
-    background: rgba(15, 20, 32, 0.88);
+    background: rgba(15, 20, 32, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    z-index: 100;
     background-image:
         linear-gradient(rgba(15, 20, 32, 0.88), rgba(15, 20, 32, 0.88)),
         linear-gradient(135deg, #00e7ff, #6a5cff, #00e7ff);

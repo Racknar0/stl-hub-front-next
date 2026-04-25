@@ -104,6 +104,11 @@ const useStore = create(
             }
         },
 
+        // Resultados de búsqueda visual por imagen (puente Header → SearchClient)
+        imageSearchResults: null,
+        setImageSearchResults: (data) => set({ imageSearchResults: data }),
+        clearImageSearchResults: () => set({ imageSearchResults: null }),
+
     }))
 );
 

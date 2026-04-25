@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react'
 import Link from 'next/link'
+import Tooltip from '@mui/material/Tooltip'
 import './Header.scss'
 import Button from '../Buttons/Button'
 import axiosInstance from '../../../services/AxiosInterceptor';
@@ -35,6 +36,7 @@ const Header = () => {
   const roleId = useStore((s) => s.roleId)
   const logout = useStore((s) => s.logout)
   const language = useStore((s) => s.language)
+  const setImageSearchResults = useStore((s) => s.setImageSearchResults)
   const [profile, setProfile] = React.useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
   const profileMenuRef = useRef(null);
@@ -206,13 +208,14 @@ const Header = () => {
       if (isSearchBusy) return
       const input = e.currentTarget.querySelector('input[type="text"]')
       const val = input?.value?.trim() || ''
+
       if (searchMode === 'ai') {
         if (aiVisualTimerRef.current) clearTimeout(aiVisualTimerRef.current)
         setAiVisualSearching(true)
         aiVisualTimerRef.current = setTimeout(() => {
           setAiVisualSearching(false)
           aiVisualTimerRef.current = null
-        }, 4000)
+        }, 8000)
 
         try {
           if (typeof window !== 'undefined') {
@@ -221,22 +224,66 @@ const Header = () => {
         } catch {
           // noop
         }
+
+        // Si hay imagen cargada, hacer búsqueda visual por API
+        if (imageSearchFile) {
+          try {
+            const formData = new FormData()
+            formData.append('image', imageSearchFile)
+            if (val) formData.append('text', val)
+            formData.append('limit', '200')
+
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+            const res = await fetch(`${apiBase}/api/ai/search-by-image`, {
+              method: 'POST',
+              body: formData,
+            })
+            const data = await res.json()
+
+            if (res.ok && Array.isArray(data?.items)) {
+              // Store results in Zustand for the search page
+              setImageSearchResults({
+                items: data.items,
+                total: data.total || data.items.length,
+                query: val || imageSearchFile.name,
+              })
+              let url = `/search?image_search=true&is_ai_search=true`
+              if (val) url += `&q=${encodeURIComponent(val)}`
+              await router.push(url)
+            } else {
+              console.error('Image search error:', data?.message)
+              // Fallback to text AI search
+              let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
+              url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
+              await router.push(url)
+            }
+          } catch (fetchErr) {
+            console.error('Image search fetch error:', fetchErr)
+            let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
+            url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
+            await router.push(url)
+          }
+          return
+        }
         
-        // Navegación para búsqueda IA
+        // Navegación para búsqueda IA (solo texto)
         let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
         url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
         await router.push(url)
         return
       }
       setSearchLoading(true)
-      // await router.push para poder resetear el loading aunque la URL no cambie
       let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
       await router.push(url)
     } catch (err) {
       console.error('Navigation error on search submit', err)
     } finally {
-      // Aseguramos que el spinner local siempre se resetea
       setSearchLoading(false)
+      setAiVisualSearching(false)
+      if (aiVisualTimerRef.current) {
+        clearTimeout(aiVisualTimerRef.current)
+        aiVisualTimerRef.current = null
+      }
     }
   }
 
@@ -560,26 +607,30 @@ const Header = () => {
           <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
             <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
               <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
-                <button
-                  type="button"
-                  className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
-                  aria-pressed={searchMode === 'normal'}
-                  title={normalSearchTitle}
-                  disabled={isSearchBusy}
-                  onClick={() => setSearchMode('normal')}
-                >
-                  {normalModeLabel}
-                </button>
-                <button
-                  type="button"
-                  className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
-                  aria-pressed={searchMode === 'ai'}
-                  title={aiSearchTitle}
-                  disabled={isSearchBusy}
-                  onClick={() => setSearchMode('ai')}
-                >
-                  {aiModeLabel}
-                </button>
+                <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
+                  <button
+                    type="button"
+                    className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                    aria-pressed={searchMode === 'normal'}
+                    aria-label={normalSearchTitle}
+                    disabled={isSearchBusy}
+                    onClick={() => setSearchMode('normal')}
+                  >
+                    {normalModeLabel}
+                  </button>
+                </Tooltip>
+                <Tooltip title={isEn ? "Semantic & image search powered by AI" : "Búsqueda semántica y visual potenciada por IA"} arrow placement="bottom">
+                  <button
+                    type="button"
+                    className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
+                    aria-pressed={searchMode === 'ai'}
+                    aria-label={aiSearchTitle}
+                    disabled={isSearchBusy}
+                    onClick={() => setSearchMode('ai')}
+                  >
+                    {aiModeLabel}
+                  </button>
+                </Tooltip>
               </div>
               <input
                 type="text"
@@ -746,26 +797,30 @@ const Header = () => {
         <div className={`search-panel d-lg-none ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
           <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
             <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
-              <button
-                type="button"
-                className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
-                aria-pressed={searchMode === 'normal'}
-                title={normalSearchTitle}
-                disabled={isSearchBusy}
-                onClick={() => setSearchMode('normal')}
-              >
-                {normalModeLabel}
-              </button>
-              <button
-                type="button"
-                className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
-                aria-pressed={searchMode === 'ai'}
-                title={aiSearchTitle}
-                disabled={isSearchBusy}
-                onClick={() => setSearchMode('ai')}
-              >
-                {aiModeLabel}
-              </button>
+              <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
+                <button
+                  type="button"
+                  className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                  aria-pressed={searchMode === 'normal'}
+                  aria-label={normalSearchTitle}
+                  disabled={isSearchBusy}
+                  onClick={() => setSearchMode('normal')}
+                >
+                  {normalModeLabel}
+                </button>
+              </Tooltip>
+              <Tooltip title={isEn ? "Semantic & image search powered by AI" : "Búsqueda semántica y visual potenciada por IA"} arrow placement="bottom">
+                <button
+                  type="button"
+                  className={`mode-btn mode-btn-ai ${searchMode === 'ai' ? 'active' : ''}`}
+                  aria-pressed={searchMode === 'ai'}
+                  aria-label={aiSearchTitle}
+                  disabled={isSearchBusy}
+                  onClick={() => setSearchMode('ai')}
+                >
+                  {aiModeLabel}
+                </button>
+              </Tooltip>
             </div>
             <input
               type="text"

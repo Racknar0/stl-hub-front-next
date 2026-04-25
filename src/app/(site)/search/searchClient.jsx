@@ -148,6 +148,8 @@ function toDisplayItem(a, lang) {
 export default function SearchClient({ initialParams }) {
   const { t } = useI18n();
   const language = useStore((s)=>s.language);
+  const imageSearchResults = useStore((s) => s.imageSearchResults);
+  const clearImageSearchResults = useStore((s) => s.clearImageSearchResults);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const isEn = String(language || 'es').toLowerCase() === 'en';
@@ -296,8 +298,24 @@ export default function SearchClient({ initialParams }) {
     isLoadingRef.current = true;
     if (nextPage > 0) setIsLoadingMore(true);
     try {
-      // Delay artificial para visualizar el loader
       await sleep(0);
+
+      // Check for image search results in Zustand store
+      const isImageSearch = params.is_ai_search === 'true' && typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).get('image_search') === 'true';
+
+      if (isImageSearch && nextPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
+        const list = imageSearchResults.items.map(a => toDisplayItem(a, language));
+        setItems(list);
+        setHasMore(false);
+        hasMoreRef.current = false;
+        pageRef.current = 1;
+        setPage(1);
+        if (list.length > 0) void trackSearchIfNeeded(list.length);
+        clearImageSearchResults();
+        return;
+      }
+
       const res = await axios.get('/assets/search', {
         params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
       });
