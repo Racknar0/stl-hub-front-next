@@ -313,19 +313,15 @@ export default function BatchTable() {
         },
       }))
 
+      const imagePath = Array.isArray(row?.images) && row.images.length > 0 ? row.images[0] : null;
+
       const payload = {
-        filename: archiveName,
+        imagePath: imagePath,
+        textContext: titleValue,
         limit: 8,
-        sizeB,
-        imageHashes,
-        categoryIds,
-        categorySlugs,
-        tags,
-        title: titleValue,
-        titleEn: String(row?.nombreEn || titleValue || '').trim(),
       }
 
-      const r = await http.postData('/assets/similar', payload)
+      const r = await http.postData('/ai/search-by-local-image', payload)
       const data = r?.data || {}
       const items = Array.isArray(data?.items) ? data.items : []
 

@@ -33,7 +33,6 @@ export default function MetaSeoTab({
     metaBusy,
     loading,
     handleGenerateAllDescriptions,
-    setSyncVectorsOpen,
     handleGenerateMissingDescriptions,
     handleGenerateSelectedDescriptions,
     runMetaTagsGenerationForSelected,
@@ -71,7 +70,6 @@ export default function MetaSeoTab({
     setPageSize,
     metaPageOptions,
     metaTotalPages,
-    syncVectorsOpen,
     syncMultimodalVectorsOpen,
     setSyncMultimodalVectorsOpen,
     metaProfilesOpen,
@@ -118,25 +116,6 @@ export default function MetaSeoTab({
                                     }}
                                 >
                                     <AutoAwesomeIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Tooltip title="Sincronizar Vectores (Qdrant)">
-                            <span>
-                                <IconButton
-                                    onClick={() => setSyncVectorsOpen(true)}
-                                    disabled={metaBusy || loading}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1.5,
-                                    }}
-                                >
-                                    <CachedIcon
-                                        color="secondary"
-                                        fontSize="small"
-                                    />
                                 </IconButton>
                             </span>
                         </Tooltip>
@@ -477,8 +456,6 @@ export default function MetaSeoTab({
             </Paper>
 
             <MetaSeoDialogs
-                syncVectorsOpen={syncVectorsOpen}
-                setSyncVectorsOpen={setSyncVectorsOpen}
                 syncMultimodalVectorsOpen={syncMultimodalVectorsOpen}
                 setSyncMultimodalVectorsOpen={setSyncMultimodalVectorsOpen}
                 metaProfilesOpen={metaProfilesOpen}
