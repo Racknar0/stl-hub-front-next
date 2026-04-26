@@ -16,12 +16,11 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import DeleteIcon from '@mui/icons-material/Delete';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function VisualSimilarTab({
@@ -56,6 +55,7 @@ export default function VisualSimilarTab({
 }) {
     const parentRef = useRef(null);
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+    const [isReviewMode, setIsReviewMode] = useState(false);
 
     const rowVirtualizer = useVirtualizer({
         count: visualSimilarGroups.length,
@@ -96,6 +96,14 @@ export default function VisualSimilarTab({
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={1}
                     >
+                        <Button
+                            variant="outlined"
+                            color="info"
+                            onClick={() => setIsReviewMode(!isReviewMode)}
+                            startIcon={isReviewMode ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                        >
+                            Modo Revisión
+                        </Button>
                         <Button
                             variant="contained"
                             color="secondary"
@@ -189,7 +197,22 @@ export default function VisualSimilarTab({
             </Paper>
 
             <Box
-                sx={{
+                sx={isReviewMode ? {
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 1300,
+                    bgcolor: (theme) => theme.palette.background.default,
+                    p: 2,
+                    pt: 8, // padding top for the floating header
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        lg: isSidebarExpanded ? 'minmax(0, 1fr) 320px' : 'minmax(0, 1fr) auto',
+                    },
+                    gap: 2,
+                    alignItems: 'start',
+                    overflow: 'hidden',
+                } : {
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: '1fr',
@@ -200,7 +223,42 @@ export default function VisualSimilarTab({
                     alignItems: 'start',
                 }}
             >
-                <Stack spacing={2} sx={{ height: 'calc(100vh - 200px)' }}>
+                {isReviewMode && (
+                    <Paper 
+                        elevation={4}
+                        sx={{ 
+                            position: 'fixed', 
+                            top: 16, 
+                            left: '50%', 
+                            transform: 'translateX(-50%)', 
+                            zIndex: 1301, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 3, 
+                            px: 3, 
+                            py: 1, 
+                            borderRadius: 8,
+                            border: '1px solid rgba(127,127,127,0.2)'
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                                Modo Revisión
+                            </Typography>
+                            <Chip size="small" color="error" label={`${selectedVisualSimilarIds.length} marcados`} sx={{ fontWeight: 800 }} />
+                        </Box>
+                        <Button 
+                            size="small" 
+                            variant="contained" 
+                            color="inherit" 
+                            onClick={() => setIsReviewMode(false)}
+                            startIcon={<FullscreenExitIcon />}
+                        >
+                            Salir
+                        </Button>
+                    </Paper>
+                )}
+                <Stack spacing={2} sx={{ height: isReviewMode ? 'calc(100vh - 40px)' : { xs: 'calc(100vh - 200px)', lg: 'calc(100vh - 120px)' } }}>
                     {!visualSimilarGroups.length && !visualSimilarLoading && (
                         <Paper sx={{ p: 3, borderRadius: 2 }}>
                             <Typography
