@@ -329,12 +329,20 @@ export default function VisualSimilarTab({
                                                             {group.signature}
                                                         </Typography>
                                                         <Chip size="small" label={`${group.items.length} assets`} sx={{ height: 20, fontSize: 10 }} />
-                                                        <Chip size="small" color="secondary" label={`Similitud > ${group.confidence}%`} sx={{ height: 20, fontSize: 10 }} />
+                                                        <Chip 
+                                                            size="small" 
+                                                            label={`Similitud > ${group.confidence}%`} 
+                                                            sx={{ 
+                                                                height: 20, 
+                                                                fontSize: 10, 
+                                                                fontWeight: 800,
+                                                                bgcolor: group.confidence >= 98 ? 'rgba(34,197,94,0.25)' : group.confidence >= 94 ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.25)',
+                                                                color: group.confidence >= 98 ? '#4ade80' : group.confidence >= 94 ? '#fb923c' : '#f87171',
+                                                                border: `1px solid ${group.confidence >= 98 ? 'rgba(34,197,94,0.5)' : group.confidence >= 94 ? 'rgba(249,115,22,0.5)' : 'rgba(239,68,68,0.5)'}`,
+                                                            }} 
+                                                        />
                                                     </Box>
                                                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                        <Button size="small" variant="outlined" color="secondary" onClick={() => selectVisualGroupDuplicates(group)} sx={{ py: 0, fontSize: 10 }}>
-                                                            Sugerir duplicados
-                                                        </Button>
                                                         <Button size="small" variant="outlined" color="inherit" onClick={() => dismissVisualSimilarGroup(group)} sx={{ py: 0, fontSize: 10 }}>
                                                             No son duplicados
                                                         </Button>
@@ -370,17 +378,25 @@ export default function VisualSimilarTab({
                                                                     p: 1.25,
                                                                     borderRadius: 2,
                                                                     border: isPrimary
-                                                                        ? '2px solid #ce93d8' // secondary light
+                                                                        ? '2px solid #fbbf24'
                                                                         : isSelected
-                                                                          ? '2px solid #ff9800'
+                                                                          ? '2px solid #ef4444'
                                                                           : '1px solid rgba(127,127,127,0.25)',
+                                                                    boxShadow: isSelected
+                                                                        ? '0 0 12px rgba(239, 68, 68, 0.5), 0 0 24px rgba(239, 68, 68, 0.2)'
+                                                                        : isPrimary
+                                                                          ? '0 0 8px rgba(251, 191, 36, 0.3)'
+                                                                          : 'none',
                                                                     bgcolor: isPrimary
-                                                                        ? 'rgba(156, 39, 176, 0.12)' // secondary main alpha
-                                                                        : 'transparent',
+                                                                        ? 'rgba(251, 191, 36, 0.08)'
+                                                                        : isSelected
+                                                                          ? 'rgba(239, 68, 68, 0.06)'
+                                                                          : 'transparent',
                                                                     width: 'fit-content',
                                                                     maxWidth: '100%',
                                                                     display: 'flex',
                                                                     flexDirection: 'column',
+                                                                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                                                                 }}
                                                             >
                                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
@@ -399,7 +415,7 @@ export default function VisualSimilarTab({
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                                         <Tooltip title={isPrimary ? 'Principal' : 'Marcar principal'}>
                                                                             <IconButton size="small" sx={{ p: 0 }} onClick={() => setVisualPrimaryInGroup(group.id, id)}>
-                                                                                {isPrimary ? <StarIcon color="secondary" sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                                                {isPrimary ? <StarIcon sx={{ fontSize: 18, color: '#fbbf24' }} /> : <StarBorderIcon sx={{ fontSize: 18, color: 'rgba(251,191,36,0.5)' }} />}
                                                                             </IconButton>
                                                                         </Tooltip>
                                                                         <Tooltip title="Eliminar asset">
