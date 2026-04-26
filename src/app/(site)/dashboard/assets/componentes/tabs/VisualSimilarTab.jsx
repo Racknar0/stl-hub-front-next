@@ -15,12 +15,13 @@ import {
     Stack,
     Tooltip,
     Typography,
-    Collapse,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import DeleteIcon from '@mui/icons-material/Delete';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function VisualSimilarTab({
@@ -192,8 +193,9 @@ export default function VisualSimilarTab({
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: '1fr',
-                        lg: 'minmax(0, 1fr) 320px',
+                        lg: isSidebarExpanded ? 'minmax(0, 1fr) 320px' : 'minmax(0, 1fr) auto',
                     },
+                    transition: 'all 0.3s ease',
                     gap: 2,
                     alignItems: 'start',
                 }}
@@ -284,7 +286,11 @@ export default function VisualSimilarTab({
                                                 <Box
                                                     sx={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                                                        gridTemplateColumns: {
+                                                            xs: '1fr',
+                                                            sm: 'repeat(2, minmax(0, 1fr))',
+                                                            xl: 'repeat(3, minmax(0, 1fr))',
+                                                        },
                                                         gap: 1.5,
                                                     }}
                                                 >
@@ -316,6 +322,28 @@ export default function VisualSimilarTab({
                                                                         : 'transparent',
                                                                 }}
                                                             >
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                                                    <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11 }} noWrap>
+                                                                        ID: {id} • {entry.similarity}% • {asset.account?.alias || asset.accountId || '-'}
+                                                                    </Typography>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                        <Tooltip title={isPrimary ? 'Principal' : 'Marcar principal'}>
+                                                                            <IconButton size="small" sx={{ p: 0 }} onClick={() => setVisualPrimaryInGroup(group.id, id)}>
+                                                                                {isPrimary ? <StarIcon color="secondary" sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                                            </IconButton>
+                                                                        </Tooltip>
+                                                                        <Tooltip title="Eliminar asset">
+                                                                            <Checkbox
+                                                                                color="warning"
+                                                                                checked={isSelected}
+                                                                                onChange={() => toggleVisualSimilarSelection(id)}
+                                                                                disabled={isPrimary}
+                                                                                sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+                                                                            />
+                                                                        </Tooltip>
+                                                                    </Box>
+                                                                </Box>
+
                                                                 {assetImages.length ? (
                                                                     <Box
                                                                         sx={{
@@ -446,63 +474,11 @@ export default function VisualSimilarTab({
                                                                 )}
 
                                                                 <Typography
-                                                                    variant="body2"
-                                                                    sx={{ fontWeight: 700, mt: 0.5 }}
+                                                                    variant="caption"
+                                                                    sx={{ fontWeight: 600, display: 'block', mt: 0.5, lineHeight: 1.2 }}
                                                                 >
                                                                     {asset.title || asset.archiveName || `Asset #${id}`}
                                                                 </Typography>
-                                                                <Typography
-                                                                    variant="caption"
-                                                                    color="text.secondary"
-                                                                    sx={{ display: 'block', mb: 0.8 }}
-                                                                    noWrap
-                                                                >
-                                                                    ID: {id} • Similitud: {entry.similarity}% • Cta: {asset.account?.alias || asset.accountId || '-'}
-                                                                </Typography>
-
-                                                                <Stack
-                                                                    direction="row"
-                                                                    spacing={1}
-                                                                    justifyContent="space-between"
-                                                                    alignItems="center"
-                                                                >
-                                                                    <Button
-                                                                        size="small"
-                                                                        color="secondary"
-                                                                        variant={
-                                                                            isPrimary
-                                                                                ? 'contained'
-                                                                                : 'outlined'
-                                                                        }
-                                                                        onClick={() =>
-                                                                            setVisualPrimaryInGroup(
-                                                                                group.id,
-                                                                                id,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        {isPrimary
-                                                                            ? 'Principal'
-                                                                            : 'Marcar principal'}
-                                                                    </Button>
-
-                                                                    <FormControlLabel
-                                                                        sx={{ mr: 0 }}
-                                                                        control={
-                                                                            <Checkbox
-                                                                                color="warning"
-                                                                                checked={isSelected}
-                                                                                onChange={() =>
-                                                                                    toggleVisualSimilarSelection(
-                                                                                        id,
-                                                                                    )
-                                                                                }
-                                                                                disabled={isPrimary}
-                                                                            />
-                                                                        }
-                                                                        label="Eliminar"
-                                                                    />
-                                                                </Stack>
                                                             </Paper>
                                                         );
                                                     })}
@@ -516,41 +492,41 @@ export default function VisualSimilarTab({
                     )}
                 </Stack>
 
-                <Paper
-                    sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        position: { xs: 'static', lg: 'sticky' },
-                        top: { lg: 16 },
-                        maxHeight: { lg: 'calc(100vh - 120px)' },
-                        overflow: 'auto',
-                    }}
-                >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                                Seleccionados para eliminar
-                            </Typography>
-                            <Typography
-                                variant="h4"
-                                sx={{ fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}
-                            >
-                                {selectedVisualSimilarIds.length}
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ display: 'block', mb: 1.5 }}
-                            >
-                                Espacio estimado: {formatMBfromB(selectedVisualSimilarBytes)}
-                            </Typography>
+                {isSidebarExpanded ? (
+                    <Paper
+                        sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            position: { xs: 'static', lg: 'sticky' },
+                            top: { lg: 16 },
+                            maxHeight: { lg: 'calc(100vh - 120px)' },
+                            overflow: 'auto',
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Box>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                                    Seleccionados para eliminar
+                                </Typography>
+                                <Typography
+                                    variant="h4"
+                                    sx={{ fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}
+                                >
+                                    {selectedVisualSimilarIds.length}
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mb: 1.5 }}
+                                >
+                                    Espacio estimado: {formatMBfromB(selectedVisualSimilarBytes)}
+                                </Typography>
+                            </Box>
+                            <IconButton size="small" onClick={() => setIsSidebarExpanded(false)}>
+                                <ChevronRightIcon />
+                            </IconButton>
                         </Box>
-                        <IconButton size="small" onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}>
-                            {isSidebarExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                        </IconButton>
-                    </Box>
 
-                    <Collapse in={isSidebarExpanded}>
                         {(visualSimilarDeleteProgress.running ||
                             visualSimilarDeleteProgress.total > 0) && (
                             <Box sx={{ mb: 1.5 }}>
@@ -591,63 +567,99 @@ export default function VisualSimilarTab({
 
                         <Divider sx={{ mb: 1.5 }} />
 
-                    <Stack spacing={0.7} sx={{ mb: 1.5 }}>
-                        {selectedVisualSimilarAssets.length === 0 && (
-                            <Typography variant="body2" color="text.secondary">
-                                Aun no seleccionas assets.
-                            </Typography>
-                        )}
-                        {selectedVisualSimilarAssets.map((asset) => (
-                            <Box
-                                key={`vis-selected-${asset.id}`}
-                                sx={{
-                                    p: 1,
-                                    borderRadius: 1,
-                                    bgcolor: 'rgba(127,127,127,0.12)',
-                                }}
-                            >
-                                <Typography
-                                    variant="body2"
-                                    sx={{ fontWeight: 600 }}
-                                    noWrap
+                        <Stack spacing={0.7} sx={{ mb: 1.5 }}>
+                            {selectedVisualSimilarAssets.length === 0 && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Aun no seleccionas assets.
+                                </Typography>
+                            )}
+                            {selectedVisualSimilarAssets.map((asset) => (
+                                <Box
+                                    key={`vis-selected-${asset.id}`}
+                                    sx={{
+                                        p: 1,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(127,127,127,0.12)',
+                                    }}
                                 >
-                                    #{asset.id}{' '}
-                                    {asset.title ||
-                                        asset.archiveName ||
-                                        'Sin nombre'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {asset.account?.alias || asset.accountId || '-'}
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Stack>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 600 }}
+                                        noWrap
+                                    >
+                                        #{asset.id}{' '}
+                                        {asset.title ||
+                                            asset.archiveName ||
+                                            'Sin nombre'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {asset.account?.alias || asset.accountId || '-'}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Stack>
 
-                    <Stack spacing={1}>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            disabled={
-                                !selectedVisualSimilarIds.length ||
-                                visualSimilarLoading
-                            }
-                            onClick={handleDeleteSelectedVisualSimilar}
+                        <Stack spacing={1}>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                disabled={
+                                    !selectedVisualSimilarIds.length ||
+                                    visualSimilarLoading
+                                }
+                                onClick={handleDeleteSelectedVisualSimilar}
+                            >
+                                Eliminar seleccionados
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                disabled={
+                                    !selectedVisualSimilarIds.length ||
+                                    visualSimilarLoading
+                                }
+                                onClick={clearVisualSimilarSelection}
+                            >
+                                Limpiar seleccion
+                            </Button>
+                        </Stack>
+                    </Paper>
+                ) : (
+                    <Paper
+                        sx={{
+                            p: 1,
+                            borderRadius: 2,
+                            position: { xs: 'static', lg: 'sticky' },
+                            top: { lg: 16 },
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            minHeight: 200,
+                        }}
+                    >
+                        <IconButton size="small" onClick={() => setIsSidebarExpanded(true)}>
+                            <ChevronLeftIcon />
+                        </IconButton>
+                        <Box sx={{ flexGrow: 1 }} />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                writingMode: 'vertical-rl',
+                                transform: 'rotate(180deg)',
+                                py: 2,
+                                cursor: 'pointer',
+                            }}
+                            onClick={() => setIsSidebarExpanded(true)}
                         >
-                            Eliminar seleccionados
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            disabled={
-                                !selectedVisualSimilarIds.length ||
-                                visualSimilarLoading
-                            }
-                            onClick={clearVisualSimilarSelection}
-                        >
-                            Limpiar seleccion
-                        </Button>
-                    </Stack>
-                    </Collapse>
-                </Paper>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                Seleccionados
+                            </Typography>
+                            <Chip size="small" color={selectedVisualSimilarIds.length > 0 ? "error" : "default"} label={selectedVisualSimilarIds.length} sx={{ transform: 'rotate(90deg)' }} />
+                        </Box>
+                        <Box sx={{ flexGrow: 1 }} />
+                    </Paper>
+                )}
             </Box>
         </Stack>
     );
