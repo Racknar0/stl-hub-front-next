@@ -3163,11 +3163,9 @@ export default function AssetsAdminPage() {
 
     return (
         <ThemeProvider theme={darkTheme}>
-            <section className="dashboard-page-theme">
-                <h1 className="dashboard-title mb-3" style={{ padding: '0 1rem' }}>Assets & AI Tools</h1>
-                <ScopedCssBaseline sx={{ background: 'transparent' }}>
-                    <div className="dashboard-page-content p-3 mb-5">
-                        <Tabs
+            <div className="p-3 mb-5">
+                <h1 className="dashboard-title mb-3">Assets & AI Tools</h1>
+                <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 sx={{
@@ -3496,8 +3494,6 @@ export default function AssetsAdminPage() {
                 )}
             </Dialog>
             </div>
-            </ScopedCssBaseline>
-        </section>
         </ThemeProvider>
     );
 }

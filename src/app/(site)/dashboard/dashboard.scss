@@ -494,3 +494,231 @@
   background: rgba(21, 128, 61, 0.18) !important;
   color: #bbf7d0 !important;
 }
+
+/* =========================================================
+   Assets Page – MUI & material-react-table dark overrides
+   Applied globally inside .dashboard-content so every
+   dashboard sub-page inherits the dark palette.
+   ========================================================= */
+
+/* ── MUI Tabs ── */
+.dashboard-content .MuiTabs-root {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.dashboard-content .MuiTab-root {
+  color: #94a3b8 !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.dashboard-content .MuiTab-root.Mui-selected {
+  color: #bae6fd !important;
+}
+.dashboard-content .MuiTabs-indicator {
+  background: #38bdf8 !important;
+}
+
+/* ── MUI Paper (cards, panels) ── */
+.dashboard-content .MuiPaper-root {
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+
+/* ── MUI Typography ── */
+.dashboard-content .MuiTypography-root {
+  color: #e2e8f0;
+}
+
+/* ── MUI TextField / Input ── */
+.dashboard-content .MuiInputBase-root,
+.dashboard-content .MuiOutlinedInput-root {
+  background: rgba(2, 6, 23, 0.5) !important;
+  color: #f8fafc !important;
+}
+.dashboard-content .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(148, 163, 184, 0.4) !important;
+}
+.dashboard-content .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(56, 189, 248, 0.6) !important;
+}
+.dashboard-content .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(56, 189, 248, 0.9) !important;
+}
+.dashboard-content .MuiInputLabel-root {
+  color: #94a3b8 !important;
+}
+.dashboard-content .MuiInputLabel-root.Mui-focused {
+  color: #38bdf8 !important;
+}
+
+/* ── MUI Button ── */
+.dashboard-content .MuiButton-outlined {
+  border-color: rgba(148, 163, 184, 0.45) !important;
+  color: #cbd5e1 !important;
+}
+.dashboard-content .MuiButton-outlined:hover {
+  background: rgba(56, 189, 248, 0.1) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+}
+
+/* ── MUI Switch / Checkbox ── */
+.dashboard-content .MuiSwitch-track {
+  background: rgba(148, 163, 184, 0.4) !important;
+}
+.dashboard-content .MuiCheckbox-root {
+  color: #94a3b8 !important;
+}
+
+/* ── MUI Slider ── */
+.dashboard-content .MuiSlider-rail {
+  background: rgba(148, 163, 184, 0.3) !important;
+}
+
+/* ── MUI Chip ── */
+.dashboard-content .MuiChip-root {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+.dashboard-content .MuiChip-filled {
+  background: rgba(30, 41, 59, 0.9) !important;
+  color: #e2e8f0 !important;
+}
+
+/* ── MUI Dialog ── */
+.dashboard-content .MuiDialog-paper {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+
+/* ── MUI LinearProgress ── */
+.dashboard-content .MuiLinearProgress-root {
+  background: rgba(148, 163, 184, 0.2) !important;
+}
+
+/* ── MUI Divider ── */
+.dashboard-content .MuiDivider-root {
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+/* ── MUI IconButton ── */
+.dashboard-content .MuiIconButton-root {
+  color: #94a3b8;
+}
+.dashboard-content .MuiIconButton-root:hover {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+/* ── material-react-table (MRT) ── */
+.dashboard-content .MuiTableContainer-root {
+  background: transparent !important;
+}
+
+.dashboard-content .MRT_TablePaper,
+.dashboard-content [class*="MRT_TablePaper"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Table head */
+.dashboard-content .MuiTableHead-root .MuiTableCell-root {
+  background: rgba(2, 6, 23, 0.7) !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Table body rows */
+.dashboard-content .MuiTableBody-root .MuiTableRow-root {
+  background: transparent !important;
+}
+.dashboard-content .MuiTableBody-root .MuiTableRow-root:hover {
+  background: rgba(56, 189, 248, 0.06) !important;
+}
+
+/* Table cells */
+.dashboard-content .MuiTableBody-root .MuiTableCell-root {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+
+/* MRT toolbar (top & bottom) */
+.dashboard-content .MuiToolbar-root {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+
+/* MRT top toolbar search box */
+.dashboard-content .MRT_GlobalFilterTextField input,
+.dashboard-content .MRT_FilterTextField input {
+  color: #f8fafc !important;
+}
+
+/* MRT pagination */
+.dashboard-content .MuiTablePagination-root {
+  color: #94a3b8 !important;
+}
+.dashboard-content .MuiTablePagination-root .MuiSelect-select {
+  color: #e2e8f0 !important;
+}
+.dashboard-content .MuiTablePagination-root .MuiSvgIcon-root {
+  color: #94a3b8 !important;
+}
+.dashboard-content .MuiTablePagination-root .MuiIconButton-root {
+  color: #94a3b8 !important;
+}
+.dashboard-content .MuiTablePagination-root .MuiIconButton-root.Mui-disabled {
+  color: rgba(148, 163, 184, 0.3) !important;
+}
+
+/* MRT column actions menu */
+.dashboard-content .MuiMenu-paper {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+.dashboard-content .MuiMenuItem-root {
+  color: #e2e8f0 !important;
+}
+.dashboard-content .MuiMenuItem-root:hover {
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+/* MRT row expansion */
+.dashboard-content .MuiCollapse-root {
+  background: rgba(2, 6, 23, 0.4) !important;
+}
+
+/* ── SVG icons inside dashboard ── */
+.dashboard-content .MuiSvgIcon-root {
+  color: inherit;
+}
+
+/* ── Tooltip ── */
+.dashboard-content .MuiTooltip-tooltip {
+  background: rgba(2, 6, 23, 0.92) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+
+/* ── Select / Autocomplete dropdown ── */
+.dashboard-content .MuiAutocomplete-paper,
+.dashboard-content .MuiPopover-paper {
+  background: rgba(15, 23, 42, 0.96) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+.dashboard-content .MuiAutocomplete-option {
+  color: #e2e8f0 !important;
+}
+.dashboard-content .MuiAutocomplete-option:hover,
+.dashboard-content .MuiAutocomplete-option[aria-selected="true"] {
+  background: rgba(56, 189, 248, 0.12) !important;
+}
