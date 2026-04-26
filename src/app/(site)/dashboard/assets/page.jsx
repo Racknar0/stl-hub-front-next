@@ -2612,6 +2612,20 @@ export default function AssetsAdminPage() {
                 Number(row?.id || 0) === id ? { ...row, images: safeImages } : row,
             ),
         );
+        
+        const updateGroups = (prevGroups) =>
+            (Array.isArray(prevGroups) ? prevGroups : []).map((group) => ({
+                ...group,
+                items: group.items.map((item) =>
+                    Number(item?.asset?.id || 0) === id
+                        ? { ...item, asset: { ...item.asset, images: safeImages } }
+                        : item
+                ),
+            }));
+
+        setVisualSimilarGroups(updateGroups);
+        setNameSimilarGroups(updateGroups);
+        setSimilarGroups(updateGroups);
     }, []);
 
     const toggleMetaExpandedImages = useCallback((assetId) => {
@@ -2687,6 +2701,28 @@ export default function AssetsAdminPage() {
         [applyMetaImagesInRow],
     );
 
+    const findAssetInAllSources = useCallback((assetId) => {
+        const id = Number(assetId);
+        // 1) assetsRef (tabla principal)
+        const fromAssets = (Array.isArray(assetsRef.current) ? assetsRef.current : []).find(
+            (it) => Number(it?.id || 0) === id,
+        );
+        if (fromAssets) return fromAssets;
+        // 2) metaRows
+        const fromMeta = (Array.isArray(metaRows) ? metaRows : []).find(
+            (it) => Number(it?.id || 0) === id,
+        );
+        if (fromMeta) return fromMeta;
+        // 3) similarity groups (visual, name, image)
+        for (const groups of [visualSimilarGroups, nameSimilarGroups, similarGroups]) {
+            for (const g of (Array.isArray(groups) ? groups : [])) {
+                const entry = (g.items || []).find((i) => Number(i?.asset?.id || 0) === id);
+                if (entry?.asset) return entry.asset;
+            }
+        }
+        return null;
+    }, [metaRows, visualSimilarGroups, nameSimilarGroups, similarGroups]);
+
     const handleMetaSetFirstImage = useCallback(
         async (assetId, imgIndex) => {
             const id = Number(assetId);
@@ -2694,9 +2730,7 @@ export default function AssetsAdminPage() {
             if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(from) || from < 0)
                 return;
 
-            const row = (Array.isArray(metaRows) ? metaRows : []).find(
-                (it) => Number(it?.id || 0) === id,
-            );
+            const row = findAssetInAllSources(id);
             const currentImages = Array.isArray(row?.images) ? row.images : [];
             if (!currentImages.length || from >= currentImages.length || from === 0) return;
 
@@ -2707,6 +2741,7 @@ export default function AssetsAdminPage() {
             try {
                 setMetaBusy(true);
                 await saveMetaImagesNow(id, reordered);
+                applyMetaImagesInRow(id, reordered);
                 await fireAlert({
                     toast: true,
                     position: 'bottom',
@@ -2726,7 +2761,7 @@ export default function AssetsAdminPage() {
                 setMetaBusy(false);
             }
         },
-        [fireAlert, metaRows, saveMetaImagesNow],
+        [fireAlert, findAssetInAllSources, saveMetaImagesNow, applyMetaImagesInRow],
     );
 
     const handleMetaDeleteImage = useCallback(
@@ -2736,13 +2771,7 @@ export default function AssetsAdminPage() {
             if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(idx) || idx < 0)
                 return;
 
-            const row =
-                (Array.isArray(assetsRef.current) ? assetsRef.current : []).find(
-                    (it) => Number(it?.id || 0) === id,
-                ) ||
-                (Array.isArray(metaRows) ? metaRows : []).find(
-                    (it) => Number(it?.id || 0) === id,
-                );
+            const row = findAssetInAllSources(id);
             const currentImages = Array.isArray(row?.images) ? row.images : [];
             if (!currentImages.length || idx >= currentImages.length) return;
 
@@ -2752,7 +2781,7 @@ export default function AssetsAdminPage() {
             applyMetaImagesInRow(id, nextImages);
             queueMetaImagesSave(id, nextImages);
         },
-        [applyMetaImagesInRow, metaRows, queueMetaImagesSave],
+        [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave],
     );
 
     const saveMetaRow = async (assetId, { silent = false } = {}) => {
@@ -3338,6 +3367,10 @@ export default function AssetsAdminPage() {
                     visualSimilarDeleteProgress={visualSimilarDeleteProgress}
                     handleDeleteSelectedVisualSimilar={handleDeleteSelectedVisualSimilar}
                     clearVisualSimilarSelection={clearVisualSimilarSelection}
+                    onSetFirstImage={handleMetaSetFirstImage}
+                    onDeleteImage={handleMetaDeleteImage}
+                    metaBusy={metaBusy}
+                    loading={loading}
                 />
             )}
             {tab === 4 && (

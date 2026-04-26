@@ -8,12 +8,16 @@ import {
     Chip,
     Divider,
     FormControlLabel,
+    IconButton,
     LinearProgress,
     Paper,
     Slider,
     Stack,
+    Tooltip,
     Typography,
 } from '@mui/material';
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function VisualSimilarTab({
@@ -41,6 +45,10 @@ export default function VisualSimilarTab({
     visualSimilarDeleteProgress,
     handleDeleteSelectedVisualSimilar,
     clearVisualSimilarSelection,
+    onSetFirstImage,
+    onDeleteImage,
+    metaBusy,
+    loading,
 }) {
     const parentRef = useRef(null);
 
@@ -356,32 +364,87 @@ export default function VisualSimilarTab({
                                                                                     return (
                                                                                         <Box
                                                                                             key={`${group.id}-${id}-vis-img-${imgIdx}`}
-                                                                                            component="img"
-                                                                                            src={thumbSrc}
-                                                                                            alt={`${asset.title || `asset-${id}`} - ${imgIdx + 1}`}
-                                                                                            onClick={() =>
-                                                                                                openSimilarViewer(
-                                                                                                    asset,
-                                                                                                    imgIdx,
-                                                                                                )
-                                                                                            }
                                                                                             sx={{
-                                                                                                width: '100%',
-                                                                                                aspectRatio:
-                                                                                                    '1 / 1',
-                                                                                                objectFit:
-                                                                                                    'cover',
+                                                                                                position: 'relative',
                                                                                                 borderRadius: 1,
-                                                                                                cursor: 'pointer',
+                                                                                                overflow: 'hidden',
                                                                                                 border: '1px solid rgba(127,127,127,0.35)',
-                                                                                                transition:
-                                                                                                    'transform 120ms ease',
-                                                                                                '&:hover': {
-                                                                                                    transform:
-                                                                                                        'scale(1.03)',
+                                                                                                '&:hover .img-overlay': {
+                                                                                                    opacity: 1,
                                                                                                 },
                                                                                             }}
-                                                                                        />
+                                                                                        >
+                                                                                            <Box
+                                                                                                component="img"
+                                                                                                src={thumbSrc}
+                                                                                                alt={`${asset.title || `asset-${id}`} - ${imgIdx + 1}`}
+                                                                                                onClick={() =>
+                                                                                                    openSimilarViewer(
+                                                                                                        asset,
+                                                                                                        imgIdx,
+                                                                                                    )
+                                                                                                }
+                                                                                                sx={{
+                                                                                                    width: '100%',
+                                                                                                    aspectRatio: '1 / 1',
+                                                                                                    objectFit: 'cover',
+                                                                                                    display: 'block',
+                                                                                                    cursor: 'pointer',
+                                                                                                }}
+                                                                                            />
+                                                                                            {/* ── Overlay con controles ── */}
+                                                                                            <Box
+                                                                                                className="img-overlay"
+                                                                                                onClick={() => openSimilarViewer(asset, imgIdx)}
+                                                                                                sx={{
+                                                                                                    position: 'absolute',
+                                                                                                    inset: 0,
+                                                                                                    display: 'flex',
+                                                                                                    flexDirection: 'column',
+                                                                                                    justifyContent: 'space-between',
+                                                                                                    p: 0.5,
+                                                                                                    opacity: 0,
+                                                                                                    transition: 'opacity 0.18s ease',
+                                                                                                    background: 'linear-gradient(to bottom, rgba(2,6,23,0.5), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.5))',
+                                                                                                    cursor: 'pointer',
+                                                                                                }}
+                                                                                            >
+                                                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                                                    <Chip
+                                                                                                        size="small"
+                                                                                                        label={imgIdx === 0 ? 'Primera' : `#${imgIdx + 1}`}
+                                                                                                        color={imgIdx === 0 ? 'success' : 'default'}
+                                                                                                        sx={{ height: 20, '& .MuiChip-label': { px: 0.6, fontSize: 10 } }}
+                                                                                                    />
+                                                                                                    <Tooltip title="Poner de primera">
+                                                                                                        <span>
+                                                                                                            <IconButton
+                                                                                                                size="small"
+                                                                                                                onClick={(e) => { e.stopPropagation(); void onSetFirstImage(id, imgIdx); }}
+                                                                                                                disabled={metaBusy || loading || imgIdx === 0}
+                                                                                                                sx={{ bgcolor: 'rgba(2,6,23,0.68)', color: '#fff', '&:hover': { bgcolor: 'rgba(15,23,42,0.9)' } }}
+                                                                                                            >
+                                                                                                                <VerticalAlignTopIcon sx={{ fontSize: 16 }} />
+                                                                                                            </IconButton>
+                                                                                                        </span>
+                                                                                                    </Tooltip>
+                                                                                                </Box>
+                                                                                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                                                    <Tooltip title="Eliminar imagen">
+                                                                                                        <span>
+                                                                                                            <IconButton
+                                                                                                                size="small"
+                                                                                                                onClick={(e) => { e.stopPropagation(); void onDeleteImage(id, imgIdx); }}
+                                                                                                                disabled={loading}
+                                                                                                                sx={{ bgcolor: 'rgba(127,29,29,0.78)', color: '#fff', '&:hover': { bgcolor: 'rgba(153,27,27,0.95)' } }}
+                                                                                                            >
+                                                                                                                <DeleteIcon sx={{ fontSize: 16 }} />
+                                                                                                            </IconButton>
+                                                                                                        </span>
+                                                                                                    </Tooltip>
+                                                                                                </Box>
+                                                                                            </Box>
+                                                                                        </Box>
                                                                                     );
                                                                                 },
                                                                             )}
