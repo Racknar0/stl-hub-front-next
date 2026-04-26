@@ -25,6 +25,7 @@ import {
     Dialog,
     ThemeProvider,
     createTheme,
+    ScopedCssBaseline,
 } from '@mui/material';
 import {
     useMaterialReactTable,
@@ -3164,8 +3165,9 @@ export default function AssetsAdminPage() {
         <ThemeProvider theme={darkTheme}>
             <section className="dashboard-page-theme">
                 <h1 className="dashboard-title mb-3" style={{ padding: '0 1rem' }}>Assets & AI Tools</h1>
-                <div className="dashboard-page-content p-3 mb-5">
-                    <Tabs
+                <ScopedCssBaseline sx={{ background: 'transparent' }}>
+                    <div className="dashboard-page-content p-3 mb-5">
+                        <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 sx={{
@@ -3494,6 +3496,7 @@ export default function AssetsAdminPage() {
                 )}
             </Dialog>
             </div>
+            </ScopedCssBaseline>
         </section>
         </ThemeProvider>
     );
