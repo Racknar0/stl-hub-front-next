@@ -12,10 +12,7 @@ import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, 
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CloseIcon from '@mui/icons-material/Close'
 import RightSidebar from '../../assets/uploader/RightSidebar'
-import {
   RIGHT_SIDEBAR_WIDTH,
-  SIMILARITY_CURRENT_IMAGE_SIZE,
-  SIMILARITY_MATCH_IMAGE_SIZE,
 } from '../constants'
 
 export default function SimilaritySidebar({
@@ -65,41 +62,9 @@ export default function SimilaritySidebar({
           <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
             {sidebarQueueItem?.nombre || '(sin nombre)'}
           </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.75, display: 'block' }}>
-            {sidebarQueueItem?.pesoMB} MB • {(sidebarQueueItem?.imagenes || []).length} imágenes
+          <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
+            Ítem en foco para búsqueda
           </Typography>
-
-          {/* ── Imágenes del ítem ── */}
-          {(sidebarQueueItem?.imagenes || []).length > 0 && (
-            <Box sx={{ mt: 0.9 }}>
-              <Typography variant="caption" sx={{ opacity: 0.82, display: 'block', mb: 0.55 }}>
-                Imágenes del ítem actual
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.25 }}>
-                {(sidebarQueueItem?.imagenes || []).map((src, i) => {
-                  const safeSrc = makeUploadsUrl(src)
-                  if (!safeSrc) return null
-                  return (
-                    <img
-                      key={`current-${i}`}
-                      src={safeSrc}
-                      alt={`current-${i}`}
-                      style={{
-                        width: SIMILARITY_CURRENT_IMAGE_SIZE,
-                        height: SIMILARITY_CURRENT_IMAGE_SIZE,
-                        objectFit: 'cover',
-                        borderRadius: 6,
-                        border: '1px solid rgba(173, 175, 184, 0.45)',
-                        cursor: 'pointer',
-                        background: 'rgba(255,255,255,0.06)'
-                      }}
-                      onClick={() => setPreviewImage(safeSrc)}
-                    />
-                  )
-                })}
-              </Box>
-            </Box>
-          )}
 
           <Divider sx={{ my: 1.25, opacity: 0.2 }} />
 
@@ -139,45 +104,54 @@ export default function SimilaritySidebar({
 
           {/* ── Lista de resultados ── */}
           {sidebarSimilarity?.status === 'done' && (
-            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1.1 }}>
-              {(sidebarSimilarity?.items || []).map((a) => (
-                <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.65)', background: 'rgba(255,255,255,0.05)' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.25 }}>{a.title}</Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 0.25, wordBreak: 'break-word' }}>{a.archiveName}</Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.25 }}>
-                    {((Number(a.fileSizeB || a.archiveSizeB || 0)) / (1024*1024)).toFixed(2)} MB • {(a.images || []).length} imágenes
-                  </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.35 }}>
-                    Score total: {Number(a?._similarity?.score || 0)} · nombre: {Number(a?._similarity?.name || 0)} · imagen: {Number(a?._similarity?.image || 0)}
-                  </Typography>
-                  <Typography variant="caption" sx={{ display: 'inline-block', mt: 0.55, px: 0.8, py: 0.2, borderRadius: 999, border: '1px solid rgba(88, 214, 141, 0.55)', background: 'rgba(88, 214, 141, 0.14)', color: '#d7ffe7', fontWeight: 700 }}>
-                    Coincidencia visual alta
-                  </Typography>
-                  {(a.images || []).length > 0 && (
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.75, overflowX: 'auto' }}>
-                      {(a.images || []).map((src, i) => {
-                        const safeSrc = makeUploadsUrl(src)
-                        if (!safeSrc) return null
-                        return (
-                          <img
-                            key={i}
-                            src={safeSrc}
-                            style={{
-                              width: SIMILARITY_MATCH_IMAGE_SIZE,
-                              height: SIMILARITY_MATCH_IMAGE_SIZE,
-                              objectFit: 'cover',
-                              borderRadius: 6,
-                              border: '1px solid rgba(148,163,184,0.45)',
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => setPreviewImage(safeSrc)}
-                          />
-                        )
-                      })}
-                    </Box>
-                  )}
-                </Box>
-              ))}
+            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {(sidebarSimilarity?.items || []).map((a) => {
+                const scoreValue = Number(a?._score || a?._similarity?.score || 0);
+                const percent = Math.round(scoreValue * 100);
+                return (
+                  <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.45)', background: 'rgba(255,255,255,0.03)' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box sx={{ flex: 1, pr: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{a.title}</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.2, wordBreak: 'break-word', fontSize: '0.65rem' }}>{a.archiveName}</Typography>
+                      </Box>
+                      <Box sx={{
+                        px: 0.8, py: 0.3, borderRadius: 1.5,
+                        background: percent > 85 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                        border: `1px solid ${percent > 85 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
+                        color: percent > 85 ? '#86efac' : '#fde047',
+                        fontWeight: 800, fontSize: '0.75rem', flexShrink: 0
+                      }}>
+                        {percent}%
+                      </Box>
+                    </Stack>
+                    
+                    {(a.images || []).length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.5, mt: 1, overflowX: 'auto', pb: 0.5 }}>
+                        {(a.images || []).map((src, i) => {
+                          const safeSrc = makeUploadsUrl(src)
+                          if (!safeSrc) return null
+                          return (
+                            <img
+                              key={i}
+                              src={safeSrc}
+                              style={{
+                                width: 75,
+                                height: 75,
+                                objectFit: 'cover',
+                                borderRadius: 6,
+                                border: '1px solid rgba(148,163,184,0.3)',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => setPreviewImage(safeSrc)}
+                            />
+                          )
+                        })}
+                      </Box>
+                    )}
+                  </Box>
+                )
+              })}
             </Box>
           )}
 
