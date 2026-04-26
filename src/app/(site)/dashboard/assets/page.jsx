@@ -1303,60 +1303,72 @@ export default function AssetsAdminPage() {
         setVisualSimilarGroups([]);
         setVisualSimilarSelectedMap({});
         setVisualSimilarPrimaryMap({});
-        setVisualSimilarProgress({ done: 0, total: 0 });
+        setVisualSimilarProgress({ done: 0, total: 0, phase: 'init' });
 
         try {
-            let pageIndexScan = 0;
-            const pageSize = 50;
+            const baseUrl = http.baseUrl || process.env.NEXT_PUBLIC_API_URL || '';
+            const url = `${baseUrl}/ai/similar-visual-full-scan?threshold=${visualSimilarThreshold}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'text/event-stream' },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
             const allGroups = [];
-            const seenAssetIds = new Set();
 
             while (true) {
-                const res = await http.getData(
-                    `/ai/similar-visual-batch?pageIndex=${pageIndexScan}&pageSize=${pageSize}&threshold=${visualSimilarThreshold}`,
-                );
-                
-                const { groups, totalProcessed, totalAssets } = res.data;
+                const { done, value } = await reader.read();
+                if (done) break;
 
-                if (!totalProcessed || totalProcessed === 0) {
-                    break;
-                }
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
 
-                if (groups && groups.length > 0) {
-                    const uniqueGroups = groups.filter(g => {
-                        // Si el principal ya fue procesado, saltar el grupo entero
-                        const primaryId = Number(g.id.replace('group-vis-', ''));
-                        if (seenAssetIds.has(primaryId)) return false;
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const evt = JSON.parse(line.slice(6));
 
-                        // Marcar todos los elementos de este grupo como vistos
-                        g.items.forEach(i => seenAssetIds.add(Number(i.asset.id)));
-                        return true;
-                    });
-
-                    if (uniqueGroups.length > 0) {
-                        allGroups.push(...uniqueGroups);
-                        setVisualSimilarGroups([...allGroups]);
-                    }
-                }
-
-                setVisualSimilarProgress(prev => ({
-                    done: (pageIndexScan + 1) * pageSize,
-                    total: totalAssets || '...' 
-                }));
-
-                pageIndexScan += 1;
-                
-                if (totalProcessed < pageSize || pageIndexScan > 500) {
-                    setVisualSimilarProgress(prev => ({
-                        done: prev.done,
-                        total: prev.done 
-                    }));
-                    break;
+                        if (evt.type === 'init') {
+                            setVisualSimilarProgress({ done: 0, total: evt.totalAssets, phase: 'scanning' });
+                        } else if (evt.type === 'progress') {
+                            setVisualSimilarProgress(prev => ({
+                                ...prev,
+                                done: evt.current,
+                                total: evt.totalAssets,
+                                phase: evt.phase || 'scanning',
+                                assetId: evt.assetId,
+                            }));
+                        } else if (evt.type === 'done') {
+                            setVisualSimilarProgress(prev => ({
+                                ...prev,
+                                done: prev.total,
+                                phase: 'loading_groups',
+                            }));
+                        } else if (evt.type === 'groups') {
+                            allGroups.push(...evt.groups);
+                            setVisualSimilarGroups([...allGroups]);
+                        } else if (evt.type === 'error') {
+                            setVisualSimilarError(evt.message);
+                        } else if (evt.type === 'complete') {
+                            setVisualSimilarProgress(prev => ({
+                                ...prev,
+                                phase: 'done',
+                            }));
+                        }
+                    } catch (_) { /* skip malformed SSE */ }
                 }
             }
         } catch (error) {
             console.error('Visual similarity error:', error);
-            setVisualSimilarError(error?.response?.data?.message || error?.message || 'Error analizando similitud visual');
+            setVisualSimilarError(error?.message || 'Error analizando similitud visual');
         } finally {
             setVisualSimilarLoading(false);
         }

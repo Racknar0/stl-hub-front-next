@@ -180,13 +180,18 @@ export default function VisualSimilarTab({
 
                 {visualSimilarLoading && <LinearProgress color="secondary" sx={{ mt: 2 }} />}
                 {!!visualSimilarProgress.total && (
-                    <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ mt: 1, display: 'block' }}
-                    >
-                        Procesados: {visualSimilarProgress.done} / {visualSimilarProgress.total} assets
-                    </Typography>
+                    <Box sx={{ mt: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 'bold' }}>
+                            {visualSimilarProgress.phase === 'scanning' && '🔍 Escaneando contra toda la BD...'}
+                            {visualSimilarProgress.phase === 'clustering' && '🧠 Fusionando redes de similitud...'}
+                            {visualSimilarProgress.phase === 'loading_groups' && '📦 Descargando grupos...'}
+                            {visualSimilarProgress.phase === 'done' && '✅ Análisis completado'}
+                            {visualSimilarProgress.phase === 'init' && 'Iniciando conexión...'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            Procesados: {visualSimilarProgress.done} / {visualSimilarProgress.total} assets
+                        </Typography>
+                    </Box>
                 )}
                 {visualSimilarError && (
                     <Typography
