@@ -12,8 +12,7 @@ import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, 
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CloseIcon from '@mui/icons-material/Close'
 import RightSidebar from '../../assets/uploader/RightSidebar'
-  RIGHT_SIDEBAR_WIDTH,
-} from '../constants'
+import { RIGHT_SIDEBAR_WIDTH } from '../constants'
 
 export default function SimilaritySidebar({
   searchSidebarOpen,
