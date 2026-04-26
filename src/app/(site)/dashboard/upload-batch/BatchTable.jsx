@@ -313,7 +313,7 @@ export default function BatchTable() {
         },
       }))
 
-      const imagePath = Array.isArray(row?.images) && row.images.length > 0 ? row.images[0] : null;
+      const imagePath = Array.isArray(row?.imagenes) && row.imagenes.length > 0 ? row.imagenes[0] : null;
 
       const payload = {
         imagePath: imagePath,
