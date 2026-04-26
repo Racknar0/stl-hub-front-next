@@ -285,12 +285,9 @@ export default function VisualSimilarTab({
 
                                                 <Box
                                                     sx={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: {
-                                                            xs: '1fr',
-                                                            sm: 'repeat(2, minmax(0, 1fr))',
-                                                            xl: 'repeat(3, minmax(0, 1fr))',
-                                                        },
+                                                        display: 'flex',
+                                                        flexWrap: 'wrap',
+                                                        alignItems: 'stretch',
                                                         gap: 1.5,
                                                     }}
                                                 >
@@ -320,12 +317,25 @@ export default function VisualSimilarTab({
                                                                     bgcolor: isPrimary
                                                                         ? 'rgba(156, 39, 176, 0.12)' // secondary main alpha
                                                                         : 'transparent',
+                                                                    width: 'fit-content',
+                                                                    maxWidth: '100%',
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
                                                                 }}
                                                             >
-                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                                                    <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11 }} noWrap>
-                                                                        ID: {id} • {entry.similarity}% • {asset.account?.alias || asset.accountId || '-'}
-                                                                    </Typography>
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                                                                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mr: 2, mb: 0.5 }}>
+                                                                        <Chip size="small" label={`ID: ${id}`} sx={{ height: 18, fontSize: 10, fontWeight: 800, bgcolor: 'rgba(127,127,127,0.15)' }} />
+                                                                        <Chip 
+                                                                            size="small" 
+                                                                            label={`${entry.similarity}%`} 
+                                                                            color={entry.similarity >= 98 ? 'success' : entry.similarity >= 94 ? 'warning' : 'default'}
+                                                                            sx={{ height: 18, fontSize: 10, fontWeight: 800 }} 
+                                                                        />
+                                                                        <Typography variant="caption" sx={{ fontSize: 10, ml: 0.5, color: 'text.secondary' }} noWrap>
+                                                                            {asset.account?.alias || asset.accountId || '-'}
+                                                                        </Typography>
+                                                                    </Box>
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                                         <Tooltip title={isPrimary ? 'Principal' : 'Marcar principal'}>
                                                                             <IconButton size="small" sx={{ p: 0 }} onClick={() => setVisualPrimaryInGroup(group.id, id)}>
@@ -347,12 +357,11 @@ export default function VisualSimilarTab({
                                                                 {assetImages.length ? (
                                                                     <Box
                                                                         sx={{
-                                                                            width: '100%',
-                                                                            display: 'grid',
-                                                                            gridTemplateColumns:
-                                                                                'repeat(auto-fill, minmax(100px, 1fr))',
+                                                                            display: 'flex',
+                                                                            flexWrap: 'wrap',
                                                                             gap: 0.6,
                                                                             mb: 1,
+                                                                            maxWidth: 440,
                                                                         }}
                                                                     >
                                                                         {assetImages
@@ -368,6 +377,9 @@ export default function VisualSimilarTab({
                                                                                             key={`${group.id}-${id}-vis-img-${imgIdx}`}
                                                                                             sx={{
                                                                                                 position: 'relative',
+                                                                                                width: 100,
+                                                                                                height: 100,
+                                                                                                flexShrink: 0,
                                                                                                 borderRadius: 1,
                                                                                                 overflow: 'hidden',
                                                                                                 border: '1px solid rgba(127,127,127,0.35)',
