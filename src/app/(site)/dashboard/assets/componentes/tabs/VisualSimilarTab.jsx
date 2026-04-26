@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Box,
     Button,
@@ -15,7 +15,10 @@ import {
     Stack,
     Tooltip,
     Typography,
+    Collapse,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -51,6 +54,7 @@ export default function VisualSimilarTab({
     loading,
 }) {
     const parentRef = useRef(null);
+    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
     const rowVirtualizer = useVirtualizer({
         count: visualSimilarGroups.length,
@@ -444,8 +448,6 @@ export default function VisualSimilarTab({
                                                                 <Typography
                                                                     variant="body2"
                                                                     sx={{ fontWeight: 700, mt: 0.5 }}
-                                                                    noWrap
-                                                                    title={asset.title || asset.archiveName || `Asset #${id}`}
                                                                 >
                                                                     {asset.title || asset.archiveName || `Asset #${id}`}
                                                                 </Typography>
@@ -524,62 +526,70 @@ export default function VisualSimilarTab({
                         overflow: 'auto',
                     }}
                 >
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                        Seleccionados para eliminar
-                    </Typography>
-                    <Typography
-                        variant="h4"
-                        sx={{ fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}
-                    >
-                        {selectedVisualSimilarIds.length}
-                    </Typography>
-                    <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mb: 1.5 }}
-                    >
-                        Espacio estimado: {formatMBfromB(selectedVisualSimilarBytes)}
-                    </Typography>
-
-                    {(visualSimilarDeleteProgress.running ||
-                        visualSimilarDeleteProgress.total > 0) && (
-                        <Box sx={{ mb: 1.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                {visualSimilarDeleteProgress.running
-                                    ? `Eliminando ${visualSimilarDeleteProgress.processed}/${visualSimilarDeleteProgress.total}`
-                                    : `Proceso finalizado ${visualSimilarDeleteProgress.processed}/${visualSimilarDeleteProgress.total}`}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                                Seleccionados para eliminar
+                            </Typography>
+                            <Typography
+                                variant="h4"
+                                sx={{ fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}
+                            >
+                                {selectedVisualSimilarIds.length}
                             </Typography>
                             <Typography
                                 variant="caption"
                                 color="text.secondary"
-                                sx={{ display: 'block', mb: 0.8 }}
+                                sx={{ display: 'block', mb: 1.5 }}
                             >
-                                OK: {visualSimilarDeleteProgress.success} · Fallidos:{' '}
-                                {visualSimilarDeleteProgress.failed}
-                                {visualSimilarDeleteProgress.currentAssetId
-                                    ? ` · Asset #${visualSimilarDeleteProgress.currentAssetId}`
-                                    : ''}
+                                Espacio estimado: {formatMBfromB(selectedVisualSimilarBytes)}
                             </Typography>
-                            <LinearProgress
-                                variant="determinate"
-                                color="error"
-                                value={
-                                    visualSimilarDeleteProgress.total
-                                        ? Math.min(
-                                              100,
-                                              Math.round(
-                                                  (visualSimilarDeleteProgress.processed /
-                                                      visualSimilarDeleteProgress.total) *
-                                                      100,
-                                              ),
-                                          )
-                                        : 0
-                                }
-                            />
                         </Box>
-                    )}
+                        <IconButton size="small" onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}>
+                            {isSidebarExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                    </Box>
 
-                    <Divider sx={{ mb: 1.5 }} />
+                    <Collapse in={isSidebarExpanded}>
+                        {(visualSimilarDeleteProgress.running ||
+                            visualSimilarDeleteProgress.total > 0) && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                    {visualSimilarDeleteProgress.running
+                                        ? `Eliminando ${visualSimilarDeleteProgress.processed}/${visualSimilarDeleteProgress.total}`
+                                        : `Proceso finalizado ${visualSimilarDeleteProgress.processed}/${visualSimilarDeleteProgress.total}`}
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mb: 0.8 }}
+                                >
+                                    OK: {visualSimilarDeleteProgress.success} · Fallidos:{' '}
+                                    {visualSimilarDeleteProgress.failed}
+                                    {visualSimilarDeleteProgress.currentAssetId
+                                        ? ` · Asset #${visualSimilarDeleteProgress.currentAssetId}`
+                                        : ''}
+                                </Typography>
+                                <LinearProgress
+                                    variant="determinate"
+                                    color="error"
+                                    value={
+                                        visualSimilarDeleteProgress.total
+                                            ? Math.min(
+                                                  100,
+                                                  Math.round(
+                                                      (visualSimilarDeleteProgress.processed /
+                                                          visualSimilarDeleteProgress.total) *
+                                                          100,
+                                                  ),
+                                              )
+                                            : 0
+                                    }
+                                />
+                            </Box>
+                        )}
+
+                        <Divider sx={{ mb: 1.5 }} />
 
                     <Stack spacing={0.7} sx={{ mb: 1.5 }}>
                         {selectedVisualSimilarAssets.length === 0 && (
@@ -636,6 +646,7 @@ export default function VisualSimilarTab({
                             Limpiar seleccion
                         </Button>
                     </Stack>
+                    </Collapse>
                 </Paper>
             </Box>
         </Stack>
