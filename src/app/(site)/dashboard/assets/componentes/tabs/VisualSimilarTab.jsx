@@ -313,7 +313,13 @@ export default function VisualSimilarTab({
                                                 pb: 2, // Equivalent to spacing(2) gap
                                             }}
                                         >
-                                            <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                            <Paper sx={{ 
+                                                p: 2, 
+                                                borderRadius: 3,
+                                                border: '1px solid rgba(148, 163, 184, 0.4)',
+                                                bgcolor: virtualRow.index % 2 === 0 ? 'rgba(15, 23, 42, 0.95)' : 'rgba(30, 41, 59, 0.95)',
+                                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                            }}>
                                                 <Stack
                                                     direction="row"
                                                     spacing={1}
@@ -381,17 +387,17 @@ export default function VisualSimilarTab({
                                                                         ? '2px solid #fbbf24'
                                                                         : isSelected
                                                                           ? '3px solid #ff1744'
-                                                                          : '1px solid rgba(127,127,127,0.25)',
+                                                                          : '1px solid rgba(255, 255, 255, 0.35)',
                                                                     boxShadow: isSelected
                                                                         ? '0 0 16px rgba(255, 23, 68, 0.7), 0 0 32px rgba(255, 23, 68, 0.35), inset 0 0 8px rgba(255, 23, 68, 0.15)'
                                                                         : isPrimary
                                                                           ? '0 0 8px rgba(251, 191, 36, 0.3)'
-                                                                          : 'none',
+                                                                          : '0 4px 6px rgba(0, 0, 0, 0.3)',
                                                                     bgcolor: isPrimary
-                                                                        ? 'rgba(251, 191, 36, 0.08)'
+                                                                        ? 'rgba(251, 191, 36, 0.12)'
                                                                         : isSelected
-                                                                          ? 'rgba(255, 23, 68, 0.12)'
-                                                                          : 'transparent',
+                                                                          ? 'rgba(255, 23, 68, 0.15)'
+                                                                          : 'rgba(15, 23, 42, 0.85)',
                                                                     width: 'fit-content',
                                                                     maxWidth: '100%',
                                                                     display: 'flex',
