@@ -380,17 +380,17 @@ export default function VisualSimilarTab({
                                                                     border: isPrimary
                                                                         ? '2px solid #fbbf24'
                                                                         : isSelected
-                                                                          ? '2px solid #ef4444'
+                                                                          ? '3px solid #ff1744'
                                                                           : '1px solid rgba(127,127,127,0.25)',
                                                                     boxShadow: isSelected
-                                                                        ? '0 0 12px rgba(239, 68, 68, 0.5), 0 0 24px rgba(239, 68, 68, 0.2)'
+                                                                        ? '0 0 16px rgba(255, 23, 68, 0.7), 0 0 32px rgba(255, 23, 68, 0.35), inset 0 0 8px rgba(255, 23, 68, 0.15)'
                                                                         : isPrimary
                                                                           ? '0 0 8px rgba(251, 191, 36, 0.3)'
                                                                           : 'none',
                                                                     bgcolor: isPrimary
                                                                         ? 'rgba(251, 191, 36, 0.08)'
                                                                         : isSelected
-                                                                          ? 'rgba(239, 68, 68, 0.06)'
+                                                                          ? 'rgba(255, 23, 68, 0.12)'
                                                                           : 'transparent',
                                                                     width: 'fit-content',
                                                                     maxWidth: '100%',
