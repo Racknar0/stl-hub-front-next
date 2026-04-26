@@ -39,6 +39,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import CachedIcon from '@mui/icons-material/Cached';
+import '../dashboard.scss';
 
 // Nuevos componentes
 import ToolbarBusqueda from './componentes/ToolbarBusqueda';
@@ -3146,8 +3147,10 @@ export default function AssetsAdminPage() {
     };
 
     return (
-        <div className="p-3 mb-5">
-            <Tabs
+        <section className="dashboard-page-theme">
+            <h1 className="dashboard-title mb-3" style={{ padding: '0 1rem' }}>Assets & AI Tools</h1>
+            <div className="dashboard-page-content p-3 mb-5">
+                <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 sx={{
@@ -3475,6 +3478,7 @@ export default function AssetsAdminPage() {
                     </Box>
                 )}
             </Dialog>
-        </div>
+            </div>
+        </section>
     );
 }

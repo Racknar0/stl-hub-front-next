@@ -244,11 +244,10 @@ export default function VisualSimilarTab({
                             border: '1px solid rgba(127,127,127,0.2)'
                         }}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                                Modo Revisión
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                Grupos: {visualSimilarGroups.length} | Pares descartados: {ignoredPairsCount || 0} | Seleccionados: {selectedVisualSimilarIds.length}
                             </Typography>
-                            <Chip size="small" color="error" label={`${selectedVisualSimilarIds.length} marcados`} sx={{ fontWeight: 800 }} />
                         </Box>
                         <Button 
                             size="small" 
@@ -422,7 +421,7 @@ export default function VisualSimilarTab({
                                                                             flexWrap: 'wrap',
                                                                             gap: 0.6,
                                                                             mb: 1,
-                                                                            maxWidth: 440,
+                                                                            maxWidth: 850,
                                                                         }}
                                                                     >
                                                                         {assetImages
@@ -438,8 +437,8 @@ export default function VisualSimilarTab({
                                                                                             key={`${group.id}-${id}-vis-img-${imgIdx}`}
                                                                                             sx={{
                                                                                                 position: 'relative',
-                                                                                                width: 100,
-                                                                                                height: 100,
+                                                                                                width: 200,
+                                                                                                height: 200,
                                                                                                 flexShrink: 0,
                                                                                                 borderRadius: 1,
                                                                                                 overflow: 'hidden',
