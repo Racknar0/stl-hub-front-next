@@ -23,6 +23,8 @@ import {
     LinearProgress,
     Slider,
     Dialog,
+    ThemeProvider,
+    createTheme,
 } from '@mui/material';
 import {
     useMaterialReactTable,
@@ -67,6 +69,18 @@ const slugify = (s) =>
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .slice(0, 80);
+
+const darkTheme = createTheme({
+    palette: {
+        mode: 'dark',
+        background: {
+            default: '#0f172a',
+            paper: '#1e293b',
+        },
+        primary: { main: '#a855f7' },
+        secondary: { main: '#eab308' },
+    },
+});
 
 export default function AssetsAdminPage() {
     const SIMILAR_GROUPS_PAGE_SIZE = 20;
@@ -3147,10 +3161,11 @@ export default function AssetsAdminPage() {
     };
 
     return (
-        <section className="dashboard-page-theme">
-            <h1 className="dashboard-title mb-3" style={{ padding: '0 1rem' }}>Assets & AI Tools</h1>
-            <div className="dashboard-page-content p-3 mb-5">
-                <Tabs
+        <ThemeProvider theme={darkTheme}>
+            <section className="dashboard-page-theme">
+                <h1 className="dashboard-title mb-3" style={{ padding: '0 1rem' }}>Assets & AI Tools</h1>
+                <div className="dashboard-page-content p-3 mb-5">
+                    <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 sx={{
@@ -3480,5 +3495,6 @@ export default function AssetsAdminPage() {
             </Dialog>
             </div>
         </section>
+        </ThemeProvider>
     );
 }
