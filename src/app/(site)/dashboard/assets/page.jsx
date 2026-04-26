@@ -1306,7 +1306,7 @@ export default function AssetsAdminPage() {
         setVisualSimilarProgress({ done: 0, total: 0, phase: 'init' });
 
         try {
-            const baseUrl = http.baseUrl || process.env.NEXT_PUBLIC_API_URL || '';
+            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api` : '/api';
             const url = `${baseUrl}/ai/similar-visual-full-scan?threshold=${visualSimilarThreshold}`;
 
             const response = await fetch(url, {
