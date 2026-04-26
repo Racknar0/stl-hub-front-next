@@ -3408,6 +3408,7 @@ export default function AssetsAdminPage() {
                 open={similarViewer.open}
                 onClose={closeSimilarViewer}
                 maxWidth="lg"
+                disableScrollLock={true}
                 PaperProps={{
                     sx: {
                         background: 'transparent',
