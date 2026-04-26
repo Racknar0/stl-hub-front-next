@@ -249,68 +249,38 @@ export default function VisualSimilarTab({
                                         >
                                             <Paper sx={{ p: 2, borderRadius: 2 }}>
                                                 <Stack
-                                                    direction={{ xs: 'column', sm: 'row' }}
-                                                    spacing={1.5}
+                                                    direction="row"
+                                                    spacing={1}
+                                                    alignItems="center"
                                                     justifyContent="space-between"
-                                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                                    sx={{ flexWrap: 'wrap', gap: 1 }}
                                                 >
-                                                    <Box>
-                                                        <Typography
-                                                            variant="subtitle1"
-                                                            sx={{ fontWeight: 700 }}
-                                                        >
+                                                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                                                             Grupo #{virtualRow.index + 1}
                                                         </Typography>
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                        >
-                                                            Firma: {group.signature}
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {group.signature}
                                                         </Typography>
+                                                        <Chip size="small" label={`${group.items.length} assets`} sx={{ height: 20, fontSize: 10 }} />
+                                                        <Chip size="small" color="secondary" label={`Similitud > ${group.confidence}%`} sx={{ height: 20, fontSize: 10 }} />
                                                     </Box>
-                                                    <Stack direction="row" spacing={1}>
-                                                        <Chip
-                                                            size="small"
-                                                            label={`${group.items.length} assets`}
-                                                        />
-                                                        <Chip
-                                                            size="small"
-                                                            color="secondary"
-                                                            label={`Similitud Visual > ${group.confidence}%`}
-                                                        />
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color="secondary"
-                                                            onClick={() =>
-                                                                selectVisualGroupDuplicates(group)
-                                                            }
-                                                        >
+                                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                        <Button size="small" variant="outlined" color="secondary" onClick={() => selectVisualGroupDuplicates(group)} sx={{ py: 0, fontSize: 10 }}>
                                                             Sugerir duplicados
                                                         </Button>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color="inherit"
-                                                            onClick={() =>
-                                                                dismissVisualSimilarGroup(group)
-                                                            }
-                                                        >
+                                                        <Button size="small" variant="outlined" color="inherit" onClick={() => dismissVisualSimilarGroup(group)} sx={{ py: 0, fontSize: 10 }}>
                                                             No son duplicados
                                                         </Button>
-                                                    </Stack>
+                                                    </Box>
                                                 </Stack>
 
-                                                <Divider sx={{ my: 1.5 }} />
+                                                <Divider sx={{ my: 1 }} />
 
                                                 <Box
                                                     sx={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: {
-                                                            xs: '1fr',
-                                                            sm: 'repeat(2, minmax(0, 1fr))',
-                                                            xl: 'repeat(3, minmax(0, 1fr))',
-                                                        },
+                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
                                                         gap: 1.5,
                                                     }}
                                                 >
@@ -405,7 +375,7 @@ export default function VisualSimilarTab({
                                                                                                     p: 0.5,
                                                                                                     opacity: 0,
                                                                                                     transition: 'opacity 0.18s ease',
-                                                                                                    background: 'linear-gradient(to bottom, rgba(2,6,23,0.5), rgba(2,6,23,0.08) 45%, rgba(2,6,23,0.5))',
+                                                                                                    background: 'transparent',
                                                                                                     cursor: 'pointer',
                                                                                                 }}
                                                                                             >
@@ -473,37 +443,19 @@ export default function VisualSimilarTab({
 
                                                                 <Typography
                                                                     variant="body2"
-                                                                    sx={{ fontWeight: 700 }}
+                                                                    sx={{ fontWeight: 700, mt: 0.5 }}
                                                                     noWrap
+                                                                    title={asset.title || asset.archiveName || `Asset #${id}`}
                                                                 >
-                                                                    {asset.title ||
-                                                                        asset.archiveName ||
-                                                                        `Asset #${id}`}
-                                                                </Typography>
-                                                                <Typography
-                                                                    variant="caption"
-                                                                    color="text.secondary"
-                                                                    sx={{ display: 'block' }}
-                                                                >
-                                                                    Archivo: {asset.archiveName || '-'}
-                                                                </Typography>
-                                                                <Typography
-                                                                    variant="caption"
-                                                                    color="text.secondary"
-                                                                    sx={{ display: 'block' }}
-                                                                >
-                                                                    ID: {id} • Similitud:{' '}
-                                                                    {entry.similarity}%
+                                                                    {asset.title || asset.archiveName || `Asset #${id}`}
                                                                 </Typography>
                                                                 <Typography
                                                                     variant="caption"
                                                                     color="text.secondary"
                                                                     sx={{ display: 'block', mb: 0.8 }}
+                                                                    noWrap
                                                                 >
-                                                                    Cuenta:{' '}
-                                                                    {asset.account?.alias ||
-                                                                        asset.accountId ||
-                                                                        '-'}
+                                                                    ID: {id} • Similitud: {entry.similarity}% • Cta: {asset.account?.alias || asset.accountId || '-'}
                                                                 </Typography>
 
                                                                 <Stack
