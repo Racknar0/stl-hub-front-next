@@ -313,11 +313,9 @@ export default function VisualSimilarTab({
                                                 pb: 2, // Equivalent to spacing(2) gap
                                             }}
                                         >
-                                            <Paper sx={{ 
+                                            <Paper className={`visual-group-container ${virtualRow.index % 2 === 0 ? 'even' : 'odd'}`} sx={{ 
                                                 p: 2, 
                                                 borderRadius: 3,
-                                                border: virtualRow.index % 2 === 0 ? '1px solid rgba(255, 255, 255, 0.05) !important' : '1px solid rgba(255, 255, 255, 0.15) !important',
-                                                bgcolor: virtualRow.index % 2 === 0 ? 'rgba(18, 18, 18, 0.95) !important' : 'rgba(32, 32, 32, 0.95) !important',
                                                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                                             }}>
                                                 <Stack
@@ -337,19 +335,17 @@ export default function VisualSimilarTab({
                                                         <Chip size="small" label={`${group.items.length} assets`} sx={{ height: 20, fontSize: 10 }} />
                                                         <Chip 
                                                             size="small" 
+                                                            className={group.confidence >= 98 ? 'chip-sim-high' : group.confidence >= 94 ? 'chip-sim-medium' : 'chip-sim-low'}
                                                             label={`Similitud > ${group.confidence}%`} 
                                                             sx={{ 
                                                                 height: 20, 
                                                                 fontSize: 10, 
                                                                 fontWeight: 800,
-                                                                bgcolor: group.confidence >= 98 ? 'rgba(34,197,94,0.25)' : group.confidence >= 94 ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.25)',
-                                                                color: group.confidence >= 98 ? '#4ade80' : group.confidence >= 94 ? '#fb923c' : '#f87171',
-                                                                border: `1px solid ${group.confidence >= 98 ? 'rgba(34,197,94,0.5)' : group.confidence >= 94 ? 'rgba(249,115,22,0.5)' : 'rgba(239,68,68,0.5)'}`,
                                                             }} 
                                                         />
                                                     </Box>
                                                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                        <Button size="small" variant="outlined" color="inherit" onClick={() => dismissVisualSimilarGroup(group)} sx={{ py: 0, fontSize: 10 }}>
+                                                        <Button className="btn-discard-group" size="small" variant="contained" onClick={() => dismissVisualSimilarGroup(group)} sx={{ fontSize: 11, px: 2, py: 0.5 }}>
                                                             No son duplicados
                                                         </Button>
                                                     </Box>
@@ -380,29 +376,15 @@ export default function VisualSimilarTab({
                                                         return (
                                                             <Paper
                                                                 key={`${group.id}-${id}`}
+                                                                className={`visual-asset-card ${isPrimary ? 'primary' : ''} ${isSelected ? 'selected' : ''}`}
                                                                 sx={{
                                                                     p: 1.25,
                                                                     borderRadius: 2,
-                                                                    border: isPrimary
-                                                                        ? '2px solid #fbbf24'
-                                                                        : isSelected
-                                                                          ? '3px solid #ff1744'
-                                                                          : '1px solid rgba(255, 255, 255, 0.35)',
-                                                                    boxShadow: isSelected
-                                                                        ? '0 0 16px rgba(255, 23, 68, 0.7), 0 0 32px rgba(255, 23, 68, 0.35), inset 0 0 8px rgba(255, 23, 68, 0.15)'
-                                                                        : isPrimary
-                                                                          ? '0 0 8px rgba(251, 191, 36, 0.3)'
-                                                                          : '0 4px 6px rgba(0, 0, 0, 0.3)',
-                                                                    bgcolor: isPrimary
-                                                                        ? 'rgba(251, 191, 36, 0.12)'
-                                                                        : isSelected
-                                                                          ? 'rgba(255, 23, 68, 0.15)'
-                                                                          : 'rgba(15, 23, 42, 0.85)',
                                                                     width: 'fit-content',
                                                                     maxWidth: '100%',
                                                                     display: 'flex',
                                                                     flexDirection: 'column',
-                                                                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                                                                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease',
                                                                 }}
                                                             >
                                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
@@ -410,8 +392,8 @@ export default function VisualSimilarTab({
                                                                         <Chip size="small" label={`ID: ${id}`} sx={{ height: 18, fontSize: 10, fontWeight: 800, bgcolor: 'rgba(127,127,127,0.15)' }} />
                                                                         <Chip 
                                                                             size="small" 
+                                                                            className={entry.similarity >= 98 ? 'chip-sim-high' : entry.similarity >= 94 ? 'chip-sim-medium' : 'chip-sim-low'}
                                                                             label={`${entry.similarity}%`} 
-                                                                            color={entry.similarity >= 98 ? 'success' : entry.similarity >= 94 ? 'warning' : 'default'}
                                                                             sx={{ height: 18, fontSize: 10, fontWeight: 800 }} 
                                                                         />
                                                                         <Typography variant="caption" sx={{ fontSize: 10, ml: 0.5, color: 'text.secondary' }} noWrap>
