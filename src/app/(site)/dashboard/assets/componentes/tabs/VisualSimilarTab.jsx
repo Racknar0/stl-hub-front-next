@@ -344,13 +344,12 @@ export default function VisualSimilarTab({
                                                             }} 
                                                         />
                                                     </Box>
+                                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                        <Button className="btn-discard-group" size="small" variant="contained" onClick={() => dismissVisualSimilarGroup(group)} sx={{ fontSize: 11, px: 3, py: 0.5 }}>
+                                                            No son duplicados
+                                                        </Button>
+                                                    </Box>
                                                 </Stack>
-
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 1.5 }}>
-                                                    <Button className="btn-discard-group" size="small" variant="contained" onClick={() => dismissVisualSimilarGroup(group)} sx={{ fontSize: 11, px: 3, py: 0.5 }}>
-                                                        No son duplicados
-                                                    </Button>
-                                                </Box>
 
                                                 <Divider sx={{ my: 1 }} />
 

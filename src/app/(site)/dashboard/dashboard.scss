@@ -725,12 +725,12 @@
 
 /* ── Visual Similar Moderation Specific Overrides ── */
 .dashboard-content .MuiPaper-root.visual-group-container.even {
-  background: rgb(115 115 115 / 43%) !important;
+  background: rgba(15, 23, 42, 0.72) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .dashboard-content .MuiPaper-root.visual-group-container.odd {
-  background: rgb(20 18 23 / 93%) !important;
+  background: rgba(20, 18, 23, 0.93) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
