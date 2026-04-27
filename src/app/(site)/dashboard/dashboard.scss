@@ -725,12 +725,12 @@
 
 /* ── Visual Similar Moderation Specific Overrides ── */
 .dashboard-content .MuiPaper-root.visual-group-container.even {
-  background: rgba(18, 18, 18, 0.95) !important;
+  background: rgb(115 115 115 / 43%) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .dashboard-content .MuiPaper-root.visual-group-container.odd {
-  background: rgba(32, 32, 32, 0.95) !important;
+  background: rgb(20 18 23 / 93%) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -741,7 +741,7 @@
 }
 
 .dashboard-content .MuiPaper-root.visual-asset-card.primary {
-  background: rgba(251, 191, 36, 0.12) !important;
+  background: rgba(15, 23, 42, 0.85) !important; /* Mismo fondo que card normal */
   border: 2px solid #fbbf24 !important;
   box-shadow: 0 0 8px rgba(251, 191, 36, 0.3) !important;
 }
