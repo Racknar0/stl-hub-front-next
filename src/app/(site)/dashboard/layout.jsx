@@ -1,8 +1,11 @@
 'use client'
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ThemeProvider } from '@mui/material/styles'
 import Sidebar from '../../../components/dashboard/Sidebar/Sidebar'
 import dynamic from 'next/dynamic'
+import dashboardTheme from './dashboardTheme'
+import './dashboard.scss'
 
 // Carga dinámica para evitar problemas SSR y sólo en cliente
 const ConsoleBar = dynamic(() => import('../../../components/dashboard/ConsoleBar/ConsoleBar'), { ssr: false })
@@ -29,12 +32,14 @@ export default function DashboardLayout({ children }) {
   if (!token || roleId !== 2) return null
 
   return (
-    <div className="dashboard-page">
-      <Sidebar />
-      <main className="dashboard-content p-3">
-        {children}
-      </main>
-      <ConsoleBar />
-    </div>
+    <ThemeProvider theme={dashboardTheme}>
+      <div className="dashboard-page">
+        <Sidebar />
+        <main className="dashboard-content p-3">
+          {children}
+        </main>
+        <ConsoleBar />
+      </div>
+    </ThemeProvider>
   )
 }

@@ -82,7 +82,7 @@ export default function MetaSeoTab({
 }) {
     return (
         <Stack spacing={2}>
-            <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', boxShadow: 'none' }}>
                 <Stack
                     direction={{ xs: 'column', lg: 'row' }}
                     spacing={1.2}
@@ -248,16 +248,19 @@ export default function MetaSeoTab({
                 ref={metaScrollRef}
                 sx={{
                     borderRadius: 2,
+                    bgcolor: 'rgba(0, 0, 0, 0)',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    boxShadow: 'none',
                     maxHeight: 'calc(100vh - 260px)',
                     overflowY: 'scroll',
                     overflowAnchor: 'none',
                     '& .MuiTableCell-head': {
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'rgba(2, 6, 23, 0.7)',
                         backdropFilter: 'blur(8px)',
                         zIndex: 10,
                         color: '#f8fbff',
                         fontWeight: 800,
-                        borderBottom: '1px solid rgba(191,219,254,0.45)',
+                        borderBottom: '1px solid rgba(191,219,254,0.25)',
                     },
                 }}
             >
@@ -401,7 +404,7 @@ export default function MetaSeoTab({
                 </Table>
             </TableContainer>
 
-            <Paper sx={{ borderRadius: 2 }}>
+            <Paper sx={{ borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', p: 1, mt: 1, boxShadow: 'none' }}>
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={1}

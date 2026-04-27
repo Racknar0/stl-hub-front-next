@@ -64,7 +64,7 @@
 }
 
 .dashboard-card-cell {
-  /* Ancho responsivo, pero sin “huecos raros” */
+  /* Ancho responsivo, pero sin "huecos raros" */
   flex: 1 1 320px;
   max-width: 420px;
   min-width: 300px;
@@ -392,9 +392,9 @@
 .dashboard-page-theme .taxonomy-counts-card,
 .dashboard-page-theme .search-insights-card,
 .dashboard-page-theme .last-checks-card {
-  border: 1px solid rgba(148, 163, 184, 0.35) !important;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.52)) !important;
-  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.35) !important;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.52));
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.35);
   color: #e2e8f0;
 }
 
@@ -407,7 +407,7 @@
 .dashboard-page-theme .last-checks-card .lc-footer,
 .dashboard-page-theme .last-checks-card .lc-count,
 .dashboard-page-theme .last-checks-card .lc-meta-type {
-  color: rgba(203, 213, 225, 0.84) !important;
+  color: rgba(203, 213, 225, 0.84);
 }
 
 .dashboard-page-theme .stat-card .value,
@@ -421,7 +421,7 @@
 .dashboard-page-theme .last-checks-card .lc-title,
 .dashboard-page-theme .last-checks-card .lc-alias,
 .dashboard-page-theme .last-checks-card .lc-meta-rel {
-  color: #f8fafc !important;
+  color: #f8fafc;
 }
 
 .dashboard-page-theme .top-downloads-card .card-header h6,
@@ -432,7 +432,7 @@
 .dashboard-page-theme .taxonomy-counts-card .item-row .name,
 .dashboard-page-theme .search-insights-card .item-row .name,
 .dashboard-page-theme .top-downloads-card .download-item .name {
-  color: #e2e8f0 !important;
+  color: #e2e8f0;
 }
 
 .dashboard-page-theme .stat-card .range-btn,
@@ -441,9 +441,9 @@
 .dashboard-page-theme .search-insights-card .range-btn,
 .dashboard-page-theme .last-checks-card .lc-tab,
 .dashboard-page-theme .last-checks-card .lc-refresh {
-  background: rgba(2, 6, 23, 0.4) !important;
-  border: 1px solid rgba(148, 163, 184, 0.45) !important;
-  color: #cbd5e1 !important;
+  background: rgba(2, 6, 23, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #cbd5e1;
 }
 
 .dashboard-page-theme .stat-card .range-btn.active,
@@ -451,332 +451,121 @@
 .dashboard-page-theme .taxonomy-counts-card .range-btn.active,
 .dashboard-page-theme .search-insights-card .range-btn.active,
 .dashboard-page-theme .last-checks-card .lc-tab.active {
-  background: rgba(14, 165, 233, 0.24) !important;
-  border-color: rgba(56, 189, 248, 0.75) !important;
-  color: #bae6fd !important;
+  background: rgba(14, 165, 233, 0.24);
+  border-color: rgba(56, 189, 248, 0.75);
+  color: #bae6fd;
 }
 
 .dashboard-page-theme .top-downloads-card .card-header .collapse-btn,
 .dashboard-page-theme .reports-card .collapse-btn,
 .dashboard-page-theme .taxonomy-counts-card .card-header .collapse-btn,
 .dashboard-page-theme .search-insights-card .card-header .collapse-btn {
-  color: #94a3b8 !important;
+  color: #94a3b8;
 }
 
 .dashboard-page-theme .top-downloads-card .download-item,
 .dashboard-page-theme .reports-card .report-item,
 .dashboard-page-theme .taxonomy-counts-card .item-row,
 .dashboard-page-theme .search-insights-card .item-row {
-  background: rgba(2, 6, 23, 0.52) !important;
-  border: 1px solid rgba(148, 163, 184, 0.26) !important;
+  background: rgba(2, 6, 23, 0.52);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 
 .dashboard-page-theme .last-checks-card .lc-list {
-  border-top: 1px solid rgba(148, 163, 184, 0.22) !important;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .dashboard-page-theme .last-checks-card .lc-item {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .dashboard-page-theme .last-checks-card .lc-alert-dot {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
 }
 
 .dashboard-page-theme .reports-card .report-item .btn-solve {
-  border-color: rgba(56, 189, 248, 0.4) !important;
-  background: rgba(2, 132, 199, 0.18) !important;
-  color: #bae6fd !important;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(2, 132, 199, 0.18);
+  color: #bae6fd;
 }
 
 .dashboard-page-theme .reports-card .report-item .btn-check {
-  border-color: rgba(34, 197, 94, 0.42) !important;
-  background: rgba(21, 128, 61, 0.18) !important;
-  color: #bbf7d0 !important;
+  border-color: rgba(34, 197, 94, 0.42);
+  background: rgba(21, 128, 61, 0.18);
+  color: #bbf7d0;
 }
 
 /* =========================================================
-   Assets Page – MUI & material-react-table dark overrides
-   Applied globally inside .dashboard-content so every
-   dashboard sub-page inherits the dark palette.
+   MRT (material-react-table) — overrides no cubiertas por el theme
    ========================================================= */
-
-/* ── MUI Tabs ── */
-.dashboard-content .MuiTabs-root {
-  background: rgba(15, 23, 42, 0.85) !important;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-}
-.dashboard-content .MuiTab-root {
-  color: #94a3b8 !important;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-}
-.dashboard-content .MuiTab-root.Mui-selected {
-  color: #bae6fd !important;
-}
-.dashboard-content .MuiTabs-indicator {
-  background: #38bdf8 !important;
-}
-
-/* ── MUI Paper (cards, panels) ── */
-.dashboard-content .MuiPaper-root {
-  background: rgba(15, 23, 42, 0.72) !important;
-  color: #e2e8f0 !important;
-  border-color: rgba(148, 163, 184, 0.25) !important;
-}
-
-/* ── MUI Typography ── */
-.dashboard-content .MuiTypography-root {
-  color: #e2e8f0;
-}
-
-/* ── MUI TextField / Input ── */
-.dashboard-content .MuiInputBase-root,
-.dashboard-content .MuiOutlinedInput-root {
-  background: rgba(2, 6, 23, 0.5) !important;
-  color: #f8fafc !important;
-}
-.dashboard-content .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(148, 163, 184, 0.4) !important;
-}
-.dashboard-content .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(56, 189, 248, 0.6) !important;
-}
-.dashboard-content .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(56, 189, 248, 0.9) !important;
-}
-.dashboard-content .MuiInputLabel-root {
-  color: #94a3b8 !important;
-}
-.dashboard-content .MuiInputLabel-root.Mui-focused {
-  color: #38bdf8 !important;
-}
-
-/* ── MUI Button ── */
-.dashboard-content .MuiButton-outlined {
-  border-color: rgba(148, 163, 184, 0.45) !important;
-  color: #cbd5e1 !important;
-}
-.dashboard-content .MuiButton-outlined:hover {
-  background: rgba(56, 189, 248, 0.1) !important;
-  border-color: rgba(56, 189, 248, 0.6) !important;
-}
-
-/* ── MUI Switch / Checkbox ── */
-.dashboard-content .MuiSwitch-track {
-  background: rgba(148, 163, 184, 0.4) !important;
-}
-.dashboard-content .MuiCheckbox-root {
-  color: #94a3b8 !important;
-}
-
-/* ── MUI Slider ── */
-.dashboard-content .MuiSlider-rail {
-  background: rgba(148, 163, 184, 0.3) !important;
-}
-
-/* ── MUI Chip ── */
-.dashboard-content .MuiChip-root {
-  border-color: rgba(148, 163, 184, 0.3);
-}
-.dashboard-content .MuiChip-filled {
-  background: rgba(30, 41, 59, 0.9) !important;
-  color: #e2e8f0 !important;
-}
-
-/* ── MUI Dialog ── */
-.dashboard-content .MuiDialog-paper {
-  background: rgba(15, 23, 42, 0.96) !important;
-  border: 1px solid rgba(148, 163, 184, 0.3) !important;
-  color: #e2e8f0 !important;
-}
-
-/* ── MUI LinearProgress ── */
-.dashboard-content .MuiLinearProgress-root {
-  background: rgba(148, 163, 184, 0.2) !important;
-}
-
-/* ── MUI Divider ── */
-.dashboard-content .MuiDivider-root {
-  border-color: rgba(148, 163, 184, 0.2) !important;
-}
-
-/* ── MUI IconButton ── */
-.dashboard-content .MuiIconButton-root {
-  color: #94a3b8;
-}
-.dashboard-content .MuiIconButton-root:hover {
-  background: rgba(56, 189, 248, 0.1);
-}
-
-/* ── material-react-table (MRT) ── */
-.dashboard-content .MuiTableContainer-root {
-  background: transparent !important;
-}
 
 .dashboard-content .MRT_TablePaper,
 .dashboard-content [class*="MRT_TablePaper"] {
-  background: transparent !important;
-  box-shadow: none !important;
+  background: transparent;
+  box-shadow: none;
 }
 
-/* Table head */
-.dashboard-content .MuiTableHead-root .MuiTableCell-root {
-  background: rgba(2, 6, 23, 0.7) !important;
-  color: #94a3b8 !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important;
-  font-weight: 700;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Table body rows */
-.dashboard-content .MuiTableBody-root .MuiTableRow-root {
-  background: transparent !important;
-}
-.dashboard-content .MuiTableBody-root .MuiTableRow-root:hover {
-  background: rgba(56, 189, 248, 0.06) !important;
-}
-
-/* Table cells */
-.dashboard-content .MuiTableBody-root .MuiTableCell-root {
-  background: transparent !important;
-  color: #e2e8f0 !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
-}
-
-/* MRT toolbar (top & bottom) */
-.dashboard-content .MuiToolbar-root {
-  background: transparent !important;
-  color: #e2e8f0 !important;
-}
-
-/* MRT top toolbar search box */
 .dashboard-content .MRT_GlobalFilterTextField input,
 .dashboard-content .MRT_FilterTextField input {
-  color: #f8fafc !important;
+  color: #f8fafc;
 }
 
-/* MRT pagination */
-.dashboard-content .MuiTablePagination-root {
-  color: #94a3b8 !important;
-}
-.dashboard-content .MuiTablePagination-root .MuiSelect-select {
-  color: #e2e8f0 !important;
-}
-.dashboard-content .MuiTablePagination-root .MuiSvgIcon-root {
-  color: #94a3b8 !important;
-}
-.dashboard-content .MuiTablePagination-root .MuiIconButton-root {
-  color: #94a3b8 !important;
-}
-.dashboard-content .MuiTablePagination-root .MuiIconButton-root.Mui-disabled {
-  color: rgba(148, 163, 184, 0.3) !important;
-}
+/* =========================================================
+   Visual Similar Moderation – custom class overrides
+   ========================================================= */
 
-/* MRT column actions menu */
-.dashboard-content .MuiMenu-paper {
-  background: rgba(15, 23, 42, 0.96) !important;
-  border: 1px solid rgba(148, 163, 184, 0.3) !important;
-  color: #e2e8f0 !important;
-}
-.dashboard-content .MuiMenuItem-root {
-  color: #e2e8f0 !important;
-}
-.dashboard-content .MuiMenuItem-root:hover {
-  background: rgba(56, 189, 248, 0.12) !important;
-}
-
-/* MRT row expansion */
-.dashboard-content .MuiCollapse-root {
-  background: rgba(2, 6, 23, 0.4) !important;
-}
-
-/* ── SVG icons inside dashboard ── */
-.dashboard-content .MuiSvgIcon-root {
-  color: inherit;
-}
-
-/* ── Tooltip ── */
-.dashboard-content .MuiTooltip-tooltip {
-  background: rgba(2, 6, 23, 0.92) !important;
-  color: #f8fafc !important;
-  border: 1px solid rgba(148, 163, 184, 0.3) !important;
-}
-
-/* ── Select / Autocomplete dropdown ── */
-.dashboard-content .MuiAutocomplete-paper,
-.dashboard-content .MuiPopover-paper {
-  background: rgba(15, 23, 42, 0.96) !important;
-  color: #e2e8f0 !important;
-  border: 1px solid rgba(148, 163, 184, 0.3) !important;
-}
-.dashboard-content .MuiAutocomplete-option {
-  color: #e2e8f0 !important;
-}
-.dashboard-content .MuiAutocomplete-option:hover,
-.dashboard-content .MuiAutocomplete-option[aria-selected="true"] {
-  background: rgba(56, 189, 248, 0.12) !important;
-}
-
-/* ── Visual Similar Moderation Specific Overrides ── */
 .dashboard-content .MuiPaper-root.visual-group-container.even {
-  background: rgba(15, 23, 42, 0.72) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .dashboard-content .MuiPaper-root.visual-group-container.odd {
-  background: rgba(20, 18, 23, 0.93) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(20, 18, 23, 0.93);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .dashboard-content .MuiPaper-root.visual-asset-card {
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .dashboard-content .MuiPaper-root.visual-asset-card.primary {
-  background: rgba(15, 23, 42, 0.85) !important; /* Mismo fondo que card normal */
-  border: 2px solid #fbbf24 !important;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3) !important;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
 }
 
 .dashboard-content .MuiPaper-root.visual-asset-card.selected {
-  background: rgba(255, 23, 68, 0.15) !important;
-  border: 3px solid #ff1744 !important;
-  box-shadow: 0 0 16px rgba(255, 23, 68, 0.7), 0 0 32px rgba(255, 23, 68, 0.35), inset 0 0 8px rgba(255, 23, 68, 0.15) !important;
+  background: rgba(255, 23, 68, 0.15);
+  border: 3px solid #ff1744;
+  box-shadow: 0 0 16px rgba(255, 23, 68, 0.7), 0 0 32px rgba(255, 23, 68, 0.35), inset 0 0 8px rgba(255, 23, 68, 0.15);
 }
 
 .dashboard-content .MuiChip-root.chip-sim-high {
-  background: rgba(34, 197, 94, 0.25) !important;
-  color: #4ade80 !important;
-  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+  background: rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
 .dashboard-content .MuiChip-root.chip-sim-medium {
-  background: rgba(249, 115, 22, 0.25) !important;
-  color: #fb923c !important;
-  border: 1px solid rgba(249, 115, 22, 0.5) !important;
+  background: rgba(249, 115, 22, 0.25);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.5);
 }
 
 .dashboard-content .MuiChip-root.chip-sim-low {
-  background: rgba(239, 68, 68, 0.25) !important;
-  color: #f87171 !important;
-  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 .dashboard-content .btn-discard-group {
-  background: rgba(14, 165, 233, 0.9) !important;
-  color: #ffffff !important;
-  font-weight: bold !important;
-  border: none !important;
+  background: rgba(14, 165, 233, 0.9);
+  color: #ffffff;
+  font-weight: bold;
+  border: none;
 }
 .dashboard-content .btn-discard-group:hover {
-  background: rgba(2, 132, 199, 1) !important;
+  background: rgba(2, 132, 199, 1);
 }
-

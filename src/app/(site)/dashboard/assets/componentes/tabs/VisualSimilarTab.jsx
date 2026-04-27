@@ -73,10 +73,9 @@ export default function VisualSimilarTab({
                 sx={{
                     p: 2,
                     borderRadius: 2,
-                    bgcolor: (theme) =>
-                        theme.palette.mode === 'dark'
-                            ? 'rgba(22,22,22,0.9)'
-                            : 'background.paper',
+                    bgcolor: 'rgba(0, 0, 0, 0)',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    boxShadow: 'none',
                 }}
             >
                 <Stack
@@ -262,7 +261,7 @@ export default function VisualSimilarTab({
                 )}
                 <Stack spacing={2} sx={{ height: isReviewMode ? 'calc(100vh - 40px)' : { xs: 'calc(100vh - 200px)', lg: 'calc(100vh - 120px)' } }}>
                     {!visualSimilarGroups.length && !visualSimilarLoading && (
-                        <Paper sx={{ p: 3, borderRadius: 2 }}>
+                        <Paper sx={{ p: 3, borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', boxShadow: 'none' }}>
                             <Typography
                                 variant="body1"
                                 sx={{ fontWeight: 600, mb: 0.5 }}
@@ -577,6 +576,9 @@ export default function VisualSimilarTab({
                             top: { lg: 16 },
                             maxHeight: { lg: 'calc(100vh - 120px)' },
                             overflow: 'auto',
+                            bgcolor: 'rgba(0, 0, 0, 0)',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            boxShadow: 'none',
                         }}
                     >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -710,6 +712,9 @@ export default function VisualSimilarTab({
                             flexDirection: 'column',
                             alignItems: 'center',
                             minHeight: 200,
+                            bgcolor: 'rgba(0, 0, 0, 0)',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            boxShadow: 'none',
                         }}
                     >
                         <IconButton size="small" onClick={() => setIsSidebarExpanded(true)}>

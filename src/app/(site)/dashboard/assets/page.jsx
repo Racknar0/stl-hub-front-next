@@ -20,8 +20,6 @@ import {
     Tabs,
     Tab,
     Paper,
-    LinearProgress,
-    Slider,
     Dialog,
     ThemeProvider,
     createTheme,
@@ -42,13 +40,12 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import CachedIcon from '@mui/icons-material/Cached';
-import '../dashboard.scss';
+
 
 // Nuevos componentes
 import ToolbarBusqueda from './componentes/ToolbarBusqueda';
 import AssetsListTab from './componentes/tabs/AssetsListTab';
-import ImageSimilarTab from './componentes/tabs/ImageSimilarTab';
-import NameSimilarTab from './componentes/tabs/NameSimilarTab';
+// ImageSimilarTab y NameSimilarTab eliminados Ã¢â‚¬â€ reemplazados por VisualSimilarTab (Qdrant)
 import VisualSimilarTab from './componentes/tabs/VisualSimilarTab';
 import MetaSeoTab from './componentes/tabs/MetaSeoTab';
 
@@ -84,8 +81,6 @@ const darkTheme = createTheme({
 });
 
 export default function AssetsAdminPage() {
-    const SIMILAR_GROUPS_PAGE_SIZE = 20;
-
     // Servicios
     const http = new HttpService();
 
@@ -101,7 +96,7 @@ export default function AssetsAdminPage() {
     const [pageSize, setPageSize] = useState(50);
     const [rowCount, setRowCount] = useState(0);
     const [refreshTick, setRefreshTick] = useState(0);
-    // filtro plan (se mantiene en backend, pero aquí no exponemos UI adicional salvo búsqueda normal)
+    // filtro plan (se mantiene en backend, pero aquÃƒÂ­ no exponemos UI adicional salvo bÃƒÂºsqueda normal)
     const [showFreeOnly, setShowFreeOnly] = useState(false);
 
     // Estado: modales
@@ -112,9 +107,9 @@ export default function AssetsAdminPage() {
     const [dropFound, setDropFound] = useState([]);
     const [dropNotFound, setDropNotFound] = useState([]);
 
-    // Estado: selección actual y formularios
+    // Estado: selecciÃƒÂ³n actual y formularios
     const [selected, setSelected] = useState(null);
-    // Edit form sin categoría legacy
+    // Edit form sin categorÃƒÂ­a legacy
     const [editForm, setEditForm] = useState({
         title: '',
         titleEn: '',
@@ -122,15 +117,15 @@ export default function AssetsAdminPage() {
         tags: [],
         isPremium: false,
     });
-    // Detalle bilingüe
+    // Detalle bilingÃƒÂ¼e
     const [detail, setDetail] = useState(null);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
-    // Catálogo meta
+    // CatÃƒÂ¡logo meta
     const [categories, setCategories] = useState([]);
     const [allTags, setAllTags] = useState([]);
 
-    // Estado: imágenes del editor
+    // Estado: imÃƒÂ¡genes del editor
     const [tab, setTab] = useState(0);
     const [metaDraftMap, setMetaDraftMap] = useState({});
     const [metaSelectedMap, setMetaSelectedMap] = useState({});
@@ -140,70 +135,12 @@ export default function AssetsAdminPage() {
     const [metaProfilesOpen, setMetaProfilesOpen] = useState(false);
     const [metaProfileAssetId, setMetaProfileAssetId] = useState(null);
 
-    // Virtualización nativa para META-SEO
+    // VirtualizaciÃƒÂ³n nativa para META-SEO
     const metaScrollRef = useRef(null);
     const [metaScrollTop, setMetaScrollTop] = useState(0);
 
-    const [similarThreshold, setSimilarThreshold] = useState(88);
-    const [similarLoading, setSimilarLoading] = useState(false);
-    const [similarError, setSimilarError] = useState('');
-    const [similarProgress, setSimilarProgress] = useState({
-        done: 0,
-        total: 0,
-    });
-    const [similarGroups, setSimilarGroups] = useState([]);
-    const [similarVisibleCount, setSimilarVisibleCount] = useState(
-        SIMILAR_GROUPS_PAGE_SIZE,
-    );
-    const [similarSelectedMap, setSimilarSelectedMap] = useState({});
-    const [similarPrimaryMap, setSimilarPrimaryMap] = useState({});
+    // Estado compartido: pares ignorados (usado por visual-similar)
     const [similarIgnoredPairMap, setSimilarIgnoredPairMap] = useState({});
-    const [similarBackfill, setSimilarBackfill] = useState({
-        running: false,
-        startedAt: null,
-        finishedAt: null,
-        totalAssets: 0,
-        processedAssets: 0,
-        totalImages: 0,
-        processedImages: 0,
-        hashedRows: 0,
-        failedImages: 0,
-        currentAssetId: null,
-        lastError: null,
-    });
-    const [similarHashStats, setSimilarHashStats] = useState({
-        assetsTotal: 0,
-        hashRows: 0,
-    });
-    const [similarDeleteProgress, setSimilarDeleteProgress] = useState({
-        running: false,
-        total: 0,
-        processed: 0,
-        success: 0,
-        failed: 0,
-        currentAssetId: null,
-    });
-    const [nameSimilarThreshold, setNameSimilarThreshold] = useState(86);
-    const [nameSimilarLoading, setNameSimilarLoading] = useState(false);
-    const [nameSimilarError, setNameSimilarError] = useState('');
-    const [nameSimilarProgress, setNameSimilarProgress] = useState({
-        done: 0,
-        total: 0,
-    });
-    const [nameSimilarGroups, setNameSimilarGroups] = useState([]);
-    const [nameSimilarVisibleCount, setNameSimilarVisibleCount] = useState(
-        SIMILAR_GROUPS_PAGE_SIZE,
-    );
-    const [nameSimilarSelectedMap, setNameSimilarSelectedMap] = useState({});
-    const [nameSimilarPrimaryMap, setNameSimilarPrimaryMap] = useState({});
-    const [nameSimilarDeleteProgress, setNameSimilarDeleteProgress] = useState({
-        running: false,
-        total: 0,
-        processed: 0,
-        success: 0,
-        failed: 0,
-        currentAssetId: null,
-    });
     const [visualSimilarThreshold, setVisualSimilarThreshold] = useState(90);
     const [visualSimilarLoading, setVisualSimilarLoading] = useState(false);
     const [visualSimilarError, setVisualSimilarError] = useState('');
@@ -231,15 +168,12 @@ export default function AssetsAdminPage() {
     const [editImageFiles, setEditImageFiles] = useState([]);
     const [editPreviewIndex, setEditPreviewIndex] = useState(0);
     const fileInputRef = useRef(null);
-    const hashBackfillPollRef = useRef(null);
-    const similarLoadMoreRef = useRef(null);
-    const nameSimilarLoadMoreRef = useRef(null);
     const assetsRef = useRef([]);
     const metaImageSaveQueueRef = useRef(new Map());
 
-    // (Randomizar freebies se movió a otra pantalla del dashboard)
+    // (Randomizar freebies se moviÃƒÂ³ a otra pantalla del dashboard)
 
-    // Cargar catálogos (categorías y tags)
+    // Cargar catÃƒÂ¡logos (categorÃƒÂ­as y tags)
     const loadMeta = async () => {
         try {
             const [cats, tgs] = await Promise.all([
@@ -286,14 +220,7 @@ export default function AssetsAdminPage() {
         setSelected(null);
     };
 
-    useEffect(() => {
-        return () => {
-            if (hashBackfillPollRef.current) {
-                clearInterval(hashBackfillPollRef.current);
-                hashBackfillPollRef.current = null;
-            }
-        };
-    }, []);
+
 
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
@@ -315,375 +242,12 @@ export default function AssetsAdminPage() {
             .trim()
             .toLowerCase();
 
-    const titleSimilarity = (left, right) => {
-        const a = slugify(left || '');
-        const b = slugify(right || '');
-        if (!a || !b) return 0;
-        if (a === b) return 1;
 
-        const toBigrams = (value) => {
-            const arr = [];
-            for (let i = 0; i < value.length - 1; i += 1)
-                arr.push(value.slice(i, i + 2));
-            return arr;
-        };
 
-        const ag = toBigrams(a);
-        const bg = toBigrams(b);
-        if (!ag.length || !bg.length) return 0;
 
-        const freq = new Map();
-        ag.forEach((g) => freq.set(g, (freq.get(g) || 0) + 1));
 
-        let inter = 0;
-        bg.forEach((g) => {
-            const count = freq.get(g) || 0;
-            if (count > 0) {
-                inter += 1;
-                freq.set(g, count - 1);
-            }
-        });
 
-        return (2 * inter) / (ag.length + bg.length);
-    };
 
-    const buildSimilarGroups = (items, threshold) => {
-        const candidates = Array.from(items || []).filter(
-            (item) => Array.isArray(item?.images) && item.images.length > 0,
-        );
-        const buckets = new Map();
-
-        candidates.forEach((item) => {
-            const raw = item?.title || item?.archiveName || '';
-            const normalized = slugify(raw).replace(/-\d+$/, '');
-            const tokenKey = normalized
-                .split('-')
-                .filter(Boolean)
-                .slice(0, 3)
-                .join('-');
-            const key = tokenKey || normalized;
-            if (!key) return;
-            if (!buckets.has(key)) buckets.set(key, []);
-            buckets.get(key).push(item);
-        });
-
-        const groups = [];
-        let idx = 1;
-
-        buckets.forEach((bucket, key) => {
-            if (!Array.isArray(bucket) || bucket.length < 2) return;
-            const reference = bucket[0];
-            const scored = bucket.map((asset) => {
-                const similarity =
-                    asset.id === reference.id
-                        ? 100
-                        : Number(
-                              (
-                                  titleSimilarity(
-                                      reference?.title ||
-                                          reference?.archiveName,
-                                      asset?.title || asset?.archiveName,
-                                  ) * 100
-                              ).toFixed(2),
-                          );
-                const distance = Math.max(
-                    0,
-                    Math.round(((100 - similarity) / 100) * 64),
-                );
-                return { asset, similarity, distance };
-            });
-
-            const filtered = scored.filter(
-                (entry) =>
-                    entry.asset?.id === reference.id ||
-                    entry.similarity >= threshold,
-            );
-            if (filtered.length < 2) return;
-
-            const confidence = Number(
-                (
-                    filtered.reduce(
-                        (acc, entry) => acc + Number(entry.similarity || 0),
-                        0,
-                    ) / filtered.length
-                ).toFixed(2),
-            );
-            groups.push({
-                id: `similar-${idx}`,
-                signature: key,
-                confidence,
-                items: filtered.sort(
-                    (a, b) =>
-                        Number(b.similarity || 0) - Number(a.similarity || 0),
-                ),
-            });
-            idx += 1;
-        });
-
-        return groups.sort(
-            (a, b) => Number(b.confidence || 0) - Number(a.confidence || 0),
-        );
-    };
-
-    const buildNameSimilarGroups = (items, threshold) => {
-        const getNameText = (item) =>
-            String(item?.title || item?.archiveName || item?.slug || '').trim();
-        const candidates = Array.from(items || []).filter(
-            (item) => getNameText(item).length >= 3,
-        );
-        const buckets = new Map();
-
-        candidates.forEach((item) => {
-            const raw = getNameText(item);
-            const normalized = slugify(raw);
-            if (!normalized) return;
-
-            const tokens = normalized.split('-').filter(Boolean);
-            const head = tokens.slice(0, 3).join('-');
-            const compact = normalized.replace(/\d+/g, '');
-            const key = (head || compact || normalized).slice(0, 36);
-            if (!key) return;
-
-            if (!buckets.has(key)) buckets.set(key, []);
-            buckets.get(key).push(item);
-        });
-
-        const groups = [];
-        let idx = 1;
-
-        buckets.forEach((bucket, key) => {
-            if (!Array.isArray(bucket) || bucket.length < 2) return;
-
-            const limited = bucket
-                .slice()
-                .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
-                .slice(0, 220);
-
-            const byId = new Map();
-            limited.forEach((item) => {
-                const id = Number(item?.id);
-                if (Number.isFinite(id) && id > 0) byId.set(id, item);
-            });
-
-            const adjacency = new Map();
-            byId.forEach((_, id) => adjacency.set(id, new Set()));
-            const similarityCache = new Map();
-            const pairKey = (a, b) => {
-                const x = Number(a);
-                const y = Number(b);
-                if (
-                    !Number.isFinite(x) ||
-                    !Number.isFinite(y) ||
-                    x <= 0 ||
-                    y <= 0 ||
-                    x === y
-                )
-                    return '';
-                return x < y ? `${x}:${y}` : `${y}:${x}`;
-            };
-
-            const entries = Array.from(byId.entries());
-            for (let i = 0; i < entries.length; i += 1) {
-                for (let j = i + 1; j < entries.length; j += 1) {
-                    const [idA, assetA] = entries[i];
-                    const [idB, assetB] = entries[j];
-                    const similarity = Number(
-                        (
-                            titleSimilarity(
-                                getNameText(assetA),
-                                getNameText(assetB),
-                            ) * 100
-                        ).toFixed(2),
-                    );
-                    if (similarity < threshold) continue;
-
-                    const keyPair = pairKey(idA, idB);
-                    if (keyPair) similarityCache.set(keyPair, similarity);
-                    adjacency.get(idA)?.add(idB);
-                    adjacency.get(idB)?.add(idA);
-                }
-            }
-
-            const visited = new Set();
-            const ids = Array.from(byId.keys());
-            ids.forEach((seedId) => {
-                if (visited.has(seedId)) return;
-
-                const stack = [seedId];
-                const componentIds = [];
-                while (stack.length) {
-                    const current = stack.pop();
-                    if (!Number.isFinite(current) || visited.has(current))
-                        continue;
-                    visited.add(current);
-                    componentIds.push(current);
-                    const nexts = adjacency.get(current) || new Set();
-                    nexts.forEach((nextId) => {
-                        if (!visited.has(nextId)) stack.push(nextId);
-                    });
-                }
-
-                if (componentIds.length < 2) return;
-                const componentAssets = componentIds
-                    .map((id) => byId.get(id))
-                    .filter(Boolean)
-                    .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0));
-                if (componentAssets.length < 2) return;
-
-                const primary = componentAssets[0];
-                const primaryId = Number(primary?.id);
-                const groupItems = componentAssets.map((asset) => {
-                    const id = Number(asset?.id);
-                    let similarity = 100;
-                    if (id !== primaryId) {
-                        const k = pairKey(id, primaryId);
-                        similarity = Number(similarityCache.get(k));
-                        if (!Number.isFinite(similarity)) {
-                            similarity = Number(
-                                (
-                                    titleSimilarity(
-                                        getNameText(primary),
-                                        getNameText(asset),
-                                    ) * 100
-                                ).toFixed(2),
-                            );
-                        }
-                    }
-                    const distance = Math.max(
-                        0,
-                        Math.round(((100 - similarity) / 100) * 64),
-                    );
-                    return { asset, similarity, distance };
-                });
-
-                const confidence = Number(
-                    (
-                        groupItems.reduce(
-                            (acc, entry) => acc + Number(entry.similarity || 0),
-                            0,
-                        ) / groupItems.length
-                    ).toFixed(2),
-                );
-                groups.push({
-                    id: `name-similar-${idx}`,
-                    signature: `${key}-${primaryId}-${groupItems.length}`,
-                    confidence,
-                    items: groupItems.sort(
-                        (a, b) =>
-                            Number(b.similarity || 0) -
-                            Number(a.similarity || 0),
-                    ),
-                });
-                idx += 1;
-            });
-        });
-
-        return groups.sort((a, b) => {
-            if (Number(b.confidence || 0) !== Number(a.confidence || 0))
-                return Number(b.confidence || 0) - Number(a.confidence || 0);
-            return Number(b.items?.length || 0) - Number(a.items?.length || 0);
-        });
-    };
-
-    const similarAssetIndex = useMemo(() => {
-        const map = new Map();
-        similarGroups.forEach((group) => {
-            group.items.forEach((entry) => {
-                if (entry?.asset?.id)
-                    map.set(Number(entry.asset.id), entry.asset);
-            });
-        });
-        return map;
-    }, [similarGroups]);
-
-    const visibleSimilarGroups = useMemo(() => {
-        return similarGroups.slice(
-            0,
-            Math.max(0, Number(similarVisibleCount) || 0),
-        );
-    }, [similarGroups, similarVisibleCount]);
-
-    const hasMoreSimilarGroups = useMemo(() => {
-        return visibleSimilarGroups.length < similarGroups.length;
-    }, [visibleSimilarGroups.length, similarGroups.length]);
-
-    const loadMoreSimilarGroups = useCallback(() => {
-        setSimilarVisibleCount((prev) => {
-            const next = Number(prev || 0) + SIMILAR_GROUPS_PAGE_SIZE;
-            return Math.min(next, similarGroups.length);
-        });
-    }, [similarGroups.length]);
-
-    const selectedSimilarIds = useMemo(() => {
-        return Object.entries(similarSelectedMap)
-            .filter(([, value]) => !!value)
-            .map(([id]) => Number(id))
-            .filter((id) => Number.isFinite(id));
-    }, [similarSelectedMap]);
-
-    const selectedSimilarAssets = useMemo(() => {
-        return selectedSimilarIds
-            .map((id) => similarAssetIndex.get(id))
-            .filter(Boolean);
-    }, [selectedSimilarIds, similarAssetIndex]);
-
-    const selectedSimilarBytes = useMemo(() => {
-        return selectedSimilarAssets.reduce(
-            (acc, item) =>
-                acc + Number(item?.fileSizeB ?? item?.archiveSizeB ?? 0),
-            0,
-        );
-    }, [selectedSimilarAssets]);
-
-    const nameSimilarAssetIndex = useMemo(() => {
-        const map = new Map();
-        nameSimilarGroups.forEach((group) => {
-            group.items.forEach((entry) => {
-                if (entry?.asset?.id)
-                    map.set(Number(entry.asset.id), entry.asset);
-            });
-        });
-        return map;
-    }, [nameSimilarGroups]);
-
-    const visibleNameSimilarGroups = useMemo(() => {
-        return nameSimilarGroups.slice(
-            0,
-            Math.max(0, Number(nameSimilarVisibleCount) || 0),
-        );
-    }, [nameSimilarGroups, nameSimilarVisibleCount]);
-
-    const hasMoreNameSimilarGroups = useMemo(() => {
-        return visibleNameSimilarGroups.length < nameSimilarGroups.length;
-    }, [visibleNameSimilarGroups.length, nameSimilarGroups.length]);
-
-    const loadMoreNameSimilarGroups = useCallback(() => {
-        setNameSimilarVisibleCount((prev) => {
-            const next = Number(prev || 0) + SIMILAR_GROUPS_PAGE_SIZE;
-            return Math.min(next, nameSimilarGroups.length);
-        });
-    }, [nameSimilarGroups.length]);
-
-    const selectedNameSimilarIds = useMemo(() => {
-        return Object.entries(nameSimilarSelectedMap)
-            .filter(([, value]) => !!value)
-            .map(([id]) => Number(id))
-            .filter((id) => Number.isFinite(id));
-    }, [nameSimilarSelectedMap]);
-
-    const selectedNameSimilarAssets = useMemo(() => {
-        return selectedNameSimilarIds
-            .map((id) => nameSimilarAssetIndex.get(id))
-            .filter(Boolean);
-    }, [selectedNameSimilarIds, nameSimilarAssetIndex]);
-
-    const selectedNameSimilarBytes = useMemo(() => {
-        return selectedNameSimilarAssets.reduce(
-            (acc, item) =>
-                acc + Number(item?.fileSizeB ?? item?.archiveSizeB ?? 0),
-            0,
-        );
-    }, [selectedNameSimilarAssets]);
 
     const buildPairKey = (a, b) => {
         const x = Number(a);
@@ -720,581 +284,9 @@ export default function AssetsAdminPage() {
         }
     };
 
-    const loadHashStats = async () => {
-        try {
-            const res = await http.getData('/assets/similar/hash/stats');
-            const data = res?.data || {};
-            setSimilarHashStats({
-                assetsTotal: Number(data?.assetsTotal || 0),
-                hashRows: Number(data?.hashRows || 0),
-            });
-            if (data?.backfill && typeof data.backfill === 'object') {
-                setSimilarBackfill((prev) => ({ ...prev, ...data.backfill }));
-            }
-        } catch {}
-    };
-
-    const loadBackfillStatus = async () => {
-        try {
-            const res = await http.getData(
-                '/assets/similar/hash/backfill-status',
-            );
-            const data = res?.data || {};
-            setSimilarBackfill((prev) => ({ ...prev, ...data }));
-            return data;
-        } catch {
-            return null;
-        }
-    };
-
-    const stopBackfillPolling = () => {
-        if (hashBackfillPollRef.current) {
-            clearInterval(hashBackfillPollRef.current);
-            hashBackfillPollRef.current = null;
-        }
-    };
-
-    const startBackfillPolling = () => {
-        stopBackfillPolling();
-        hashBackfillPollRef.current = setInterval(async () => {
-            const state = await loadBackfillStatus();
-            if (state && !state.running) {
-                stopBackfillPolling();
-                await loadHashStats();
-            }
-        }, 3000);
-    };
-
-    const startHashBackfill = async () => {
-        try {
-            await http.postData('/assets/similar/hash/backfill', {});
-            await loadBackfillStatus();
-            startBackfillPolling();
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message ||
-                    'No se pudo iniciar el backfill de hashes',
-            );
-        }
-    };
-
-    const analyzeSimilarAssets = async (options = {}) => {
-        const ignoreDismissed = !!options?.ignoreDismissed;
-        try {
-            setSimilarLoading(true);
-            setSimilarError('');
-            setSimilarGroups([]);
-            setSimilarVisibleCount(SIMILAR_GROUPS_PAGE_SIZE);
-            setSimilarSelectedMap({});
-            setSimilarPrimaryMap({});
-            setSimilarProgress({ done: 0, total: 0 });
-
-            const pageSize = 1000;
-            const allItems = [];
-            let pageIndexScan = 0;
-            let totalScan = 0;
-
-            while (true) {
-                const res = await http.getData(
-                    `/assets?pageIndex=${pageIndexScan}&pageSize=${pageSize}`,
-                );
-                const payload = res.data;
-
-                if (payload && Array.isArray(payload.items)) {
-                    const chunk = payload.items;
-                    if (!Number(totalScan)) {
-                        totalScan = Number(payload.total) || chunk.length;
-                    }
-
-                    allItems.push(...chunk);
-                    setSimilarProgress({
-                        done: allItems.length,
-                        total: totalScan || allItems.length,
-                    });
-
-                    if (!chunk.length || allItems.length >= totalScan) break;
-                    pageIndexScan += 1;
-                    if (pageIndexScan > 500) break;
-                    continue;
-                }
-
-                if (Array.isArray(payload)) {
-                    allItems.push(...payload);
-                    setSimilarProgress({
-                        done: allItems.length,
-                        total: allItems.length,
-                    });
-                }
-                break;
-            }
-
-            const allGroups = buildSimilarGroups(allItems, similarThreshold);
-            const ignoredMap = ignoreDismissed ? {} : await loadIgnoredPairs();
-            const groups = allGroups.filter((group) => {
-                const ids = Array.isArray(group?.items)
-                    ? group.items
-                          .map((entry) => Number(entry?.asset?.id))
-                          .filter((n) => Number.isFinite(n) && n > 0)
-                    : [];
-                if (ids.length < 2) return false;
-
-                let hasVisiblePair = false;
-                for (let i = 0; i < ids.length; i += 1) {
-                    for (let j = i + 1; j < ids.length; j += 1) {
-                        const key = buildPairKey(ids[i], ids[j]);
-                        if (key && !ignoredMap[key]) {
-                            hasVisiblePair = true;
-                            break;
-                        }
-                    }
-                    if (hasVisiblePair) break;
-                }
-                return hasVisiblePair;
-            });
-            setSimilarGroups(groups);
-            setSimilarVisibleCount(
-                Math.min(SIMILAR_GROUPS_PAGE_SIZE, groups.length || 0),
-            );
-
-            const primaries = {};
-            groups.forEach((group) => {
-                if (group?.items?.[0]?.asset?.id)
-                    primaries[group.id] = Number(group.items[0].asset.id);
-            });
-            setSimilarPrimaryMap(primaries);
-        } catch (e) {
-            console.error('Error analizando similares', e);
-            setSimilarError(
-                e?.response?.data?.message ||
-                    'No se pudieron analizar los assets para similitud.',
-            );
-        } finally {
-            setSimilarLoading(false);
-        }
-    };
-
-    const toggleSimilarSelection = (assetId) => {
-        const id = Number(assetId);
-        if (!Number.isFinite(id)) return;
-        setSimilarSelectedMap((prev) => ({ ...prev, [id]: !prev[id] }));
-    };
-
-    const setPrimaryInGroup = (groupId, assetId) => {
-        const id = Number(assetId);
-        if (!groupId || !Number.isFinite(id)) return;
-        setSimilarPrimaryMap((prev) => ({ ...prev, [groupId]: id }));
-        setSimilarSelectedMap((prev) => {
-            if (!prev[id]) return prev;
-            const next = { ...prev };
-            delete next[id];
-            return next;
-        });
-    };
-
-    const selectGroupDuplicates = (group) => {
-        if (!group?.id || !Array.isArray(group?.items)) return;
-        const primaryId = Number(
-            similarPrimaryMap[group.id] || group.items?.[0]?.asset?.id,
-        );
-        setSimilarSelectedMap((prev) => {
-            const next = { ...prev };
-            group.items.forEach((entry) => {
-                const id = Number(entry?.asset?.id);
-                if (!Number.isFinite(id)) return;
-                if (id === primaryId) delete next[id];
-                else next[id] = true;
-            });
-            return next;
-        });
-    };
-
-    const clearSimilarSelection = () => setSimilarSelectedMap({});
-
-    const dismissSimilarGroup = async (group) => {
-        if (!group?.signature) return;
-
-        const assetIds = Array.isArray(group?.items)
-            ? group.items
-                  .map((entry) => Number(entry?.asset?.id))
-                  .filter((n) => Number.isFinite(n) && n > 0)
-            : [];
-
-        const pairs = [];
-        for (let i = 0; i < assetIds.length; i += 1) {
-            for (let j = i + 1; j < assetIds.length; j += 1) {
-                const a = assetIds[i];
-                const b = assetIds[j];
-                if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
-                    const key = buildPairKey(a, b);
-                    if (key)
-                        pairs.push({
-                            assetAId: Math.min(a, b),
-                            assetBId: Math.max(a, b),
-                            key,
-                        });
-                }
-            }
-        }
-        if (!pairs.length) return;
-
-        setSimilarIgnoredPairMap((prev) => {
-            const next = { ...prev };
-            pairs.forEach((p) => {
-                next[p.key] = true;
-            });
-            return next;
-        });
-        setSimilarGroups((prev) =>
-            prev.filter((g) => g.signature !== group.signature),
-        );
-        setSimilarPrimaryMap((prev) => {
-            const next = { ...prev };
-            if (group?.id) delete next[group.id];
-            return next;
-        });
-        setSimilarSelectedMap((prev) => {
-            const next = { ...prev };
-            (group?.items || []).forEach((entry) => {
-                const id = Number(entry?.asset?.id);
-                if (Number.isFinite(id)) delete next[id];
-            });
-            return next;
-        });
-
-        try {
-            await http.postData('/assets/similar/ignored-pairs', {
-                pairs: pairs.map((p) => ({
-                    assetAId: p.assetAId,
-                    assetBId: p.assetBId,
-                })),
-            });
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message ||
-                    'No se pudo guardar el descarte en base de datos',
-            );
-        }
-    };
-
-    const reactivateDismissedGroups = async () => {
-        try {
-            await http.deleteRaw('/assets/similar/ignored-pairs');
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message ||
-                    'No se pudieron reactivar los descartes',
-            );
-            return;
-        }
-        setSimilarIgnoredPairMap({});
-        await analyzeSimilarAssets({ ignoreDismissed: true });
-    };
-
-    const analyzeNameSimilarAssets = async (options = {}) => {
-        const ignoreDismissed = !!options?.ignoreDismissed;
-        try {
-            setNameSimilarLoading(true);
-            setNameSimilarError('');
-            setNameSimilarGroups([]);
-            setNameSimilarVisibleCount(SIMILAR_GROUPS_PAGE_SIZE);
-            setNameSimilarSelectedMap({});
-            setNameSimilarPrimaryMap({});
-            setNameSimilarProgress({ done: 0, total: 0 });
-
-            const pageSize = 1000;
-            const allItems = [];
-            let pageIndexScan = 0;
-            let totalScan = 0;
-
-            while (true) {
-                const res = await http.getData(
-                    `/assets?pageIndex=${pageIndexScan}&pageSize=${pageSize}`,
-                );
-                const payload = res.data;
-
-                if (payload && Array.isArray(payload.items)) {
-                    const chunk = payload.items;
-                    if (!Number(totalScan)) {
-                        totalScan = Number(payload.total) || chunk.length;
-                    }
-
-                    allItems.push(...chunk);
-                    setNameSimilarProgress({
-                        done: allItems.length,
-                        total: totalScan || allItems.length,
-                    });
-
-                    if (!chunk.length || allItems.length >= totalScan) break;
-                    pageIndexScan += 1;
-                    if (pageIndexScan > 500) break;
-                    continue;
-                }
-
-                if (Array.isArray(payload)) {
-                    allItems.push(...payload);
-                    setNameSimilarProgress({
-                        done: allItems.length,
-                        total: allItems.length,
-                    });
-                }
-                break;
-            }
-
-            const allGroups = buildNameSimilarGroups(
-                allItems,
-                nameSimilarThreshold,
-            );
-            const ignoredMap = ignoreDismissed ? {} : await loadIgnoredPairs();
-
-            const groups = allGroups.filter((group) => {
-                const ids = Array.isArray(group?.items)
-                    ? group.items
-                          .map((entry) => Number(entry?.asset?.id))
-                          .filter((n) => Number.isFinite(n) && n > 0)
-                    : [];
-                if (ids.length < 2) return false;
-
-                let hasVisiblePair = false;
-                for (let i = 0; i < ids.length; i += 1) {
-                    for (let j = i + 1; j < ids.length; j += 1) {
-                        const key = buildPairKey(ids[i], ids[j]);
-                        if (key && !ignoredMap[key]) {
-                            hasVisiblePair = true;
-                            break;
-                        }
-                    }
-                    if (hasVisiblePair) break;
-                }
-                return hasVisiblePair;
-            });
-
-            setNameSimilarGroups(groups);
-            setNameSimilarVisibleCount(
-                Math.min(SIMILAR_GROUPS_PAGE_SIZE, groups.length || 0),
-            );
-
-            const primaries = {};
-            groups.forEach((group) => {
-                if (group?.items?.[0]?.asset?.id)
-                    primaries[group.id] = Number(group.items[0].asset.id);
-            });
-            setNameSimilarPrimaryMap(primaries);
-        } catch (e) {
-            console.error('Error analizando nombres similares', e);
-            setNameSimilarError(
-                e?.response?.data?.message ||
-                    'No se pudieron analizar los assets por nombre.',
-            );
-        } finally {
-            setNameSimilarLoading(false);
-        }
-    };
-
-    const toggleNameSimilarSelection = (assetId) => {
-        const id = Number(assetId);
-        if (!Number.isFinite(id)) return;
-        setNameSimilarSelectedMap((prev) => ({ ...prev, [id]: !prev[id] }));
-    };
-
-    const setNamePrimaryInGroup = (groupId, assetId) => {
-        const id = Number(assetId);
-        if (!groupId || !Number.isFinite(id)) return;
-        setNameSimilarPrimaryMap((prev) => ({ ...prev, [groupId]: id }));
-        setNameSimilarSelectedMap((prev) => {
-            if (!prev[id]) return prev;
-            const next = { ...prev };
-            delete next[id];
-            return next;
-        });
-    };
-
-    const selectNameGroupDuplicates = (group) => {
-        if (!group?.id || !Array.isArray(group?.items)) return;
-        const primaryId = Number(
-            nameSimilarPrimaryMap[group.id] || group.items?.[0]?.asset?.id,
-        );
-        setNameSimilarSelectedMap((prev) => {
-            const next = { ...prev };
-            group.items.forEach((entry) => {
-                const id = Number(entry?.asset?.id);
-                if (!Number.isFinite(id)) return;
-                if (id === primaryId) delete next[id];
-                else next[id] = true;
-            });
-            return next;
-        });
-    };
-
-    const clearNameSimilarSelection = () => setNameSimilarSelectedMap({});
-
-    const dismissNameSimilarGroup = async (group) => {
-        if (!group?.id) return;
-
-        const assetIds = Array.isArray(group?.items)
-            ? group.items
-                  .map((entry) => Number(entry?.asset?.id))
-                  .filter((n) => Number.isFinite(n) && n > 0)
-            : [];
-
-        const pairs = [];
-        for (let i = 0; i < assetIds.length; i += 1) {
-            for (let j = i + 1; j < assetIds.length; j += 1) {
-                const a = assetIds[i];
-                const b = assetIds[j];
-                if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
-                    const key = buildPairKey(a, b);
-                    if (key)
-                        pairs.push({
-                            assetAId: Math.min(a, b),
-                            assetBId: Math.max(a, b),
-                            key,
-                        });
-                }
-            }
-        }
-        if (!pairs.length) return;
-
-        setSimilarIgnoredPairMap((prev) => {
-            const next = { ...prev };
-            pairs.forEach((p) => {
-                next[p.key] = true;
-            });
-            return next;
-        });
-
-        setNameSimilarGroups((prev) => prev.filter((g) => g.id !== group.id));
-        setNameSimilarPrimaryMap((prev) => {
-            const next = { ...prev };
-            delete next[group.id];
-            return next;
-        });
-        setNameSimilarSelectedMap((prev) => {
-            const next = { ...prev };
-            (group?.items || []).forEach((entry) => {
-                const id = Number(entry?.asset?.id);
-                if (Number.isFinite(id)) delete next[id];
-            });
-            return next;
-        });
-
-        try {
-            await http.postData('/assets/similar/ignored-pairs', {
-                pairs: pairs.map((p) => ({
-                    assetAId: p.assetAId,
-                    assetBId: p.assetBId,
-                })),
-            });
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message ||
-                    'No se pudo guardar el descarte en base de datos',
-            );
-        }
-    };
-
-    const reactivateNameDismissedGroups = async () => {
-        try {
-            await http.deleteRaw('/assets/similar/ignored-pairs');
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message ||
-                    'No se pudieron reactivar los descartes',
-            );
-            return;
-        }
-        setSimilarIgnoredPairMap({});
-        await analyzeNameSimilarAssets({ ignoreDismissed: true });
-    };
-
-    const handleDeleteSelectedNameSimilar = async () => {
-        if (!selectedNameSimilarIds.length) return;
-
-        const ok = await confirmAlert(
-            'Eliminar seleccionados',
-            `Se eliminarán ${selectedNameSimilarIds.length} assets seleccionados del resultado por nombre.`,
-            'Sí, eliminar',
-            'Cancelar',
-            'warning',
-        );
-        if (!ok) return;
-
-        let successCount = 0;
-        let failedCount = 0;
-        const idsToDelete = [...selectedNameSimilarIds];
-        setNameSimilarLoading(true);
-        setNameSimilarDeleteProgress({
-            running: true,
-            total: idsToDelete.length,
-            processed: 0,
-            success: 0,
-            failed: 0,
-            currentAssetId: null,
-        });
-
-        for (const id of idsToDelete) {
-            setNameSimilarDeleteProgress((prev) => ({
-                ...prev,
-                currentAssetId: id,
-            }));
-            try {
-                await http.deleteData('/assets', id);
-                successCount += 1;
-                setNameSimilarDeleteProgress((prev) => ({
-                    ...prev,
-                    processed: prev.processed + 1,
-                    success: prev.success + 1,
-                }));
-            } catch (e) {
-                failedCount += 1;
-                setNameSimilarDeleteProgress((prev) => ({
-                    ...prev,
-                    processed: prev.processed + 1,
-                    failed: prev.failed + 1,
-                }));
-            }
-        }
-
-        const deletedSet = new Set(idsToDelete);
-        setNameSimilarGroups((prev) => {
-            return prev
-                .map((group) => ({
-                    ...group,
-                    items: group.items.filter(
-                        (entry) => !deletedSet.has(Number(entry?.asset?.id)),
-                    ),
-                }))
-                .filter((group) => group.items.length > 1);
-        });
-        setNameSimilarSelectedMap({});
-        setRefreshTick((n) => n + 1);
-        setNameSimilarLoading(false);
-        setNameSimilarDeleteProgress((prev) => ({
-            ...prev,
-            running: false,
-            currentAssetId: null,
-        }));
-
-        if (successCount > 0) {
-            await successAlert(
-                'Eliminados',
-                `Se eliminaron ${successCount} assets correctamente.`,
-            );
-        }
-        if (failedCount > 0) {
-            await errorAlert(
-                'Parcial',
-                `No se pudieron eliminar ${failedCount} assets.`,
-            );
-        }
-    };
 
     // ==========================================
-    // LÓGICA SIMILAR-VISUAL
+    // LÃƒâ€œGICA SIMILAR-VISUAL
     // ==========================================
 
     const analyzeVisualSimilarAssets = async () => {
@@ -1493,8 +485,8 @@ export default function AssetsAdminPage() {
 
         const ok = await confirmAlert(
             'Eliminar seleccionados',
-            `Se eliminarán ${idsToDelete.length} assets seleccionados del resultado multimodal.`,
-            'Sí, eliminar',
+            `Se eliminarÃƒÂ¡n ${idsToDelete.length} assets seleccionados del resultado multimodal.`,
+            'SÃƒÂ­, eliminar',
             'Cancelar',
             'warning',
         );
@@ -1570,69 +562,6 @@ export default function AssetsAdminPage() {
     };
 
 
-    useEffect(() => {
-        if (tab !== 1) return;
-        if (!hasMoreSimilarGroups) return;
-        const target = similarLoadMoreRef.current;
-        if (!target) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries.some((entry) => entry.isIntersecting)) {
-                    loadMoreSimilarGroups();
-                }
-            },
-            { root: null, rootMargin: '300px 0px' },
-        );
-
-        observer.observe(target);
-        return () => observer.disconnect();
-    }, [
-        tab,
-        hasMoreSimilarGroups,
-        loadMoreSimilarGroups,
-        visibleSimilarGroups.length,
-    ]);
-
-    useEffect(() => {
-        if (tab !== 2) return;
-        if (!hasMoreNameSimilarGroups) return;
-        const target = nameSimilarLoadMoreRef.current;
-        if (!target) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries.some((entry) => entry.isIntersecting)) {
-                    loadMoreNameSimilarGroups();
-                }
-            },
-            { root: null, rootMargin: '300px 0px' },
-        );
-
-        observer.observe(target);
-        return () => observer.disconnect();
-    }, [
-        tab,
-        hasMoreNameSimilarGroups,
-        loadMoreNameSimilarGroups,
-        visibleNameSimilarGroups.length,
-    ]);
-
-    useEffect(() => {
-        if (tab !== 1) return;
-        (async () => {
-            await Promise.all([loadIgnoredPairs(), loadHashStats()]);
-            const state = await loadBackfillStatus();
-            if (state?.running) startBackfillPolling();
-        })();
-    }, [tab]);
-
-    useEffect(() => {
-        if (tab !== 2) return;
-        (async () => {
-            await loadIgnoredPairs();
-        })();
-    }, [tab]);
 
     const openSimilarViewer = (asset, imageIndex = 0) => {
         const images = Array.isArray(asset?.images) ? asset.images : [];
@@ -1653,89 +582,9 @@ export default function AssetsAdminPage() {
         setSimilarViewer((prev) => ({ ...prev, open: false }));
     };
 
-    const handleDeleteSelectedSimilar = async () => {
-        if (!selectedSimilarIds.length) return;
 
-        const ok = await confirmAlert(
-            'Eliminar seleccionados',
-            `Se eliminarán ${selectedSimilarIds.length} assets seleccionados del resultado de similitud.`,
-            'Sí, eliminar',
-            'Cancelar',
-            'warning',
-        );
-        if (!ok) return;
 
-        let successCount = 0;
-        let failedCount = 0;
-        const idsToDelete = [...selectedSimilarIds];
-        setSimilarLoading(true);
-        setSimilarDeleteProgress({
-            running: true,
-            total: idsToDelete.length,
-            processed: 0,
-            success: 0,
-            failed: 0,
-            currentAssetId: null,
-        });
-
-        for (const id of idsToDelete) {
-            setSimilarDeleteProgress((prev) => ({
-                ...prev,
-                currentAssetId: id,
-            }));
-            try {
-                await http.deleteData('/assets', id);
-                successCount += 1;
-                setSimilarDeleteProgress((prev) => ({
-                    ...prev,
-                    processed: prev.processed + 1,
-                    success: prev.success + 1,
-                }));
-            } catch (e) {
-                failedCount += 1;
-                setSimilarDeleteProgress((prev) => ({
-                    ...prev,
-                    processed: prev.processed + 1,
-                    failed: prev.failed + 1,
-                }));
-            }
-        }
-
-        const deletedSet = new Set(idsToDelete);
-        setSimilarGroups((prev) => {
-            return prev
-                .map((group) => ({
-                    ...group,
-                    items: group.items.filter(
-                        (entry) => !deletedSet.has(Number(entry?.asset?.id)),
-                    ),
-                }))
-                .filter((group) => group.items.length > 1);
-        });
-        setSimilarSelectedMap({});
-        setRefreshTick((n) => n + 1);
-        setSimilarLoading(false);
-        setSimilarDeleteProgress((prev) => ({
-            ...prev,
-            running: false,
-            currentAssetId: null,
-        }));
-
-        if (successCount > 0) {
-            await successAlert(
-                'Eliminados',
-                `Se eliminaron ${successCount} assets correctamente.`,
-            );
-        }
-        if (failedCount > 0) {
-            await errorAlert(
-                'Parcial',
-                `No se pudieron eliminar ${failedCount} assets.`,
-            );
-        }
-    };
-
-    // Drop múltiple: busca assets por archiveName (exacto) y por nombre base como fallback.
+    // Drop mÃƒÂºltiple: busca assets por archiveName (exacto) y por nombre base como fallback.
     const handleDropManyFiles = async (fileNames) => {
         const names = Array.from(fileNames || [])
             .map((n) => String(n || '').trim())
@@ -1746,7 +595,7 @@ export default function AssetsAdminPage() {
             setLoading(true);
 
             // 1) Traer una ventana grande (pero limitada) de assets para poder matchear localmente.
-            // Si necesitas más de 1000, más adelante podemos iterar por páginas.
+            // Si necesitas mÃƒÂ¡s de 1000, mÃƒÂ¡s adelante podemos iterar por pÃƒÂ¡ginas.
             const res = await http.getData(`/assets?pageIndex=0&pageSize=1000`); // admin route
             const payload = res.data;
             const items = Array.isArray(payload?.items)
@@ -1806,7 +655,7 @@ export default function AssetsAdminPage() {
         }
     };
 
-    // Cargar datos de la tabla (paginación servidor)
+    // Cargar datos de la tabla (paginaciÃƒÂ³n servidor)
     useEffect(() => {
         const load = async () => {
             try {
@@ -1817,10 +666,10 @@ export default function AssetsAdminPage() {
                     pageSize: String(pageSize),
                 });
                 if (showFreeOnly) params.set('plan', 'free');
-                // Añadir filtros nuevos si están presentes
+                // AÃƒÂ±adir filtros nuevos si estÃƒÂ¡n presentes
                 const accTrim = String(accountQ || '').trim();
                 if (accTrim) {
-                    // si es número, tomar como accountId; si no, alias
+                    // si es nÃƒÂºmero, tomar como accountId; si no, alias
                     const asNum = Number(accTrim);
                     if (Number.isFinite(asNum) && asNum > 0)
                         params.set('accountId', String(asNum));
@@ -1856,7 +705,7 @@ export default function AssetsAdminPage() {
         assetsRef.current = Array.isArray(assets) ? assets : [];
     }, [assets]);
 
-    // Detalle: cargar bilingüe al abrir modal de vista
+    // Detalle: cargar bilingÃƒÂ¼e al abrir modal de vista
     useEffect(() => {
         if (previewOpen && selected?.id) {
             setLoadingDetail(true);
@@ -1872,7 +721,7 @@ export default function AssetsAdminPage() {
         }
     }, [previewOpen, selected?.id]);
 
-    // Tabla: definición de columnas (ES)
+    // Tabla: definiciÃƒÂ³n de columnas (ES)
     const StatusDot = ({ status }) => {
         const s = String(status || '').toUpperCase();
         const map = {
@@ -1935,7 +784,7 @@ export default function AssetsAdminPage() {
                                 setSelected(row.original);
                                 setPreviewOpen(true);
                             }}
-                            title="Ver imágenes"
+                            title="Ver imÃƒÂ¡genes"
                         />
                     ) : (
                         <Box
@@ -1992,7 +841,7 @@ export default function AssetsAdminPage() {
             },
             // {
             //   id: 'categoriesEs',
-            //   header: 'Categorías',
+            //   header: 'CategorÃƒÂ­as',
             //   accessorFn: (row) => {
             //     const cats = Array.isArray(row.categories) ? row.categories : []
             //     const names = cats.map(c => c?.name).filter(Boolean)
@@ -2048,7 +897,7 @@ export default function AssetsAdminPage() {
             },
             {
                 id: 'sizeB',
-                header: 'Tamaño',
+                header: 'TamaÃƒÂ±o',
                 accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
                 Cell: ({ cell }) => ( <Typography variant="body2"> {formatMBfromB(cell.getValue())} </Typography> ),
                 size: 100,
@@ -2216,14 +1065,14 @@ export default function AssetsAdminPage() {
             </Box>
         ),
         muiTableBodyRowProps: ({ row }) => {
-            // Cambia el color de fondo si el link está caído
+            // Cambia el color de fondo si el link estÃƒÂ¡ caÃƒÂ­do
             return row.original.megaLinkAlive === false
                 ? { sx: { backgroundColor: '#fc8282' } } // rojo claro, puedes ajustar el color
                 : {};
         },
     });
 
-    // Abrir editor con datos del asset (sin categoría legacy)
+    // Abrir editor con datos del asset (sin categorÃƒÂ­a legacy)
     const openEdit = async (asset) => {
         setSelected(asset);
         setEditForm({
@@ -2245,7 +1094,7 @@ export default function AssetsAdminPage() {
         await loadMeta();
     };
 
-    // Helpers de imágenes para editor
+    // Helpers de imÃƒÂ¡genes para editor
     const buildItemsFromFiles = (files) => {
         const list = [];
         Array.from(files || []).forEach((f, idx) => {
@@ -2307,13 +1156,13 @@ export default function AssetsAdminPage() {
     };
     const onSelectPreview = (idx) => setEditPreviewIndex(idx);
 
-    // Guardar edición (sin categoría legacy)
+    // Guardar ediciÃƒÂ³n (sin categorÃƒÂ­a legacy)
     const handleSaveEdit = async () => {
         if (!selected) return;
         const ok = await confirmAlert(
             'Confirmar cambios',
-            '¿Deseas aplicar las modificaciones a este STL?',
-            'Sí, guardar',
+            'Ã‚Â¿Deseas aplicar las modificaciones a este STL?',
+            'SÃƒÂ­, guardar',
             'Cancelar',
             'question',
         );
@@ -2360,8 +1209,8 @@ export default function AssetsAdminPage() {
     const handleDelete = async (asset) => {
         const ok = await confirmAlert(
             'Eliminar STL',
-            `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y se intentará borrar de MEGA.`,
-            'Sí, eliminar',
+            `Ã‚Â¿Deseas eliminar "${asset.title}"? Se borrarÃƒÂ¡ de la base de datos y se intentarÃƒÂ¡ borrar de MEGA.`,
+            'SÃƒÂ­, eliminar',
             'Cancelar',
             'warning',
         );
@@ -2398,8 +1247,8 @@ export default function AssetsAdminPage() {
     const handleRestoreLink = async (asset) => {
         const ok = await confirmAlert(
             'Restaurar link MEGA',
-            `¿Deseas restaurar el link MEGA para "${asset.title}"?`,
-            'Sí, restaurar',
+            `Ã‚Â¿Deseas restaurar el link MEGA para "${asset.title}"?`,
+            'SÃƒÂ­, restaurar',
             'Cancelar',
             'warning',
         );
@@ -2640,8 +1489,6 @@ export default function AssetsAdminPage() {
             }));
 
         setVisualSimilarGroups(updateGroups);
-        setNameSimilarGroups(updateGroups);
-        setSimilarGroups(updateGroups);
     }, []);
 
     const toggleMetaExpandedImages = useCallback((assetId) => {
@@ -2729,15 +1576,15 @@ export default function AssetsAdminPage() {
             (it) => Number(it?.id || 0) === id,
         );
         if (fromMeta) return fromMeta;
-        // 3) similarity groups (visual, name, image)
-        for (const groups of [visualSimilarGroups, nameSimilarGroups, similarGroups]) {
+        // 3) similarity groups (visual)
+        for (const groups of [visualSimilarGroups]) {
             for (const g of (Array.isArray(groups) ? groups : [])) {
                 const entry = (g.items || []).find((i) => Number(i?.asset?.id || 0) === id);
                 if (entry?.asset) return entry.asset;
             }
         }
         return null;
-    }, [metaRows, visualSimilarGroups, nameSimilarGroups, similarGroups]);
+    }, [metaRows, visualSimilarGroups]);
 
     const handleMetaSetFirstImage = useCallback(
         async (assetId, imgIndex) => {
@@ -2771,7 +1618,7 @@ export default function AssetsAdminPage() {
             } catch (e) {
                 await errorAlert(
                     'Error',
-                    e?.response?.data?.message || 'No se pudo actualizar el orden de imágenes',
+                    e?.response?.data?.message || 'No se pudo actualizar el orden de imÃƒÂ¡genes',
                 );
             } finally {
                 setMetaBusy(false);
@@ -2887,7 +1734,7 @@ export default function AssetsAdminPage() {
             if (!items.length) {
                 await errorAlert(
                     'Sin cambios',
-                    'No hay borradores válidos para guardar en selección.',
+                    'No hay borradores vÃƒÂ¡lidos para guardar en selecciÃƒÂ³n.',
                 );
                 return;
             }
@@ -2916,7 +1763,7 @@ export default function AssetsAdminPage() {
             await errorAlert(
                 'Error',
                 e?.response?.data?.message ||
-                    'No se pudo guardar la selección',
+                    'No se pudo guardar la selecciÃƒÂ³n',
             );
         } finally {
             setMetaBusy(false);
@@ -3055,8 +1902,8 @@ export default function AssetsAdminPage() {
     const handleGenerateAllDescriptions = async () => {
         const ok = await confirmAlert(
             'Generar descripciones (todos)',
-            'Esto intentará generar descripciones IA para todos los assets según el límite configurado. ¿Deseas continuar?',
-            'Sí, generar',
+            'Esto intentarÃƒÂ¡ generar descripciones IA para todos los assets segÃƒÂºn el lÃƒÂ­mite configurado. Ã‚Â¿Deseas continuar?',
+            'SÃƒÂ­, generar',
             'Cancelar',
             'warning',
         );
@@ -3067,8 +1914,8 @@ export default function AssetsAdminPage() {
     const handleGenerateMissingDescriptions = async () => {
         const ok = await confirmAlert(
             'Generar descripciones (faltantes)',
-            'Esto generará descripciones IA solo para assets con descripción faltante. ¿Deseas continuar?',
-            'Sí, generar',
+            'Esto generarÃƒÂ¡ descripciones IA solo para assets con descripciÃƒÂ³n faltante. Ã‚Â¿Deseas continuar?',
+            'SÃƒÂ­, generar',
             'Cancelar',
             'question',
         );
@@ -3192,20 +2039,6 @@ export default function AssetsAdminPage() {
                     }}
                 />
                 <Tab
-                    label="SIMILAR-IMAGES"
-                    sx={{
-                        color: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fff' : undefined,
-                    }}
-                />
-                <Tab
-                    label="SIMILAR-NAMES"
-                    sx={{
-                        color: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fff' : undefined,
-                    }}
-                />
-                <Tab
                     label="SIMILAR-VISUAL"
                     sx={{
                         color: (theme) =>
@@ -3259,81 +2092,6 @@ export default function AssetsAdminPage() {
                 />
             )}
             {tab === 1 && (
-                <ImageSimilarTab
-                    analyzeSimilarAssets={analyzeSimilarAssets}
-                    similarLoading={similarLoading}
-                    startHashBackfill={startHashBackfill}
-                    similarBackfill={similarBackfill}
-                    similarThreshold={similarThreshold}
-                    setSimilarThreshold={setSimilarThreshold}
-                    similarGroups={similarGroups}
-                    visibleSimilarGroups={visibleSimilarGroups}
-                    ignoredPairsCount={ignoredPairsCount}
-                    selectedSimilarIds={selectedSimilarIds}
-                    formatMBfromB={formatMBfromB}
-                    selectedSimilarBytes={selectedSimilarBytes}
-                    similarHashStats={similarHashStats}
-                    reactivateDismissedGroups={reactivateDismissedGroups}
-                    similarProgress={similarProgress}
-                    similarError={similarError}
-                    similarPrimaryMap={similarPrimaryMap}
-                    selectGroupDuplicates={selectGroupDuplicates}
-                    dismissSimilarGroup={dismissSimilarGroup}
-                    similarSelectedMap={similarSelectedMap}
-                    imgUrl={imgUrl}
-                    openSimilarViewer={openSimilarViewer}
-                    setPrimaryInGroup={setPrimaryInGroup}
-                    toggleSimilarSelection={toggleSimilarSelection}
-                    hasMoreSimilarGroups={hasMoreSimilarGroups}
-                    similarLoadMoreRef={similarLoadMoreRef}
-                    loadMoreSimilarGroups={loadMoreSimilarGroups}
-                    selectedSimilarAssets={selectedSimilarAssets}
-                    similarDeleteProgress={similarDeleteProgress}
-                    handleDeleteSelectedSimilar={
-                        handleDeleteSelectedSimilar
-                    }
-                    clearSimilarSelection={clearSimilarSelection}
-                    similarViewer={similarViewer}
-                    closeSimilarViewer={closeSimilarViewer}
-                />
-            )}
-            {tab === 2 && (
-                <NameSimilarTab
-                    analyzeNameSimilarAssets={analyzeNameSimilarAssets}
-                    nameSimilarLoading={nameSimilarLoading}
-                    nameSimilarThreshold={nameSimilarThreshold}
-                    setNameSimilarThreshold={setNameSimilarThreshold}
-                    nameSimilarGroups={nameSimilarGroups}
-                    visibleNameSimilarGroups={visibleNameSimilarGroups}
-                    ignoredPairsCount={ignoredPairsCount}
-                    selectedNameSimilarIds={selectedNameSimilarIds}
-                    formatMBfromB={formatMBfromB}
-                    selectedNameSimilarBytes={selectedNameSimilarBytes}
-                    reactivateNameDismissedGroups={
-                        reactivateNameDismissedGroups
-                    }
-                    nameSimilarProgress={nameSimilarProgress}
-                    nameSimilarError={nameSimilarError}
-                    nameSimilarPrimaryMap={nameSimilarPrimaryMap}
-                    selectNameGroupDuplicates={selectNameGroupDuplicates}
-                    dismissNameSimilarGroup={dismissNameSimilarGroup}
-                    nameSimilarSelectedMap={nameSimilarSelectedMap}
-                    imgUrl={imgUrl}
-                    openSimilarViewer={openSimilarViewer}
-                    setNamePrimaryInGroup={setNamePrimaryInGroup}
-                    toggleNameSimilarSelection={toggleNameSimilarSelection}
-                    hasMoreNameSimilarGroups={hasMoreNameSimilarGroups}
-                    nameSimilarLoadMoreRef={nameSimilarLoadMoreRef}
-                    loadMoreNameSimilarGroups={loadMoreNameSimilarGroups}
-                    selectedNameSimilarAssets={selectedNameSimilarAssets}
-                    nameSimilarDeleteProgress={nameSimilarDeleteProgress}
-                    handleDeleteSelectedNameSimilar={
-                        handleDeleteSelectedNameSimilar
-                    }
-                    clearNameSimilarSelection={clearNameSimilarSelection}
-                />
-            )}
-            {tab === 3 && (
                 <VisualSimilarTab
                     analyzeVisualSimilarAssets={analyzeVisualSimilarAssets}
                     visualSimilarLoading={visualSimilarLoading}
@@ -3391,7 +2149,7 @@ export default function AssetsAdminPage() {
                     loading={loading}
                 />
             )}
-            {tab === 4 && (
+            {tab === 2 && (
                 <MetaSeoTab
                     metaBusy={metaBusy}
                     loading={loading}

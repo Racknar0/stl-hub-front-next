@@ -238,6 +238,20 @@ export default function UsersPage() {
         muiToolbarAlertBannerProps: error
             ? { color: 'error', children: error }
             : undefined,
+        /* ── Dark theme para MRT ── */
+        muiTablePaperProps: {
+            sx: {
+                backgroundColor: 'rgba(0, 0, 0, 0)',
+                boxShadow: 'none',
+                border: 'none',
+            },
+        },
+        muiTopToolbarProps: {
+            sx: { backgroundColor: 'rgba(0, 0, 0, 0)' },
+        },
+        muiBottomToolbarProps: {
+            sx: { backgroundColor: 'rgba(0, 0, 0, 0)' },
+        },
         renderTopToolbarCustomActions: () => (
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
                 <TextField
@@ -309,8 +323,18 @@ export default function UsersPage() {
     });
 
     return (
-        <div className="dashboard-content p-3">
-            <h2 className="mb-3 text-center">Users</h2>
+        <>
+            <Box
+                component="h2"
+                sx={{
+                    mb: 2,
+                    textAlign: 'center',
+                    color: '#f8fafc',
+                    fontWeight: 800,
+                }}
+            >
+                Users
+            </Box>
 
             {/* Modal Crear usuario */}
             <Dialog open={showForm} onClose={() => setShowForm(false)} fullWidth maxWidth="sm">
@@ -340,9 +364,7 @@ export default function UsersPage() {
                 </Box>
             </Dialog>
 
-            <div className="card glass p-3">
-                <MaterialReactTable table={table} />
-            </div>
-        </div>
+            <MaterialReactTable table={table} />
+        </>
     );
 }

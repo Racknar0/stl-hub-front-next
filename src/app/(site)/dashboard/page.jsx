@@ -20,7 +20,7 @@ import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCar
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
 import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic';
 import TrafficCharts from '@/components/dashboard/modules/TrafficCharts/TrafficCharts';
-import './dashboard.scss';
+
 
 export default function Page() {
   const router = useRouter();
