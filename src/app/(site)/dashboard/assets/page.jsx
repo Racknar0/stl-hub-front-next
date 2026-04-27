@@ -1307,7 +1307,7 @@ export default function AssetsAdminPage() {
 
         try {
             let pageIndexScan = 0;
-            const pageSize = 50;
+            const pageSize = 500;
             const allGroups = [];
             const seenAssetIds = new Set();
 
