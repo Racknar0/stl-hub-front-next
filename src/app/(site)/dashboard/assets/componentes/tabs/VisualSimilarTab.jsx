@@ -180,18 +180,13 @@ export default function VisualSimilarTab({
 
                 {visualSimilarLoading && <LinearProgress color="secondary" sx={{ mt: 2 }} />}
                 {!!visualSimilarProgress.total && (
-                    <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 'bold' }}>
-                            {visualSimilarProgress.phase === 'scanning' && '🔍 Escaneando contra toda la BD...'}
-                            {visualSimilarProgress.phase === 'clustering' && '🧠 Fusionando redes de similitud...'}
-                            {visualSimilarProgress.phase === 'loading_groups' && '📦 Descargando grupos...'}
-                            {visualSimilarProgress.phase === 'done' && '✅ Análisis completado'}
-                            {visualSimilarProgress.phase === 'init' && 'Iniciando conexión...'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Procesados: {visualSimilarProgress.done} / {visualSimilarProgress.total} assets
-                        </Typography>
-                    </Box>
+                    <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 1, display: 'block' }}
+                    >
+                        Procesados: {visualSimilarProgress.done} / {visualSimilarProgress.total} assets
+                    </Typography>
                 )}
                 {visualSimilarError && (
                     <Typography
@@ -321,8 +316,8 @@ export default function VisualSimilarTab({
                                             <Paper sx={{ 
                                                 p: 2, 
                                                 borderRadius: 3,
-                                                border: '1px solid rgba(148, 163, 184, 0.4)',
-                                                bgcolor: virtualRow.index % 2 === 0 ? 'rgba(15, 23, 42, 0.95)' : 'rgba(30, 41, 59, 0.95)',
+                                                border: virtualRow.index % 2 === 0 ? '1px solid rgba(255, 255, 255, 0.05) !important' : '1px solid rgba(255, 255, 255, 0.15) !important',
+                                                bgcolor: virtualRow.index % 2 === 0 ? 'rgba(18, 18, 18, 0.95) !important' : 'rgba(32, 32, 32, 0.95) !important',
                                                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                                             }}>
                                                 <Stack
