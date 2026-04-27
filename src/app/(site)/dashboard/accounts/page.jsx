@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Grid, LinearProgress, Stack } from '@mui/material';
+import { Box, LinearProgress, Stack } from '@mui/material';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
 import { timerAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
@@ -16,7 +16,8 @@ import BulkAddAccountsModal from './components/BulkAddAccountsModal';
 const http = new HttpService();
 const API_BASE = '/accounts';
 // Cuota gratuita MEGA en MB para el front (fallback). Puede sobreescribirse en build con NEXT_PUBLIC_MEGA_FREE_QUOTA_MB
-const FREE_QUOTA_MB = Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480;
+const FREE_QUOTA_MB =
+    Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480;
 
 // Nota: StatusChip extraído a componente separado
 
@@ -93,13 +94,13 @@ export default function AccountsOverviewPage() {
                     'Hay subidas activas. Si fuerzas el test puede interferir con el proceso en curso. ¿Deseas forzar la actualización de esta cuenta?',
                     'Sí, forzar',
                     'Cancelar',
-                    'warning'
+                    'warning',
                 );
                 if (!ok) return;
 
                 await http.postData(
                     `${API_BASE}/${id}/test?force=1&source=dashboard-accounts`,
-                    { force: true, source: 'dashboard-accounts' }
+                    { force: true, source: 'dashboard-accounts' },
                 );
             }
 
@@ -120,7 +121,7 @@ export default function AccountsOverviewPage() {
         if (!alias || !email || !baseFolder || !username || !password) {
             await errorAlert(
                 'Faltan datos',
-                'Alias, correo, carpeta, usuario y contraseña son obligatorios'
+                'Alias, correo, carpeta, usuario y contraseña son obligatorios',
             );
             return;
         }
@@ -151,7 +152,7 @@ export default function AccountsOverviewPage() {
                     await fetchAccounts();
                     await errorAlert(
                         'Error',
-                        'Cuenta creada pero falló la validación'
+                        'Cuenta creada pero falló la validación',
                     );
                 } finally {
                     endPending(id);
@@ -198,14 +199,20 @@ export default function AccountsOverviewPage() {
     };
 
     const openDetail = async (acc) => {
-        setSelected({ ...acc, backups: acc.backups || [], mains: acc.mains || [] });
+        setSelected({
+            ...acc,
+            backups: acc.backups || [],
+            mains: acc.mains || [],
+        });
         setOpen(true);
         try {
             await Promise.all([
                 fetchAccountAssets(acc.id),
                 loadBackupCandidates(acc.id, acc.type),
             ]);
-        } catch (e) { console.error('openDetail error', e); }
+        } catch (e) {
+            console.error('openDetail error', e);
+        }
     };
 
     const refreshSelectedDetail = async () => {
@@ -213,18 +220,27 @@ export default function AccountsOverviewPage() {
         try {
             const res = await http.getData(`${API_BASE}`);
             const arr = res.data || [];
-            const found = arr.find(a => a.id === selected.id);
-            if (found) setSelected(prev => ({ ...prev, ...found }));
-        } catch (e) { console.error('refreshSelectedDetail', e); }
+            const found = arr.find((a) => a.id === selected.id);
+            if (found) setSelected((prev) => ({ ...prev, ...found }));
+        } catch (e) {
+            console.error('refreshSelectedDetail', e);
+        }
     };
 
     const loadBackupCandidates = async (id, type) => {
-        if (type !== 'main') { setBackupCandidates([]); return; }
+        if (type !== 'main') {
+            setBackupCandidates([]);
+            return;
+        }
         try {
             setLoadingBackups(true);
-            const res = await http.getData(`${API_BASE}/${id}/backup-candidates`);
+            const res = await http.getData(
+                `${API_BASE}/${id}/backup-candidates`,
+            );
             // Filtrar: solo mostrar cuentas que no tengan mains asociadas
-            const filtered = (res.data?.items || []).filter(c => !c.mains || c.mains.length === 0);
+            const filtered = (res.data?.items || []).filter(
+                (c) => !c.mains || c.mains.length === 0,
+            );
             setBackupCandidates(filtered);
         } catch (e) {
             console.error('loadBackupCandidates error', e);
@@ -238,20 +254,34 @@ export default function AccountsOverviewPage() {
         if (!selected || !selectedBackupCandidate) return;
         try {
             setAddingBackup(true);
-            await http.postData(`${API_BASE}/${selected.id}/backups`, { backupAccountId: Number(selectedBackupCandidate) });
-            await Promise.all([refreshSelectedDetail(), loadBackupCandidates(selected.id, selected.type)]);
+            await http.postData(`${API_BASE}/${selected.id}/backups`, {
+                backupAccountId: Number(selectedBackupCandidate),
+            });
+            await Promise.all([
+                refreshSelectedDetail(),
+                loadBackupCandidates(selected.id, selected.type),
+            ]);
             setSelectedBackupCandidate('');
         } catch (e) {
             console.error('addBackup error', e);
-        } finally { setAddingBackup(false); }
+        } finally {
+            setAddingBackup(false);
+        }
     };
 
     const removeBackup = async (backupId) => {
         if (!selected) return;
         try {
-            await http.deleteRaw(`${API_BASE}/${selected.id}/backups/${backupId}`);
-            await Promise.all([refreshSelectedDetail(), loadBackupCandidates(selected.id, selected.type)]);
-        } catch (e) { console.error('removeBackup error', e); }
+            await http.deleteRaw(
+                `${API_BASE}/${selected.id}/backups/${backupId}`,
+            );
+            await Promise.all([
+                refreshSelectedDetail(),
+                loadBackupCandidates(selected.id, selected.type),
+            ]);
+        } catch (e) {
+            console.error('removeBackup error', e);
+        }
     };
     const refresh = async () => {
         await fetchAccounts();
@@ -261,9 +291,13 @@ export default function AccountsOverviewPage() {
         const resp = await http.patchData(`${API_BASE}`, id, data);
         const updated = resp.data;
         // Actualizar lista
-        setAccounts((prev) => (prev || []).map((a) => (a.id === id ? { ...a, ...updated } : a)));
+        setAccounts((prev) =>
+            (prev || []).map((a) => (a.id === id ? { ...a, ...updated } : a)),
+        );
         // Actualizar seleccionado si corresponde
-        setSelected((prev) => (prev && prev.id === id ? { ...prev, ...updated } : prev));
+        setSelected((prev) =>
+            prev && prev.id === id ? { ...prev, ...updated } : prev,
+        );
         // Refrescar para traer includes (backups/mains) si cambiaron
         await fetchAccounts();
         return updated;
@@ -316,11 +350,16 @@ export default function AccountsOverviewPage() {
     // Totales de almacenamiento de cuentas OK (CONNECTED)
     const totalStorage = useMemo(() => {
         // Solo cuentas MAIN en estado CONNECTED
-        const ok = (accounts || []).filter((a) => a.status === 'CONNECTED' && a.type === 'main');
+        const ok = (accounts || []).filter(
+            (a) => a.status === 'CONNECTED' && a.type === 'main',
+        );
         let used = 0;
         let total = 0;
         for (const a of ok) {
-            const t = a.storageTotalMB && a.storageTotalMB > 0 ? a.storageTotalMB : FREE_QUOTA_MB;
+            const t =
+                a.storageTotalMB && a.storageTotalMB > 0
+                    ? a.storageTotalMB
+                    : FREE_QUOTA_MB;
             const u = Math.max(0, a.storageUsedMB || 0);
             used += u;
             total += t;
@@ -329,13 +368,25 @@ export default function AccountsOverviewPage() {
         return { used, total, pct, okCount: ok.length };
     }, [accounts]);
 
-    const mainAccounts = useMemo(() => accounts.filter(a => a.type === 'main'), [accounts]);
-    const backupAccounts = useMemo(() => accounts.filter(a => a.type === 'backup'), [accounts]);
+    const mainAccounts = useMemo(
+        () => accounts.filter((a) => a.type === 'main'),
+        [accounts],
+    );
+    const backupAccounts = useMemo(
+        () => accounts.filter((a) => a.type === 'backup'),
+        [accounts],
+    );
     const shownAccounts = tab === 'main' ? mainAccounts : backupAccounts;
 
     return (
         <div className="dashboard-content p-3">
-            <AddAccountForm form={form} setForm={setForm} onSubmit={addAccount} disabled={testing} onBulkOpen={() => setBulkOpen(true)} />
+            <AddAccountForm
+                form={form}
+                setForm={setForm}
+                onSubmit={addAccount}
+                disabled={testing}
+                onBulkOpen={() => setBulkOpen(true)}
+            />
 
             {loading && <LinearProgress />}
 
@@ -343,67 +394,81 @@ export default function AccountsOverviewPage() {
 
             {/* Botón Refrescar Todas oculto por ahora para evitar validar en masa */}
             {false && (
-              <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
-                  <AppButton
-                      variant="purple"
-                      onClick={validateAll}
-                      disabled={loading || testing}
-                      styles={{ fontWeight: 400, marginBottom: '20px' }}
-                      width={'250px'}
-                  >
-                      Refrescar Todas
-                  </AppButton>
-              </Stack>
+                <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+                    <AppButton
+                        variant="purple"
+                        onClick={validateAll}
+                        disabled={loading || testing}
+                        styles={{ fontWeight: 400, marginBottom: '20px' }}
+                        width={'250px'}
+                    >
+                        Refrescar Todas
+                    </AppButton>
+                </Stack>
             )}
 
             {/* Tabs para separar cuentas main y backup */}
-            <AccountsTabs tab={tab} onChange={setTab} mainCount={mainAccounts.length} backupCount={backupAccounts.length} />
-
-            <Grid container spacing={2}>
-              {shownAccounts.map(acc => (
-                <Grid item xs={12} md={4} key={acc.id}>
-                  <AccountCard
-                    acc={acc}
-                    onClick={openDetail}
-                    isPending={pendingIds.has(acc.id)}
-                    onTest={testConnection}
-                    loadingAny={loading}
-                    testing={testing}
-                  />
-                </Grid>
-              ))}
-              {shownAccounts.length === 0 && (
-                <Grid item xs={12}>
-                  <Box className="glass" sx={{ p:2 }}>
-                    {tab === 'main' ? 'No hay cuentas main' : 'No hay cuentas backup'}
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-
-            <AccountDrawer
-              open={open}
-              onClose={()=>setOpen(false)}
-              selected={selected}
-              assets={assets}
-              assetsLoading={assetsLoading}
-              assetsSearch={assetsSearch}
-              setAssetsSearch={setAssetsSearch}
-              backupCandidates={backupCandidates}
-              loadingBackups={loadingBackups}
-              selectedBackupCandidate={selectedBackupCandidate}
-              setSelectedBackupCandidate={setSelectedBackupCandidate}
-              addBackup={addBackup}
-              addingBackup={addingBackup}
-              removeBackup={removeBackup}
-                            onUpdateAccount={patchAccount}
-                            onDeleteAccount={deleteAccount}
+            <AccountsTabs
+                tab={tab}
+                onChange={setTab}
+                mainCount={mainAccounts.length}
+                backupCount={backupAccounts.length}
             />
 
-            <BulkAddAccountsModal 
-                 open={bulkOpen} 
-                 onClose={() => setBulkOpen(false)} 
-                 onComplete={() => fetchAccounts()} 
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: 'repeat(2, 1fr)',
+                        md: 'repeat(5, 1fr)',
+                        lg: 'repeat(7, 1fr)',
+                    },
+                    gap: 1,
+                }}
+            >
+                {shownAccounts.map((acc) => (
+                    <AccountCard
+                        key={acc.id}
+                        acc={acc}
+                        onClick={openDetail}
+                        isPending={pendingIds.has(acc.id)}
+                        onTest={testConnection}
+                        loadingAny={loading}
+                        testing={testing}
+                    />
+                ))}
+                {shownAccounts.length === 0 && (
+                    <Box className="glass" sx={{ p: 2, gridColumn: '1 / -1' }}>
+                        {tab === 'main'
+                            ? 'No hay cuentas main'
+                            : 'No hay cuentas backup'}
+                    </Box>
+                )}
+            </Box>
+
+            <AccountDrawer
+                open={open}
+                onClose={() => setOpen(false)}
+                selected={selected}
+                assets={assets}
+                assetsLoading={assetsLoading}
+                assetsSearch={assetsSearch}
+                setAssetsSearch={setAssetsSearch}
+                backupCandidates={backupCandidates}
+                loadingBackups={loadingBackups}
+                selectedBackupCandidate={selectedBackupCandidate}
+                setSelectedBackupCandidate={setSelectedBackupCandidate}
+                addBackup={addBackup}
+                addingBackup={addingBackup}
+                removeBackup={removeBackup}
+                onUpdateAccount={patchAccount}
+                onDeleteAccount={deleteAccount}
+            />
+
+            <BulkAddAccountsModal
+                open={bulkOpen}
+                onClose={() => setBulkOpen(false)}
+                onComplete={() => fetchAccounts()}
             />
         </div>
     );
