@@ -41,10 +41,12 @@ export default function AccountCard({
     const totalGB = (total / 1024).toFixed(1);
     const isHigh = pct >= 80;
     const checkedToday = isToday(acc.lastCheckAt);
-    const shortDate = acc.lastCheckAt
+    const formattedDate = acc.lastCheckAt
         ? (() => {
               const d = new Date(acc.lastCheckAt);
-              return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`;
+              const datePart = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`;
+              const timePart = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+              return `${datePart} ${timePart}`;
           })()
         : '-';
 
@@ -58,9 +60,9 @@ export default function AccountCard({
                 : acc.status || '?';
     const statusColor =
         acc.status === 'CONNECTED'
-            ? '#4caf50'
+            ? '#246bef70'
             : acc.status === 'ERROR'
-              ? '#f44336'
+              ? '#ff1100ff'
               : acc.status === 'EXPIRED'
                 ? '#ff9800'
                 : '#888';
@@ -77,7 +79,7 @@ export default function AccountCard({
                 border: isHigh
                     ? '1px solid rgba(255, 17, 0, 0.5)'
                     : acc.status === 'CONNECTED'
-                      ? '1px solid rgba(0, 255, 13, 0.35)'
+                      ? '1px solid rgba(14, 102, 19, 0.35)'
                       : acc.status === 'ERROR'
                         ? '1px solid rgba(255, 0, 0, 0.4)'
                         : '1px solid rgba(255,255,255,0.08)',
@@ -122,7 +124,7 @@ export default function AccountCard({
                     sx={{
                         fontSize: '1rem',
                         fontWeight: 600,
-                        color: '#e2e8f0',
+                        color: '#ffffffff',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -200,7 +202,7 @@ export default function AccountCard({
                         fontSize: '0.65rem',
                         fontWeight: 700,
                         flexShrink: 0,
-                        color: isHigh ? '#f44336' : '#8b5cf6',
+                        color: isHigh ? '#f44336' : '#30f01fff',
                         minWidth: 26,
                     }}
                 >
@@ -218,7 +220,7 @@ export default function AccountCard({
                             borderRadius: 3,
                             background: isHigh
                                 ? 'linear-gradient(90deg, #f44336, #ff1744)'
-                                : 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
+                                : 'linear-gradient(90deg, #30f01fff, #56d03dff)',
                         },
                     }}
                 />
@@ -276,12 +278,12 @@ export default function AccountCard({
                     <Box
                         component="span"
                         sx={{
-                            fontSize: '0.65rem',
-                            color: checkedToday ? '#4caf50' : '#cbd5e1',
+                            fontSize: '0.8rem',
+                            color: checkedToday ? '#4caf50' : '#ffffffff',
                             fontWeight: checkedToday ? 700 : 400,
                         }}
                     >
-                        {shortDate}
+                        {formattedDate}
                     </Box>
                 </Box>
             </Box>
