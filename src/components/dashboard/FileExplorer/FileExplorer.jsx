@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import HttpService from '@/services/HttpService';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
     Box, Typography, Breadcrumbs, Link, Button, IconButton,
     Menu, MenuItem, ListItemIcon, ListItemText,
@@ -35,11 +36,24 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     const [gridIconSize, setGridIconSize] = useState(60);
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     
-    // Dialog states
-    const [dialogMode, setDialogMode] = useState(null); // 'createFolder', 'rename', 'move'
+    const [dialogMode, setDialogMode] = useState(null);
     const [dialogInput, setDialogInput] = useState('');
     const [moveDestination, setMoveDestination] = useState('/');
     const [foldersList, setFoldersList] = useState([]);
+
+    const parentRef = useRef(null);
+    const [containerWidth, setContainerWidth] = useState(0);
+
+    useEffect(() => {
+        if (!parentRef.current) return;
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                setContainerWidth(entry.contentRect.width);
+            }
+        });
+        resizeObserver.observe(parentRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
 
     const http = useMemo(() => new HttpService(), []);
 
@@ -83,14 +97,10 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         setAnchorEl(event.currentTarget);
     };
 
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-    };
+    const handleMenuClose = () => setAnchorEl(null);
 
     const handleItemDoubleClick = (file) => {
-        if (file.isDir) {
-            loadFiles(file.id);
-        }
+        if (file.isDir) loadFiles(file.id);
     };
 
     const handleBreadcrumbClick = (e, path) => {
@@ -155,14 +165,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         
         if (isImage) {
             const previewUrl = `${apiBase}/api/file-explorer/preview?path=${encodeURIComponent(file.id)}`;
-            return (
-                <Box 
-                    component="img" 
-                    src={previewUrl} 
-                    alt={file.name} 
-                    sx={{ width: size, height: size, objectFit: 'cover', borderRadius: '4px' }} 
-                />
-            );
+            return <Box component="img" src={previewUrl} alt={file.name} sx={{ width: size, height: size, objectFit: 'cover', borderRadius: '4px' }} />;
         }
 
         const iconProps = { sx: { color: '#94a3b8', fontSize: size } };
@@ -172,159 +175,147 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         return <FileIcon {...iconProps} />;
     };
 
+    // VIRTUALIZATION LOGIC
+    const gap = 16;
+    const itemWidth = Math.max(160, gridIconSize + 60);
+    const columns = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
+    const rowCount = Math.ceil(files.length / columns);
+    const itemHeight = gridIconSize + 100; // estimated fixed height for grid item
+
+    const gridVirtualizer = useVirtualizer({
+        count: viewMode === 'grid' ? rowCount : 0,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => itemHeight + gap,
+        overscan: 2,
+    });
+
+    const listVirtualizer = useVirtualizer({
+        count: viewMode === 'list' ? files.length : 0,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 45, // approx height of table row
+        overscan: 5,
+    });
+
     return (
-        <Box sx={{ 
-            p: isModal ? 2 : 3, 
-            height: isModal ? '80vh' : 'calc(100vh - 64px)', 
-            display: 'flex', 
-            flexDirection: 'column',
-            bgcolor: isModal ? '#0f172a' : 'transparent',
-            borderRadius: isModal ? '8px' : 0
-        }}>
+        <Box sx={{ p: isModal ? 2 : 3, height: isModal ? '80vh' : 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', bgcolor: isModal ? '#0f172a' : 'transparent', borderRadius: isModal ? '8px' : 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                <Typography variant={isModal ? 'h5' : 'h4'} sx={{ color: 'white', fontWeight: 600 }}>
-                    Explorador de Archivos
-                </Typography>
+                <Typography variant={isModal ? 'h5' : 'h4'} sx={{ color: 'white', fontWeight: 600 }}>Explorador de Archivos</Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         {viewMode === 'grid' && (
                             <Box sx={{ display: 'flex', alignItems: 'center', width: 120, mr: 1 }}>
                                 <ImageIcon fontSize="small" sx={{ color: '#64748b', mr: 1 }} />
-                                <Slider
-                                    size="small"
-                                    value={gridIconSize}
-                                    min={30}
-                                    max={150}
-                                    onChange={(e, v) => setGridIconSize(v)}
-                                    sx={{ color: '#8b5cf6' }}
-                                />
+                                <Slider size="small" value={gridIconSize} min={30} max={150} onChange={(e, v) => setGridIconSize(v)} sx={{ color: '#8b5cf6' }} />
                             </Box>
                         )}
-                        <ToggleButtonGroup
-                            value={viewMode}
-                            exclusive
-                            onChange={(e, newMode) => newMode && setViewMode(newMode)}
-                            size="small"
-                            sx={{
-                                bgcolor: 'rgba(255,255,255,0.05)',
-                                '& .MuiToggleButton-root': {
-                                    color: '#64748b',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    '&.Mui-selected': { color: 'white', bgcolor: 'rgba(139, 92, 246, 0.4)' }
-                                }
-                            }}
-                        >
+                        <ToggleButtonGroup value={viewMode} exclusive onChange={(e, newMode) => newMode && setViewMode(newMode)} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)', '& .MuiToggleButton-root': { color: '#64748b', border: '1px solid rgba(255,255,255,0.1)', '&.Mui-selected': { color: 'white', bgcolor: 'rgba(139, 92, 246, 0.4)' } } }}>
                             <ToggleButton value="grid"><GridViewIcon fontSize="small" /></ToggleButton>
                             <ToggleButton value="list"><ViewListIcon fontSize="small" /></ToggleButton>
                         </ToggleButtonGroup>
 
-                        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => loadFiles(currentPath)}>
-                            Recargar
-                        </Button>
-                        <Button variant="contained" color="primary" startIcon={<CreateNewFolderIcon />} onClick={() => openDialog('createFolder')}>
-                            Nueva Carpeta
-                        </Button>
+                        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => loadFiles(currentPath)}>Recargar</Button>
+                        <Button variant="contained" color="primary" startIcon={<CreateNewFolderIcon />} onClick={() => openDialog('createFolder')}>Nueva Carpeta</Button>
                         {isModal && onClose && (
-                            <IconButton onClick={onClose} sx={{ color: '#ef4444', ml: 1 }}>
-                                <CloseIcon />
-                            </IconButton>
+                            <IconButton onClick={onClose} sx={{ color: '#ef4444', ml: 1 }}><CloseIcon /></IconButton>
                         )}
                     </Box>
                 </Box>
             </Box>
 
-            <Box sx={{ 
-                bgcolor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(12px)', 
-                borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)',
-                p: 2, mb: 2 
-            }}>
+            <Box sx={{ bgcolor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(12px)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', p: 2, mb: 2 }}>
                 <Breadcrumbs separator={<NavigateNextIcon fontSize="small" sx={{ color: '#64748b' }} />}>
                     {breadcrumbs.map((bc, index) => (
-                        <Link
-                            key={bc.path}
-                            underline="hover"
-                            color={index === breadcrumbs.length - 1 ? 'white' : '#94a3b8'}
-                            href="#"
-                            onClick={(e) => handleBreadcrumbClick(e, bc.path)}
-                            sx={{ fontWeight: index === breadcrumbs.length - 1 ? 600 : 400, cursor: 'pointer' }}
-                        >
+                        <Link key={bc.path} underline="hover" color={index === breadcrumbs.length - 1 ? 'white' : '#94a3b8'} href="#" onClick={(e) => handleBreadcrumbClick(e, bc.path)} sx={{ fontWeight: index === breadcrumbs.length - 1 ? 600 : 400, cursor: 'pointer' }}>
                             {bc.label}
                         </Link>
                     ))}
                 </Breadcrumbs>
             </Box>
 
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                {files.length === 0 && (
-                    <Typography sx={{ color: '#64748b', textAlign: 'center', mt: 5 }}>La carpeta está vacía</Typography>
-                )}
+            <Box ref={parentRef} sx={{ flex: 1, overflowY: 'auto', pr: 1 }}>
+                {files.length === 0 && <Typography sx={{ color: '#64748b', textAlign: 'center', mt: 5 }}>La carpeta está vacía</Typography>}
 
                 {files.length > 0 && viewMode === 'grid' && (
-                    <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${Math.max(160, gridIconSize + 60)}px, 1fr))`, gap: 2 }}>
-                        {files.map((file) => (
-                            <Box 
-                                key={file.id} 
-                                onDoubleClick={() => handleItemDoubleClick(file)}
-                                sx={{
-                                    position: 'relative',
-                                    bgcolor: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.05)',
-                                    borderRadius: '8px',
-                                    p: 2, pt: 3,
-                                    display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', textAlign: 'center', gap: 1,
-                                    cursor: 'pointer', transition: 'all 0.2s',
-                                    '&:hover': {
-                                        bgcolor: 'rgba(255,255,255,0.08)',
-                                        borderColor: 'rgba(139, 92, 246, 0.5)',
-                                        '& .action-menu': { opacity: 1 }
-                                    }
-                                }}
-                            >
-                                <Box sx={{ flexShrink: 0 }}>{getFileVisual(file)}</Box>
-                                <Box sx={{ width: '100%' }}>
-                                    <Typography sx={{ color: 'white', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word', fontSize: '0.85rem', lineHeight: 1.3, mb: 0.5 }}>
-                                        {file.name}
-                                    </Typography>
-                                    {!file.isDir && file.size > 0 && (
-                                        <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                                        </Typography>
-                                    )}
+                    <Box sx={{ position: 'relative', width: '100%', height: `${gridVirtualizer.getTotalSize()}px` }}>
+                        {gridVirtualizer.getVirtualItems().map((virtualRow) => {
+                            const y = virtualRow.start;
+                            return (
+                                <Box key={virtualRow.key} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${y}px)`, display: 'flex', gap: `${gap}px` }}>
+                                    {Array.from({ length: columns }).map((_, colIndex) => {
+                                        const index = virtualRow.index * columns + colIndex;
+                                        const file = files[index];
+                                        if (!file) return <Box key={colIndex} sx={{ width: itemWidth }} />;
+                                        
+                                        return (
+                                            <Box 
+                                                key={file.id} 
+                                                onDoubleClick={() => handleItemDoubleClick(file)}
+                                                sx={{
+                                                    position: 'relative', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px',
+                                                    p: 2, pt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1,
+                                                    cursor: 'pointer', transition: 'all 0.2s', width: itemWidth, height: itemHeight,
+                                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(139, 92, 246, 0.5)', '& .action-menu': { opacity: 1 } }
+                                                }}
+                                            >
+                                                <Box sx={{ flexShrink: 0 }}>{getFileVisual(file)}</Box>
+                                                <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                                    <Typography sx={{ color: 'white', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word', fontSize: '0.85rem', lineHeight: 1.3, mb: 0.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                        {file.name}
+                                                    </Typography>
+                                                    {!file.isDir && file.size > 0 && <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</Typography>}
+                                                </Box>
+                                                <IconButton className="action-menu" size="small" onClick={(e) => handleMenuClick(e, file)} sx={{ position: 'absolute', top: 4, right: 4, color: '#64748b', opacity: 0, transition: 'opacity 0.2s', '&:hover': { color: 'white' } }}>
+                                                    <MoreVertIcon />
+                                                </IconButton>
+                                            </Box>
+                                        );
+                                    })}
                                 </Box>
-                                <IconButton 
-                                    className="action-menu" size="small" onClick={(e) => handleMenuClick(e, file)}
-                                    sx={{ position: 'absolute', top: 4, right: 4, color: '#64748b', opacity: 0, transition: 'opacity 0.2s', '&:hover': { color: 'white' } }}
-                                >
-                                    <MoreVertIcon />
-                                </IconButton>
-                            </Box>
-                        ))}
+                            );
+                        })}
                     </Box>
                 )}
 
                 {files.length > 0 && viewMode === 'list' && (
                     <TableContainer component={Paper} sx={{ bgcolor: 'rgba(15, 23, 42, 0.4)', backgroundImage: 'none', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Table size="small">
+                        <Table size="small" sx={{ tableLayout: 'fixed' }}>
                             <TableHead>
                                 <TableRow>
                                     <TableCell sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Nombre</TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Tamaño</TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Modificado</TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)' }}></TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)', width: 120 }}>Tamaño</TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)', width: 120 }}>Modificado</TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.1)', width: 60 }}></TableCell>
                                 </TableRow>
                             </TableHead>
-                            <TableBody>
-                                {files.map((file) => (
-                                    <TableRow key={file.id} onDoubleClick={() => handleItemDoubleClick(file)} sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }, '& td': { borderBottom: '1px solid rgba(255,255,255,0.05)' }}}>
-                                        <TableCell sx={{ color: 'white' }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>{getFileVisual(file)}{file.name}</Box></TableCell>
-                                        <TableCell align="right" sx={{ color: '#94a3b8' }}>{!file.isDir ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : '--'}</TableCell>
-                                        <TableCell align="right" sx={{ color: '#94a3b8' }}>{file.modDate ? new Date(file.modDate).toLocaleDateString() : '--'}</TableCell>
-                                        <TableCell align="right">
-                                            <IconButton size="small" onClick={(e) => handleMenuClick(e, file)} sx={{ color: '#64748b', '&:hover': { color: 'white' } }}><MoreVertIcon fontSize="small" /></IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                            <TableBody sx={{ display: 'block', position: 'relative', height: `${listVirtualizer.getTotalSize()}px` }}>
+                                {listVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const file = files[virtualRow.index];
+                                    return (
+                                        <TableRow 
+                                            key={file.id} 
+                                            onDoubleClick={() => handleItemDoubleClick(file)} 
+                                            sx={{ 
+                                                display: 'flex', position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)`,
+                                                cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }, '& td': { borderBottom: '1px solid rgba(255,255,255,0.05)' }
+                                            }}
+                                        >
+                                            <TableCell sx={{ color: 'white', flex: 1, display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                                {getFileVisual(file)} {file.name}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                {!file.isDir ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : '--'}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                {file.modDate ? new Date(file.modDate).toLocaleDateString() : '--'}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ width: 60, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                <IconButton size="small" onClick={(e) => handleMenuClick(e, file)} sx={{ color: '#64748b', '&:hover': { color: 'white' } }}>
+                                                    <MoreVertIcon fontSize="small" />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -338,11 +329,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
             </Menu>
 
             <Dialog open={Boolean(dialogMode)} onClose={closeDialog} PaperProps={{ sx: { bgcolor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: 'white', minWidth: 400 } }}>
-                <DialogTitle>
-                    {dialogMode === 'createFolder' && 'Nueva Carpeta'}
-                    {dialogMode === 'rename' && 'Renombrar'}
-                    {dialogMode === 'move' && 'Mover Archivo'}
-                </DialogTitle>
+                <DialogTitle>{dialogMode === 'createFolder' && 'Nueva Carpeta'}{dialogMode === 'rename' && 'Renombrar'}{dialogMode === 'move' && 'Mover Archivo'}</DialogTitle>
                 <DialogContent>
                     {(dialogMode === 'createFolder' || dialogMode === 'rename') && (
                         <TextField autoFocus margin="dense" label="Nombre" fullWidth value={dialogInput} onChange={(e) => setDialogInput(e.target.value)} sx={{ mt: 2, '& .MuiOutlinedInput-root': { color: 'white', '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' } }, '& .MuiInputLabel-root': { color: '#94a3b8' } }} />

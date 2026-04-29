@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import HttpService from '@/services/HttpService';
+import { Dialog } from '@mui/material';
+import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramDownloader.scss';
 
 export default function TelegramDownloader() {
@@ -21,6 +23,9 @@ export default function TelegramDownloader() {
   const [channelInfo, setChannelInfo] = useState(null);
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
+
+  const [filesDownloaded, setFilesDownloaded] = useState([]);
+  const [showExplorer, setShowExplorer] = useState(false);
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [progressData, setProgressData] = useState(null);
@@ -278,6 +283,9 @@ export default function TelegramDownloader() {
           <p>Descarga archivos de canales de Telegram directamente al servidor.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-primary" onClick={() => setShowExplorer(true)} style={{ whiteSpace: 'nowrap' }}>
+            Abrir Explorador
+          </button>
           <button className="btn btn-danger" onClick={handleClearDownloads} style={{ whiteSpace: 'nowrap' }}>
             Limpiar Descargas
           </button>
@@ -286,6 +294,10 @@ export default function TelegramDownloader() {
           </button>
         </div>
       </div>
+
+      <Dialog open={showExplorer} onClose={() => setShowExplorer(false)} maxWidth="xl" fullWidth PaperProps={{ sx: { bgcolor: '#0f172a', m: 2 } }}>
+        <FileExplorer initialPath="/telegram_downloads" isModal onClose={() => setShowExplorer(false)} />
+      </Dialog>
 
       <div className="grid-layout">
         {/* CONFIG */}

@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HttpService from '@/services/HttpService';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
-import { Button } from '@mui/material';
+import { Button, Dialog } from '@mui/material';
+import FolderIcon from '@mui/icons-material/Folder';
+import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramOrganizer.scss';
 
 const PAGE_SIZE = 200;
@@ -13,6 +15,9 @@ const MAX_UNDO = 5;
 export default function TelegramOrganizer() {
   const [files, setFiles] = useState([]);
   const [serverTotal, setServerTotal] = useState(0);
+  const [showExplorer, setShowExplorer] = useState(false);
+
+  // Stats
   const [totalAssets, setTotalAssets] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -246,12 +251,25 @@ export default function TelegramOrganizer() {
             >
               Modo Revisión
             </Button>
-            <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setShowExplorer(true)}
+              startIcon={<FolderIcon />}
+              sx={{ ml: 1, textTransform: 'none', fontWeight: 600 }}
+            >
+              Explorador de Archivos
+            </Button>
+            <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading} style={{ marginLeft: '8px' }}>
               {loading ? 'Cargando...' : 'Recargar'}
             </button>
           </div>
         </div>
       )}
+
+      <Dialog open={showExplorer} onClose={() => setShowExplorer(false)} maxWidth="xl" fullWidth PaperProps={{ sx: { bgcolor: '#0f172a', m: 2 } }}>
+        <FileExplorer initialPath="/telegram_downloads_organized" isModal onClose={() => setShowExplorer(false)} />
+      </Dialog>
 
       {isReviewMode ? (
         <div className="header-review">
