@@ -254,7 +254,7 @@ export default async function AssetPage({ params }) {
                 isAccessoryOrSparePart: false,
                 offers: {
                     '@type': 'Offer',
-                    price: asset.isPremium ? '4.99' : '0', // Ajusta precio real si existe
+                    price: '0', // Precio fijo para SEO: evitar fluctuación diaria por freebies
                     priceCurrency: 'USD',
                     priceValidUntil,
                     availability: 'https://schema.org/InStock',
