@@ -5,6 +5,7 @@ import Link from 'next/link'
 import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
 import VpsMemoryWidget from './VpsMemoryWidget'
+import AssetsSubidos from '../modules/AssetsSubidos/AssetsSubidos'
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false)
@@ -183,6 +184,9 @@ const Sidebar = () => {
         </nav>
         <div className="sidebar-bottom">
           <VpsMemoryWidget />
+          <div style={{ marginTop: '1rem' }}>
+            <AssetsSubidos />
+          </div>
         </div>
       </aside>
     </>
