@@ -32,7 +32,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
-import ImagesSection from './uploader/ImagesSection';
+import ImagesSection from './componentes/ImagesSection';
 import HttpService from '@/services/HttpService';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';

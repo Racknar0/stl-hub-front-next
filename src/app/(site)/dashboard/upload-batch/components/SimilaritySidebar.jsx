@@ -11,7 +11,7 @@ import React from 'react'
 import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, Tooltip } from '@mui/material'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CloseIcon from '@mui/icons-material/Close'
-import RightSidebar from '../../assets/uploader/RightSidebar'
+import RightSidebar from '../../assets/componentes/RightSidebar'
 import { RIGHT_SIDEBAR_WIDTH } from '../constants'
 
 export default function SimilaritySidebar({

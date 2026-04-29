@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
-import AssetsUploadedWidget from '@/app/(site)/dashboard/assets/uploader/AssetsUploadedWidget'
 import VpsMemoryWidget from './VpsMemoryWidget'
 
 const Sidebar = () => {
@@ -75,11 +74,6 @@ const Sidebar = () => {
               </div>
               <ul className="submenu" aria-label="Submenu Upload">
                 <li>
-                  <Link href="/dashboard/assets/uploader" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Subir Stl
-                  </Link>
-                </li>
-                <li>
                   <Link href="/dashboard/upload-batch" className="item submenu-item" onClick={() => setOpen(false)}>
                     Upload Batch
                   </Link>
@@ -87,6 +81,29 @@ const Sidebar = () => {
               </ul>
             </li>
 
+            <li className="submenu-group" tabIndex={0}>
+              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
+                <span className="icon" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+                Download
+                <span className="submenu-caret" aria-hidden>▾</span>
+              </div>
+              <ul className="submenu" aria-label="Submenu Download">
+                <li>
+                  <Link href="/dashboard/telegram-downloader" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Telegram Downloader
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/telegram-organizer" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Telegram Organizer
+                  </Link>
+                </li>
+              </ul>
+            </li>
             <li className="submenu-group" tabIndex={0}>
               <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
                 <span className="icon" aria-hidden>
@@ -155,7 +172,6 @@ const Sidebar = () => {
         </nav>
         <div className="sidebar-bottom">
           <VpsMemoryWidget />
-          <AssetsUploadedWidget />
         </div>
       </aside>
     </>

@@ -1,7 +1,7 @@
 'use client'
 import React from 'react'
 import { Dialog, DialogTitle, DialogContent, Box, Stack, TextField, Chip, Button, Autocomplete, FormControlLabel, Switch, Typography } from '@mui/material'
-import ImagesSection from '../uploader/ImagesSection'
+import ImagesSection from './ImagesSection'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation } from 'swiper/modules'
 import 'swiper/css'
