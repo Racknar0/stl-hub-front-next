@@ -87,10 +87,8 @@ const Header = () => {
   const [seasonalCollections, setSeasonalCollections] = useState([])
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
-  // Nuevo: estado para abrir/cerrar Explorar (soporta mobile por click)
   const [exploreOpen, setExploreOpen] = useState(false)
   const exploreRef = useRef(null)
-  // Loading local para buscador (no bloquea toda la pantalla)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchMode, setSearchMode] = useState('normal')
   const [aiVisualSearching, setAiVisualSearching] = useState(false)
@@ -99,6 +97,11 @@ const Header = () => {
   const [imageSearchPreview, setImageSearchPreview] = useState('')
   const [imageDragActive, setImageDragActive] = useState(false)
   const [globalDragActive, setGlobalDragActive] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [headerHidden, setHeaderHidden] = useState(false)
+  const [aiDropzoneOpen, setAiDropzoneOpen] = useState(false)
+  const lastScrollY = useRef(0)
+  const headerRef = useRef(null)
 
   const onDropGlobal = useCallback((acceptedFiles) => {
     const file = acceptedFiles?.[0];
@@ -176,8 +179,41 @@ const Header = () => {
       setImageSearchFile(null)
       setImageSearchPreview('')
       setImageDragActive(false)
+      setAiDropzoneOpen(false)
+    } else {
+      setAiDropzoneOpen(true)
     }
   }, [searchMode])
+
+  // Auto-hide header on scroll
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y > lastScrollY.current && y > 80) {
+        setHeaderHidden(true)
+      } else {
+        setHeaderHidden(false)
+      }
+      lastScrollY.current = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [mobileMenuOpen])
   // Cerrar dropdown idioma al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
@@ -508,7 +544,7 @@ const Header = () => {
           </p>
           <style>{`@keyframes globalDropPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }`}</style>
         </div>
-      <header className="app-header">
+      <header ref={headerRef} className={`app-header ${headerHidden ? 'header-hidden' : ''}`}>
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
         <SearchParamsWatcher
@@ -537,8 +573,8 @@ const Header = () => {
             />
           </Link>
 
-          {/* Botón Explorar (desktop + mobile) */}
-          <div ref={exploreRef} className={`explore-wrap ${exploreOpen ? 'open' : ''}`}>
+          {/* Botón Explorar (solo desktop) */}
+          <div ref={exploreRef} className={`explore-wrap desktop-only ${exploreOpen ? 'open' : ''}`}>
             <button
               type="button"
               className="explore-btn"
@@ -673,7 +709,7 @@ const Header = () => {
           </div>
 
           {/* Búsqueda inline solo en desktop */}
-          <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
+          <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
             <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
               <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
                 <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
@@ -722,10 +758,10 @@ const Header = () => {
                 )}
               </button>
             </form>
-            {searchMode === 'ai' && <ImageDropzone />}
+            {searchMode === 'ai' && aiDropzoneOpen && <ImageDropzone />}
           </div>
 
-          <div className="header-cta d-flex gap-2 align-items-center">
+          <div className="header-cta d-flex gap-2 align-items-center desktop-only">
 
 
             {token && (
@@ -860,10 +896,20 @@ const Header = () => {
             </a>
 
           </div>
+
+          {/* Hamburger button — mobile only */}
+          <button
+            type="button"
+            className={`mobile-hamburger ${mobileMenuOpen ? 'active' : ''}`}
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            <span /><span /><span />
+          </button>
         </nav>
 
         {/* Búsqueda móvil (debajo), visible solo en < lg */}
-        <div className={`search-panel d-lg-none ${searchMode === 'ai' ? 'ai-dropzone-open' : ''}`} role="search">
+        <div className={`search-panel d-lg-none ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
           <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
             <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
               <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
@@ -912,10 +958,105 @@ const Header = () => {
               )}
             </button>
           </form>
-          {searchMode === 'ai' && <ImageDropzone />}
+          {searchMode === 'ai' && aiDropzoneOpen && <ImageDropzone />}
         </div>
       </div>
     </header>
+
+    {/* Mobile drawer overlay */}
+    <div className={`mobile-drawer-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+    <aside className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
+      <div className="mobile-drawer-header">
+        <img src="/nuevo_horizontal.png" alt="STL HUB" style={{ height: 28 }} />
+        <button type="button" className="mobile-drawer-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+        </button>
+      </div>
+
+      <div className="mobile-drawer-body">
+        {/* Explorar — categories */}
+        <div className="drawer-section">
+          <div className="drawer-section-title">{t('header.categories')}</div>
+          <div className="drawer-links-grid">
+            {categories.map((c) => {
+              const name = isEn && c.nameEn ? c.nameEn : c.name;
+              return (
+                <a key={c.id} href={`/search?categories=${encodeURIComponent(name)}`} onClick={() => setMobileMenuOpen(false)}>
+                  {name}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="drawer-section">
+          <div className="drawer-section-title">{t('header.tops')}</div>
+          <div className="drawer-links">
+            <a href={(isEn ? '/en/search' : '/search') + '?order=downloads'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Most downloaded' : 'Más descargados'}</a>
+            <a href={isEn ? '/en/search' : '/search'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Latest 3D models' : 'Últimos modelos 3D'}</a>
+            <a href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`} onClick={() => setMobileMenuOpen(false)}>Anime</a>
+            <a href={`${isEn ? '/en/search' : '/search'}?randomizer=true`} onClick={() => setMobileMenuOpen(false)}>Randomizer</a>
+          </div>
+        </div>
+
+        {seasonalCollections.length > 0 && (
+          <div className="drawer-section">
+            <div className="drawer-section-title">{t('header.collectionsNow')}</div>
+            <div className="drawer-links">
+              {seasonalCollections.slice(0, 6).map((it, idx) => {
+                const label = isEn ? (it?.labelEn || it?.labelEs || it?.slug || '') : (it?.labelEs || it?.labelEn || it?.slug || '');
+                return (
+                  <a key={idx} href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent(label)}&is_ai_search=true`} onClick={() => setMobileMenuOpen(false)}>{label}</a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* User actions */}
+        <div className="drawer-section drawer-actions">
+          {token ? (
+            <>
+              <a href={accountHref} className="drawer-btn" onClick={() => setMobileMenuOpen(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="currentColor" strokeWidth="2"/></svg>
+                {isEn ? 'My profile' : 'Mi perfil'}
+              </a>
+              {isAdmin && (
+                <a href="/dashboard" className="drawer-btn" onClick={() => setMobileMenuOpen(false)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+                  Dashboard
+                </a>
+              )}
+              <button type="button" className="drawer-btn drawer-btn-danger" onClick={() => { setMobileMenuOpen(false); handleLogout(); }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                {t('header.logout')}
+              </button>
+            </>
+          ) : (
+            <a href="/login" className="drawer-btn drawer-btn-primary" onClick={() => setMobileMenuOpen(false)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 11V8a5 5 0 10-10 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>
+              {t('header.login')}
+            </a>
+          )}
+        </div>
+
+        {/* Language + WhatsApp */}
+        <div className="drawer-section drawer-footer">
+          <div className="drawer-lang-row">
+            <button type="button" className={`drawer-lang ${language === 'es' ? 'active' : ''}`} onClick={() => { selectLang('es'); setMobileMenuOpen(false); }}>
+              <img src={FLAG_ES_32} alt="ES" width={20} height={20} /> ES
+            </button>
+            <button type="button" className={`drawer-lang ${language === 'en' ? 'active' : ''}`} onClick={() => { selectLang('en'); setMobileMenuOpen(false); }}>
+              <img src={FLAG_EN_32} alt="EN" width={20} height={20} /> EN
+            </button>
+          </div>
+          <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="drawer-btn drawer-btn-whatsapp" onClick={() => setMobileMenuOpen(false)}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.23-1.24C8.7 21.56 10.3 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2Zm.02 3c3.86 0 6.98 3.14 6.98 7s-3.12 7-6.98 7c-1.27 0-2.46-.35-3.48-.94l-.65-.38-2.84.67.74-2.72-.42-.67A6.94 6.94 0 0 1 5.04 12c0-3.86 3.12-7 6.98-7Zm-3.06 3.85c-.17 0-.44.06-.67.32s-.86.84-.86 2.05.88 2.38 1 2.55c.13.17 1.72 2.62 4.16 3.67.58.25 1.04.4 1.39.52.59.19 1.12.16 1.54.1.47-.07 1.45-.59 1.65-1.17.2-.58.2-1.07.14-1.17s-.22-.16-.46-.28c-.25-.12-1.45-.72-1.67-.8-.23-.08-.39-.12-.55.12-.17.25-.65.8-.79.97-.15.17-.3.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.5.11-.11.25-.3.37-.44.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.55-1.33-.76-1.82-.2-.48-.4-.41-.55-.42-.14-.01-.31-.01-.48-.01Z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      </div>
+    </aside>
     </>
   )
 }
