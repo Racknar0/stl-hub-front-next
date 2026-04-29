@@ -7,6 +7,7 @@ import ImageLightbox from './ImageLightbox';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
 import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
+import RelatedAssets from './RelatedAssets';
 
 export const revalidate = 3600; // ISR 1h
 
@@ -42,18 +43,18 @@ function formatBytes(value) {
     return `${size.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
 }
 
-function buildGenericDescriptionEs(title, isPremium) {
+function buildGenericDescriptionEs(title, tags = [], catName = '') {
     const name = String(title || 'este modelo').trim();
-    return isPremium
-        ? `Descarga STL premium de "${name}" vía MEGA con acceso rápido y seguro.`
-        : `Descarga gratis STL de "${name}" vía MEGA y prepáralo para impresión 3D.`;
+    const tagStr = tags.length > 0 ? ` Temática: ${tags.slice(0, 3).join(', ')}.` : '';
+    const catStr = catName ? ` Categoría: ${catName}.` : '';
+    return `Descarga el archivo STL de "${name}" listo para impresión 3D.${catStr}${tagStr} Compatible con impresoras FDM y de Resina. Consíguelo en STLHUB vía MEGA.`;
 }
 
-function buildGenericDescriptionEn(title, isPremium) {
+function buildGenericDescriptionEn(title, tags = [], catName = '') {
     const name = String(title || 'this model').trim();
-    return isPremium
-        ? `Premium STL download of "${name}" via MEGA with fast and secure access.`
-        : `Free STL download of "${name}" via MEGA, ready for 3D printing.`;
+    const tagStr = tags.length > 0 ? ` Tags: ${tags.slice(0, 3).join(', ')}.` : '';
+    const catStr = catName ? ` Category: ${catName}.` : '';
+    return `Download the STL file for "${name}" ready for 3D printing.${catStr}${tagStr} Compatible with FDM and Resin printers. Get it on STLHUB via MEGA.`;
 }
 
 async function fetchAsset(slug) {
@@ -104,29 +105,16 @@ export async function generateMetadata({ params }) {
         isEn = h.get('x-lang') === 'en';
     } catch {}
 
-    const isPremium = !!asset.isPremium;
-    const safeTitleEs = (asset.title || 'modelo 3D').length > 35 ? (asset.title || 'modelo 3D').substring(0, 35) + '...' : (asset.title || 'modelo 3D');
-    const titleEs =
-        (isPremium ? 'Descargar STL premium ' : 'Descargar STL gratis ') +
-        safeTitleEs +
-        ' por MEGA';
-    const safeTitleEn = (asset.titleEn || asset.title || '3D model').length > 35 ? (asset.titleEn || asset.title || '3D model').substring(0, 35) + '...' : (asset.titleEn || asset.title || '3D model');
-    const titleEn =
-        (isPremium ? 'Download premium STL ' : 'Download free STL ') +
-        safeTitleEn +
-        ' via MEGA';
-    const descEs =
-        (asset.description?.slice(0, 180) ||
-            asset.title + ' STL para impresión 3D.') +
-        (asset.tagsEs?.length
-            ? ` Tags: ${asset.tagsEs.slice(0, 6).join(', ')}`
-            : '');
-    const descEn =
-        (asset.descriptionEn?.slice(0, 180) ||
-            (asset.titleEn || asset.title) + ' STL for 3D printing.') +
-        (asset.tagsEn?.length
-            ? ` Tags: ${asset.tagsEn.slice(0, 6).join(', ')}`
-            : '');
+    const safeTitleEs = (asset.title || 'modelo 3D').length > 40 ? (asset.title || 'modelo 3D').substring(0, 40) + '...' : (asset.title || 'modelo 3D');
+    const titleEs = `Descargar STL: ${safeTitleEs} | STLHUB`;
+    
+    const safeTitleEn = (asset.titleEn || asset.title || '3D model').length > 40 ? (asset.titleEn || asset.title || '3D model').substring(0, 40) + '...' : (asset.titleEn || asset.title || '3D model');
+    const titleEn = `Download STL: ${safeTitleEn} | STLHUB`;
+    const catEs = asset.categories?.[0]?.es || asset.categories?.[0]?.name || '';
+    const catEn = asset.categories?.[0]?.en || asset.categories?.[0]?.nameEn || catEs;
+    
+    const descEs = asset.description?.slice(0, 160) || buildGenericDescriptionEs(asset.title, asset.tagsEs, catEs);
+    const descEn = asset.descriptionEn?.slice(0, 160) || buildGenericDescriptionEn(asset.titleEn || asset.title, asset.tagsEn, catEn);
 
     const baseTitle = isEn ? titleEn : titleEs;
     const desc = isEn ? descEn : descEs;
@@ -210,8 +198,13 @@ export default async function AssetPage({ params }) {
         : [];
     const descriptionEsRaw = String(asset.description || '').trim();
     const descriptionEnRaw = String(asset.descriptionEn || '').trim();
-    const descriptionEs = descriptionEsRaw || buildGenericDescriptionEs(asset.title, !!asset.isPremium);
-    const descriptionEn = descriptionEnRaw || buildGenericDescriptionEn(asset.titleEn || asset.title, !!asset.isPremium);
+    
+    // Mejorar la generación de descripción si está vacía
+    const catEs = categories[0]?.es || '';
+    const catEn = categories[0]?.en || categories[0]?.es || '';
+    
+    const descriptionEs = descriptionEsRaw || buildGenericDescriptionEs(asset.title, tagsEs, catEs);
+    const descriptionEn = descriptionEnRaw || buildGenericDescriptionEn(asset.titleEn || asset.title, tagsEn, catEn);
 
     // Detectar idioma desde header inyectado por middleware
     let pageIsEn = false;
@@ -266,6 +259,30 @@ export default async function AssetPage({ params }) {
                     itemCondition: 'https://schema.org/NewCondition',
                 },
             },
+            {
+                '@type': 'BreadcrumbList',
+                '@id': `${site}/asset/${asset.slug}#breadcrumb`,
+                itemListElement: [
+                    {
+                        '@type': 'ListItem',
+                        position: 1,
+                        name: 'Home',
+                        item: site
+                    },
+                    {
+                        '@type': 'ListItem',
+                        position: 2,
+                        name: categories[0]?.es || 'Catalog',
+                        item: `${site}/search${categories[0]?.slug ? `?category=${categories[0].slug}` : ''}`
+                    },
+                    {
+                        '@type': 'ListItem',
+                        position: 3,
+                        name: asset.title,
+                        item: `${site}/asset/${asset.slug}`
+                    }
+                ]
+            }
         ],
     };
 
@@ -406,6 +423,16 @@ export default async function AssetPage({ params }) {
                         </section>
                     </div>
                 ) : null}
+                
+                {/* ── Related Assets ── */}
+                <div className={styles.contentWrap}>
+                    <RelatedAssets 
+                        currentSlug={asset.slug} 
+                        categories={categories} 
+                        tags={mergedTags} 
+                        isEn={pageIsEn} 
+                    />
+                </div>
                 </main>
             </NsfwPageWrapper>
         </>
