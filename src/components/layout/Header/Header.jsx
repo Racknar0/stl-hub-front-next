@@ -185,16 +185,43 @@ const Header = () => {
     }
   }, [searchMode])
 
-  // Auto-hide header on scroll
+  // Auto-hide header on scroll (Mobile only via CSS)
   useEffect(() => {
+    let ticking = false
     const onScroll = () => {
-      const y = window.scrollY
-      if (y > lastScrollY.current && y > 80) {
-        setHeaderHidden(true)
-      } else {
-        setHeaderHidden(false)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const y = window.scrollY
+          
+          // Ignorar rubber-banding de iOS
+          if (y <= 0) {
+            setHeaderHidden(false)
+            lastScrollY.current = y
+            ticking = false
+            return
+          }
+
+          const diff = y - lastScrollY.current
+          
+          // Umbral de 5px para evitar jitter
+          if (Math.abs(diff) < 5) {
+            ticking = false
+            return
+          }
+
+          if (diff > 0 && y > 60) {
+            // Scroll abajo -> Ocultar
+            setHeaderHidden(true)
+          } else if (diff < 0) {
+            // Scroll arriba -> Mostrar
+            setHeaderHidden(false)
+          }
+          
+          lastScrollY.current = y
+          ticking = false
+        })
+        ticking = true
       }
-      lastScrollY.current = y
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
