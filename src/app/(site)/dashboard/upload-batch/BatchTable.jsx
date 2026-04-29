@@ -25,7 +25,7 @@ import SimilaritySidebar from './components/SimilaritySidebar'
 import {
   MAX_SIMILARITY_HASH_IMAGES, UI_ACCOUNT_LIMIT_MB, BACKEND_SAFETY_LIMIT_MB,
   DISTRIBUTION_HEADROOM_MB, AUTO_DISTRIBUTION_LIMIT_MB, MIN_SELECTOR_FREE_MB,
-  REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
+  SELECTOR_GREEN_PCT, REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
 } from './constants'
 
 
@@ -521,7 +521,13 @@ export default function BatchTable() {
           usedMB: Number(c.storageUsedMB || 0),
           totalMB: Number(c.storageTotalMB || 0),
         }))
-        .filter(c => Number(c.id) > 0 && Number(c.usedMB || 0) < Number(c.limitMB || UI_ACCOUNT_LIMIT_MB))
+        .filter(c => {
+          if (Number(c.id) <= 0) return false
+          // Usar el total real (ajustado por bottleneck de backup) para calcular %
+          const effectiveTotal = c.totalMB > 0 ? c.totalMB : UI_ACCOUNT_LIMIT_MB
+          const pct = effectiveTotal > 0 ? (c.usedMB / effectiveTotal) * 100 : 100
+          return pct < SELECTOR_GREEN_PCT
+        })
 
       const availableIds = new Set(normalized.map((c) => Number(c.id)))
       setDistributionAccountIds((prev) => {
@@ -1400,7 +1406,8 @@ export default function BatchTable() {
       const effectiveLimitMb = Math.max(0, limitMb - DISTRIBUTION_HEADROOM_MB)
       const effectiveFreeMb = Math.max(0, effectiveLimitMb - usedMb)
       const checked = selectedSet.has(Number(c?.id || 0))
-      const canFitMinPending = effectiveFreeMb >= minRequiredFreeMb
+      const pct = limitMb > 0 ? (usedMb / limitMb) * 100 : 100
+      const canFitMinPending = pct < SELECTOR_GREEN_PCT
       return {
         ...c,
         limitMb,

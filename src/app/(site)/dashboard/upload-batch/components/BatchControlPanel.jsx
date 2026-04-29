@@ -243,14 +243,16 @@ export default function BatchControlPanel({
               >
                 {accountSelectionMeta?.selectable?.map((c) => {
                   const checked = (distributionAccountIds || []).includes(Number(c.id))
+                  const pct = c.limitMb > 0 ? Math.round((c.usedMb / c.limitMb) * 100) : 0
+                  const capFreeMb = Math.max(0, Number(c.limitMb || 0) - Number(c.usedMb || 0))
                   return (
                     <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', '&:hover': { bgcolor: '#1e293b' } }}>
                       <Checkbox checked={checked} size="small" sx={{ color: '#38bdf8', '&.Mui-checked': { color: '#38bdf8' } }} />
                       <ListItemText 
                         primary={c.alias} 
-                        secondary={`${(Math.max(0, Number(c.freeMb || 0)) / 1024).toFixed(2)} GB`}
+                        secondary={`${pct}% · ${(capFreeMb / 1024).toFixed(1)} GB libres`}
                         primaryTypographyProps={{ fontSize: 13, fontWeight: checked ? 700 : 500 }}
-                        secondaryTypographyProps={{ fontSize: 11, color: '#94a3b8' }}
+                        secondaryTypographyProps={{ fontSize: 11, color: '#4ade80' }}
                       />
                     </MenuItem>
                   )
