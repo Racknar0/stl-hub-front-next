@@ -99,6 +99,11 @@
         height: 390px;
     }
 
+    @media (max-width: 600px) {
+        max-width: 280px;
+        margin: 0 auto;
+    }
+
     &:hover {
         cursor: pointer;
         border-color: rgba(255, 255, 255, 0.12);
