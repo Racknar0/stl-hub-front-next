@@ -268,21 +268,6 @@ export default function Page() {
 
         {activeTab === 'overview' && (
           <>
-            <div className="dashboard-randomize-row">
-              <label htmlFor="free-count">Cantidad FREE aleatoria:</label>
-              <input
-                id="free-count"
-                type="number"
-                min={0}
-                value={count}
-                onChange={(e)=>setCount(e.target.value)}
-                className="dashboard-randomize-input"
-              />
-              <button className="btn btn-secondary" onClick={randomize} disabled={loading}>
-                {loading ? 'Procesando…' : 'Randomizar FREE'}
-              </button>
-            </div>
-
             <div className="dashboard-kpi-row">
               <AssetsSubidos />
               <TotalArchivo value={1234} />
