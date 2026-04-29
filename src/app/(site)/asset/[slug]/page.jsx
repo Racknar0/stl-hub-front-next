@@ -113,8 +113,11 @@ export async function generateMetadata({ params }) {
     const catEs = asset.categories?.[0]?.es || asset.categories?.[0]?.name || '';
     const catEn = asset.categories?.[0]?.en || asset.categories?.[0]?.nameEn || catEs;
     
-    const descEs = asset.description?.slice(0, 160) || buildGenericDescriptionEs(asset.title, asset.tagsEs, catEs);
-    const descEn = asset.descriptionEn?.slice(0, 160) || buildGenericDescriptionEn(asset.titleEn || asset.title, asset.tagsEn, catEn);
+    const tagsEs = Array.isArray(asset.tagsEs) ? asset.tagsEs.filter(Boolean) : [];
+    const tagsEn = Array.isArray(asset.tagsEn) ? asset.tagsEn.filter(Boolean) : [];
+    
+    const descEs = asset.description?.slice(0, 160) || buildGenericDescriptionEs(asset.title, tagsEs, catEs);
+    const descEn = asset.descriptionEn?.slice(0, 160) || buildGenericDescriptionEn(asset.titleEn || asset.title, tagsEn, catEn);
 
     const baseTitle = isEn ? titleEn : titleEs;
     const desc = isEn ? descEn : descEs;

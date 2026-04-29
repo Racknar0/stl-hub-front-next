@@ -56,10 +56,7 @@ export default async function RelatedAssets({ currentSlug, categories = [], tags
                                 border: '1px solid rgba(255,255,255,0.05)',
                                 transition: 'transform 0.2s',
                                 cursor: 'pointer'
-                            }} 
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
+                            }}>
                                 <div style={{ position: 'relative', aspectRatio: '4/3', width: '100%', backgroundColor: '#000' }}>
                                     <Image 
                                         src={img}
