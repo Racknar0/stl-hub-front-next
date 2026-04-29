@@ -190,7 +190,7 @@ export default function TelegramOrganizer() {
   };
 
   const toggleSelectAll = () => {
-    if (filesToDelete.size === files.length) setFilesToDelete(new Set());
+    if (filesToDelete.size > 0) setFilesToDelete(new Set());
     else setFilesToDelete(new Set(files.map(f => f.name)));
   };
 
@@ -219,6 +219,19 @@ export default function TelegramOrganizer() {
         <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
           ▶ Empaquetar (Espacio)
         </button>
+        
+        {files.length > 0 && (
+          <button className="btn btn-secondary" onClick={toggleSelectAll}>
+            {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
+          </button>
+        )}
+
+        {filesToDelete.size > 0 && (
+          <button className="btn btn-delete" onClick={deleteSelected}>
+            🗑️ Eliminar ({filesToDelete.size})
+          </button>
+        )}
+
         {undoStack.length > 0 && (
           <button className="btn btn-undo" onClick={undoLast}>
             ↩️ Deshacer ({undoStack.length})
@@ -271,18 +284,7 @@ export default function TelegramOrganizer() {
         </div>
       )}
 
-      {files.length > 0 && (
-        <div className="floating-bar">
-          <button className="btn btn-secondary" onClick={toggleSelectAll}>
-            {filesToDelete.size === files.length ? '🚫 Desmarcar' : '✅ Seleccionar Todo'}
-          </button>
-          {filesToDelete.size > 0 && (
-            <button className="btn btn-delete" onClick={deleteSelected}>
-              🗑️ Eliminar ({filesToDelete.size})
-            </button>
-          )}
-        </div>
-      )}
+
     </div>
   );
 }
