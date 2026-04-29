@@ -73,6 +73,7 @@ export default function BatchTable() {
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
   const [reviewMode, setReviewMode] = useState(false)
+  const [useTelegramSource, setUseTelegramSource] = useState(false)
   const [summaryFilter, setSummaryFilter] = useState('all')
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
@@ -785,8 +786,10 @@ export default function BatchTable() {
     try {
       setScanStatus(null)
       setIsScanning(true)
-      setToast({ open: true, msg: 'Escaneando carpeta local uploads/batch_imports...', type: 'info' })
-      const res = await http.postData('/batch-imports/scan', {}, { timeout: 0 });
+      setToast({ open: true, msg: useTelegramSource
+        ? 'Escaneando carpeta Telegram Organizer...'
+        : 'Escaneando carpeta local uploads/batch_imports...', type: 'info' })
+      const res = await http.postData(`/batch-imports/scan${useTelegramSource ? '?source=telegram' : ''}`, {}, { timeout: 0 });
       if (res.data?.success) {
         setAiRetryCandidateIds([])
         const scannedCount = Number(res.data?.scannedItemsCount || 0)
@@ -1838,6 +1841,8 @@ export default function BatchTable() {
           handleStopAndResetToDraft={handleStopAndResetToDraft}
           reviewMode={reviewMode}
           setReviewMode={setReviewMode}
+          useTelegramSource={useTelegramSource}
+          setUseTelegramSource={setUseTelegramSource}
           http={http}
           setToast={setToast}
           setRows={setRows}

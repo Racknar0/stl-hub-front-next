@@ -25,6 +25,7 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import TelegramIcon from '@mui/icons-material/Telegram'
 
 export default function BatchControlPanel({
   // ─── SCP Dropzone ───
@@ -64,6 +65,9 @@ export default function BatchControlPanel({
   // ─── Modo revisión ───
   reviewMode,
   setReviewMode,
+  // ─── Telegram Source ───
+  useTelegramSource,
+  setUseTelegramSource,
   // ─── Eliminar completados / todo ───
   http,
   setToast,
@@ -113,27 +117,56 @@ export default function BatchControlPanel({
             </Box>
           </Box>
 
-          <Tooltip title="Buscar nuevas carpetas en uploads/batch_imports y agregarlas a la cola">
+          <Tooltip title="Buscar nuevas carpetas y agregarlas a la cola">
             <Button
               variant="contained"
               onClick={async () => {
-                if (await confirmAlert('¿Escanear carpetas?', '¿Estás seguro de escanear las carpetas locales en busca de nuevos assets?')) {
+                const sourceLabel = useTelegramSource ? 'Telegram Organizer' : 'carpetas locales (SCP)'
+                if (await confirmAlert('¿Escanear carpetas?', `¿Estás seguro de escanear ${sourceLabel} en busca de nuevos assets?`)) {
                   handleScanLocal()
                 }
               }}
               disabled={isScanning || isApplyingAiMetadata || isRetryingAi}
-              startIcon={<SearchIcon />}
+              startIcon={useTelegramSource ? <TelegramIcon /> : <SearchIcon />}
               sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                boxShadow: '0 4px 14px 0 rgba(37,99,235,0.39)',
-                '&:hover': { background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }
+                background: useTelegramSource
+                  ? 'linear-gradient(135deg, #0088cc, #0077b5)'
+                  : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                boxShadow: useTelegramSource
+                  ? '0 4px 14px 0 rgba(0,136,204,0.39)'
+                  : '0 4px 14px 0 rgba(37,99,235,0.39)',
+                '&:hover': { background: useTelegramSource
+                  ? 'linear-gradient(135deg, #0077b5, #006699)'
+                  : 'linear-gradient(135deg, #2563eb, #1d4ed8)' }
               }}
             >
               {isScanning ? 'Escaneando...' : 'Escanear'}
             </Button>
+          </Tooltip>
+
+          <Tooltip title={useTelegramSource ? 'Fuente: Telegram Organizer' : 'Fuente: SCP (batch_imports)'}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={useTelegramSource}
+                  onChange={(e) => setUseTelegramSource(Boolean(e?.target?.checked))}
+                  color="info"
+                  size="small"
+                />
+              }
+              label={
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <TelegramIcon sx={{ fontSize: 16, color: useTelegramSource ? '#0088cc' : '#64748b' }} />
+                  <Typography variant="body2" sx={{ color: useTelegramSource ? '#0088cc' : '#94a3b8', fontWeight: 600, fontSize: 12 }}>
+                    Telegram
+                  </Typography>
+                </Stack>
+              }
+              sx={{ m: 0, px: 1, py: 0.3, borderRadius: 2, border: '1px solid', borderColor: useTelegramSource ? 'rgba(0,136,204,0.4)' : 'rgba(148,163,184,0.2)', bgcolor: useTelegramSource ? 'rgba(0,136,204,0.08)' : 'transparent', transition: 'all 0.2s' }}
+            />
           </Tooltip>
         </Stack>
 
