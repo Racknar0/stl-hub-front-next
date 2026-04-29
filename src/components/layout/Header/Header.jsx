@@ -187,42 +187,29 @@ const Header = () => {
 
   // Auto-hide header on scroll (Mobile only via CSS)
   useEffect(() => {
-    let ticking = false
     const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const y = window.scrollY
-          
-          // Ignorar rubber-banding de iOS
-          if (y <= 0) {
-            setHeaderHidden(false)
-            lastScrollY.current = y
-            ticking = false
-            return
-          }
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop
+      
+      // Ignorar rebote superior de iOS
+      if (currentScrollY <= 0) {
+        setHeaderHidden(false)
+        lastScrollY.current = currentScrollY
+        return
+      }
 
-          const diff = y - lastScrollY.current
-          
-          // Umbral de 5px para evitar jitter
-          if (Math.abs(diff) < 5) {
-            ticking = false
-            return
-          }
+      const diff = currentScrollY - lastScrollY.current
 
-          if (diff > 0 && y > 60) {
-            // Scroll abajo -> Ocultar
-            setHeaderHidden(true)
-          } else if (diff < 0) {
-            // Scroll arriba -> Mostrar
-            setHeaderHidden(false)
-          }
-          
-          lastScrollY.current = y
-          ticking = false
-        })
-        ticking = true
+      if (diff > 8 && currentScrollY > 60) {
+        // Scroll hacia abajo
+        setHeaderHidden(true)
+        lastScrollY.current = currentScrollY
+      } else if (diff < -8) {
+        // Scroll hacia arriba
+        setHeaderHidden(false)
+        lastScrollY.current = currentScrollY
       }
     }
+
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
