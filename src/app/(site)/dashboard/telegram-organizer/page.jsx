@@ -6,6 +6,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { Button, Dialog } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramOrganizer.scss';
 
@@ -29,6 +30,7 @@ export default function TelegramOrganizer() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const http = new HttpService();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
@@ -370,6 +372,18 @@ export default function TelegramOrganizer() {
               onClick={e => e.stopPropagation()}
             />
             <button className="delete-btn-quick" title="Eliminar" onClick={(e) => quickDelete(file.name, e)}>🗑️</button>
+            {file.type === 'image' && (
+              <button 
+                className="preview-btn-quick" 
+                title="Ver en grande" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewImage(`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`);
+                }}
+              >
+                <VisibilityIcon fontSize="small" />
+              </button>
+            )}
 
             {file.type === 'anchor' && (
               <>
@@ -398,6 +412,12 @@ export default function TelegramOrganizer() {
           </button>
         </div>
       )}
+
+      <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="lg">
+        {previewImage && (
+          <img src={previewImage} alt="Preview" style={{ width: '100%', height: 'auto', display: 'block' }} />
+        )}
+      </Dialog>
 
 
     </div>

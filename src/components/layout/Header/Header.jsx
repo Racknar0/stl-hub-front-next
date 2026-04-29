@@ -185,33 +185,45 @@ const Header = () => {
     }
   }, [searchMode])
 
-  // Auto-hide header on scroll (Mobile only via CSS)
+  // Auto-hide header on scroll — directly sets `top` on the sticky header
+  // Note: We listen on document because in some setups body is the scroll
+  // container (window.scrollY stays 0 while document.body.scrollTop changes).
   useEffect(() => {
+    const getScrollY = () =>
+      window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0
+
     const onScroll = () => {
-      const currentScrollY = window.scrollY || document.documentElement.scrollTop
-      
-      // Ignorar rebote superior de iOS
+      const currentScrollY = getScrollY()
+
       if (currentScrollY <= 0) {
-        setHeaderHidden(false)
-        lastScrollY.current = currentScrollY
+        if (headerRef.current) headerRef.current.style.top = '0px'
+        lastScrollY.current = 0
         return
       }
 
       const diff = currentScrollY - lastScrollY.current
 
-      if (diff > 8 && currentScrollY > 60) {
-        // Scroll hacia abajo
-        setHeaderHidden(true)
+      if (diff > 5 && currentScrollY > 60) {
+        // Scrolling DOWN — hide
+        if (headerRef.current) {
+          const h = headerRef.current.offsetHeight || 120
+          headerRef.current.style.top = `-${h + 10}px`
+        }
         lastScrollY.current = currentScrollY
-      } else if (diff < -8) {
-        // Scroll hacia arriba
-        setHeaderHidden(false)
+      } else if (diff < -5) {
+        // Scrolling UP — show
+        if (headerRef.current) headerRef.current.style.top = '0px'
         lastScrollY.current = currentScrollY
       }
     }
 
+    // Listen on window, document, AND body to cover all scroll container scenarios
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    document.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('scroll', onScroll)
+    }
   }, [])
 
   // Close mobile menu on route change
@@ -558,7 +570,7 @@ const Header = () => {
           </p>
           <style>{`@keyframes globalDropPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }`}</style>
         </div>
-      <header ref={headerRef} className={`app-header ${headerHidden ? 'header-hidden' : ''}`}>
+      <header ref={headerRef} className="app-header">
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
         <SearchParamsWatcher
