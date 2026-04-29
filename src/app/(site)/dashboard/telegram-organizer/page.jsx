@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HttpService from '@/services/HttpService';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import { Button } from '@mui/material';
 import './TelegramOrganizer.scss';
 
 const PAGE_SIZE = 200;
@@ -20,6 +23,7 @@ export default function TelegramOrganizer() {
   const [undoStack, setUndoStack] = useState([]);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
 
   const http = new HttpService();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
@@ -197,48 +201,107 @@ export default function TelegramOrganizer() {
   const remaining = serverTotal - offset;
 
   return (
-    <div className="telegram-organizer">
-      <div className="header">
-        <div>
-          <h1>📦 Telegram Organizer</h1>
-          <p>Organiza los archivos descargados en carpetas para el Batch Upload.</p>
+    <div className={`telegram-organizer ${isReviewMode ? 'review-mode' : ''}`}>
+      {!isReviewMode && (
+        <div className="header">
+          <div>
+            <h1>📦 Telegram Organizer</h1>
+            <p>Organiza los archivos descargados en carpetas para el Batch Upload.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button
+              variant="outlined"
+              color="info"
+              onClick={() => setIsReviewMode(true)}
+              startIcon={<FullscreenIcon />}
+            >
+              Modo Revisión
+            </Button>
+            <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading}>
+              {loading ? 'Cargando...' : 'Recargar'}
+            </button>
+          </div>
         </div>
-        <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading}>
-          {loading ? 'Cargando...' : 'Recargar'}
-        </button>
-      </div>
+      )}
 
-      <div className="stats-bar">
-        <div className="stat">Assets:<span>{totalAssets}</span></div>
-        <div className="stat">Imágenes:<span>{totalImages}</span></div>
-        <div className="stat">Total:<span>{serverTotal}</span></div>
-        <div className="stat">Cargados:<span>{files.length}</span></div>
-      </div>
+      {isReviewMode ? (
+        <div className="header-review">
+          <div className="stats-bar">
+            <div className="stat">Assets:<span>{totalAssets}</span></div>
+            <div className="stat">Imágenes:<span>{totalImages}</span></div>
+            <div className="stat">Total:<span>{serverTotal}</span></div>
+            <div className="stat">Cargados:<span>{files.length}</span></div>
+          </div>
+          
+          <div className="actions-bar">
+            <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
+              ▶ Empaquetar (Espacio)
+            </button>
+            {files.length > 0 && (
+              <button className="btn btn-secondary" onClick={toggleSelectAll}>
+                {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
+              </button>
+            )}
+            {filesToDelete.size > 0 && (
+              <button className="btn btn-delete" onClick={deleteSelected}>
+                🗑️ Eliminar ({filesToDelete.size})
+              </button>
+            )}
+            {undoStack.length > 0 && (
+              <button className="btn btn-undo" onClick={undoLast}>
+                ↩️ Deshacer ({undoStack.length})
+              </button>
+            )}
+            <span className="status-text">{status}</span>
+          </div>
 
-      <div className="actions-bar">
-        <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
-          ▶ Empaquetar (Espacio)
-        </button>
-        
-        {files.length > 0 && (
-          <button className="btn btn-secondary" onClick={toggleSelectAll}>
-            {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
-          </button>
-        )}
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            onClick={() => setIsReviewMode(false)}
+            startIcon={<FullscreenExitIcon />}
+          >
+            Salir
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="stats-bar">
+            <div className="stat">Assets:<span>{totalAssets}</span></div>
+            <div className="stat">Imágenes:<span>{totalImages}</span></div>
+            <div className="stat">Total:<span>{serverTotal}</span></div>
+            <div className="stat">Cargados:<span>{files.length}</span></div>
+          </div>
 
-        {filesToDelete.size > 0 && (
-          <button className="btn btn-delete" onClick={deleteSelected}>
-            🗑️ Eliminar ({filesToDelete.size})
-          </button>
-        )}
+          <div className="actions-bar">
+            <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
+              ▶ Empaquetar (Espacio)
+            </button>
+            
+            {files.length > 0 && (
+              <button className="btn btn-secondary" onClick={toggleSelectAll}>
+                {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
+              </button>
+            )}
 
-        {undoStack.length > 0 && (
-          <button className="btn btn-undo" onClick={undoLast}>
-            ↩️ Deshacer ({undoStack.length})
-          </button>
-        )}
-        <span className="status-text">{status}</span>
-      </div>
+            {filesToDelete.size > 0 && (
+              <button className="btn btn-delete" onClick={deleteSelected}>
+                🗑️ Eliminar ({filesToDelete.size})
+              </button>
+            )}
+
+            {undoStack.length > 0 && (
+              <button className="btn btn-undo" onClick={undoLast}>
+                ↩️ Deshacer ({undoStack.length})
+              </button>
+            )}
+            <span className="status-text">{status}</span>
+          </div>
+        </>
+      )}
+
+
 
       <div className="grid">
         {files.map(file => (

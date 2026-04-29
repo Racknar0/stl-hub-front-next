@@ -144,4 +144,49 @@
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     backdrop-filter: blur(10px);
   }
+
+  &.review-mode {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background-color: var(--background-default, #0f172a);
+    padding: 20px;
+    padding-top: 100px;
+    overflow-y: auto;
+
+    .header-review {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1301;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px 24px;
+      border-radius: 50px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(127, 127, 127, 0.2);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      flex-wrap: nowrap;
+      width: max-content;
+      max-width: 90vw;
+      overflow-x: auto;
+      
+      .stat {
+        padding: 0.4rem 0.8rem;
+        background: transparent;
+        border: none;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        border-radius: 0;
+        &:last-child { border-right: none; }
+      }
+
+      .stats-bar, .actions-bar {
+        margin-bottom: 0;
+        flex-wrap: nowrap;
+      }
+    }
+  }
 }
