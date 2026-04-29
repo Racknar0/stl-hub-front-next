@@ -5,7 +5,7 @@ import './SectionRow.scss';
 import Button from '../../layout/Buttons/Button';
 import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Virtual } from 'swiper/modules';
+import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
@@ -57,11 +57,10 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
         ) : (
           <Swiper
             className="row-slider"
-            modules={[Navigation, Virtual]}
+            modules={[Navigation]}
             navigation
-            virtual
             slidesPerView="auto"
-            spaceBetween={16}
+            spaceBetween={12}
             grabCursor
             watchOverflow
           >
@@ -78,7 +77,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
               };
               const uploadDate = formatUploadDate(it.createdAt);
               return (
-                <SwiperSlide key={it.id} virtualIndex={index}>
+                <SwiperSlide key={it.id}>
                   <article className="card-item" onClick={() => onItemClick?.(it)}>
                     <div className="thumb">
                       <CardImageSlider

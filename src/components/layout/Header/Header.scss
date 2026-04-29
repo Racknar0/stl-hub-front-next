@@ -336,6 +336,7 @@
 
     input {
         flex: 1;
+        min-width: 0;
         background: transparent;
         border: 0;
         outline: 0;
@@ -370,6 +371,7 @@
         cursor: pointer;
         position: relative;
         z-index: 1;
+        flex-shrink: 0;
         transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
     }
 
@@ -473,11 +475,14 @@
 
 .search-panel {
     padding: 0.8rem 0 1rem;
+    position: relative;
 }
 
 /* Inline dentro del navbar en desktop */
 .search-inline {
     min-width: 340px;
+    flex-wrap: wrap;
+    position: relative;
 }
 @media (min-width: 992px) {
     .search-inline {
@@ -668,20 +673,11 @@
    AI Image Search — Dropzone Expandido Inline
    ═══════════════════════════════════════════════════════════════════ */
 
-.search-inline.ai-dropzone-open {
-    position: relative;
-}
-
-.search-panel.ai-dropzone-open {
-    flex-direction: column;
-    align-items: stretch;
-}
-
 .ai-image-dropzone {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
+    left: 1rem;
+    right: 1rem;
     margin-top: 8px;
     border-radius: 16px;
     border: 2px dashed transparent;
@@ -701,6 +697,60 @@
         0 0 0 1px rgba(0, 231, 255, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
     transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+/* Close button on the dropzone */
+.dropzone-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    line-height: 1;
+
+    &:hover {
+        background: rgba(255, 107, 107, 0.15);
+        border-color: rgba(255, 107, 107, 0.4);
+        color: #ff6b6b;
+    }
+}
+
+/* Photo icon toggle to reopen the dropzone */
+.dropzone-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 231, 255, 0.25);
+    background: rgba(0, 231, 255, 0.08);
+    color: #00e7ff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    margin-right: 2px;
+
+    &:hover {
+        background: rgba(0, 231, 255, 0.18);
+        border-color: rgba(0, 231, 255, 0.5);
+        transform: scale(1.05);
+    }
+
+    svg {
+        display: block;
+    }
 }
 
 .ai-image-dropzone:not(.has-image) {

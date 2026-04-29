@@ -444,6 +444,12 @@ const Header = () => {
       onDrop={handleImageDrop}
       onClick={() => !imageSearchPreview && imagePickerRef.current?.click()}
     >
+      <button
+        type="button"
+        className="dropzone-close"
+        onClick={(e) => { e.stopPropagation(); setAiDropzoneOpen(false) }}
+        aria-label="Close"
+      >✕</button>
       <input ref={imagePickerRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImagePick} />
       {!imageSearchPreview ? (
         <div className="dropzone-content">
@@ -757,6 +763,21 @@ const Header = () => {
                 placeholder={imageSearchPreview ? (isEn ? 'Add context... (optional)' : 'Agrega contexto... (opcional)') : searchPlaceholder}
                 aria-label={t('header.searchAria')}
               />
+              {searchMode === 'ai' && !aiDropzoneOpen && (
+                <button
+                  type="button"
+                  className="dropzone-toggle-btn"
+                  onClick={() => setAiDropzoneOpen(true)}
+                  aria-label={isEn ? 'Open image search' : 'Abrir búsqueda por imagen'}
+                  title={isEn ? 'Search by image' : 'Buscar por imagen'}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
+                    <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
               <button
                 type="submit"
                 className="search-btn"
@@ -957,6 +978,21 @@ const Header = () => {
               placeholder={imageSearchPreview ? (isEn ? 'Add context... (optional)' : 'Agrega contexto... (opcional)') : searchPlaceholder}
               aria-label={t('header.searchAria')}
             />
+            {searchMode === 'ai' && !aiDropzoneOpen && (
+              <button
+                type="button"
+                className="dropzone-toggle-btn"
+                onClick={() => setAiDropzoneOpen(true)}
+                aria-label={isEn ? 'Open image search' : 'Abrir búsqueda por imagen'}
+                title={isEn ? 'Search by image' : 'Buscar por imagen'}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
             <button
               type="submit"
               className="search-btn"
