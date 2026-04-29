@@ -167,8 +167,28 @@ export default function TelegramOrganizer() {
     setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: Array.from(filesToDelete) }]);
     setFiles(prev => prev.filter(f => !filesToDelete.has(f.name)));
     setServerTotal(prev => prev - filesToDelete.size);
+    if (filesToDelete.has(selectedAnchor)) { setSelectedAnchor(null); setSelectedFiles(new Set()); }
     setFilesToDelete(new Set());
-    setStatus('✅ Archivos borrados.');
+    setStatus('Borrados.');
+  };
+
+  const purgeFolder = async () => {
+    if (!confirm('🚨 ¿Estás seguro? Esto eliminará TODOS los archivos sueltos en la carpeta de Telegram Downloads que no han sido empaquetados. Esta acción no se puede deshacer.')) return;
+    setStatus('Purgando carpeta...');
+    try {
+      const res = await http.deleteRaw('/organizer/purge');
+      const d = res.data || res;
+      if (d.error) throw new Error(d.error);
+      setFiles([]);
+      setServerTotal(0);
+      setSelectedAnchor(null);
+      setSelectedFiles(new Set());
+      setFilesToDelete(new Set());
+      setUndoStack([]);
+      setStatus('Carpeta purgada correctamente.');
+    } catch (e) {
+      setStatus('Error al purgar: ' + e.message);
+    }
   };
 
   const undoLast = async () => {
@@ -209,6 +229,15 @@ export default function TelegramOrganizer() {
             <p>Organiza los archivos descargados en carpetas para el Batch Upload.</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
+            {files.length > 0 && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={purgeFolder}
+              >
+                ☠️ Purgar Carpeta
+              </Button>
+            )}
             <Button
               variant="outlined"
               color="info"
@@ -250,6 +279,11 @@ export default function TelegramOrganizer() {
             {undoStack.length > 0 && (
               <button className="btn btn-undo" onClick={undoLast}>
                 ↩️ Deshacer ({undoStack.length})
+              </button>
+            )}
+            {files.length > 0 && (
+              <button className="btn btn-delete" style={{ marginLeft: 'auto', backgroundColor: '#dc2626' }} onClick={purgeFolder}>
+                ☠️ Purgar Carpeta
               </button>
             )}
             <span className="status-text">{status}</span>

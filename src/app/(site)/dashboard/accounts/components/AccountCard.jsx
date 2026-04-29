@@ -60,12 +60,12 @@ export default function AccountCard({
                 : acc.status || '?';
     const statusColor =
         acc.status === 'CONNECTED'
-            ? '#246bef70'
+            ? '#3b82f670' // subtle blue
             : acc.status === 'ERROR'
-              ? '#ff1100ff'
+              ? '#ef4444' // red-500
               : acc.status === 'EXPIRED'
-                ? '#ff9800'
-                : '#888';
+                ? '#f59e0b' // amber-500
+                : '#64748b'; // slate-500
 
     return (
         <Box
@@ -76,13 +76,12 @@ export default function AccountCard({
                 borderRadius: '10px',
                 background: 'rgba(15, 23, 42, 0.65)',
                 backdropFilter: 'blur(12px)',
-                border: isHigh
-                    ? '1px solid rgba(255, 17, 0, 0.5)'
-                    : acc.status === 'CONNECTED'
-                      ? '1px solid rgba(14, 102, 19, 0.35)'
-                      : acc.status === 'ERROR'
-                        ? '1px solid rgba(255, 0, 0, 0.4)'
-                        : '1px solid rgba(255,255,255,0.08)',
+                border:
+                    acc.status === 'CONNECTED'
+                        ? '1px solid rgba(14, 102, 19, 0.35)'
+                        : acc.status === 'ERROR'
+                          ? '1px solid rgba(255, 0, 0, 0.4)'
+                          : '1px solid rgba(255,255,255,0.08)',
                 transition: 'all .2s',
                 '&:hover': {
                     borderColor: 'rgba(139, 92, 246, 0.5)',
@@ -124,7 +123,7 @@ export default function AccountCard({
                     sx={{
                         fontSize: '1rem',
                         fontWeight: 600,
-                        color: '#ffffffff',
+                        color: '#a6aab0ff', // slate-200 (less bright than #ffffff)
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -202,7 +201,7 @@ export default function AccountCard({
                         fontSize: '0.65rem',
                         fontWeight: 700,
                         flexShrink: 0,
-                        color: isHigh ? '#f44336' : '#30f01fff',
+                        color: isHigh ? '#ef4444' : '#4ade80',
                         minWidth: 26,
                     }}
                 >
@@ -219,8 +218,8 @@ export default function AccountCard({
                         '& .MuiLinearProgress-bar': {
                             borderRadius: 3,
                             background: isHigh
-                                ? 'linear-gradient(90deg, #f44336, #ff1744)'
-                                : 'linear-gradient(90deg, #30f01fff, #56d03dff)',
+                                ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                                : 'linear-gradient(90deg, #22c55e, #4ade80)',
                         },
                     }}
                 />
@@ -272,14 +271,14 @@ export default function AccountCard({
                     <CalendarTodayOutlinedIcon
                         sx={{
                             fontSize: 11,
-                            color: checkedToday ? '#4caf50' : '#64748b',
+                            color: checkedToday ? '#a78bfa' : '#64748b',
                         }}
                     />
                     <Box
                         component="span"
                         sx={{
                             fontSize: '0.8rem',
-                            color: checkedToday ? '#4caf50' : '#ffffffff',
+                            color: checkedToday ? '#a78bfa' : '#bdbdbdff',
                             fontWeight: checkedToday ? 700 : 400,
                         }}
                     >
