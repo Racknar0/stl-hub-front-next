@@ -393,14 +393,12 @@ export default function SearchClient({ initialParams }) {
       const rect = node.getBoundingClientRect();
       const next = {
         width: Math.max(1, Math.round(rect.width || 1)),
-        // Calculate stable absolute document top
-        top: Math.max(0, Math.round(rect.top + (window.scrollY || window.pageYOffset || 0))),
+        // Use offsetTop for a stable position that doesn't change with scroll
+        top: Math.max(0, node.offsetTop || 0),
         windowW: Math.max(1, Math.round(window.innerWidth || 1)),
       };
       setVirtualMetrics((prev) => {
-        // Only trigger re-render if width or window boundaries change significantly
-        // Ignore micro-shifts in 'top' to prevent jitter storms on scroll
-        if (prev.width === next.width && prev.windowW === next.windowW && Math.abs(prev.top - next.top) < 50) return prev;
+        if (prev.width === next.width && prev.windowW === next.windowW) return prev;
         return next;
       });
     };

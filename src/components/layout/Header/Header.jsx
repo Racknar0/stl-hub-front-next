@@ -22,16 +22,14 @@ function SearchParamsWatcher({ onReset }) {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    onReset({
-      isAiSearch: String(searchParams?.get('is_ai_search') || '').toLowerCase() === 'true'
-    })
+    onReset()
   }, [pathname, searchParams?.toString()])
 
   return null
 }
 
 const Header = () => {
-  const SEARCH_MODE_STORAGE_KEY = 'stlhub:header-search-mode:v1'
+  // (storage key removed — searchMode is ephemeral state only)
   const token = useStore((s) => s.token)
   const roleId = useStore((s) => s.roleId)
   const logout = useStore((s) => s.logout)
@@ -185,15 +183,12 @@ const Header = () => {
     }
   }, [searchMode])
 
-  // Auto-hide header on scroll — directly sets `top` on the sticky header
-  // Note: We listen on document because in some setups body is the scroll
-  // container (window.scrollY stays 0 while document.body.scrollTop changes).
+  // Auto-hide header on scroll — uses capture to catch scroll on ANY container
   useEffect(() => {
-    const getScrollY = () =>
-      window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0
-
-    const onScroll = () => {
-      const currentScrollY = getScrollY()
+    const onScroll = (e) => {
+      // Read scroll position from whichever element is actually scrolling
+      const target = e.target === document ? document.documentElement : e.target
+      const currentScrollY = target.scrollTop ?? window.scrollY ?? 0
 
       if (currentScrollY <= 0) {
         if (headerRef.current) headerRef.current.style.top = '0px'
@@ -204,26 +199,20 @@ const Header = () => {
       const diff = currentScrollY - lastScrollY.current
 
       if (diff > 5 && currentScrollY > 60) {
-        // Scrolling DOWN — hide
         if (headerRef.current) {
           const h = headerRef.current.offsetHeight || 120
           headerRef.current.style.top = `-${h + 10}px`
         }
         lastScrollY.current = currentScrollY
       } else if (diff < -5) {
-        // Scrolling UP — show
         if (headerRef.current) headerRef.current.style.top = '0px'
         lastScrollY.current = currentScrollY
       }
     }
 
-    // Listen on window, document, AND body to cover all scroll container scenarios
-    window.addEventListener('scroll', onScroll, { passive: true })
-    document.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      document.removeEventListener('scroll', onScroll)
-    }
+    // capture: true intercepts scroll events from ANY element (scroll doesn't bubble)
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    return () => document.removeEventListener('scroll', onScroll, { capture: true })
   }, [])
 
   // Close mobile menu on route change
@@ -316,7 +305,8 @@ const Header = () => {
               // 1-second delay for elegance so the user sees the animation and success state
               await new Promise(r => setTimeout(r, 1000))
               
-              setSearchMode('normal')
+              // Close dropzone without flipping searchMode (avoids re-animation jump)
+              setAiDropzoneOpen(false)
               let url = `/search?image_search=true`
               if (val) url += `&q=${encodeURIComponent(val)}`
               await router.push(url)
@@ -337,7 +327,7 @@ const Header = () => {
         }
         
         // Navegación para búsqueda IA (solo texto)
-        setSearchMode('normal')
+        setAiDropzoneOpen(false)
         let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
         url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
         await router.push(url)
@@ -574,9 +564,8 @@ const Header = () => {
       {/* Suspense boundary for useSearchParams — required for static pre-rendering */}
       <Suspense fallback={null}>
         <SearchParamsWatcher
-          onReset={({ isAiSearch } = {}) => {
+          onReset={() => {
             setSearchLoading(false)
-            if (isAiSearch) setSearchMode('ai')
           }}
         />
       </Suspense>
