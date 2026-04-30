@@ -28,7 +28,8 @@ export default function AlignmentModal({ open, onClose, account }) {
     const [error, setError] = useState(null);
 
     const [selectedMissing, setSelectedMissing] = useState(new Set());
-    const [selectedOrphans, setSelectedOrphans] = useState(new Set());
+    const [selectedOrphansMain, setSelectedOrphansMain] = useState(new Set());
+    const [selectedOrphansBackup, setSelectedOrphansBackup] = useState(new Set());
 
     const [actionResult, setActionResult] = useState(null);
 
@@ -38,7 +39,8 @@ export default function AlignmentModal({ open, onClose, account }) {
         setError(null);
         setAuditData(null);
         setSelectedMissing(new Set());
-        setSelectedOrphans(new Set());
+        setSelectedOrphansMain(new Set());
+        setSelectedOrphansBackup(new Set());
         setActionResult(null);
         try {
             const data = await accountService.auditAlignment(account.id);
@@ -65,14 +67,15 @@ export default function AlignmentModal({ open, onClose, account }) {
         }
     }
 
-    async function handleCleanup() {
-        if (!selectedOrphans.size || !account?.id) return;
+    async function handleCleanup(target) {
+        const selected = target === 'main' ? selectedOrphansMain : selectedOrphansBackup;
+        if (!selected.size || !account?.id) return;
         setPhase('cleaning');
         setActionResult(null);
         try {
-            const folders = Array.from(selectedOrphans);
-            const data = await accountService.cleanupAlignment(account.id, folders);
-            setActionResult({ type: 'cleanup', ...data });
+            const folders = Array.from(selected);
+            const data = await accountService.cleanupAlignment(account.id, folders, target);
+            setActionResult({ type: 'cleanup', target, ...data });
             await handleAudit();
         } catch (e) {
             setError(e?.response?.data?.message || e?.message || 'Error eliminando');
@@ -80,35 +83,17 @@ export default function AlignmentModal({ open, onClose, account }) {
         }
     }
 
-    function toggleMissing(slug) {
-        setSelectedMissing(prev => {
+    function toggleSet(setter, key) {
+        setter(prev => {
             const next = new Set(prev);
-            next.has(slug) ? next.delete(slug) : next.add(slug);
+            next.has(key) ? next.delete(key) : next.add(key);
             return next;
         });
     }
-    function toggleOrphan(folder) {
-        setSelectedOrphans(prev => {
-            const next = new Set(prev);
-            next.has(folder) ? next.delete(folder) : next.add(folder);
-            return next;
-        });
-    }
-    function toggleAllMissing() {
-        if (!auditData?.missingInBackup?.length) return;
-        setSelectedMissing(prev =>
-            prev.size === auditData.missingInBackup.length
-                ? new Set()
-                : new Set(auditData.missingInBackup.map(i => i.slug))
-        );
-    }
-    function toggleAllOrphans() {
-        if (!auditData?.orphansInBackup?.length) return;
-        setSelectedOrphans(prev =>
-            prev.size === auditData.orphansInBackup.length
-                ? new Set()
-                : new Set(auditData.orphansInBackup.map(i => i.folder))
-        );
+
+    function toggleAllSet(setter, items, currentSet) {
+        if (!items?.length) return;
+        setter(currentSet.size === items.length ? new Set() : new Set(items));
     }
 
     const isLoading = phase === 'auditing' || phase === 'syncing' || phase === 'cleaning';
@@ -199,7 +184,7 @@ export default function AlignmentModal({ open, onClose, account }) {
                     }}>
                         <Typography variant="body2" sx={{ color: (actionResult.failCount > 0 || actionResult.failed > 0) ? '#fbbf24' : '#4ade80' }}>
                             {actionResult.type === 'sync' && `Sincronización completada: ${actionResult.okCount} OK, ${actionResult.failCount} fallidos`}
-                            {actionResult.type === 'cleanup' && `Limpieza completada: ${actionResult.deleted} eliminados, ${actionResult.failed || 0} fallidos`}
+                            {actionResult.type === 'cleanup' && `Limpieza ${actionResult.target?.toUpperCase()}: ${actionResult.deleted} eliminados, ${actionResult.failed || 0} fallidos`}
                         </Typography>
                     </Box>
                 )}
@@ -271,7 +256,7 @@ export default function AlignmentModal({ open, onClose, account }) {
                             </Box>
                         )}
 
-                        {/* Missing in Backup (actionable) */}
+                        {/* Missing in Backup (actionable - sync) */}
                         {auditData.missingInBackup?.length > 0 && (
                             <Box sx={{ mb: 2 }}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
@@ -280,7 +265,7 @@ export default function AlignmentModal({ open, onClose, account }) {
                                             size="small"
                                             checked={selectedMissing.size === auditData.missingInBackup.length}
                                             indeterminate={selectedMissing.size > 0 && selectedMissing.size < auditData.missingInBackup.length}
-                                            onChange={toggleAllMissing}
+                                            onChange={() => toggleAllSet(setSelectedMissing, auditData.missingInBackup.map(i => i.slug), selectedMissing)}
                                             sx={{ color: '#fbbf24', '&.Mui-checked': { color: '#fbbf24' }, '&.MuiCheckbox-indeterminate': { color: '#fbbf24' } }}
                                         />
                                         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fbbf24' }}>
@@ -301,7 +286,7 @@ export default function AlignmentModal({ open, onClose, account }) {
                                 <Box sx={{ maxHeight: 180, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px' }}>
                                     {auditData.missingInBackup.map(item => (
                                         <Stack key={item.slug} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(139,92,246,0.05)' } }}>
-                                            <Checkbox size="small" checked={selectedMissing.has(item.slug)} onChange={() => toggleMissing(item.slug)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#8b5cf6' } }} />
+                                            <Checkbox size="small" checked={selectedMissing.has(item.slug)} onChange={() => toggleSet(setSelectedMissing, item.slug)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#8b5cf6' } }} />
                                             <Typography variant="body2" sx={{ flex: 1, ml: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#cbd5e1' }}>
                                                 {item.title || item.slug}
                                             </Typography>
@@ -312,16 +297,38 @@ export default function AlignmentModal({ open, onClose, account }) {
                             </Box>
                         )}
 
-                        {/* Orphans in Main */}
+                        {/* Orphans in Main (actionable - delete) */}
                         {auditData.orphansInMain?.length > 0 && (
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#818cf8', mb: 0.5 }}>
-                                    Huérfanos en Main ({auditData.orphansInMain.length}) — En MEGA Main pero sin asset en BD
-                                </Typography>
-                                <Box sx={{ maxHeight: 120, overflow: 'auto', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', bgcolor: 'rgba(99,102,241,0.04)' }}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                        <Checkbox
+                                            size="small"
+                                            checked={selectedOrphansMain.size === auditData.orphansInMain.length}
+                                            indeterminate={selectedOrphansMain.size > 0 && selectedOrphansMain.size < auditData.orphansInMain.length}
+                                            onChange={() => toggleAllSet(setSelectedOrphansMain, auditData.orphansInMain.map(i => i.folder), selectedOrphansMain)}
+                                            sx={{ color: '#818cf8', '&.Mui-checked': { color: '#818cf8' }, '&.MuiCheckbox-indeterminate': { color: '#818cf8' } }}
+                                        />
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#818cf8' }}>
+                                            Huérfanos en Main ({auditData.orphansInMain.length})
+                                        </Typography>
+                                    </Stack>
+                                    <AppButton
+                                        variant="cyan"
+                                        width="180px"
+                                        styles={{ height: 30, fontSize: '.7rem', fontWeight: 600, background: '#4338ca' }}
+                                        onClick={() => handleCleanup('main')}
+                                        disabled={!selectedOrphansMain.size}
+                                    >
+                                        <DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />
+                                        Eliminar ({selectedOrphansMain.size})
+                                    </AppButton>
+                                </Stack>
+                                <Box sx={{ maxHeight: 150, overflow: 'auto', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', bgcolor: 'rgba(99,102,241,0.04)' }}>
                                     {auditData.orphansInMain.map(item => (
-                                        <Stack key={item.folder} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                            <Typography variant="body2" sx={{ color: '#c7d2fe', fontFamily: 'monospace', fontSize: '.8rem' }}>
+                                        <Stack key={item.folder} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(99,102,241,0.05)' } }}>
+                                            <Checkbox size="small" checked={selectedOrphansMain.has(item.folder)} onChange={() => toggleSet(setSelectedOrphansMain, item.folder)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#818cf8' } }} />
+                                            <Typography variant="body2" sx={{ flex: 1, ml: 0.5, color: '#c7d2fe', fontFamily: 'monospace', fontSize: '.8rem' }}>
                                                 {item.folder}
                                             </Typography>
                                         </Stack>
@@ -330,16 +337,16 @@ export default function AlignmentModal({ open, onClose, account }) {
                             </Box>
                         )}
 
-                        {/* Orphans in Backup (actionable) */}
+                        {/* Orphans in Backup (actionable - delete) */}
                         {auditData.orphansInBackup?.length > 0 && (
                             <Box sx={{ mb: 2 }}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
                                     <Stack direction="row" alignItems="center" spacing={0.5}>
                                         <Checkbox
                                             size="small"
-                                            checked={selectedOrphans.size === auditData.orphansInBackup.length}
-                                            indeterminate={selectedOrphans.size > 0 && selectedOrphans.size < auditData.orphansInBackup.length}
-                                            onChange={toggleAllOrphans}
+                                            checked={selectedOrphansBackup.size === auditData.orphansInBackup.length}
+                                            indeterminate={selectedOrphansBackup.size > 0 && selectedOrphansBackup.size < auditData.orphansInBackup.length}
+                                            onChange={() => toggleAllSet(setSelectedOrphansBackup, auditData.orphansInBackup.map(i => i.folder), selectedOrphansBackup)}
                                             sx={{ color: '#f87171', '&.Mui-checked': { color: '#f87171' }, '&.MuiCheckbox-indeterminate': { color: '#f87171' } }}
                                         />
                                         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#f87171' }}>
@@ -350,17 +357,17 @@ export default function AlignmentModal({ open, onClose, account }) {
                                         variant="cyan"
                                         width="180px"
                                         styles={{ height: 30, fontSize: '.7rem', fontWeight: 600, background: '#b71c1c' }}
-                                        onClick={handleCleanup}
-                                        disabled={!selectedOrphans.size}
+                                        onClick={() => handleCleanup('backup')}
+                                        disabled={!selectedOrphansBackup.size}
                                     >
                                         <DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />
-                                        Eliminar ({selectedOrphans.size})
+                                        Eliminar ({selectedOrphansBackup.size})
                                     </AppButton>
                                 </Stack>
                                 <Box sx={{ maxHeight: 180, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px' }}>
                                     {auditData.orphansInBackup.map(item => (
                                         <Stack key={item.folder} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(239,68,68,0.05)' } }}>
-                                            <Checkbox size="small" checked={selectedOrphans.has(item.folder)} onChange={() => toggleOrphan(item.folder)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#ef4444' } }} />
+                                            <Checkbox size="small" checked={selectedOrphansBackup.has(item.folder)} onChange={() => toggleSet(setSelectedOrphansBackup, item.folder)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#ef4444' } }} />
                                             <Typography variant="body2" sx={{ flex: 1, ml: 0.5, color: '#cbd5e1', fontFamily: 'monospace', fontSize: '.8rem' }}>
                                                 {item.folder}
                                             </Typography>

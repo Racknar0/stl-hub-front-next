@@ -48,9 +48,9 @@ export class AccountService extends HttpService {
     }
   }
 
-  async cleanupAlignment(mainId, folders) {
+  async cleanupAlignment(mainId, folders, target = 'backup') {
     try {
-      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup`, { folders });
+      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup`, { folders, target });
       return resp.data;
     } catch (err) {
       showApiError(err, 'Error eliminando huérfanos');
