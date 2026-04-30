@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, LinearProgress, Stack } from '@mui/material';
+import { Box, LinearProgress, Stack, TextField, ToggleButton, ToggleButtonGroup, InputAdornment, Tooltip } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import SortIcon from '@mui/icons-material/Sort';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
 import { timerAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
@@ -337,51 +339,11 @@ export default function AccountsOverviewPage() {
         }
     };
 
-    const validateAll = async () => {
-        try {
-            setLoading(true);
-            setValidatingAll(true);
-            cancelValidationRef.current = false;
-            const res = await http.getData(`${API_BASE}`);
-            const list = res.data || [];
-            setPendingIds(new Set(list.map((a) => a.id)));
-            let completed = 0;
-            let skipped = 0;
-            for (const acc of list) {
-                if (cancelValidationRef.current) {
-                    // Limpiar los pendientes restantes
-                    setPendingIds(new Set());
-                    skipped = list.length - completed;
-                    break;
-                }
-                try {
-                    await http.postData(`${API_BASE}/${acc.id}/test`, {});
-                } catch (e) {
-                    console.error('Fallo validación cuenta', acc.id, e);
-                } finally {
-                    endPending(acc.id);
-                    completed++;
-                }
-            }
-            await fetchAccounts();
-            if (cancelValidationRef.current) {
-                await timerAlert('Detenido', `Validación detenida. ${completed} validadas, ${skipped} omitidas.`, 1500);
-            } else {
-                await timerAlert('OK', 'Validación completada', 1000);
-            }
-        } catch (e) {
-            console.error(e);
-            await errorAlert('Error', 'No se pudieron validar las cuentas');
-        } finally {
-            setLoading(false);
-            setValidatingAll(false);
-            cancelValidationRef.current = false;
-        }
-    };
-
-    const stopValidation = () => {
-        cancelValidationRef.current = true;
-    };
+    // === Filtros y orden ===
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterUsage, setFilterUsage] = useState('all');
+    const [sortBy, setSortBy] = useState('alias-desc');
 
     // Totales de almacenamiento de cuentas OK (CONNECTED)
     const totalStorage = useMemo(() => {
@@ -412,7 +374,61 @@ export default function AccountsOverviewPage() {
         () => accounts.filter((a) => a.type === 'backup'),
         [accounts],
     );
-    const shownAccounts = tab === 'main' ? mainAccounts : backupAccounts;
+    const tabAccounts = tab === 'main' ? mainAccounts : backupAccounts;
+
+    const shownAccounts = useMemo(() => {
+        let list = [...tabAccounts];
+
+        // Filtro búsqueda
+        if (filterSearch.trim()) {
+            const q = filterSearch.trim().toLowerCase();
+            list = list.filter((a) =>
+                (a.alias || '').toLowerCase().includes(q) ||
+                (a.email || '').toLowerCase().includes(q)
+            );
+        }
+
+        // Filtro estado
+        if (filterStatus !== 'all') {
+            list = list.filter((a) => a.status === filterStatus);
+        }
+
+        // Filtro uso
+        if (filterUsage !== 'all') {
+            list = list.filter((a) => {
+                const total = (a.storageTotalMB && a.storageTotalMB > 0) ? a.storageTotalMB : FREE_QUOTA_MB;
+                const pct = total > 0 ? (Math.max(0, a.storageUsedMB || 0) / total) * 100 : 0;
+                if (filterUsage === 'low') return pct < 50;
+                if (filterUsage === 'mid') return pct >= 50 && pct < 80;
+                if (filterUsage === 'high') return pct >= 80;
+                return true;
+            });
+        }
+
+        // Ordenar
+        list.sort((a, b) => {
+            if (sortBy === 'alias-desc') return (b.alias || '').localeCompare(a.alias || '');
+            if (sortBy === 'alias-asc') return (a.alias || '').localeCompare(b.alias || '');
+            if (sortBy === 'usage-desc') {
+                const pctA = getPct(a), pctB = getPct(b);
+                return pctB - pctA;
+            }
+            if (sortBy === 'usage-asc') {
+                const pctA = getPct(a), pctB = getPct(b);
+                return pctA - pctB;
+            }
+            if (sortBy === 'date-desc') return new Date(b.lastCheckAt || 0) - new Date(a.lastCheckAt || 0);
+            if (sortBy === 'date-asc') return new Date(a.lastCheckAt || 0) - new Date(b.lastCheckAt || 0);
+            return 0;
+        });
+
+        return list;
+    }, [tabAccounts, filterSearch, filterStatus, filterUsage, sortBy]);
+
+    function getPct(a) {
+        const total = (a.storageTotalMB && a.storageTotalMB > 0) ? a.storageTotalMB : FREE_QUOTA_MB;
+        return total > 0 ? (Math.max(0, a.storageUsedMB || 0) / total) * 100 : 0;
+    }
 
     return (
         <div className="dashboard-content p-3">
@@ -435,6 +451,93 @@ export default function AccountsOverviewPage() {
                 mainCount={mainAccounts.length}
                 backupCount={backupAccounts.length}
             />
+
+            {/* Barra de filtros + orden */}
+            <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1}
+                alignItems={{ md: 'center' }}
+                sx={{ mb: 1.5, flexWrap: 'wrap' }}
+            >
+                {/* Búsqueda */}
+                <TextField
+                    size="small"
+                    placeholder="Buscar alias o email…"
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                            </InputAdornment>
+                        ),
+                    }}
+                    sx={{
+                        minWidth: 180,
+                        maxWidth: 240,
+                        '& .MuiOutlinedInput-root': {
+                            bgcolor: 'rgba(15,23,42,0.6)',
+                            borderRadius: '8px',
+                            fontSize: '.8rem',
+                            color: '#e2e8f0',
+                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.3)' },
+                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                        },
+                    }}
+                />
+
+                {/* Estado */}
+                <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={filterStatus}
+                    onChange={(_, v) => v && setFilterStatus(v)}
+                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#a78bfa', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                >
+                    <ToggleButton value="all">Todas</ToggleButton>
+                    <ToggleButton value="CONNECTED" sx={{ '&.Mui-selected': { color: '#4ade80 !important', bgcolor: 'rgba(34,197,94,0.12) !important' } }}>OK</ToggleButton>
+                    <ToggleButton value="ERROR" sx={{ '&.Mui-selected': { color: '#f87171 !important', bgcolor: 'rgba(239,68,68,0.12) !important' } }}>Error</ToggleButton>
+                    <ToggleButton value="EXPIRED" sx={{ '&.Mui-selected': { color: '#fbbf24 !important', bgcolor: 'rgba(245,158,11,0.12) !important' } }}>Exp</ToggleButton>
+                </ToggleButtonGroup>
+
+                {/* Uso */}
+                <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={filterUsage}
+                    onChange={(_, v) => v && setFilterUsage(v)}
+                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#a78bfa', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                >
+                    <ToggleButton value="all">Uso: Todo</ToggleButton>
+                    <ToggleButton value="low" sx={{ '&.Mui-selected': { color: '#4ade80 !important' } }}>&lt;50%</ToggleButton>
+                    <ToggleButton value="mid" sx={{ '&.Mui-selected': { color: '#fbbf24 !important' } }}>50-80%</ToggleButton>
+                    <ToggleButton value="high" sx={{ '&.Mui-selected': { color: '#f87171 !important' } }}>&gt;80%</ToggleButton>
+                </ToggleButtonGroup>
+
+                {/* Orden */}
+                <Box sx={{ ml: { md: 'auto' }, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <SortIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={sortBy}
+                        onChange={(_, v) => v && setSortBy(v)}
+                        sx={{ '& .MuiToggleButton-root': { fontSize: '.65rem', px: 0.8, py: 0.3, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#c4b5fd', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                    >
+                        <Tooltip title="Alias Z→A" arrow><ToggleButton value="alias-desc">Z→A</ToggleButton></Tooltip>
+                        <Tooltip title="Alias A→Z" arrow><ToggleButton value="alias-asc">A→Z</ToggleButton></Tooltip>
+                        <Tooltip title="Más llenas primero" arrow><ToggleButton value="usage-desc">%↓</ToggleButton></Tooltip>
+                        <Tooltip title="Menos llenas primero" arrow><ToggleButton value="usage-asc">%↑</ToggleButton></Tooltip>
+                        <Tooltip title="Más recientes" arrow><ToggleButton value="date-desc">📅↓</ToggleButton></Tooltip>
+                    </ToggleButtonGroup>
+                </Box>
+
+                {/* Contador */}
+                <Box sx={{ fontSize: '.75rem', color: '#64748b', ml: 1, whiteSpace: 'nowrap' }}>
+                    {shownAccounts.length} / {tabAccounts.length}
+                </Box>
+            </Stack>
 
             <Box
                 sx={{
