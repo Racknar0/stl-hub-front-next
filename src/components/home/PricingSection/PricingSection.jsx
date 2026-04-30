@@ -11,7 +11,7 @@ import {
     getTrackingFromMiddlewareCookie,
     getVisitIdentityFromMiddlewareCookie,
 } from '../../../helpers/attributionCookie';
-import { sendGAEvent } from '@next/third-parties/google';
+import { sendGTMEvent } from '@next/third-parties/google';
 
 const getFeatures = (t, isEn) => {
     if (typeof t === 'function') {
@@ -257,7 +257,7 @@ const PricingSection = ({
                                 p.highlight ? 'fill' : 'outline'
                             }`}
                             onClick={(e) => {
-                            sendGAEvent('event', 'checkout_initiated', {
+                            sendGTMEvent({ event: 'checkout_initiated',
                                 plan_id: p.id,
                                 plan_price: p.total
                             });

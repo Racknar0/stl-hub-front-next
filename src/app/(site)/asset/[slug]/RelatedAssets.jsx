@@ -9,15 +9,20 @@ export default async function RelatedAssets({ currentSlug, categories = [], tags
     
     // Construir query para buscar similares (por categoría o tag)
     const catSlug = categories[0]?.slug || '';
+
+    // Sin categoría no podemos encontrar relacionados significativos;
+    // evitamos hacer una llamada sin filtro que siempre devolvería los mismos 4 primeros.
+    if (!catSlug) return null;
+
     const queryParams = new URLSearchParams();
     queryParams.append('limit', '4'); // Traeremos 4 para la grilla
     queryParams.append('status', 'PUBLISHED');
-    if (catSlug) queryParams.append('category', catSlug);
+    queryParams.append('category', catSlug);
     
     let related = [];
     try {
         const url = `${base}/api/assets?${queryParams.toString()}`;
-        const res = await fetch(url, { next: { revalidate: 3600 } });
+        const res = await fetch(url, { next: { revalidate: false } });
         if (res.ok) {
             const data = await res.json();
             // Filtrar el actual
@@ -28,6 +33,7 @@ export default async function RelatedAssets({ currentSlug, categories = [], tags
     }
 
     if (!related || related.length === 0) return null;
+
 
     return (
         <section className={styles.relatedSection} style={{ marginTop: '3rem' }}>

@@ -6,7 +6,7 @@ import useStore from '../../../../store/useStore';
 import HttpService from '../../../../services/HttpService';
 import { errorAlert, warningAlert } from '../../../../helpers/alerts';
 import styles from './AssetSeoBackground.module.css';
-import { sendGAEvent } from '@next/third-parties/google';
+import { sendGTMEvent } from '@next/third-parties/google';
 
 export default function AssetDownloadCtaClient({ assetId, isPremium = false, isEn = false }) {
   const token = useStore((s) => s.token);
@@ -37,7 +37,7 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
   const handleDownload = async () => {
     if (!assetId || downloading) return;
 
-    sendGAEvent('event', 'download_started', {
+    sendGTMEvent({ event: 'download_started',
       asset_id: assetId,
       is_premium: isPremium
     });

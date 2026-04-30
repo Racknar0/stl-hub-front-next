@@ -12,7 +12,7 @@ import { confirmAlert } from '../../../helpers/alerts'
 import HttpService from '../../../services/HttpService'
 // import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
 import { useI18n } from '../../../i18n'
-import { sendGAEvent } from '@next/third-parties/google'
+import { sendGTMEvent } from '@next/third-parties/google'
 
 /**
  * Inner component that safely reads useSearchParams inside Suspense.
@@ -274,7 +274,7 @@ const Header = () => {
       const val = input?.value?.trim() || ''
 
       if (val || imageSearchFile) {
-        sendGAEvent('event', 'search_performed', {
+        sendGTMEvent({ event: 'search_performed',
           search_term: val || 'image_search',
           search_type: searchMode
         });
@@ -635,7 +635,7 @@ const Header = () => {
                                 <a
                                     href={dinamycHref}
                                     onClick={() => {
-                                        sendGAEvent('event', 'category_viewed', { category_name: name });
+                                        sendGTMEvent({ event: 'category_viewed', category_name: name });
                                         setExploreOpen(false);
                                     }}
                                 >
@@ -922,7 +922,7 @@ const Header = () => {
               className="whatsapp-cta"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => sendGAEvent('event', 'whatsapp_contact_clicked', { source: 'header' })}
+              onClick={() => sendGTMEvent({ event: 'whatsapp_contact_clicked', source: 'header' })}
               title={isEn ? 'Contact on WhatsApp' : 'Contactar por WhatsApp'}
               aria-label={isEn ? 'Contact on WhatsApp' : 'Contactar por WhatsApp'}
             >

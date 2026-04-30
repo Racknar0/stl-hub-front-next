@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 import "../styles/bundle.scss";
 import LangSetter from "./LangSetter";
-import { GoogleAnalytics } from '@next/third-parties/google';
+import { GoogleTagManager } from '@next/third-parties/google';
 
 const SITE_URL = 'https://stl-hub.com';
 
@@ -93,7 +93,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         {children}
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       </body>
     </html>
   );

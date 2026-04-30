@@ -9,7 +9,22 @@ import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
 import RelatedAssets from './RelatedAssets';
 
-export const revalidate = 3600; // ISR 1h
+export const revalidate = false; // Cache permanente hasta el próximo build
+export const dynamicParams = true; // Acepta y cachea slugs no pre-generados on-demand
+
+// Pre-genera los 500 modelos más recientes en cada build.
+// El resto se generan on-demand y quedan cacheados hasta el próximo deploy.
+export async function generateStaticParams() {
+    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');
+    try {
+        const res = await fetch(`${base}/api/assets/slugs?limit=500`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        const rows = await res.json();
+        return rows.map(r => ({ slug: r.slug }));
+    } catch {
+        return []; // Si falla el fetch, el build continúa sin pre-generar (no falla el deploy)
+    }
+}
 
 function toSafeDate(value) {
     const d = new Date(value);
