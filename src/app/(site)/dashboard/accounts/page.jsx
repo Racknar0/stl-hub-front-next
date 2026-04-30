@@ -407,8 +407,8 @@ export default function AccountsOverviewPage() {
 
         // Ordenar
         list.sort((a, b) => {
-            if (sortBy === 'alias-desc') return (b.alias || '').localeCompare(a.alias || '');
-            if (sortBy === 'alias-asc') return (a.alias || '').localeCompare(b.alias || '');
+            if (sortBy === 'alias-desc') return (b.alias || '').localeCompare(a.alias || '', undefined, { numeric: true });
+            if (sortBy === 'alias-asc') return (a.alias || '').localeCompare(b.alias || '', undefined, { numeric: true });
             if (sortBy === 'usage-desc') {
                 const pctA = getPct(a), pctB = getPct(b);
                 return pctB - pctA;
