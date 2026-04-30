@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,6 +35,10 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
   const [logs, setLogs] = useState([]);
   const [errorCount, setErrorCount] = useState(0);
   
+  const [maxRetries, setMaxRetries] = useState(25);
+  const abortControllerRef = useRef(null);
+  const skipCurrentRef = useRef(false);
+  
   const handleClose = () => {
     if (isProcessing) return; // Bloquear cierre si está trabajando
     onClose();
@@ -42,6 +46,13 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
 
   const addLog = (msg, type = 'info') => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg, type }]);
+  };
+
+  const handleSkip = () => {
+    skipCurrentRef.current = true;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort('Saltado por el usuario');
+    }
   };
 
   const processBulk = async () => {
@@ -88,24 +99,31 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
       const pct = Math.round((i / items.length) * 100);
       setProgress(pct);
       setProgressText(`Procesando Par ${i+1}/${items.length}: ${item.mainAlias}`);
+      let currentMainId = null;
+      let currentBackupId = null;
       
       try {
         // ------------------ 1. CREAR MAIN ------------------
         addLog(`[${i+1}] Creando Main: ${item.mainAlias}...`);
+        
+        skipCurrentRef.current = false;
+        abortControllerRef.current = new AbortController();
+        const signalOptions = { signal: abortControllerRef.current.signal };
+
         const mainRes = await http.postData(`${API_BASE}`, {
           alias: item.mainAlias,
           email: item.mainEmail,
           baseFolder: '/STLHUB',
           type: 'main',
           credentials: { type: 'login', username: item.mainEmail, password }
-        });
-        const mainId = mainRes.data?.id;
-        if (!mainId) throw new Error('No devolvió ID al crear la cuenta Main');
+        }, signalOptions);
+        
+        currentMainId = mainRes.data?.id;
+        if (!currentMainId) throw new Error('No devolvió ID al crear la cuenta Main');
         
         // ------------------ 2. TEST MAIN ------------------
         addLog(`[${i+1}] Validando Main (Test/Proxy): ${item.mainAlias}...`);
-        // Test usa proxy rotation internamente en el mega-get/proxy wrapper si está configurado
-        await http.postData(`${API_BASE}/${mainId}/test`, { force: true, source: 'bulk-insert' });
+        await http.postData(`${API_BASE}/${currentMainId}/test`, { force: true, source: 'bulk-insert', maxTries: maxRetries }, signalOptions);
         
         // ------------------ 3. CREAR BACKUP ------------------
         addLog(`[${i+1}] Creando Backup: ${item.backupAlias}...`);
@@ -115,26 +133,54 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
           baseFolder: '/STLHUB',
           type: 'backup',
           credentials: { type: 'login', username: item.backupEmail, password }
-        });
-        const backupId = bkRes.data?.id;
-        if (!backupId) throw new Error('No devolvió ID al crear la cuenta Backup');
+        }, signalOptions);
+        currentBackupId = bkRes.data?.id;
+        if (!currentBackupId) throw new Error('No devolvió ID al crear la cuenta Backup');
 
         // ------------------ 4. TEST BACKUP ------------------
         addLog(`[${i+1}] Validando Backup (Test/Proxy): ${item.backupAlias}...`);
-        await http.postData(`${API_BASE}/${backupId}/test`, { force: true, source: 'bulk-insert' });
+        await http.postData(`${API_BASE}/${currentBackupId}/test`, { force: true, source: 'bulk-insert', maxTries: maxRetries }, signalOptions);
 
         // ------------------ 5. ENLAZAR BACKUP -> MAIN ------------------
         addLog(`[${i+1}] Enlazando ${item.backupAlias} -> ${item.mainAlias}...`);
-        await http.postData(`${API_BASE}/${mainId}/backups`, { backupAccountId: Number(backupId) });
+        await http.postData(`${API_BASE}/${currentMainId}/backups`, { backupAccountId: Number(currentBackupId) }, signalOptions);
         
         addLog(`[${i+1}] ¡Par Completado con Éxito!`, 'success');
 
       } catch (err) {
         errs++;
         setErrorCount(errs);
-        const errMsg = err?.response?.data?.message || err.message || 'Error desconocido';
-        addLog(`[${i+1}] ERROR en ${item.mainAlias}: ${errMsg}`, 'error');
-        // El bucle continuará con el siguiente "Par" para no bloquear la operación masiva
+        let errMsg = err?.response?.data?.message || err.message || 'Error desconocido';
+        const errDetail = err?.response?.data?.lastError || '';
+        const errCategory = err?.response?.data?.errorCategory || '';
+        
+        if (skipCurrentRef.current || err.code === 'ERR_CANCELED') {
+          errMsg = 'Saltado por el usuario o cancelado';
+        }
+        
+        addLog(`[${i+1}] ❌ ERROR en ${item.mainAlias}: ${errMsg}`, 'error');
+        
+        // Mostrar diagnóstico detallado si el backend lo devolvió
+        if (errCategory) {
+          const catLabels = {
+            'CREDENTIALS': '🔑 CREDENCIALES INCORRECTAS — Verificar email/password manualmente',
+            'TIMEOUT': '⏱️ TIMEOUT — Todos los proxies agotaron tiempo, reintentar más tarde',
+            'ACCOUNT_ISSUE': '🚫 PROBLEMA DE CUENTA — Cuenta suspendida/bloqueada en MEGA',
+            'PROXY': '🌐 PROXY — Ningún proxy pudo conectar',
+            'UNKNOWN': '❓ DESCONOCIDO — Revisar logs del servidor'
+          };
+          addLog(`[${i+1}] Diagnóstico: ${catLabels[errCategory] || errCategory}`, 'warning');
+        }
+        if (errDetail) {
+          addLog(`[${i+1}] Último error MEGA: ${errDetail}`, 'warning');
+        }
+        
+        // NO eliminar cuentas de la BD — ya existen en MEGA.
+        // Las dejamos con status='ERROR' para que el usuario pueda re-testear manualmente.
+        if (currentMainId || currentBackupId) {
+          const ids = [currentMainId && `Main(id=${currentMainId})`, currentBackupId && `Backup(id=${currentBackupId})`].filter(Boolean).join(', ');
+          addLog(`[${i+1}] ⚠️ ${ids} quedan en BD con status=ERROR. Re-testea manualmente.`, 'warning');
+        }
       }
     }
 
@@ -199,11 +245,30 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
               onChange={(e) => setPasswordConf(e.target.value)}
             />
           </Stack>
+          
+          <Box sx={{ mb: 2, maxWidth: 300 }}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Max reintentos de proxy (ej. 25)"
+              value={maxRetries}
+              onChange={(e) => setMaxRetries(Number(e.target.value))}
+              helperText="Pasará al siguiente par si la cuenta no logra loguearse tras estos intentos."
+              inputProps={{ min: 1, max: 100 }}
+            />
+          </Box>
         </Box>
 
         {(isProcessing || progress > 0) && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>{progressText}</Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="subtitle2">{progressText}</Typography>
+              {isProcessing && (
+                <Button variant="outlined" color="warning" size="small" onClick={handleSkip}>
+                  Saltar y seguir
+                </Button>
+              )}
+            </Stack>
             <LinearProgress variant="determinate" value={progress} sx={{ height: 10, borderRadius: 1 }} />
             
             <Box className="glass" sx={{ mt: 2, height: 260, overflowY: 'auto', p: 1, border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -213,7 +278,7 @@ export default function BulkAddAccountsModal({ open, onClose, onComplete }) {
                   variant="caption" 
                   sx={{ 
                     display: 'block', 
-                    color: L.type === 'error' ? '#ef4444' : (L.type === 'success' ? '#10b981' : '#cbd5e1') 
+                    color: L.type === 'error' ? '#ef4444' : L.type === 'success' ? '#10b981' : L.type === 'warning' ? '#f59e0b' : '#cbd5e1' 
                   }}
                 >
                   [{L.time}] {L.msg}
