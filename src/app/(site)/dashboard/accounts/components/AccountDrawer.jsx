@@ -12,6 +12,7 @@ import StatusChip from './StatusChip';
 import AppButton from '@/components/layout/Buttons/Button';
 import accountService from '@/services/AccountService';
 import { confirmAlert, errorAlert, timerAlert } from '@/helpers/alerts';
+import AlignmentModal from './AlignmentModal';
 
 function formatMB(bytes) {
     const n = Number(bytes);
@@ -39,6 +40,7 @@ export default function AccountDrawer({
 }) {
     const [syncLoading, setSyncLoading] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
+    const [alignmentOpen, setAlignmentOpen] = useState(false);
     const [restoreLoading, setRestoreLoading] = useState(false);
     const [restoreResult, setRestoreResult] = useState(null);
 
@@ -516,6 +518,24 @@ export default function AccountDrawer({
                                 </AppButton>
                             </Stack>
                         </Stack>
+                        {selected.type === 'main' && (selected.backups || []).length > 0 && (
+                            <Box sx={{ mb: 1 }}>
+                                <AppButton
+                                    variant="cyan"
+                                    width="100%"
+                                    styles={{
+                                        height: 36,
+                                        fontWeight: 600,
+                                        fontSize: '.78rem',
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        border: '1px solid rgba(139,92,246,0.3)',
+                                    }}
+                                    onClick={() => setAlignmentOpen(true)}
+                                >
+                                    Verificar Alineación
+                                </AppButton>
+                            </Box>
+                        )}
                         {(syncResult || restoreResult) && (
                             <Box sx={{ mb: 1, mt: -1 }}>
                                 {syncResult && (
@@ -627,6 +647,13 @@ export default function AccountDrawer({
                     </>
                 )}
             </Box>
+            {selected && (
+                <AlignmentModal
+                    open={alignmentOpen}
+                    onClose={() => setAlignmentOpen(false)}
+                    account={selected}
+                />
+            )}
         </Drawer>
     );
 }

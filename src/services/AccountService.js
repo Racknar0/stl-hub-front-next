@@ -27,6 +27,36 @@ export class AccountService extends HttpService {
       throw err;
     }
   }
+
+  async auditAlignment(mainId) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-audit`, {});
+      return resp.data;
+    } catch (err) {
+      showApiError(err, 'Error auditando alineación');
+      throw err;
+    }
+  }
+
+  async syncAlignment(mainId, slugs) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-sync`, { slugs });
+      return resp.data;
+    } catch (err) {
+      showApiError(err, 'Error sincronizando alineación');
+      throw err;
+    }
+  }
+
+  async cleanupAlignment(mainId, folders) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup`, { folders });
+      return resp.data;
+    } catch (err) {
+      showApiError(err, 'Error eliminando huérfanos');
+      throw err;
+    }
+  }
 }
 
 const accountService = new AccountService();
