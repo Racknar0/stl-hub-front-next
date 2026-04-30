@@ -10,6 +10,7 @@ import './dashboard.scss'
 // Carga dinámica para evitar problemas SSR y sólo en cliente
 const ConsoleBar = dynamic(() => import('../../../components/dashboard/ConsoleBar/ConsoleBar'), { ssr: false })
 import useStore from '../../../store/useStore'
+import StickyNote from '../../../components/common/StickyNote'
 
 export default function DashboardLayout({ children }) {
   const router = useRouter()
@@ -39,6 +40,7 @@ export default function DashboardLayout({ children }) {
           {children}
         </main>
         <ConsoleBar />
+        <StickyNote />
       </div>
     </ThemeProvider>
   )

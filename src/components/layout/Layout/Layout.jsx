@@ -8,13 +8,15 @@ import useStore from '../../../store/useStore'
 import { usePathname } from 'next/navigation'
 import LanguageOverlay from '../../common/LanguageOverlay/LanguageOverlay'
 
+import StickyNote from '../../common/StickyNote';
+
 const Layout = ({ children }) => {
   const [hydrated, setHydrated] = useState(false)
   const token = useStore((s) => s.token)
   const hydrateToken = useStore((s) => s.hydrateToken)
   const hydrateLanguage = useStore((s) => s.hydrateLanguage)
   const pathname = usePathname()
-  const isDashboard = pathname?.startsWith('/dashboard')
+  const isDashboard = pathname?.includes('/dashboard') || pathname?.includes('/admin')
 
   useEffect(() => {
     hydrateToken()
@@ -38,13 +40,12 @@ const Layout = ({ children }) => {
         </div>
       )}
 
-      {/* Loader global eliminado (no se llama) */}
-
       {/* Overlay de idioma (primera visita) */}
       {showLanguageOverlay && <LanguageOverlay />}
 
       <Header />
       <main className="app-main">{children}</main>
+
       {!isDashboard && <SubscribeBar />}
       {!isDashboard && <Footer />}
     </div>
