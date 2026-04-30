@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, LinearProgress, Stack } from '@mui/material';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
@@ -47,6 +47,7 @@ export default function AccountsOverviewPage() {
         password: '',
     });
     const [testing, setTesting] = useState(false);
+    const abortRef = useRef(null);
     // Eliminar StatusIndicator y mantener pendingIds para overlay
     const [pendingIds, setPendingIds] = useState(new Set());
     const startPending = (id) =>
@@ -80,13 +81,15 @@ export default function AccountsOverviewPage() {
     }, []);
 
     const testConnection = async (id) => {
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
             setTesting(true);
             startPending(id);
 
             const first = await http.postData(`${API_BASE}/${id}/test`, {
                 source: 'dashboard-accounts',
-            });
+            }, { signal: controller.signal });
 
             if (first?.data?.busy) {
                 const ok = await confirmAlert(
@@ -101,18 +104,31 @@ export default function AccountsOverviewPage() {
                 await http.postData(
                     `${API_BASE}/${id}/test?force=1&source=dashboard-accounts`,
                     { force: true, source: 'dashboard-accounts' },
+                    { signal: controller.signal },
                 );
             }
 
             await timerAlert('OK', 'Conexión verificada', 1200);
             await fetchAccounts();
         } catch (e) {
+            if (e?.name === 'AbortError' || e?.name === 'CanceledError' || controller.signal.aborted) {
+                await fetchAccounts();
+                return;
+            }
             console.error(e);
             await fetchAccounts();
             await errorAlert('Error', 'Falló la verificación');
         } finally {
+            abortRef.current = null;
             endPending(id);
             setTesting(false);
+        }
+    };
+
+    const cancelTest = () => {
+        if (abortRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
         }
     };
 
@@ -324,27 +340,47 @@ export default function AccountsOverviewPage() {
     const validateAll = async () => {
         try {
             setLoading(true);
+            setValidatingAll(true);
+            cancelValidationRef.current = false;
             const res = await http.getData(`${API_BASE}`);
             const list = res.data || [];
-            // Marcar todos como pendientes mientras se validan secuencialmente
             setPendingIds(new Set(list.map((a) => a.id)));
+            let completed = 0;
+            let skipped = 0;
             for (const acc of list) {
+                if (cancelValidationRef.current) {
+                    // Limpiar los pendientes restantes
+                    setPendingIds(new Set());
+                    skipped = list.length - completed;
+                    break;
+                }
                 try {
                     await http.postData(`${API_BASE}/${acc.id}/test`, {});
                 } catch (e) {
                     console.error('Fallo validación cuenta', acc.id, e);
                 } finally {
                     endPending(acc.id);
+                    completed++;
                 }
             }
-            await timerAlert('OK', 'Validación completada', 1000);
             await fetchAccounts();
+            if (cancelValidationRef.current) {
+                await timerAlert('Detenido', `Validación detenida. ${completed} validadas, ${skipped} omitidas.`, 1500);
+            } else {
+                await timerAlert('OK', 'Validación completada', 1000);
+            }
         } catch (e) {
             console.error(e);
             await errorAlert('Error', 'No se pudieron validar las cuentas');
         } finally {
             setLoading(false);
+            setValidatingAll(false);
+            cancelValidationRef.current = false;
         }
+    };
+
+    const stopValidation = () => {
+        cancelValidationRef.current = true;
     };
 
     // Totales de almacenamiento de cuentas OK (CONNECTED)
@@ -392,21 +428,6 @@ export default function AccountsOverviewPage() {
 
             <StorageSummaryCard totalStorage={totalStorage} />
 
-            {/* Botón Refrescar Todas oculto por ahora para evitar validar en masa */}
-            {false && (
-                <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
-                    <AppButton
-                        variant="purple"
-                        onClick={validateAll}
-                        disabled={loading || testing}
-                        styles={{ fontWeight: 400, marginBottom: '20px' }}
-                        width={'250px'}
-                    >
-                        Refrescar Todas
-                    </AppButton>
-                </Stack>
-            )}
-
             {/* Tabs para separar cuentas main y backup */}
             <AccountsTabs
                 tab={tab}
@@ -433,6 +454,7 @@ export default function AccountsOverviewPage() {
                         onClick={openDetail}
                         isPending={pendingIds.has(acc.id)}
                         onTest={testConnection}
+                        onCancelTest={cancelTest}
                         loadingAny={loading}
                         testing={testing}
                     />

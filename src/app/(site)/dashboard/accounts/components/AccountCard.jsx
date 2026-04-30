@@ -7,6 +7,7 @@ import {
     IconButton,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
@@ -19,6 +20,7 @@ export default function AccountCard({
     onClick,
     isPending,
     onTest,
+    onCancelTest,
     loadingAny,
     testing,
 }) {
@@ -100,12 +102,32 @@ export default function AccountCard({
                         zIndex: 2,
                         bgcolor: 'rgba(0,0,0,0.45)',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: '10px',
+                        gap: 0.5,
                     }}
                 >
                     <CircularProgress size={22} sx={{ color: '#fff' }} />
+                    <Tooltip title="Detener validación" arrow>
+                        <IconButton
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCancelTest?.();
+                            }}
+                            sx={{
+                                color: '#f87171',
+                                bgcolor: 'rgba(239,68,68,0.15)',
+                                width: 24,
+                                height: 24,
+                                '&:hover': { bgcolor: 'rgba(239,68,68,0.35)' },
+                            }}
+                        >
+                            <CloseIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             )}
 
