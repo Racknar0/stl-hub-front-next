@@ -95,6 +95,8 @@ export default function AssetsAdminPage() {
     const [refreshTick, setRefreshTick] = useState(0);
     // filtro plan
     const [showFreeOnly, setShowFreeOnly] = useState(false);
+    // filtro estado
+    const [statusFilter, setStatusFilter] = useState('');
 
     // Estado: modal unificado
     const [assetModalOpen, setAssetModalOpen] = useState(false);
@@ -665,6 +667,7 @@ export default function AssetsAdminPage() {
                     pageSize: String(pageSize),
                 });
                 if (showFreeOnly) params.set('plan', 'free');
+                if (statusFilter) params.set('status', statusFilter);
                 // Añadir filtros por cuenta
                 const accTrim = String(accountQ || '').trim();
                 if (accTrim) {
@@ -697,7 +700,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter]);
+    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -1013,6 +1016,8 @@ export default function AssetsAdminPage() {
                 setCategoryFilter={(v) => { setCategoryFilter(v); setPageIndex(0); }}
                 tagFilter={tagFilter}
                 setTagFilter={(v) => { setTagFilter(v); setPageIndex(0); }}
+                statusFilter={statusFilter}
+                setStatusFilter={(v) => { setStatusFilter(v); setPageIndex(0); }}
             />
         ),
         renderRowActions: ({ row }) => (
@@ -1208,8 +1213,8 @@ export default function AssetsAdminPage() {
         if (!selected) return;
         const ok = await confirmAlert(
             'Confirmar cambios',
-            'Ã‚Â¿Deseas aplicar las modificaciones a este STL?',
-            'SÃƒÂ­, guardar',
+            '¿Deseas aplicar las modificaciones a este STL?',
+            'Sí, guardar',
             'Cancelar',
             'question',
         );
@@ -1259,8 +1264,8 @@ export default function AssetsAdminPage() {
     const handleDelete = async (asset) => {
         const ok = await confirmAlert(
             'Eliminar STL',
-            `Ã‚Â¿Deseas eliminar "${asset.title}"? Se borrarÃƒÂ¡ de la base de datos y se intentarÃƒÂ¡ borrar de MEGA.`,
-            'SÃƒÂ­, eliminar',
+            `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y se intentará borrar de MEGA.`,
+            'Sí, eliminar',
             'Cancelar',
             'warning',
         );
@@ -1297,8 +1302,8 @@ export default function AssetsAdminPage() {
     const handleRestoreLink = async (asset) => {
         const ok = await confirmAlert(
             'Restaurar link MEGA',
-            `Ã‚Â¿Deseas restaurar el link MEGA para "${asset.title}"?`,
-            'SÃƒÂ­, restaurar',
+            `¿Deseas restaurar el link MEGA para "${asset.title}"?`,
+            'Sí, restaurar',
             'Cancelar',
             'warning',
         );

@@ -1,6 +1,14 @@
 'use client'
 import React from 'react'
-import { Box, TextField, Button, Typography, Autocomplete } from '@mui/material'
+import { Box, TextField, Button, Typography, Autocomplete, Select, MenuItem, FormControl, InputLabel } from '@mui/material'
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Todos' },
+  { value: 'PUBLISHED', label: 'Publicado' },
+  { value: 'DRAFT', label: 'Borrador' },
+  { value: 'PROCESSING', label: 'Procesando' },
+  { value: 'FAILED', label: 'Fallido' },
+]
 
 export default function ToolbarBusqueda({
   q, setQ, onBuscar,
@@ -11,6 +19,7 @@ export default function ToolbarBusqueda({
   categories, allTags,
   categoryFilter, setCategoryFilter,
   tagFilter, setTagFilter,
+  statusFilter, setStatusFilter,
 }) {
   const normalizeFilenameToQuery = (name) => {
     const raw = String(name || '').trim()
@@ -89,6 +98,30 @@ export default function ToolbarBusqueda({
         )}
         sx={acSx}
       />
+
+      {/* Filtro estado */}
+      <FormControl size="small" sx={{ minWidth: 130 }}>
+        <Select
+          value={statusFilter || ''}
+          onChange={(e) => setStatusFilter?.(e.target.value)}
+          displayEmpty
+          sx={{
+            bgcolor: 'rgba(15,23,42,0.6)',
+            borderRadius: '8px',
+            fontSize: '.8rem',
+            color: '#e2e8f0',
+            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+            '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.3)' },
+            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+          }}
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* Solo FREE */}
       <Button
