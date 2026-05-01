@@ -28,32 +28,57 @@ export class AccountService extends HttpService {
     }
   }
 
-  async auditAlignment(mainId) {
+  async auditAlignment(mainId, { signal } = {}) {
     try {
-      const resp = await this.postData(`/accounts/${mainId}/alignment-audit`, {});
+      const resp = await this.postData(`/accounts/${mainId}/alignment-audit`, {}, { signal });
       return resp.data;
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
       showApiError(err, 'Error auditando alineación');
       throw err;
     }
   }
 
-  async syncAlignment(mainId, slugs) {
+  async syncAlignment(mainId, slugs, { signal } = {}) {
     try {
-      const resp = await this.postData(`/accounts/${mainId}/alignment-sync`, { slugs });
+      const resp = await this.postData(`/accounts/${mainId}/alignment-sync`, { slugs }, { signal });
       return resp.data;
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
       showApiError(err, 'Error sincronizando alineación');
       throw err;
     }
   }
 
-  async cleanupAlignment(mainId, folders, target = 'backup') {
+  async cleanupAlignment(mainId, folders, target = 'backup', { signal } = {}) {
     try {
-      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup`, { folders, target });
+      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup`, { folders, target }, { signal });
       return resp.data;
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
       showApiError(err, 'Error eliminando huérfanos');
+      throw err;
+    }
+  }
+
+  async restoreAlignment(mainId, slugs, { signal } = {}) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-restore`, { slugs }, { signal });
+      return resp.data;
+    } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
+      showApiError(err, 'Error restaurando desde backup');
+      throw err;
+    }
+  }
+
+  async ghostCleanupAlignment(mainId, assetIds, { signal } = {}) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-ghost-cleanup`, { assetIds }, { signal });
+      return resp.data;
+    } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
+      showApiError(err, 'Error eliminando registros fantasma');
       throw err;
     }
   }

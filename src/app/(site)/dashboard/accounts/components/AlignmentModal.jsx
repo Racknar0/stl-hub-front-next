@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -19,6 +19,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import RestoreIcon from '@mui/icons-material/Restore';
+import CancelIcon from '@mui/icons-material/Cancel';
 import AppButton from '@/components/layout/Buttons/Button';
 import accountService from '@/services/AccountService';
 
@@ -28,27 +30,50 @@ export default function AlignmentModal({ open, onClose, account }) {
     const [error, setError] = useState(null);
 
     const [selectedMissing, setSelectedMissing] = useState(new Set());
+    const [selectedMissingInMain, setSelectedMissingInMain] = useState(new Set());
+    const [selectedGhosts, setSelectedGhosts] = useState(new Set());
     const [selectedOrphansMain, setSelectedOrphansMain] = useState(new Set());
     const [selectedOrphansBackup, setSelectedOrphansBackup] = useState(new Set());
 
     const [actionResult, setActionResult] = useState(null);
+    const abortRef = useRef(null);
+
+    function resetSelections() {
+        setSelectedMissing(new Set());
+        setSelectedMissingInMain(new Set());
+        setSelectedGhosts(new Set());
+        setSelectedOrphansMain(new Set());
+        setSelectedOrphansBackup(new Set());
+    }
+
+    function handleCancel() {
+        if (abortRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
+        }
+        setPhase('results');
+        setError('Operación cancelada por el usuario.');
+    }
 
     async function handleAudit() {
         if (!account?.id) return;
         setPhase('auditing');
         setError(null);
         setAuditData(null);
-        setSelectedMissing(new Set());
-        setSelectedOrphansMain(new Set());
-        setSelectedOrphansBackup(new Set());
+        resetSelections();
         setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
-            const data = await accountService.auditAlignment(account.id);
+            const data = await accountService.auditAlignment(account.id, { signal: controller.signal });
             setAuditData(data);
             setPhase('results');
         } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error desconocido');
             setPhase('idle');
+        } finally {
+            abortRef.current = null;
         }
     }
 
@@ -56,14 +81,59 @@ export default function AlignmentModal({ open, onClose, account }) {
         if (!selectedMissing.size || !account?.id) return;
         setPhase('syncing');
         setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
             const slugs = Array.from(selectedMissing);
-            const data = await accountService.syncAlignment(account.id, slugs);
+            const data = await accountService.syncAlignment(account.id, slugs, { signal: controller.signal });
             setActionResult({ type: 'sync', ...data });
             await handleAudit();
         } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error sincronizando');
             setPhase('results');
+        } finally {
+            abortRef.current = null;
+        }
+    }
+
+    async function handleRestore() {
+        if (!selectedMissingInMain.size || !account?.id) return;
+        setPhase('restoring');
+        setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
+        try {
+            const slugs = Array.from(selectedMissingInMain);
+            const data = await accountService.restoreAlignment(account.id, slugs, { signal: controller.signal });
+            setActionResult({ type: 'restore', ...data });
+            await handleAudit();
+        } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
+            setError(e?.response?.data?.message || e?.message || 'Error restaurando');
+            setPhase('results');
+        } finally {
+            abortRef.current = null;
+        }
+    }
+
+    async function handleGhostCleanup() {
+        if (!selectedGhosts.size || !account?.id) return;
+        setPhase('cleaning');
+        setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
+        try {
+            const assetIds = Array.from(selectedGhosts);
+            const data = await accountService.ghostCleanupAlignment(account.id, assetIds, { signal: controller.signal });
+            setActionResult({ type: 'ghost', ...data });
+            await handleAudit();
+        } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
+            setError(e?.response?.data?.message || e?.message || 'Error eliminando fantasmas');
+            setPhase('results');
+        } finally {
+            abortRef.current = null;
         }
     }
 
@@ -72,14 +142,19 @@ export default function AlignmentModal({ open, onClose, account }) {
         if (!selected.size || !account?.id) return;
         setPhase('cleaning');
         setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
             const folders = Array.from(selected);
-            const data = await accountService.cleanupAlignment(account.id, folders, target);
+            const data = await accountService.cleanupAlignment(account.id, folders, target, { signal: controller.signal });
             setActionResult({ type: 'cleanup', target, ...data });
             await handleAudit();
         } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error eliminando');
             setPhase('results');
+        } finally {
+            abortRef.current = null;
         }
     }
 
@@ -96,7 +171,16 @@ export default function AlignmentModal({ open, onClose, account }) {
         setter(currentSet.size === items.length ? new Set() : new Set(items));
     }
 
-    const isLoading = phase === 'auditing' || phase === 'syncing' || phase === 'cleaning';
+    const isLoading = ['auditing', 'syncing', 'restoring', 'cleaning'].includes(phase);
+
+    const loadingMessages = {
+        auditing: 'Escaneando Main MEGA y Backup MEGA...',
+        syncing: 'Sincronizando (descarga de Main → subida a Backup)...',
+        restoring: 'Restaurando (descarga de Backup → subida a Main)...',
+        cleaning: 'Procesando limpieza...',
+    };
+
+    const totalOrphans = (auditData?.orphansInMain?.length || 0) + (auditData?.orphansInBackup?.length || 0);
 
     return (
         <Dialog
@@ -155,13 +239,20 @@ export default function AlignmentModal({ open, onClose, account }) {
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                         <CircularProgress size={40} sx={{ color: '#8b5cf6', mb: 2 }} />
                         <Typography variant="body2" color="text.secondary">
-                            {phase === 'auditing' && 'Escaneando Main MEGA y Backup MEGA...'}
-                            {phase === 'syncing' && 'Sincronizando (descarga de Main → subida a Backup)...'}
-                            {phase === 'cleaning' && 'Eliminando carpetas huérfanas...'}
+                            {loadingMessages[phase] || 'Procesando...'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                             Revisa la consola del servidor para ver el progreso detallado.
                         </Typography>
+                        <AppButton
+                            variant="cyan"
+                            width="160px"
+                            styles={{ height: 34, mt: 2, fontWeight: 600, background: '#b91c1c' }}
+                            onClick={handleCancel}
+                        >
+                            <CancelIcon sx={{ fontSize: 15, mr: 0.5 }} />
+                            Cancelar
+                        </AppButton>
                     </Box>
                 )}
 
@@ -184,6 +275,8 @@ export default function AlignmentModal({ open, onClose, account }) {
                     }}>
                         <Typography variant="body2" sx={{ color: (actionResult.failCount > 0 || actionResult.failed > 0) ? '#fbbf24' : '#4ade80' }}>
                             {actionResult.type === 'sync' && `Sincronización completada: ${actionResult.okCount} OK, ${actionResult.failCount} fallidos`}
+                            {actionResult.type === 'restore' && `Restauración completada: ${actionResult.okCount} OK, ${actionResult.failCount} fallidos`}
+                            {actionResult.type === 'ghost' && `Limpieza BD completada: ${actionResult.deleted} registros eliminados`}
                             {actionResult.type === 'cleanup' && `Limpieza ${actionResult.target?.toUpperCase()}: ${actionResult.deleted} eliminados, ${actionResult.failed || 0} fallidos`}
                         </Typography>
                     </Box>
@@ -193,35 +286,12 @@ export default function AlignmentModal({ open, onClose, account }) {
                 {phase === 'results' && auditData && (
                     <>
                         {/* Summary Cards */}
-                        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
-                            <Box sx={{ flex: 1, minWidth: 90, p: 1, borderRadius: '8px', bgcolor: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', textAlign: 'center' }}>
-                                <CheckCircleIcon sx={{ fontSize: 18, color: '#4ade80', mb: 0.2 }} />
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#4ade80', fontSize: '1.1rem' }}>
-                                    {auditData.synced?.length || 0}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '.65rem' }}>Sincronizados</Typography>
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 90, p: 1, borderRadius: '8px', bgcolor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
-                                <ReportProblemIcon sx={{ fontSize: 18, color: '#f87171', mb: 0.2 }} />
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#f87171', fontSize: '1.1rem' }}>
-                                    {auditData.missingInMain?.length || 0}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '.65rem' }}>Faltan en Main</Typography>
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 90, p: 1, borderRadius: '8px', bgcolor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', textAlign: 'center' }}>
-                                <WarningAmberIcon sx={{ fontSize: 18, color: '#fbbf24', mb: 0.2 }} />
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#fbbf24', fontSize: '1.1rem' }}>
-                                    {auditData.missingInBackup?.length || 0}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '.65rem' }}>Faltan en Backup</Typography>
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 90, p: 1, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', textAlign: 'center' }}>
-                                <ErrorIcon sx={{ fontSize: 18, color: '#818cf8', mb: 0.2 }} />
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#818cf8', fontSize: '1.1rem' }}>
-                                    {(auditData.orphansInMain?.length || 0) + (auditData.orphansInBackup?.length || 0)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '.65rem' }}>Huérfanos</Typography>
-                            </Box>
+                        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                            <SummaryCard icon={<CheckCircleIcon />} color="#4ade80" bgColor="34,197,94" value={auditData.synced?.length || 0} label="Sincronizados" />
+                            <SummaryCard icon={<WarningAmberIcon />} color="#fbbf24" bgColor="245,158,11" value={auditData.missingInBackup?.length || 0} label="Faltan Backup" />
+                            <SummaryCard icon={<ReportProblemIcon />} color="#fb923c" bgColor="249,115,22" value={auditData.missingInMain?.length || 0} label="Faltan Main" />
+                            <SummaryCard icon={<ErrorIcon />} color="#f87171" bgColor="239,68,68" value={auditData.ghostsInDB?.length || 0} label="Fantasmas BD" />
+                            <SummaryCard icon={<DeleteSweepIcon />} color="#818cf8" bgColor="99,102,241" value={totalOrphans} label="Huérfanos" />
                         </Stack>
 
                         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
@@ -232,154 +302,114 @@ export default function AlignmentModal({ open, onClose, account }) {
 
                         <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.08)' }} />
 
-                        {/* Missing in Main (CRITICAL) */}
-                        {auditData.missingInMain?.length > 0 && (
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#f87171', mb: 0.5 }}>
-                                    ⚠️ Faltan en Main ({auditData.missingInMain.length}) — En BD pero NO en MEGA Main
-                                </Typography>
-                                <Box sx={{ maxHeight: 150, overflow: 'auto', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', bgcolor: 'rgba(239,68,68,0.04)' }}>
-                                    {auditData.missingInMain.map(item => (
-                                        <Stack key={item.slug} direction="row" alignItems="center" sx={{ px: 1, py: 0.4, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                            <Typography variant="body2" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fca5a5' }}>
-                                                {item.title || item.slug}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#64748b', flexShrink: 0, ml: 1 }}>
-                                                {item.sizeMB} MB
-                                            </Typography>
-                                        </Stack>
-                                    ))}
-                                </Box>
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    Estos assets están en la BD pero no se encontraron en Main MEGA. Posible DMCA o eliminación manual.
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {/* Missing in Backup (actionable - sync) */}
+                        {/* Missing in Backup (sync Main → Backup) */}
                         {auditData.missingInBackup?.length > 0 && (
-                            <Box sx={{ mb: 2 }}>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                                        <Checkbox
-                                            size="small"
-                                            checked={selectedMissing.size === auditData.missingInBackup.length}
-                                            indeterminate={selectedMissing.size > 0 && selectedMissing.size < auditData.missingInBackup.length}
-                                            onChange={() => toggleAllSet(setSelectedMissing, auditData.missingInBackup.map(i => i.slug), selectedMissing)}
-                                            sx={{ color: '#fbbf24', '&.Mui-checked': { color: '#fbbf24' }, '&.MuiCheckbox-indeterminate': { color: '#fbbf24' } }}
-                                        />
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fbbf24' }}>
-                                            Faltan en Backup ({auditData.missingInBackup.length})
-                                        </Typography>
-                                    </Stack>
-                                    <AppButton
-                                        variant="purple"
-                                        width="200px"
-                                        styles={{ height: 30, fontSize: '.7rem', fontWeight: 600 }}
-                                        onClick={handleSync}
-                                        disabled={!selectedMissing.size}
-                                    >
-                                        <SyncIcon sx={{ fontSize: 13, mr: 0.5 }} />
-                                        Sincronizar ({selectedMissing.size})
-                                    </AppButton>
-                                </Stack>
-                                <Box sx={{ maxHeight: 180, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px' }}>
-                                    {auditData.missingInBackup.map(item => (
-                                        <Stack key={item.slug} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(139,92,246,0.05)' } }}>
-                                            <Checkbox size="small" checked={selectedMissing.has(item.slug)} onChange={() => toggleSet(setSelectedMissing, item.slug)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#8b5cf6' } }} />
-                                            <Typography variant="body2" sx={{ flex: 1, ml: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#cbd5e1' }}>
-                                                {item.title || item.slug}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#64748b', flexShrink: 0 }}>{item.sizeMB} MB</Typography>
-                                        </Stack>
-                                    ))}
-                                </Box>
-                            </Box>
+                            <AlignmentSection
+                                title={`Faltan en Backup (${auditData.missingInBackup.length})`}
+                                subtitle="En BD + Main pero NO en Backup. Sincronizar Main → Backup."
+                                color="#fbbf24"
+                                borderColor="rgba(245,158,11,0.2)"
+                                bgColor="rgba(245,158,11,0.04)"
+                                items={auditData.missingInBackup}
+                                selected={selectedMissing}
+                                setSelected={setSelectedMissing}
+                                keyFn={i => i.slug}
+                                labelFn={i => i.title || i.slug}
+                                extraFn={i => `${i.sizeMB} MB`}
+                                actionLabel="Sincronizar"
+                                actionIcon={<SyncIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                actionColor="#8b5cf6"
+                                onAction={handleSync}
+                            />
                         )}
 
-                        {/* Orphans in Main (actionable - delete) */}
+                        {/* Missing in Main (restore Backup → Main) */}
+                        {auditData.missingInMain?.length > 0 && (
+                            <AlignmentSection
+                                title={`Faltan en Main (${auditData.missingInMain.length})`}
+                                subtitle="En BD + Backup pero NO en Main. Restaurar Backup → Main."
+                                color="#fb923c"
+                                borderColor="rgba(249,115,22,0.2)"
+                                bgColor="rgba(249,115,22,0.04)"
+                                items={auditData.missingInMain}
+                                selected={selectedMissingInMain}
+                                setSelected={setSelectedMissingInMain}
+                                keyFn={i => i.slug}
+                                labelFn={i => i.title || i.slug}
+                                extraFn={i => `${i.sizeMB} MB`}
+                                actionLabel="Restaurar"
+                                actionIcon={<RestoreIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                actionColor="#ea580c"
+                                onAction={handleRestore}
+                            />
+                        )}
+
+                        {/* Ghosts in DB */}
+                        {auditData.ghostsInDB?.length > 0 && (
+                            <AlignmentSection
+                                title={`Fantasmas en BD (${auditData.ghostsInDB.length})`}
+                                subtitle="Existen en BD pero NO en Main NI en Backup. Registros sin archivo."
+                                color="#f87171"
+                                borderColor="rgba(239,68,68,0.2)"
+                                bgColor="rgba(239,68,68,0.04)"
+                                items={auditData.ghostsInDB}
+                                selected={selectedGhosts}
+                                setSelected={setSelectedGhosts}
+                                keyFn={i => i.assetId}
+                                labelFn={i => i.title || i.slug}
+                                extraFn={i => <Typography component="span" sx={{ color: '#64748b', fontSize: '.65rem', fontStyle: 'italic' }}>{i.status}</Typography>}
+                                actionLabel="Limpiar BD"
+                                actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                actionColor="#dc2626"
+                                onAction={handleGhostCleanup}
+                            />
+                        )}
+
+                        {/* Orphans in Main */}
                         {auditData.orphansInMain?.length > 0 && (
-                            <Box sx={{ mb: 2 }}>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                                        <Checkbox
-                                            size="small"
-                                            checked={selectedOrphansMain.size === auditData.orphansInMain.length}
-                                            indeterminate={selectedOrphansMain.size > 0 && selectedOrphansMain.size < auditData.orphansInMain.length}
-                                            onChange={() => toggleAllSet(setSelectedOrphansMain, auditData.orphansInMain.map(i => i.folder), selectedOrphansMain)}
-                                            sx={{ color: '#818cf8', '&.Mui-checked': { color: '#818cf8' }, '&.MuiCheckbox-indeterminate': { color: '#818cf8' } }}
-                                        />
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#818cf8' }}>
-                                            Huérfanos en Main ({auditData.orphansInMain.length})
-                                        </Typography>
-                                    </Stack>
-                                    <AppButton
-                                        variant="cyan"
-                                        width="180px"
-                                        styles={{ height: 30, fontSize: '.7rem', fontWeight: 600, background: '#4338ca' }}
-                                        onClick={() => handleCleanup('main')}
-                                        disabled={!selectedOrphansMain.size}
-                                    >
-                                        <DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />
-                                        Eliminar ({selectedOrphansMain.size})
-                                    </AppButton>
-                                </Stack>
-                                <Box sx={{ maxHeight: 150, overflow: 'auto', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', bgcolor: 'rgba(99,102,241,0.04)' }}>
-                                    {auditData.orphansInMain.map(item => (
-                                        <Stack key={item.folder} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(99,102,241,0.05)' } }}>
-                                            <Checkbox size="small" checked={selectedOrphansMain.has(item.folder)} onChange={() => toggleSet(setSelectedOrphansMain, item.folder)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#818cf8' } }} />
-                                            <Typography variant="body2" sx={{ flex: 1, ml: 0.5, color: '#c7d2fe', fontFamily: 'monospace', fontSize: '.8rem' }}>
-                                                {item.folder}
-                                            </Typography>
-                                        </Stack>
-                                    ))}
-                                </Box>
-                            </Box>
+                            <AlignmentSection
+                                title={`Huérfanos en Main (${auditData.orphansInMain.length})`}
+                                subtitle="Carpetas en Main MEGA sin asset en BD. Se pueden eliminar."
+                                color="#818cf8"
+                                borderColor="rgba(99,102,241,0.2)"
+                                bgColor="rgba(99,102,241,0.04)"
+                                items={auditData.orphansInMain}
+                                selected={selectedOrphansMain}
+                                setSelected={setSelectedOrphansMain}
+                                keyFn={i => i.folder}
+                                labelFn={i => i.folder}
+                                mono
+                                actionLabel="Eliminar"
+                                actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                actionColor="#4338ca"
+                                onAction={() => handleCleanup('main')}
+                            />
                         )}
 
-                        {/* Orphans in Backup (actionable - delete) */}
+                        {/* Orphans in Backup */}
                         {auditData.orphansInBackup?.length > 0 && (
-                            <Box sx={{ mb: 2 }}>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                                        <Checkbox
-                                            size="small"
-                                            checked={selectedOrphansBackup.size === auditData.orphansInBackup.length}
-                                            indeterminate={selectedOrphansBackup.size > 0 && selectedOrphansBackup.size < auditData.orphansInBackup.length}
-                                            onChange={() => toggleAllSet(setSelectedOrphansBackup, auditData.orphansInBackup.map(i => i.folder), selectedOrphansBackup)}
-                                            sx={{ color: '#f87171', '&.Mui-checked': { color: '#f87171' }, '&.MuiCheckbox-indeterminate': { color: '#f87171' } }}
-                                        />
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#f87171' }}>
-                                            Huérfanos en Backup ({auditData.orphansInBackup.length})
-                                        </Typography>
-                                    </Stack>
-                                    <AppButton
-                                        variant="cyan"
-                                        width="180px"
-                                        styles={{ height: 30, fontSize: '.7rem', fontWeight: 600, background: '#b71c1c' }}
-                                        onClick={() => handleCleanup('backup')}
-                                        disabled={!selectedOrphansBackup.size}
-                                    >
-                                        <DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />
-                                        Eliminar ({selectedOrphansBackup.size})
-                                    </AppButton>
-                                </Stack>
-                                <Box sx={{ maxHeight: 180, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px' }}>
-                                    {auditData.orphansInBackup.map(item => (
-                                        <Stack key={item.folder} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(239,68,68,0.05)' } }}>
-                                            <Checkbox size="small" checked={selectedOrphansBackup.has(item.folder)} onChange={() => toggleSet(setSelectedOrphansBackup, item.folder)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color: '#ef4444' } }} />
-                                            <Typography variant="body2" sx={{ flex: 1, ml: 0.5, color: '#cbd5e1', fontFamily: 'monospace', fontSize: '.8rem' }}>
-                                                {item.folder}
-                                            </Typography>
-                                        </Stack>
-                                    ))}
-                                </Box>
-                            </Box>
+                            <AlignmentSection
+                                title={`Huérfanos en Backup (${auditData.orphansInBackup.length})`}
+                                subtitle="Carpetas en Backup MEGA sin asset en BD. Se pueden eliminar."
+                                color="#f87171"
+                                borderColor="rgba(239,68,68,0.2)"
+                                bgColor="rgba(239,68,68,0.04)"
+                                items={auditData.orphansInBackup}
+                                selected={selectedOrphansBackup}
+                                setSelected={setSelectedOrphansBackup}
+                                keyFn={i => i.folder}
+                                labelFn={i => i.folder}
+                                mono
+                                actionLabel="Eliminar"
+                                actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                actionColor="#b71c1c"
+                                onAction={() => handleCleanup('backup')}
+                            />
                         )}
 
                         {/* All good */}
                         {(auditData.missingInMain?.length === 0 && auditData.missingInBackup?.length === 0 &&
-                          auditData.orphansInMain?.length === 0 && auditData.orphansInBackup?.length === 0) && (
+                          auditData.ghostsInDB?.length === 0 && auditData.orphansInMain?.length === 0 && auditData.orphansInBackup?.length === 0) && (
                             <Box sx={{ textAlign: 'center', py: 3 }}>
                                 <CheckCircleIcon sx={{ fontSize: 48, color: '#4ade80', mb: 1 }} />
                                 <Typography variant="h6" sx={{ color: '#4ade80', fontWeight: 700 }}>
@@ -394,5 +424,86 @@ export default function AlignmentModal({ open, onClose, account }) {
                 )}
             </DialogContent>
         </Dialog>
+    );
+}
+
+/* ─── Reusable summary card ─── */
+function SummaryCard({ icon, color, bgColor, value, label }) {
+    return (
+        <Box sx={{ flex: 1, minWidth: 80, p: 1, borderRadius: '8px', bgcolor: `rgba(${bgColor},0.08)`, border: `1px solid rgba(${bgColor},0.2)`, textAlign: 'center' }}>
+            {React.cloneElement(icon, { sx: { fontSize: 18, color, mb: 0.2 } })}
+            <Typography variant="h6" sx={{ fontWeight: 700, color, fontSize: '1.1rem' }}>
+                {value}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '.6rem' }}>{label}</Typography>
+        </Box>
+    );
+}
+
+/* ─── Reusable section with select-all, list, and action button ─── */
+function AlignmentSection({ title, subtitle, color, borderColor, bgColor, items, selected, setSelected, keyFn, labelFn, extraFn, actionLabel, actionIcon, actionColor, onAction, mono }) {
+
+    function toggleSet(key) {
+        setSelected(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    }
+
+    function toggleAll() {
+        if (!items?.length) return;
+        const keys = items.map(keyFn);
+        setSelected(selected.size === items.length ? new Set() : new Set(keys));
+    }
+
+    return (
+        <Box sx={{ mb: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Checkbox
+                        size="small"
+                        checked={selected.size === items.length}
+                        indeterminate={selected.size > 0 && selected.size < items.length}
+                        onChange={toggleAll}
+                        sx={{ color, '&.Mui-checked': { color }, '&.MuiCheckbox-indeterminate': { color } }}
+                    />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color }}>
+                        {title}
+                    </Typography>
+                </Stack>
+                <AppButton
+                    variant="cyan"
+                    width="200px"
+                    styles={{ height: 30, fontSize: '.7rem', fontWeight: 600, background: actionColor }}
+                    onClick={onAction}
+                    disabled={!selected.size}
+                >
+                    {actionIcon}
+                    {actionLabel} ({selected.size})
+                </AppButton>
+            </Stack>
+            {subtitle && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, ml: 4.5 }}>
+                    {subtitle}
+                </Typography>
+            )}
+            <Box sx={{ maxHeight: 160, overflow: 'auto', border: `1px solid ${borderColor}`, borderRadius: '6px', bgcolor: bgColor }}>
+                {items.map(item => {
+                    const key = keyFn(item);
+                    return (
+                        <Stack key={key} direction="row" alignItems="center" sx={{ px: 1, py: 0.3, borderBottom: '1px solid rgba(255,255,255,0.04)', '&:hover': { bgcolor: 'rgba(139,92,246,0.05)' } }}>
+                            <Checkbox size="small" checked={selected.has(key)} onChange={() => toggleSet(key)} sx={{ p: 0.3, color: '#64748b', '&.Mui-checked': { color } }} />
+                            <Typography variant="body2" sx={{ flex: 1, ml: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#cbd5e1', ...(mono ? { fontFamily: 'monospace', fontSize: '.8rem' } : {}) }}>
+                                {labelFn(item)}
+                            </Typography>
+                            {extraFn && (
+                                <Typography variant="caption" sx={{ color: '#64748b', flexShrink: 0, ml: 1 }}>{extraFn(item)}</Typography>
+                            )}
+                        </Stack>
+                    );
+                })}
+            </Box>
+        </Box>
     );
 }
