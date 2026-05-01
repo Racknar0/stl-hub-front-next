@@ -142,6 +142,36 @@ export async function generateMetadata({ params }) {
 
     const isAdult = isAssetNSFW(asset);
 
+    // NSFW: no indexar, no exponer imágenes reales a crawlers
+    if (isAdult) {
+        return {
+            title: baseTitle,
+            description: desc,
+            robots: {
+                index: false,
+                follow: false,
+                googleBot: { index: false, follow: false },
+            },
+            alternates: {
+                canonical: `${site}/asset/${asset.slug}`,
+                languages: {
+                    'es-ES': `${site}/asset/${asset.slug}`,
+                    'en-US': `${site}/en/asset/${asset.slug}`,
+                    'x-default': `${site}/asset/${asset.slug}`,
+                },
+            },
+            openGraph: {
+                title: baseTitle,
+                description: desc,
+                type: 'article',
+                locale: isEn ? 'en_US' : 'es_ES',
+                url: isEn ? `${site}/en/asset/${asset.slug}` : `${site}/asset/${asset.slug}`,
+                images: [{ url: `${site}/logo_horizontal.png` }],
+            },
+            other: { rating: 'adult' },
+        };
+    }
+
     return {
         title: baseTitle,
         description: desc,
@@ -156,7 +186,6 @@ export async function generateMetadata({ params }) {
             },
         },
         alternates: {
-            // Canonical siempre apunta a la versión ES (idioma primario del sitio)
             canonical: `${site}/asset/${asset.slug}`,
             languages: {
                 'es-ES': `${site}/asset/${asset.slug}`,
@@ -174,11 +203,6 @@ export async function generateMetadata({ params }) {
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
         },
-        ...(isAdult && {
-            other: {
-                rating: 'adult',
-            },
-        }),
     };
 }
 
@@ -324,14 +348,19 @@ export default async function AssetPage({ params }) {
                 {/* ── Hero ── */}
                 <section className={styles.hero}>
                     <div className={styles.heroBackground} aria-hidden="true">
-                        <Image
-                            src={heroImage}
-                            alt={displayTitle}
-                            fill
-                            priority
-                            sizes="(max-width: 1280px) 100vw, 1280px"
-                            style={{ objectFit: 'cover' }}
-                        />
+                        {/* NSFW: no renderizar imagen real en SSR para que crawlers no la vean */}
+                        {isAdult ? (
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1a1025 0%, #0f172a 50%, #1e1b4b 100%)' }} />
+                        ) : (
+                            <Image
+                                src={heroImage}
+                                alt={displayTitle}
+                                fill
+                                priority
+                                sizes="(max-width: 1280px) 100vw, 1280px"
+                                style={{ objectFit: 'cover' }}
+                            />
+                        )}
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,11,21,0.15) 0%, rgba(7,11,21,0.6) 50%, rgba(7,11,21,0.95) 100%)' }} />
                     </div>
                     <div className={styles.heroInner}>
@@ -424,7 +453,7 @@ export default async function AssetPage({ params }) {
                 )}
 
                 {/* ── Gallery ── */}
-                {imgList.length > 0 ? (
+                {imgList.length > 0 && !isAdult ? (
                     <div className={styles.contentWrap}>
                         <section className={styles.galleryCard}>
                             <h2>
