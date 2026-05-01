@@ -18,7 +18,6 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
-import useStore from '@/store/useStore';
 
 const statusColor = (s) =>
     ({
@@ -37,8 +36,6 @@ export default function ModalDetalle({
     formatMBfromB,
     loadingDetail,
 }) {
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -136,8 +133,9 @@ export default function ModalDetalle({
                                         );
                                     })()}
                                     {(() => {
-                                        const tagsEs = Array.isArray(detail?.tagsEs) ? detail.tagsEs : Array.isArray(selected?.tags) ? selected.tags.map(t => t?.slug || t) : [];
-                                        const tagsEn = Array.isArray(detail?.tagsEn) ? detail.tagsEn : Array.isArray(selected?.tags) ? selected.tags.map(t => t?.nameEn || t?.name || t?.slug || t) : tagsEs;
+                                        const tags = Array.isArray(detail?.tags) ? detail.tags : Array.isArray(selected?.tags) ? selected.tags : [];
+                                        const tagsEs = tags.map(t => t?.name || t?.slug || '').filter(Boolean);
+                                        const tagsEn = tags.map(t => t?.nameEn || t?.name || t?.slug || '').filter(Boolean);
                                         return (
                                             <Stack spacing={0.6}>
                                                 <Typography variant="caption" color="text.secondary">Tags (ES)</Typography>
@@ -157,6 +155,10 @@ export default function ModalDetalle({
                                 <Stack spacing={0.8}>
                                     <Typography variant="caption" color="text.secondary">Meta</Typography>
                                     <Grid container spacing={0.5}>
+                                        <Grid item xs={5}><Typography variant="body2" color="text.secondary">ID</Typography></Grid>
+                                        <Grid item xs={7}><Typography variant="body2">{detail?.id ?? selected?.id ?? '-'}</Typography></Grid>
+                                        <Grid item xs={5}><Typography variant="body2" color="text.secondary">Slug</Typography></Grid>
+                                        <Grid item xs={7}><Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{detail?.slug ?? selected?.slug ?? '-'}</Typography></Grid>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Cuenta</Typography></Grid>
                                         <Grid item xs={7}><Typography variant="body2">{detail?.account?.alias || detail?.accountId || selected?.account?.alias || selected?.accountId}</Typography></Grid>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Archivo</Typography></Grid>
@@ -164,7 +166,13 @@ export default function ModalDetalle({
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Tamaño</Typography></Grid>
                                         <Grid item xs={7}><Typography variant="body2">{formatMBfromB(detail?.fileSizeB ?? detail?.archiveSizeB ?? selected?.fileSizeB ?? selected?.archiveSizeB)}</Typography></Grid>
                                         <Grid item xs={5}><Typography variant="body2" color="text.secondary">Creado</Typography></Grid>
-                                        <Grid item xs={7}><Typography variant="body2">{ (detail?.createdAt ?? selected?.createdAt) ? new Date(detail?.createdAt ?? selected?.createdAt).toLocaleString() : '-' }</Typography></Grid>
+                                        <Grid item xs={7}><Typography variant="body2">{(() => {
+                                            let raw = detail?.createdAt ?? selected?.createdAt;
+                                            if (!raw) return '-';
+                                            if (typeof raw === 'object' && raw !== null) raw = raw?.toISOString?.() || JSON.stringify(raw);
+                                            const d = new Date(raw);
+                                            return Number.isNaN(d.getTime()) ? String(raw) : d.toLocaleString('es-ES');
+                                        })()}</Typography></Grid>
                                         {(detail?.megaLink ?? selected?.megaLink) && (
                                             <Grid item xs={12}>
                                                 <Typography variant="body2">
@@ -175,14 +183,24 @@ export default function ModalDetalle({
                                         )}
                                     </Grid>
                                     {(() => {
-                                        const activeDescription = isEn
-                                            ? (detail?.descriptionEn ?? selected?.descriptionEn ?? detail?.description ?? selected?.description)
-                                            : (detail?.description ?? selected?.description ?? detail?.descriptionEn ?? selected?.descriptionEn);
-                                        if (!activeDescription) return null;
+                                        const descEs = detail?.description ?? selected?.description;
+                                        const descEn = detail?.descriptionEn ?? selected?.descriptionEn;
+                                        if (!descEs && !descEn) return null;
                                         return (
-                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                                {activeDescription}
-                                            </Typography>
+                                            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                                                {descEs && (
+                                                    <>
+                                                        <Typography variant="caption" color="text.secondary">Descripción (ES)</Typography>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.4 }}>{descEs}</Typography>
+                                                    </>
+                                                )}
+                                                {descEn && (
+                                                    <>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3 }}>Description (EN)</Typography>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.4 }}>{descEn}</Typography>
+                                                    </>
+                                                )}
+                                            </Stack>
                                         );
                                     })()}
                                 </Stack>

@@ -81,7 +81,7 @@ export default function BatchRow({
                 data-index={virtualIndex}
                 sx={{
                     backgroundColor: isSimilarityFocused
-                        ? focusedBg
+                        ? `${focusedBg} !important`
                         : baseRowBg,
                     boxShadow: isSimilarityFocused
                         ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
@@ -525,7 +525,7 @@ export default function BatchRow({
             ref={measureElement}
             data-index={virtualIndex}
             sx={{
-                backgroundColor: isSimilarityFocused ? focusedBg : baseRowBg,
+                backgroundColor: isSimilarityFocused ? `${focusedBg} !important` : baseRowBg,
                 boxShadow: isSimilarityFocused
                     ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
                     : 'none',

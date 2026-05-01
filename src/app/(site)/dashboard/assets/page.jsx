@@ -28,18 +28,12 @@ import {
 import {
     useMaterialReactTable,
 } from 'material-react-table';
-import LinkIcon from '@mui/icons-material/Link';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
-import ImagesSection from './componentes/ImagesSection';
-import HttpService from '@/services/HttpService';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import CachedIcon from '@mui/icons-material/Cached';
+import LinkIcon from '@mui/icons-material/Link';
+import HttpService from '@/services/HttpService';
+import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 
 
 // Nuevos componentes
@@ -92,20 +86,25 @@ export default function AssetsAdminPage() {
     // Nuevos filtros: por cuenta y por ID
     const [accountQ, setAccountQ] = useState('');
     const [assetIdQ, setAssetIdQ] = useState('');
+    // Filtros por categoría y tag
+    const [categoryFilter, setCategoryFilter] = useState(null);
+    const [tagFilter, setTagFilter] = useState(null);
     const [pageIndex, setPageIndex] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [rowCount, setRowCount] = useState(0);
     const [refreshTick, setRefreshTick] = useState(0);
-    // filtro plan (se mantiene en backend, pero aquÃƒÂ­ no exponemos UI adicional salvo bÃƒÂºsqueda normal)
+    // filtro plan
     const [showFreeOnly, setShowFreeOnly] = useState(false);
 
-    // Estado: modales
-    const [previewOpen, setPreviewOpen] = useState(false);
+    // Estado: modal unificado
+    const [assetModalOpen, setAssetModalOpen] = useState(false);
+    const [assetModalIndex, setAssetModalIndex] = useState(-1);
     const [syncMultimodalVectorsOpen, setSyncMultimodalVectorsOpen] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
     const [dropResultsOpen, setDropResultsOpen] = useState(false);
     const [dropFound, setDropFound] = useState([]);
     const [dropNotFound, setDropNotFound] = useState([]);
+    // Para dirty-check al navegar
+    const [initialEditForm, setInitialEditForm] = useState(null);
 
     // Estado: selecciÃƒÂ³n actual y formularios
     const [selected, setSelected] = useState(null);
@@ -655,7 +654,7 @@ export default function AssetsAdminPage() {
         }
     };
 
-    // Cargar datos de la tabla (paginaciÃƒÂ³n servidor)
+    // Cargar datos de la tabla (paginación servidor)
     useEffect(() => {
         const load = async () => {
             try {
@@ -666,15 +665,17 @@ export default function AssetsAdminPage() {
                     pageSize: String(pageSize),
                 });
                 if (showFreeOnly) params.set('plan', 'free');
-                // AÃƒÂ±adir filtros nuevos si estÃƒÂ¡n presentes
+                // Añadir filtros por cuenta
                 const accTrim = String(accountQ || '').trim();
                 if (accTrim) {
-                    // si es nÃƒÂºmero, tomar como accountId; si no, alias
                     const asNum = Number(accTrim);
                     if (Number.isFinite(asNum) && asNum > 0)
                         params.set('accountId', String(asNum));
                     else params.set('accountAlias', accTrim);
                 }
+                // Filtros por categoría y tag
+                if (categoryFilter?.slug) params.set('categorySlug', categoryFilter.slug);
+                if (tagFilter?.slug) params.set('tagSlug', tagFilter.slug);
                 const res = await http.getData(`/assets?${params.toString()}`);
                 const payload = res.data;
                 if (payload && Array.isArray(payload.items)) {
@@ -696,7 +697,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly]);
+    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -705,21 +706,7 @@ export default function AssetsAdminPage() {
         assetsRef.current = Array.isArray(assets) ? assets : [];
     }, [assets]);
 
-    // Detalle: cargar bilingÃƒÂ¼e al abrir modal de vista
-    useEffect(() => {
-        if (previewOpen && selected?.id) {
-            setLoadingDetail(true);
-            http.getData(`/assets/${selected.id}`)
-                .then((res) => setDetail(res.data))
-                .catch((e) => {
-                    console.error('load detail error', e);
-                    setDetail(selected);
-                })
-                .finally(() => setLoadingDetail(false));
-        } else {
-            setDetail(null);
-        }
-    }, [previewOpen, selected?.id]);
+    // Detalle: ahora se carga en openAssetModal / loadAssetByIndex
 
     // Tabla: definiciÃƒÂ³n de columnas (ES)
     const StatusDot = ({ status }) => {
@@ -913,8 +900,10 @@ export default function AssetsAdminPage() {
                 accessorKey: 'createdAt',
                 size: 150,
                 Cell: ({ cell }) => {
-                    const v = cell.getValue();
+                    let v = cell.getValue();
                     if (!v) return ( <Typography variant="body2" color="text.secondary"> - </Typography> );
+                    // Handle object / BigInt-serialized values
+                    if (typeof v === 'object' && v !== null) v = v?.toISOString?.() || JSON.stringify(v);
                     const d = new Date(v);
                     const text = Number.isNaN(d.getTime())
                         ? String(v)
@@ -1018,28 +1007,22 @@ export default function AssetsAdminPage() {
                     }
                 }}
                 onDropManyFiles={handleDropManyFiles}
+                categories={categories}
+                allTags={allTags}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={(v) => { setCategoryFilter(v); setPageIndex(0); }}
+                tagFilter={tagFilter}
+                setTagFilter={(v) => { setTagFilter(v); setPageIndex(0); }}
             />
         ),
         renderRowActions: ({ row }) => (
             <Box sx={{ display: 'flex', gap: 0 }}>
                 <IconButton
-                    aria-label="Ver"
-                    size="small"
-                    onClick={() => {
-                        setSelected(row.original);
-                        setPreviewOpen(true);
-                    }}
-                    sx={{ p: 0.2 }}
-                    title="Ver detalle del STL"
-                >
-                    <VisibilityIcon fontSize="small" />
-                </IconButton>
-                <IconButton
                     aria-label="Editar"
                     size="small"
-                    onClick={() => openEdit(row.original)}
+                    onClick={() => openAssetModal(row.original)}
                     sx={{ p: 0.2 }}
-                    title="Editar STL"
+                    title="Ver / Editar STL"
                 >
                     <EditIcon fontSize="small" />
                 </IconButton>
@@ -1072,26 +1055,90 @@ export default function AssetsAdminPage() {
         },
     });
 
-    // Abrir editor con datos del asset (sin categorÃƒÂ­a legacy)
-    const openEdit = async (asset) => {
+    // Abrir modal unificado
+    const buildEditFormFromAsset = (asset) => ({
+        title: asset.title || '',
+        titleEn: asset.titleEn || '',
+        categories: Array.isArray(asset.categories) ? asset.categories.map((c) => ({ ...c })) : [],
+        tags: Array.isArray(asset.tags) ? asset.tags.map((t) => String(t.slug || t.name || '').toLowerCase()).filter(Boolean) : [],
+        isPremium: !!asset.isPremium,
+    });
+
+    const openAssetModal = async (asset) => {
+        const idx = filtered.findIndex((a) => a.id === asset.id);
         setSelected(asset);
-        setEditForm({
-            title: asset.title || '',
-            titleEn: asset.titleEn || '',
-            categories: Array.isArray(asset.categories)
-                ? asset.categories.map((c) => ({ ...c }))
-                : [],
-            tags: Array.isArray(asset.tags)
-                ? asset.tags
-                      .map((t) => String(t.slug || t.name || '').toLowerCase())
-                      .filter(Boolean)
-                : [],
-            isPremium: !!asset.isPremium,
-        });
+        const form = buildEditFormFromAsset(asset);
+        setEditForm(form);
+        setInitialEditForm(JSON.stringify(form));
         setEditImageFiles([]);
         setEditPreviewIndex(0);
-        setEditOpen(true);
+        setAssetModalIndex(idx >= 0 ? idx : 0);
+        setAssetModalOpen(true);
         await loadMeta();
+        // Cargar detalle completo
+        try {
+            setLoadingDetail(true);
+            const res = await http.getData(`/assets/${asset.id}`);
+            if (res.data) {
+                setDetail(res.data);
+                const freshForm = buildEditFormFromAsset(res.data);
+                setEditForm(freshForm);
+                setInitialEditForm(JSON.stringify(freshForm));
+            }
+        } catch {} finally { setLoadingDetail(false); }
+    };
+
+    const loadAssetByIndex = async (idx) => {
+        const asset = filtered[idx];
+        if (!asset) return;
+        setSelected(asset);
+        setAssetModalIndex(idx);
+        const form = buildEditFormFromAsset(asset);
+        setEditForm(form);
+        setInitialEditForm(JSON.stringify(form));
+        setEditImageFiles([]);
+        setEditPreviewIndex(0);
+        try {
+            setLoadingDetail(true);
+            const res = await http.getData(`/assets/${asset.id}`);
+            if (res.data) {
+                setDetail(res.data);
+                const freshForm = buildEditFormFromAsset(res.data);
+                setEditForm(freshForm);
+                setInitialEditForm(JSON.stringify(freshForm));
+            }
+        } catch {} finally { setLoadingDetail(false); }
+    };
+
+    const isDirty = () => {
+        if (editImageFiles.length > 0) return true;
+        if (!initialEditForm) return false;
+        return JSON.stringify(editForm) !== initialEditForm;
+    };
+
+    const onNavigateWithDirtyCheck = async (dir) => {
+        const nextIdx = dir === 'prev' ? assetModalIndex - 1 : assetModalIndex + 1;
+        if (nextIdx < 0 || nextIdx >= filtered.length) return;
+        if (isDirty()) {
+            const answer = await confirmAlert(
+                'Cambios sin guardar',
+                '¿Qué deseas hacer con los cambios actuales?',
+                'Guardar y continuar',
+                'Descartar y continuar',
+                'warning',
+            );
+            if (answer) {
+                await handleSaveEdit();
+            }
+        }
+        await loadAssetByIndex(nextIdx);
+    };
+
+    const closeAssetModal = () => {
+        setAssetModalOpen(false);
+        setSelected(null);
+        setDetail(null);
+        resetEdit();
     };
 
     // Helpers de imÃƒÂ¡genes para editor
@@ -1190,8 +1237,11 @@ export default function AssetsAdminPage() {
                     fd,
                 );
             }
-            setEditOpen(false);
+            setAssetModalOpen(false);
+            setSelected(null);
+            setDetail(null);
             resetEdit();
+            setInitialEditForm(null);
             setRefreshTick((n) => n + 1);
             await successAlert(
                 'Actualizado',
@@ -1349,11 +1399,10 @@ export default function AssetsAdminPage() {
     );
 
     useEffect(() => {
-        if (tab !== 3) return;
         if (!categories.length || !allTags.length) {
             void loadMeta();
         }
-    }, [tab, categories.length, allTags.length]);
+    }, []);
 
     useEffect(() => {
         if (tab !== 3) return;
@@ -2057,20 +2106,14 @@ export default function AssetsAdminPage() {
                 <AssetsListTab
                     loading={loading}
                     table={table}
-                    previewOpen={previewOpen}
-                    setPreviewOpen={setPreviewOpen}
+                    // unified modal
+                    assetModalOpen={assetModalOpen}
+                    onCloseAssetModal={closeAssetModal}
                     detail={detail}
                     selected={selected}
                     imgUrl={imgUrl}
                     formatMBfromB={formatMBfromB}
                     loadingDetail={loadingDetail}
-                    dropResultsOpen={dropResultsOpen}
-                    setDropResultsOpen={setDropResultsOpen}
-                    dropFound={dropFound}
-                    dropNotFound={dropNotFound}
-                    editOpen={editOpen}
-                    setEditOpen={setEditOpen}
-                    resetEdit={resetEdit}
                     editForm={editForm}
                     setEditForm={setEditForm}
                     categories={categories}
@@ -2089,6 +2132,17 @@ export default function AssetsAdminPage() {
                     onRemove={onRemove}
                     onSelectPreview={onSelectPreview}
                     handleSaveEdit={handleSaveEdit}
+                    // navigation
+                    onPrevAsset={() => onNavigateWithDirtyCheck('prev')}
+                    onNextAsset={() => onNavigateWithDirtyCheck('next')}
+                    assetModalIndex={assetModalIndex}
+                    totalAssets={filtered.length}
+                    onNavigateWithDirtyCheck={onNavigateWithDirtyCheck}
+                    // drop results
+                    dropResultsOpen={dropResultsOpen}
+                    setDropResultsOpen={setDropResultsOpen}
+                    dropFound={dropFound}
+                    dropNotFound={dropNotFound}
                 />
             )}
             {tab === 1 && (

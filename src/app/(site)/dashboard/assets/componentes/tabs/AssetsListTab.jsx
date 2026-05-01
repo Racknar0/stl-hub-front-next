@@ -2,27 +2,20 @@
 
 import { Box, LinearProgress } from '@mui/material';
 import { MaterialReactTable } from 'material-react-table';
-import ModalDetalle from '../ModalDetalle';
-import ModalEditar from '../ModalEditar';
+import ModalAsset from '../ModalAsset';
 import ModalResultadosDrop from '../ModalResultadosDrop';
 
 export default function AssetsListTab({
     loading,
     table,
-    previewOpen,
-    setPreviewOpen,
+    // unified modal
+    assetModalOpen,
+    onCloseAssetModal,
     detail,
     selected,
     imgUrl,
     formatMBfromB,
     loadingDetail,
-    dropResultsOpen,
-    setDropResultsOpen,
-    dropFound,
-    dropNotFound,
-    editOpen,
-    setEditOpen,
-    resetEdit,
     editForm,
     setEditForm,
     categories,
@@ -41,6 +34,17 @@ export default function AssetsListTab({
     onRemove,
     onSelectPreview,
     handleSaveEdit,
+    // navigation
+    onPrevAsset,
+    onNextAsset,
+    assetModalIndex,
+    totalAssets,
+    onNavigateWithDirtyCheck,
+    // drop results
+    dropResultsOpen,
+    setDropResultsOpen,
+    dropFound,
+    dropNotFound,
 }) {
     return (
         <>
@@ -50,30 +54,14 @@ export default function AssetsListTab({
                 <MaterialReactTable table={table} />
             </Box>
 
-            <ModalDetalle
-                open={previewOpen}
-                onClose={() => setPreviewOpen(false)}
+            <ModalAsset
+                open={assetModalOpen}
+                onClose={onCloseAssetModal}
                 detail={detail}
                 selected={selected}
                 imgUrl={imgUrl}
                 formatMBfromB={formatMBfromB}
                 loadingDetail={loadingDetail}
-            />
-
-            <ModalResultadosDrop
-                open={dropResultsOpen}
-                onClose={() => setDropResultsOpen(false)}
-                found={dropFound}
-                notFound={dropNotFound}
-            />
-
-            <ModalEditar
-                open={editOpen}
-                onClose={() => {
-                    setEditOpen(false);
-                    resetEdit();
-                }}
-                selected={selected}
                 editForm={editForm}
                 setEditForm={setEditForm}
                 categories={categories}
@@ -93,7 +81,19 @@ export default function AssetsListTab({
                 onSelectPreview={onSelectPreview}
                 loading={loading}
                 onSave={handleSaveEdit}
-                imgUrl={imgUrl}
+                // navigation
+                onPrevAsset={onPrevAsset}
+                onNextAsset={onNextAsset}
+                assetIndex={assetModalIndex}
+                totalAssets={totalAssets}
+                onNavigateWithDirtyCheck={onNavigateWithDirtyCheck}
+            />
+
+            <ModalResultadosDrop
+                open={dropResultsOpen}
+                onClose={() => setDropResultsOpen(false)}
+                found={dropFound}
+                notFound={dropNotFound}
             />
         </>
     );
