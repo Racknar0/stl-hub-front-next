@@ -154,7 +154,7 @@ export default function BatchTable() {
   const visibleRows = useMemo(() => {
     const base = reviewMode ? reviewRows : rows
     const filtered = base.filter((r) => matchesSummaryFilter(r, summaryFilter))
-    // Sort active items (uploading/processing) to the top
+    // Sort active items (uploading/processing) to the top, then alphabetically by filename
     return [...filtered].sort((a, b) => {
       const priority = (r) => {
         const st = String(r?.estado || '').toLowerCase()
@@ -169,7 +169,12 @@ export default function BatchTable() {
         // Completed → bottom
         return 3
       }
-      return priority(a) - priority(b)
+      const pDiff = priority(a) - priority(b)
+      if (pDiff !== 0) return pDiff
+      // Same status → sort alphabetically by filename for easy sequential review
+      const nameA = String(a?.nombre || '').toLowerCase()
+      const nameB = String(b?.nombre || '').toLowerCase()
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' })
     })
   }, [reviewMode, reviewRows, rows, matchesSummaryFilter, summaryFilter])
 
