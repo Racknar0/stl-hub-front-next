@@ -87,7 +87,15 @@ export default function AlignmentModal({ open, onClose, account }) {
             const slugs = Array.from(selectedMissing);
             const data = await accountService.syncAlignment(account.id, slugs, { signal: controller.signal });
             setActionResult({ type: 'sync', ...data });
-            await handleAudit();
+            // Actualizar localmente: mover items sincronizados de missingInBackup a synced
+            const okSlugs = new Set((data.results || []).filter(r => r.status === 'OK').map(r => r.slug));
+            setAuditData(prev => ({
+                ...prev,
+                missingInBackup: (prev.missingInBackup || []).filter(i => !okSlugs.has(i.slug)),
+                synced: [...(prev.synced || []), ...(prev.missingInBackup || []).filter(i => okSlugs.has(i.slug))],
+            }));
+            setSelectedMissing(new Set());
+            setPhase('results');
         } catch (e) {
             if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error sincronizando');
@@ -107,7 +115,15 @@ export default function AlignmentModal({ open, onClose, account }) {
             const slugs = Array.from(selectedMissingInMain);
             const data = await accountService.restoreAlignment(account.id, slugs, { signal: controller.signal });
             setActionResult({ type: 'restore', ...data });
-            await handleAudit();
+            // Actualizar localmente: mover items restaurados de missingInMain a synced
+            const okSlugs = new Set((data.results || []).filter(r => r.status === 'OK').map(r => r.slug));
+            setAuditData(prev => ({
+                ...prev,
+                missingInMain: (prev.missingInMain || []).filter(i => !okSlugs.has(i.slug)),
+                synced: [...(prev.synced || []), ...(prev.missingInMain || []).filter(i => okSlugs.has(i.slug))],
+            }));
+            setSelectedMissingInMain(new Set());
+            setPhase('results');
         } catch (e) {
             if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error restaurando');
@@ -127,7 +143,15 @@ export default function AlignmentModal({ open, onClose, account }) {
             const assetIds = Array.from(selectedGhosts);
             const data = await accountService.ghostCleanupAlignment(account.id, assetIds, { signal: controller.signal });
             setActionResult({ type: 'ghost', ...data });
-            await handleAudit();
+            // Actualizar localmente: quitar fantasmas eliminados
+            const deletedIds = new Set((data.assets || []).map(a => a.id));
+            setAuditData(prev => ({
+                ...prev,
+                ghostsInDB: (prev.ghostsInDB || []).filter(i => !deletedIds.has(i.assetId)),
+                totalAssetsInBD: (prev.totalAssetsInBD || 0) - deletedIds.size,
+            }));
+            setSelectedGhosts(new Set());
+            setPhase('results');
         } catch (e) {
             if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error eliminando fantasmas');
@@ -148,10 +172,54 @@ export default function AlignmentModal({ open, onClose, account }) {
             const folders = Array.from(selected);
             const data = await accountService.cleanupAlignment(account.id, folders, target, { signal: controller.signal });
             setActionResult({ type: 'cleanup', target, ...data });
-            await handleAudit();
+            // Actualizar localmente: quitar carpetas eliminadas
+            const deletedSet = new Set((data.results || []).filter(r => r.status === 'DELETED').map(r => r.folder));
+            if (target === 'main') {
+                setAuditData(prev => ({ ...prev, orphansInMain: (prev.orphansInMain || []).filter(i => !deletedSet.has(i.folder)), totalFoldersInMain: (prev.totalFoldersInMain || 0) - deletedSet.size }));
+                setSelectedOrphansMain(new Set());
+            } else {
+                setAuditData(prev => ({ ...prev, orphansInBackup: (prev.orphansInBackup || []).filter(i => !deletedSet.has(i.folder)), totalFoldersInBackup: (prev.totalFoldersInBackup || 0) - deletedSet.size }));
+                setSelectedOrphansBackup(new Set());
+            }
+            setPhase('results');
         } catch (e) {
             if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
             setError(e?.response?.data?.message || e?.message || 'Error eliminando');
+            setPhase('results');
+        } finally {
+            abortRef.current = null;
+        }
+    }
+
+    async function handleCleanupUnified() {
+        const hasMain = selectedOrphansMain.size > 0;
+        const hasBackup = selectedOrphansBackup.size > 0;
+        if ((!hasMain && !hasBackup) || !account?.id) return;
+        setPhase('cleaning');
+        setActionResult(null);
+        const controller = new AbortController();
+        abortRef.current = controller;
+        try {
+            const mainFolders = hasMain ? Array.from(selectedOrphansMain) : [];
+            const backupFolders = hasBackup ? Array.from(selectedOrphansBackup) : [];
+            const data = await accountService.cleanupAlignmentUnified(account.id, mainFolders, backupFolders, { signal: controller.signal });
+            setActionResult({ type: 'cleanup-unified', ...data });
+            // Actualizar localmente ambas listas
+            const deletedMainSet = new Set((data.mainResults || []).filter(r => r.status === 'DELETED').map(r => r.folder));
+            const deletedBackupSet = new Set((data.backupResults || []).filter(r => r.status === 'DELETED').map(r => r.folder));
+            setAuditData(prev => ({
+                ...prev,
+                orphansInMain: (prev.orphansInMain || []).filter(i => !deletedMainSet.has(i.folder)),
+                orphansInBackup: (prev.orphansInBackup || []).filter(i => !deletedBackupSet.has(i.folder)),
+                totalFoldersInMain: (prev.totalFoldersInMain || 0) - deletedMainSet.size,
+                totalFoldersInBackup: (prev.totalFoldersInBackup || 0) - deletedBackupSet.size,
+            }));
+            setSelectedOrphansMain(new Set());
+            setSelectedOrphansBackup(new Set());
+            setPhase('results');
+        } catch (e) {
+            if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
+            setError(e?.response?.data?.message || e?.message || 'Error eliminando huérfanos');
             setPhase('results');
         } finally {
             abortRef.current = null;
@@ -278,6 +346,7 @@ export default function AlignmentModal({ open, onClose, account }) {
                             {actionResult.type === 'restore' && `Restauración completada: ${actionResult.okCount} OK, ${actionResult.failCount} fallidos`}
                             {actionResult.type === 'ghost' && `Limpieza BD completada: ${actionResult.deleted} registros eliminados`}
                             {actionResult.type === 'cleanup' && `Limpieza ${actionResult.target?.toUpperCase()}: ${actionResult.deleted} eliminados, ${actionResult.failed || 0} fallidos`}
+                            {actionResult.type === 'cleanup-unified' && `Limpieza unificada: Main ${actionResult.mainDeleted || 0} eliminados (${actionResult.mainFailed || 0} fallidos) | Backup ${actionResult.backupDeleted || 0} eliminados (${actionResult.backupFailed || 0} fallidos)`}
                         </Typography>
                     </Box>
                 )}
@@ -365,46 +434,68 @@ export default function AlignmentModal({ open, onClose, account }) {
                             />
                         )}
 
-                        {/* Orphans in Main */}
-                        {auditData.orphansInMain?.length > 0 && (
-                            <AlignmentSection
-                                title={`Huérfanos en Main (${auditData.orphansInMain.length})`}
-                                subtitle="Carpetas en Main MEGA sin asset en BD. Se pueden eliminar."
-                                color="#818cf8"
-                                borderColor="rgba(99,102,241,0.2)"
-                                bgColor="rgba(99,102,241,0.04)"
-                                items={auditData.orphansInMain}
-                                selected={selectedOrphansMain}
-                                setSelected={setSelectedOrphansMain}
-                                keyFn={i => i.folder}
-                                labelFn={i => i.folder}
-                                mono
-                                actionLabel="Eliminar"
-                                actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
-                                actionColor="#4338ca"
-                                onAction={() => handleCleanup('main')}
-                            />
-                        )}
+                        {/* Orphans - Unified section */}
+                        {((auditData.orphansInMain?.length > 0) || (auditData.orphansInBackup?.length > 0)) && (
+                            <Box sx={{ mb: 2 }}>
+                                {/* Unified action button */}
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#818cf8' }}>
+                                        Huérfanos ({(auditData.orphansInMain?.length || 0) + (auditData.orphansInBackup?.length || 0)} total)
+                                    </Typography>
+                                    <AppButton
+                                        variant="cyan"
+                                        width="260px"
+                                        styles={{ height: 32, fontSize: '.72rem', fontWeight: 600, background: 'linear-gradient(135deg, #4338ca 0%, #b71c1c 100%)' }}
+                                        onClick={handleCleanupUnified}
+                                        disabled={!selectedOrphansMain.size && !selectedOrphansBackup.size}
+                                    >
+                                        <DeleteSweepIcon sx={{ fontSize: 14, mr: 0.5 }} />
+                                        Limpiar todos los huérfanos ({selectedOrphansMain.size + selectedOrphansBackup.size})
+                                    </AppButton>
+                                </Stack>
 
-                        {/* Orphans in Backup */}
-                        {auditData.orphansInBackup?.length > 0 && (
-                            <AlignmentSection
-                                title={`Huérfanos en Backup (${auditData.orphansInBackup.length})`}
-                                subtitle="Carpetas en Backup MEGA sin asset en BD. Se pueden eliminar."
-                                color="#f87171"
-                                borderColor="rgba(239,68,68,0.2)"
-                                bgColor="rgba(239,68,68,0.04)"
-                                items={auditData.orphansInBackup}
-                                selected={selectedOrphansBackup}
-                                setSelected={setSelectedOrphansBackup}
-                                keyFn={i => i.folder}
-                                labelFn={i => i.folder}
-                                mono
-                                actionLabel="Eliminar"
-                                actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
-                                actionColor="#b71c1c"
-                                onAction={() => handleCleanup('backup')}
-                            />
+                                {/* Orphans in Main */}
+                                {auditData.orphansInMain?.length > 0 && (
+                                    <AlignmentSection
+                                        title={`Main (${auditData.orphansInMain.length})`}
+                                        subtitle="Carpetas en Main MEGA sin asset en BD."
+                                        color="#818cf8"
+                                        borderColor="rgba(99,102,241,0.2)"
+                                        bgColor="rgba(99,102,241,0.04)"
+                                        items={auditData.orphansInMain}
+                                        selected={selectedOrphansMain}
+                                        setSelected={setSelectedOrphansMain}
+                                        keyFn={i => i.folder}
+                                        labelFn={i => i.folder}
+                                        mono
+                                        actionLabel="Solo Main"
+                                        actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                        actionColor="#4338ca"
+                                        onAction={() => handleCleanup('main')}
+                                    />
+                                )}
+
+                                {/* Orphans in Backup */}
+                                {auditData.orphansInBackup?.length > 0 && (
+                                    <AlignmentSection
+                                        title={`Backup (${auditData.orphansInBackup.length})`}
+                                        subtitle="Carpetas en Backup MEGA sin asset en BD."
+                                        color="#f87171"
+                                        borderColor="rgba(239,68,68,0.2)"
+                                        bgColor="rgba(239,68,68,0.04)"
+                                        items={auditData.orphansInBackup}
+                                        selected={selectedOrphansBackup}
+                                        setSelected={setSelectedOrphansBackup}
+                                        keyFn={i => i.folder}
+                                        labelFn={i => i.folder}
+                                        mono
+                                        actionLabel="Solo Backup"
+                                        actionIcon={<DeleteSweepIcon sx={{ fontSize: 13, mr: 0.5 }} />}
+                                        actionColor="#b71c1c"
+                                        onAction={() => handleCleanup('backup')}
+                                    />
+                                )}
+                            </Box>
                         )}
 
                         {/* All good */}

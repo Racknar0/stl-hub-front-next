@@ -61,6 +61,17 @@ export class AccountService extends HttpService {
     }
   }
 
+  async cleanupAlignmentUnified(mainId, mainFolders, backupFolders, { signal } = {}) {
+    try {
+      const resp = await this.postData(`/accounts/${mainId}/alignment-cleanup-unified`, { mainFolders, backupFolders }, { signal });
+      return resp.data;
+    } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') throw err;
+      showApiError(err, 'Error eliminando huérfanos');
+      throw err;
+    }
+  }
+
   async restoreAlignment(mainId, slugs, { signal } = {}) {
     try {
       const resp = await this.postData(`/accounts/${mainId}/alignment-restore`, { slugs }, { signal });
