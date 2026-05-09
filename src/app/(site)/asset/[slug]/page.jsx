@@ -186,7 +186,7 @@ export async function generateMetadata({ params }) {
             },
         },
         alternates: {
-            canonical: `${site}/asset/${asset.slug}`,
+            canonical: canonicalPath,
             languages: {
                 'es-ES': `${site}/asset/${asset.slug}`,
                 'en-US': `${site}/en/asset/${asset.slug}`,
@@ -198,7 +198,7 @@ export async function generateMetadata({ params }) {
             description: desc,
             type: 'article',
             locale: isEn ? 'en_US' : 'es_ES',
-            url: isEn ? `${site}/en/asset/${asset.slug}` : `${site}/asset/${asset.slug}`,
+            url: canonicalPath,
             images: asset.images?.length
                 ? asset.images.slice(0, 1).map((i) => ({ url: i }))
                 : ['/logo_horizontal.png'],
