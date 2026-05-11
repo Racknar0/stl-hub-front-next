@@ -321,28 +321,40 @@ export default function TrafficCharts() {
           <li><strong style={{ color: '#4facfe' }}>Vistas de Página:</strong> La suma de todos los modelos o páginas que cargaron en esas sesiones.</li>
         </ul>
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si 1 persona entra 2 veces al día y mira 5 modelos en total = 1 Visitante, 2 Sesiones, 5 Vistas.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Detectas picos de viralidad. Si lanzas una campaña, aquí verás el impacto directo.
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Úsalo para medir el impacto inmediato de tus anuncios. Si haces un video de TikTok y sube el pico rojo y azul, el anuncio funcionó y trajo gente nueva.
       </>
     ),
     'top-pages': (
       <>
-        <strong style={{ color: '#f8fafc' }}>El Ranking de Popularidad:</strong> Descubre qué URLs o partes de tu sitio se roban toda la atención.<br/>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Podrás ver si la página de inicio o un modelo específico de "Busto de Batman" tiene más visitas que el resto.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Sabrás exactamente qué tipo de contenido demanda tu audiencia para que puedas subir más modelos de ese estilo.
+        <strong style={{ color: '#f8fafc' }}>Ranking de Popularidad (Top 50):</strong> Mide exactamente qué partes de tu plataforma atraen más la atención.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#4facfe' }}>Ruta de la Página (URL):</strong> Te muestra si es el Inicio, la página de búsqueda, o un modelo en específico.</li>
+          <li><strong style={{ color: '#00f2fe' }}>Vistas Acumuladas:</strong> La cantidad exacta de veces que esa página fue abierta.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves que un modelo de "Busto de Batman" tiene 300 visitas y el de "Spiderman" solo 50, ya sabes cuál franquicia está más de moda.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Detecta tendencias reales. Si ves que un modelo se vuelve sorpresivamente popular aquí, úsalo para tus anuncios principales o sube colecciones similares porque eso es lo que la gente quiere comprar.
       </>
     ),
     'visitors-vs-sessions': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Termómetro de Fidelidad:</strong> Compara a las personas únicas (Visitantes) frente a las veces totales que entran (Sesiones).<br/>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si tienes 100 visitantes pero 300 sesiones en una semana, significa que tu audiencia es súper fiel y vuelven casi 3 veces por persona.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Te ayuda a medir tu "retención". Sabrás si tu página logra enganchar a la gente para que regresen constantemente.
+        <strong style={{ color: '#f8fafc' }}>Termómetro de Fidelidad (Retención):</strong> Compara a las personas únicas frente a las veces totales que regresan a la web.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#ff0844' }}>Visitantes Únicos:</strong> La línea roja te dice cuántos "humanos" distintos pisaron la web.</li>
+          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> La línea azul suma las veces que esos "humanos" entraron al sitio.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si tienes 1,000 Visitantes pero 2,500 Sesiones, tienes una comunidad súper fiel que entra en promedio 2.5 veces. ¡Los tienes enganchados!<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si ves que las sesiones casi empatan a los visitantes (ej. 1,000 y 1,050), significa que entran, miran un rato y casi no regresan. Esto te indica que debes usar tácticas como correos electrónicos o notificaciones para recordarles que vuelvan.
       </>
     ),
     'plan-clicks': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Intención de Compra:</strong> Mide el interés por tus suscripciones midiendo cuántas veces le dan clic al botón "Elegir Plan".<br/>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Puedes descubrir que el plan de "180 días" recibe el doble de clics que los demás porque les parece una mejor oferta.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Descubres cuál es tu plan "Estrella" y puedes optimizar tus precios o saber qué promocionar en tus redes sociales.
+        <strong style={{ color: '#f8fafc' }}>Intención de Compra Real:</strong> Mide cuántas veces tus usuarios sienten el impulso de presionar "Elegir Plan" (antes de sacar la tarjeta).<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#a78bfa' }}>Total:</strong> Clics globales sumados de todos tus planes.</li>
+          <li><strong style={{ color: '#4facfe' }}>Por Plan (30, 90, 180, 365 días):</strong> Desglose en barras individuales para ver qué oferta les resultó más atractiva visualmente.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que casi nadie le da clic a "30 días", pero el de "180 días" se lleva el 80% de los clics.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el "cuello de botella" de tu negocio.
       </>
     )
   }
