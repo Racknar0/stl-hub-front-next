@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState, useEffect } from 'react';
+import React from 'react';
 import HttpService from '../../services/HttpService';
 import Button from '../layout/Buttons/Button';
 import { useI18n } from '../../i18n';
@@ -11,20 +11,14 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/zoom';
+import { usePromo } from '../../hooks/usePromo';
 
 // Componente reutilizable que representa el cuerpo del modal en vista standalone
 export default function AssetDetailCore({ asset }) {
   const { t } = useI18n();
   const language = useStore(s => s.language);
   const isEn = String(language||'es').toLowerCase() === 'en';
-  const [promo, setPromo] = useState({ active: false });
-
-  useEffect(() => {
-    const http = new HttpService();
-    http.getData('/promo/status')
-      .then((res) => { if (res?.data) setPromo(res.data); })
-      .catch(() => {});
-  }, []);
+  const promo = usePromo();
 
   if (!asset) return null;
 

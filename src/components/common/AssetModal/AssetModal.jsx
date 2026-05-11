@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import { useNSFW } from '../../../hooks/useNSFW';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
+import { usePromo } from '../../../hooks/usePromo';
 
 export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
@@ -27,15 +28,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     const { t } = useI18n();
 
     const isEn = String(language || 'es').toLowerCase() === 'en';
-
-    // Direct promo fetch (no context dependency)
-    const [promo, setPromo] = React.useState({ active: false, daysLeft: null });
-    React.useEffect(() => {
-        const h = new HttpService();
-        h.getData('/promo/status')
-            .then((res) => { if (res?.data) setPromo(res.data); })
-            .catch(() => {});
-    }, []);
+    const promo = usePromo();
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
     const imgUrl = (rel) => {

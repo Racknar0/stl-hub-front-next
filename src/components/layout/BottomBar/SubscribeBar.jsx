@@ -6,7 +6,7 @@ import Button from '../Buttons/Button'
 import './SubscribeBar.scss'
 import useStore from '@/store/useStore'
 import axiosInstance from '@/services/AxiosInterceptor'
-import HttpService from '@/services/HttpService'
+import { usePromo } from '@/hooks/usePromo'
 
 
 const SubscribeBar = () => {
@@ -14,22 +14,13 @@ const SubscribeBar = () => {
     const language = useStore((s) => s.language);
     const token = useStore((s) => s.token);
     const isEn = String(language || 'es').toLowerCase() === 'en';
+    const promo = usePromo();
 
     const [daysRemaining, setDaysRemaining] = React.useState(null);
     const [checkedSubscription, setCheckedSubscription] = React.useState(false);
-    const [promo, setPromo] = React.useState({ active: false, daysLeft: null });
-    const [ready, setReady] = React.useState(false);
+    const [clientReady, setClientReady] = React.useState(false);
 
-    // Fetch promo status directly (no context dependency)
-    React.useEffect(() => {
-      const http = new HttpService();
-      http.getData('/promo/status')
-        .then((res) => {
-          if (res?.data) setPromo(res.data);
-        })
-        .catch(() => {})
-        .finally(() => setReady(true));
-    }, []);
+    React.useEffect(() => { setClientReady(true); }, []);
 
     React.useEffect(() => {
       let cancelled = false;
@@ -65,8 +56,8 @@ const SubscribeBar = () => {
     const showForNoDays = !!token && checkedSubscription && Number(daysRemaining || 0) <= 0;
     const showBar = showForGuest || showForNoDays;
 
-    // 🚀 Premium Free Pass: always show when promo is active (client-only)
-    if (ready && promo.active) {
+    // 🚀 Premium Free Pass: always show when promo is active (client-only to avoid SSR mismatch)
+    if (clientReady && promo.active) {
       const promoMsg = isEn
         ? '🎉 Premium Free Pass — Sign up and download ALL models for free!'
         : '🎉 Premium Free Pass — ¡Regístrate y descarga TODOS los modelos gratis!';
