@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import HttpService from '../../services/HttpService';
 import Button from '../layout/Buttons/Button';
 import { useI18n } from '../../i18n';
@@ -17,6 +17,15 @@ export default function AssetDetailCore({ asset }) {
   const { t } = useI18n();
   const language = useStore(s => s.language);
   const isEn = String(language||'es').toLowerCase() === 'en';
+  const [promo, setPromo] = useState({ active: false });
+
+  useEffect(() => {
+    const http = new HttpService();
+    http.getData('/promo/status')
+      .then((res) => { if (res?.data) setPromo(res.data); })
+      .catch(() => {});
+  }, []);
+
   if (!asset) return null;
 
   const title = isEn ? (asset.titleEn || asset.title) : (asset.title || asset.titleEn);
@@ -49,7 +58,11 @@ export default function AssetDetailCore({ asset }) {
         <div className="meta-line">
           <span className="date">{asset.createdAt ? new Date(asset.createdAt).toLocaleDateString('es-ES',{ day:'2-digit', month:'short', year:'numeric'}) : null}</span>
           {asset.downloads != null && <span className="downloads">{asset.downloads} descargas</span>}
-          {asset.isPremium && <span className="premium-badge">Premium</span>}
+          {asset.isPremium && (
+            <span className={`premium-badge ${promo.active ? 'free-pass' : ''}`}>
+              {promo.active ? 'Free Pass 🎉' : 'Premium'}
+            </span>
+          )}
         </div>
         {!!tags?.length && (
           <div className="tags">

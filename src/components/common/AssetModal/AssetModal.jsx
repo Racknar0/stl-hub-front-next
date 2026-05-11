@@ -19,7 +19,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import { useNSFW } from '../../../hooks/useNSFW';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
-import { usePromo } from '../../../hooks/usePromo';
 
 export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
@@ -28,7 +27,15 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     const { t } = useI18n();
 
     const isEn = String(language || 'es').toLowerCase() === 'en';
-    const promo = usePromo();
+
+    // Direct promo fetch (no context dependency)
+    const [promo, setPromo] = React.useState({ active: false, daysLeft: null });
+    React.useEffect(() => {
+        const h = new HttpService();
+        h.getData('/promo/status')
+            .then((res) => { if (res?.data) setPromo(res.data); })
+            .catch(() => {});
+    }, []);
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
     const imgUrl = (rel) => {
@@ -432,7 +439,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
         {
             key: 'type',
             label: isEn ? 'Type' : 'Tipo',
-            value: data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis'),
+            value: data?.isPremium ? (promo.active ? 'Free Pass 🎉' : 'Premium') : (isEn ? 'Free' : 'Gratis'),
         },
         {
             key: 'size',
@@ -752,7 +759,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                     <span className={`head-badge ${data?.isPremium ? (promo.active ? 'is-promo' : 'is-premium') : 'is-free'}`}>
                                                         {data?.isPremium
                                                           ? (promo.active
-                                                            ? (isEn ? '🎉 FREE' : '🎉 GRATIS')
+                                                            ? (isEn ? '🎉 FREE PASS' : '🎉 FREE PASS')
                                                             : 'Premium')
                                                           : (isEn ? 'Free' : 'Gratis')
                                                         }
@@ -817,7 +824,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                         ? t('asset.modal.processing')
                                                         : data.isPremium
                                                         ? (promo.active
-                                                          ? (isEn ? 'Download Free 🎉' : 'Descargar Gratis 🎉')
+                                                          ? (isEn ? 'Download (Free Pass) 🎉' : 'Descargar (Free Pass) 🎉')
                                                           : t('asset.modal.downloadPremium'))
                                                         : t('asset.modal.downloadNow')}
                                                 </Button>
