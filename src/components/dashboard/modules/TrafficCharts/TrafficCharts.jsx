@@ -239,9 +239,9 @@ export default function TrafficCharts() {
 
   const topPagesChartData = useMemo(() => {
     if (!topPagesData?.pages?.length) return null
-    const pages = topPagesData.pages.slice(0, 10)
+    const pages = topPagesData.pages.slice(0, 50)
     return {
-      labels: pages.map((p) => p.path.length > 40 ? p.path.slice(0, 37) + '...' : p.path),
+      labels: pages.map((p) => p.path.length > 50 ? p.path.slice(0, 47) + '...' : p.path),
       datasets: [
         {
           label: 'Visitas',
@@ -259,8 +259,8 @@ export default function TrafficCharts() {
             'rgba(163,230,53,0.6)',
           ],
           borderColor: 'transparent',
-          borderRadius: 6,
-          barThickness: 22,
+          borderRadius: 4,
+          barThickness: 16,
         },
       ],
     }
@@ -275,61 +275,77 @@ export default function TrafficCharts() {
         {
           label: 'Total',
           data: planClicksData.series.map((s) => s.total),
-          borderColor: '#a78bfa',
-          backgroundColor: 'rgba(167,139,250,0.15)',
-          fill: true,
-          tension: 0.35,
-          pointRadius: planClicksData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-          borderWidth: 2.5,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(167,139,250,0.85)',
+          borderRadius: 4,
         },
         {
           label: '30 días',
           data: planClicksData.series.map((s) => s['1m']),
-          borderColor: '#4facfe',
-          backgroundColor: 'rgba(79,172,254,0.1)',
-          fill: false,
-          tension: 0.35,
-          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
-          pointHoverRadius: 4,
-          borderDash: [4, 2],
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(79,172,254,0.7)',
+          borderRadius: 4,
         },
         {
           label: '90 días',
           data: planClicksData.series.map((s) => s['3m']),
-          borderColor: '#00f2fe',
-          backgroundColor: 'rgba(0,242,254,0.1)',
-          fill: false,
-          tension: 0.35,
-          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
-          pointHoverRadius: 4,
-          borderDash: [4, 2],
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(0,242,254,0.7)',
+          borderRadius: 4,
         },
         {
           label: '180 días',
           data: planClicksData.series.map((s) => s['6m']),
-          borderColor: '#34d399',
-          backgroundColor: 'rgba(52,211,153,0.1)',
-          fill: false,
-          tension: 0.35,
-          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
-          pointHoverRadius: 4,
-          borderDash: [4, 2],
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(52,211,153,0.7)',
+          borderRadius: 4,
         },
         {
           label: '365 días',
           data: planClicksData.series.map((s) => s['12m']),
-          borderColor: '#fbbf24',
-          backgroundColor: 'rgba(251,191,36,0.1)',
-          fill: false,
-          tension: 0.35,
-          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
-          pointHoverRadius: 4,
-          borderDash: [4, 2],
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(251,191,36,0.7)',
+          borderRadius: 4,
         },
       ],
     }
   }, [planClicksData])
+
+  const CHART_DESCRIPTIONS = {
+    'traffic': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Visión General del Tráfico:</strong> Mide los 3 pilares de tu sitio web día a día:<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#ff0844' }}>Visitantes:</strong> Personas reales o dispositivos únicos que entraron.</li>
+          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> Visitas totales (una misma persona puede entrar varias veces y generar varias sesiones).</li>
+          <li><strong style={{ color: '#4facfe' }}>Vistas de Página:</strong> La suma de todos los modelos o páginas que cargaron en esas sesiones.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si 1 persona entra 2 veces al día y mira 5 modelos en total = 1 Visitante, 2 Sesiones, 5 Vistas.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Detectas picos de viralidad. Si lanzas una campaña, aquí verás el impacto directo.
+      </>
+    ),
+    'top-pages': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>El Ranking de Popularidad:</strong> Descubre qué URLs o partes de tu sitio se roban toda la atención.<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Podrás ver si la página de inicio o un modelo específico de "Busto de Batman" tiene más visitas que el resto.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Sabrás exactamente qué tipo de contenido demanda tu audiencia para que puedas subir más modelos de ese estilo.
+      </>
+    ),
+    'visitors-vs-sessions': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Termómetro de Fidelidad:</strong> Compara a las personas únicas (Visitantes) frente a las veces totales que entran (Sesiones).<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si tienes 100 visitantes pero 300 sesiones en una semana, significa que tu audiencia es súper fiel y vuelven casi 3 veces por persona.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Te ayuda a medir tu "retención". Sabrás si tu página logra enganchar a la gente para que regresen constantemente.
+      </>
+    ),
+    'plan-clicks': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Intención de Compra:</strong> Mide el interés por tus suscripciones midiendo cuántas veces le dan clic al botón "Elegir Plan".<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Puedes descubrir que el plan de "180 días" recibe el doble de clics que los demás porque les parece una mejor oferta.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Ventaja:</span> Descubres cuál es tu plan "Estrella" y puedes optimizar tus precios o saber qué promocionar en tus redes sociales.
+      </>
+    )
+  }
 
   const renderChart = () => {
     if (loading) {
@@ -353,7 +369,7 @@ export default function TrafficCharts() {
 
     if (chartType === 'plan-clicks') {
       if (!planClicksChartData) return <div className="chart-empty">Sin datos para este rango</div>
-      return <Line data={planClicksChartData} options={commonLineOpts} />
+      return <Bar data={planClicksChartData} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />
     }
 
     return null
@@ -361,8 +377,11 @@ export default function TrafficCharts() {
 
   return (
     <div className="traffic-charts-module">
-      <div className="charts-header">
-        <h3>Gráficas de Tráfico</h3>
+      <div className="charts-header" style={{ marginBottom: '16px' }}>
+        <h3 style={{ marginBottom: '4px' }}>Gráficas de Tráfico</h3>
+        <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.4 }}>
+          {CHART_DESCRIPTIONS[chartType]}
+        </div>
       </div>
 
       <div className="charts-controls">
@@ -416,7 +435,10 @@ export default function TrafficCharts() {
         </div>
       </div>
 
-      <div className="chart-canvas-wrap">
+      <div 
+        className="chart-canvas-wrap" 
+        style={chartType === 'top-pages' ? { minHeight: `${Math.max(450, (topPagesData?.pages?.slice(0,50).length || 0) * 26)}px`, maxHeight: 'none' } : {}}
+      >
         {renderChart()}
       </div>
     </div>
