@@ -127,299 +127,8 @@ const barOpts = {
   },
 }
 
-export default function TrafficCharts() {
-  const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(30)))
-  const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
-  const [loading, setLoading] = useState(false)
-  const [tsData, setTsData] = useState(null)
-  const [topPagesData, setTopPagesData] = useState(null)
-  const [planClicksData, setPlanClicksData] = useState(null)
-  
-  const [searchData, setSearchData] = useState(null)
-  const [topDownloadsData, setTopDownloadsData] = useState(null)
-  const [salesData, setSalesData] = useState(null)
-  const [registrationsData, setRegistrationsData] = useState(null)
 
-  const [activePreset, setActivePreset] = useState('30d')
-
-  const http = useMemo(() => new HttpService(), [])
-
-  const applyPreset = (preset) => {
-    const today = formatDateForInput(new Date())
-    setActivePreset(preset)
-    setToDate(today)
-    if (preset === '7d') setFromDate(formatDateForInput(daysAgo(7)))
-    else if (preset === '30d') setFromDate(formatDateForInput(daysAgo(30)))
-    else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
-  }
-
-  // Fetch data when dates change
-  useEffect(() => {
-    let mounted = true
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const [
-          visitsRes, 
-          topPagesRes, 
-          planClicksRes,
-          searchRes,
-          downloadsRes,
-          salesRes,
-          regRes
-        ] = await Promise.all([
-          http.getData(`/metrics/site-visits/timeseries?from=${fromDate}&to=${toDate}`),
-          http.getData(`/metrics/site-visits/top-pages?from=${fromDate}&to=${toDate}`),
-          http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`),
-          http.getData('/metrics/search-insights'),
-          http.getData('/metrics/top-downloads'),
-          http.getData('/metrics/sales'),
-          http.getData('/metrics/registrations')
-        ])
-
-        if (mounted) {
-          if (visitsRes?.data) setTsData(visitsRes.data)
-          if (topPagesRes?.data) setTopPagesData(topPagesRes.data)
-          if (planClicksRes?.data) setPlanClicksData(planClicksRes.data)
-          
-          if (searchRes?.data) setSearchData(searchRes.data)
-          if (downloadsRes?.data) setTopDownloadsData(downloadsRes.data)
-          if (salesRes?.data) setSalesData(salesRes.data)
-          if (regRes?.data) setRegistrationsData(regRes.data)
-        }
-      } catch (e) {
-        console.error('TrafficCharts fetch error', e)
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    fetchData()
-    return () => { mounted = false }
-  }, [fromDate, toDate])
-
-  // Handle manual date change (clear active preset)
-  const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
-  const onToChange = (e) => { setToDate(e.target.value); setActivePreset(null) }
-
-  const presetKey = activePreset === '7d' ? '1w' : activePreset === '1y' ? '1y' : '1m'
-
-  // Build chart data
-  const trafficChartData = useMemo(() => {
-    if (!tsData?.series?.length) return null
-    const labels = tsData.series.map((s) => formatLabel(s.date, tsData.granularity))
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Vistas de Página',
-          data: tsData.series.map((s) => s.pv),
-          borderColor: chartColors.pv.border,
-          backgroundColor: chartColors.pv.bg,
-          fill: true,
-          tension: 0.35,
-          pointRadius: tsData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Sesiones',
-          data: tsData.series.map((s) => s.sessions),
-          borderColor: chartColors.sessions.border,
-          backgroundColor: chartColors.sessions.bg,
-          fill: true,
-          tension: 0.35,
-          pointRadius: tsData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Visitantes',
-          data: tsData.series.map((s) => s.visitors),
-          borderColor: chartColors.visitors.border,
-          backgroundColor: chartColors.visitors.bg,
-          fill: true,
-          tension: 0.35,
-          pointRadius: tsData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-      ],
-    }
-  }, [tsData])
-
-  const visitorsVsSessionsData = useMemo(() => {
-    if (!tsData?.series?.length) return null
-    const labels = tsData.series.map((s) => formatLabel(s.date, tsData.granularity))
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Sesiones',
-          data: tsData.series.map((s) => s.sessions),
-          borderColor: chartColors.sessions.border,
-          backgroundColor: chartColors.sessions.bg,
-          fill: true,
-          tension: 0.35,
-          pointRadius: tsData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Visitantes Únicos',
-          data: tsData.series.map((s) => s.visitors),
-          borderColor: chartColors.visitors.border,
-          backgroundColor: chartColors.visitors.bg,
-          fill: true,
-          tension: 0.35,
-          pointRadius: tsData.series.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-      ],
-    }
-  }, [tsData])
-
-  const topPagesChartData = useMemo(() => {
-    if (!topPagesData?.pages?.length) return null
-    const pages = topPagesData.pages.slice(0, 50)
-    return {
-      labels: pages.map((p) => p.path),
-      datasets: [
-        {
-          label: 'Visitas',
-          data: pages.map((p) => p.count),
-          backgroundColor: [
-            'rgba(79,172,254,0.7)',
-            'rgba(0,242,254,0.7)',
-            'rgba(255,8,68,0.6)',
-            'rgba(168,85,247,0.6)',
-            'rgba(250,204,21,0.6)',
-            'rgba(34,197,94,0.6)',
-            'rgba(251,146,60,0.6)',
-            'rgba(56,189,248,0.6)',
-            'rgba(244,114,182,0.6)',
-            'rgba(163,230,53,0.6)',
-          ],
-          borderColor: 'transparent',
-          borderRadius: 4,
-          barThickness: 16,
-        },
-      ],
-    }
-  }, [topPagesData])
-
-  const planClicksChartData = useMemo(() => {
-    if (!planClicksData?.series?.length) return null
-    const labels = planClicksData.series.map((s) => formatLabel(s.date, planClicksData.granularity))
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Total',
-          data: planClicksData.series.map((s) => s.total),
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(167,139,250,0.85)',
-          borderRadius: 4,
-        },
-        {
-          label: '30 días',
-          data: planClicksData.series.map((s) => s['1m']),
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(79,172,254,0.7)',
-          borderRadius: 4,
-        },
-        {
-          label: '90 días',
-          data: planClicksData.series.map((s) => s['3m']),
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(0,242,254,0.7)',
-          borderRadius: 4,
-        },
-        {
-          label: '180 días',
-          data: planClicksData.series.map((s) => s['6m']),
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(52,211,153,0.7)',
-          borderRadius: 4,
-        },
-        {
-          label: '365 días',
-          data: planClicksData.series.map((s) => s['12m']),
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(251,191,36,0.7)',
-          borderRadius: 4,
-        },
-      ],
-    }
-  }, [planClicksData])
-
-  const searchChartData = useMemo(() => {
-    const dataObj = searchData?.[presetKey]
-    if (!dataObj?.topQueries?.length) return null
-    const queries = dataObj.topQueries.slice(0, 15)
-    return {
-      labels: queries.map((q) => q.query),
-      datasets: [
-        {
-          label: 'Búsquedas',
-          data: queries.map((q) => q.count),
-          backgroundColor: 'rgba(236, 72, 153, 0.7)',
-          borderColor: 'transparent',
-          borderRadius: 4,
-          barThickness: 16,
-        }
-      ]
-    }
-  }, [searchData, presetKey])
-
-  const topDownloadsChartData = useMemo(() => {
-    const arr = topDownloadsData?.[presetKey]
-    if (!arr?.length) return null
-    const downloads = arr.slice(0, 15)
-    return {
-      labels: downloads.map((d) => d.name),
-      datasets: [
-        {
-          label: 'Descargas',
-          data: downloads.map((d) => d.count),
-          backgroundColor: 'rgba(56, 189, 248, 0.7)',
-          borderColor: 'transparent',
-          borderRadius: 4,
-          barThickness: 16,
-        }
-      ]
-    }
-  }, [topDownloadsData, presetKey])
-
-  const salesChartData = useMemo(() => {
-    const itemsArr = salesData?.items?.[presetKey]
-    if (!itemsArr?.length) return null
-    
-    let paypal = 0
-    let mp = 0
-    let other = 0
-
-    itemsArr.forEach(i => {
-      if (i.method === 'PayPal') paypal += i.amountCop
-      else if (i.method === 'MercadoPago') mp += i.amountCop
-      else other += i.amountCop
-    })
-
-    return {
-      labels: ['PayPal', 'MercadoPago', 'Otros'].filter((_, i) => [paypal, mp, other][i] > 0),
-      datasets: [
-        {
-          data: [paypal, mp, other].filter(v => v > 0),
-          backgroundColor: [
-            'rgba(59, 130, 246, 0.8)', // PayPal Blue
-            'rgba(14, 165, 233, 0.8)', // MP Light Blue
-            'rgba(100, 116, 139, 0.8)', // Gray
-          ],
-          borderColor: 'rgba(15, 23, 42, 0.8)',
-          borderWidth: 2,
-        }
-      ]
-    }
-  }, [salesData, presetKey])
-
-  const registrationsCount = registrationsData?.[presetKey] || 0
-
-  const CHART_DESCRIPTIONS = {
+const CHART_DESCRIPTIONS = {
     'traffic': (
       <>
         <strong style={{ color: '#f8fafc' }}>Visión General del Tráfico:</strong> Mide los 3 pilares de tu sitio web día a día:<br/>
@@ -508,38 +217,59 @@ export default function TrafficCharts() {
     )
   }
 
-  const renderChartBlock = (id, data, component) => {
-    return (
-      <div className="chart-block" style={{ marginBottom: '60px', paddingBottom: '50px', borderBottom: '2px dashed rgba(255,255,255,0.2)' }}>
-        <div className="charts-header" style={{ marginBottom: '24px' }}>
+
+// Map active preset to backend key
+const getPresetKey = (preset) => preset === '7d' ? '1w' : preset === '1y' ? '1y' : '1m'
+
+// --- ChartContainer Component ---
+function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart }) {
+  const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(30)))
+  const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
+  const [activePreset, setActivePreset] = useState('30d')
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState(null)
+
+  const applyPreset = (preset) => {
+    const today = formatDateForInput(new Date())
+    setActivePreset(preset)
+    setToDate(today)
+    if (preset === '7d') setFromDate(formatDateForInput(daysAgo(7)))
+    else if (preset === '30d') setFromDate(formatDateForInput(daysAgo(30)))
+    else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
+  }
+
+  const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
+  const onToChange = (e) => { setToDate(e.target.value); setActivePreset(null) }
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      setLoading(true)
+      try {
+        const result = await fetchFn(fromDate, toDate, getPresetKey(activePreset || '30d'))
+        if (mounted) setData(result)
+      } catch (e) {
+        console.error(`Error loading chart ${id}`, e)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [fromDate, toDate, activePreset, fetchFn, id])
+
+  return (
+    <div className="chart-block" style={{ marginBottom: '60px', paddingBottom: '50px', borderBottom: '2px dashed rgba(255,255,255,0.2)' }}>
+      
+      {/* Container header with specific controls */}
+      <div className="charts-controls" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+        <div style={{ flex: '1 1 300px' }}>
           <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '8px' }}>
             {CHART_DESCRIPTIONS[id]}
           </div>
         </div>
-        <div 
-          className="chart-canvas-wrap" 
-          style={id === 'top-pages' ? { minHeight: `${Math.max(450, (topPagesData?.pages?.slice(0,50).length || 0) * 26)}px`, maxHeight: 'none' } : {}}
-        >
-          {loading ? (
-             <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
-          ) : !data ? (
-             <div className="chart-empty">Sin datos para este rango</div>
-          ) : component}
-        </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className="traffic-charts-module">
-      <div className="charts-controls" style={{ marginBottom: '30px' }}>
-        <div className="charts-controls-left">
-          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-color)' }}>
-            Gráficas de Tráfico
-          </h3>
-        </div>
-
-        <div className="charts-controls-right">
+        <div className="charts-controls-right" style={{ flexShrink: 0 }}>
           <div className="preset-btns">
             {[{ key: '7d', label: '7D' }, { key: '30d', label: '30D' }, { key: '1y', label: '1A' }].map(({ key, label }) => (
               <button
@@ -553,59 +283,194 @@ export default function TrafficCharts() {
             ))}
           </div>
 
-          <div className="date-range-picker">
-            <input
-              type="date"
-              value={fromDate}
-              onChange={onFromChange}
-              className="date-input"
-              max={toDate}
-            />
-            <span className="date-separator">→</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={onToChange}
-              className="date-input"
-              min={fromDate}
-              max={formatDateForInput(new Date())}
-            />
-          </div>
+          {supportsDynamicDates && (
+            <div className="date-range-picker">
+              <input type="date" value={fromDate} onChange={onFromChange} className="date-input" max={toDate} />
+              <span className="date-separator">→</span>
+              <input type="date" value={toDate} onChange={onToChange} className="date-input" min={fromDate} max={formatDateForInput(new Date())} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Render Area */}
+      <div className="chart-canvas-wrap" style={id === 'top-pages' ? { minHeight: `${Math.max(450, (data?.datasets?.[0]?.data?.length || 0) * 26)}px`, maxHeight: 'none' } : {}}>
+        {loading ? (
+          <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
+        ) : !data ? (
+          <div className="chart-empty">Sin datos para este rango</div>
+        ) : (
+          renderChart(data)
+        )}
+      </div>
+    </div>
+  )
+}
+
+// --- Main Component ---
+export default function TrafficCharts() {
+  const http = useMemo(() => new HttpService(), [])
+
+  // 1. Traffic Fetcher
+  const fetchTraffic = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/site-visits/timeseries?from=${from}&to=${to}`)
+    const tsData = res?.data
+    if (!tsData?.series?.length) return null
+    return {
+      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
+      datasets: [
+        { label: 'Vistas de Página', data: tsData.series.map((s) => s.pv), borderColor: chartColors.pv.border, backgroundColor: chartColors.pv.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Sesiones', data: tsData.series.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Visitantes', data: tsData.series.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+      ]
+    }
+  }, [http])
+
+  // 2. Visitors vs Sessions Fetcher
+  const fetchVisitorsVsSessions = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/site-visits/timeseries?from=${from}&to=${to}`)
+    const tsData = res?.data
+    if (!tsData?.series?.length) return null
+    return {
+      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
+      datasets: [
+        { label: 'Sesiones', data: tsData.series.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Visitantes Únicos', data: tsData.series.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+      ]
+    }
+  }, [http])
+
+  // 3. Plan Clicks Fetcher
+  const fetchPlanClicks = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/plan-clicks/timeseries?from=${from}&to=${to}`)
+    const planClicksData = res?.data
+    if (!planClicksData?.series?.length) return null
+    return {
+      labels: planClicksData.series.map((s) => formatLabel(s.date, planClicksData.granularity)),
+      datasets: [
+        { label: 'Total', data: planClicksData.series.map((s) => s.total), borderColor: 'transparent', backgroundColor: 'rgba(167,139,250,0.85)', borderRadius: 4 },
+        { label: '30 días', data: planClicksData.series.map((s) => s['1m']), borderColor: 'transparent', backgroundColor: 'rgba(79,172,254,0.7)', borderRadius: 4 },
+        { label: '90 días', data: planClicksData.series.map((s) => s['3m']), borderColor: 'transparent', backgroundColor: 'rgba(0,242,254,0.7)', borderRadius: 4 },
+        { label: '180 días', data: planClicksData.series.map((s) => s['6m']), borderColor: 'transparent', backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 4 },
+        { label: '365 días', data: planClicksData.series.map((s) => s['12m']), borderColor: 'transparent', backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 },
+      ]
+    }
+  }, [http])
+
+  // 4. Top Pages Fetcher
+  const fetchTopPages = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/site-visits/top-pages?from=${from}&to=${to}`)
+    const topPagesData = res?.data
+    if (!topPagesData?.pages?.length) return null
+    const pages = topPagesData.pages.slice(0, 50)
+    return {
+      labels: pages.map((p) => p.path),
+      datasets: [{
+        label: 'Visitas',
+        data: pages.map((p) => p.count),
+        backgroundColor: ['rgba(79,172,254,0.7)','rgba(0,242,254,0.7)','rgba(255,8,68,0.6)','rgba(168,85,247,0.6)','rgba(250,204,21,0.6)','rgba(34,197,94,0.6)','rgba(251,146,60,0.6)','rgba(56,189,248,0.6)','rgba(244,114,182,0.6)','rgba(163,230,53,0.6)'],
+        borderColor: 'transparent', borderRadius: 4, barThickness: 16
+      }]
+    }
+  }, [http])
+
+  // 5. Sales Fetcher
+  const fetchSales = React.useCallback(async (from, to, presetKey) => {
+    const res = await http.getData('/metrics/sales')
+    const salesData = res?.data
+    const itemsArr = salesData?.items?.[presetKey]
+    if (!itemsArr?.length) return null
+    let paypal = 0, mp = 0, other = 0
+    itemsArr.forEach(i => {
+      if (i.method === 'PayPal') paypal += i.amountCop
+      else if (i.method === 'MercadoPago') mp += i.amountCop
+      else other += i.amountCop
+    })
+    return {
+      labels: ['PayPal', 'MercadoPago', 'Otros'].filter((_, i) => [paypal, mp, other][i] > 0),
+      datasets: [{
+        data: [paypal, mp, other].filter(v => v > 0),
+        backgroundColor: ['rgba(59, 130, 246, 0.8)','rgba(14, 165, 233, 0.8)','rgba(100, 116, 139, 0.8)'],
+        borderColor: 'rgba(15, 23, 42, 0.8)', borderWidth: 2
+      }]
+    }
+  }, [http])
+
+  // 6. Registrations Fetcher
+  const fetchRegistrations = React.useCallback(async (from, to, presetKey) => {
+    const res = await http.getData('/metrics/registrations')
+    return res?.data?.[presetKey] || 0
+  }, [http])
+
+  // 7. Top Searches Fetcher
+  const fetchSearches = React.useCallback(async (from, to, presetKey) => {
+    const res = await http.getData('/metrics/search-insights')
+    const searchData = res?.data
+    const dataObj = searchData?.[presetKey]
+    if (!dataObj?.topQueries?.length) return null
+    const queries = dataObj.topQueries.slice(0, 15)
+    return {
+      labels: queries.map((q) => q.query),
+      datasets: [{
+        label: 'Búsquedas', data: queries.map((q) => q.count),
+        backgroundColor: 'rgba(236, 72, 153, 0.7)', borderColor: 'transparent', borderRadius: 4, barThickness: 16
+      }]
+    }
+  }, [http])
+
+  // 8. Top Downloads Fetcher
+  const fetchDownloads = React.useCallback(async (from, to, presetKey) => {
+    const res = await http.getData('/metrics/top-downloads')
+    const topDownloadsData = res?.data
+    const arr = topDownloadsData?.[presetKey]
+    if (!arr?.length) return null
+    const downloads = arr.slice(0, 15)
+    return {
+      labels: downloads.map((d) => d.name),
+      datasets: [{
+        label: 'Descargas', data: downloads.map((d) => d.count),
+        backgroundColor: 'rgba(56, 189, 248, 0.7)', borderColor: 'transparent', borderRadius: 4, barThickness: 16
+      }]
+    }
+  }, [http])
+
+
+  return (
+    <div className="traffic-charts-module">
+      {/* Title Header removed global controls */}
+      <div className="charts-controls" style={{ marginBottom: '30px' }}>
+        <div className="charts-controls-left">
+          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-color)' }}>
+            Métricas Analíticas
+          </h3>
         </div>
       </div>
 
       <div className="charts-list">
-        {renderChartBlock('traffic', trafficChartData, trafficChartData && <Line data={trafficChartData} options={commonLineOpts} />)}
-        {renderChartBlock('plan-clicks', planClicksChartData, planClicksChartData && <Bar data={planClicksChartData} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />)}
+        <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
-        {renderChartBlock('sales-revenue', salesChartData, salesChartData && (
+        <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />} />
+        
+        <ChartContainer id="sales-revenue" supportsDynamicDates={false} fetchFn={fetchSales} renderChart={(data) => (
           <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <Doughnut 
-              data={salesChartData} 
-              options={{
-                plugins: {
-                  legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } },
-                  tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' }
-                }
-              }} 
-            />
+            <Doughnut data={data} options={{ plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } }, tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' } } }} />
           </div>
-        ))}
+        )} />
         
-        {renderChartBlock('user-registrations', registrationsCount, (
+        <ChartContainer id="user-registrations" supportsDynamicDates={false} fetchFn={fetchRegistrations} renderChart={(data) => (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
             <span style={{ fontSize: '1.2rem', color: '#94a3b8', marginBottom: '10px' }}>Nuevos Usuarios Registrados</span>
-            <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#f59e0b', textShadow: '0 0 20px rgba(245,158,11,0.3)' }}>
-              +{registrationsCount}
-            </span>
+            <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#f59e0b', textShadow: '0 0 20px rgba(245,158,11,0.3)' }}>+{data}</span>
           </div>
-        ))}
-
-        {renderChartBlock('top-searches', searchChartData, searchChartData && <Bar data={searchChartData} options={barOpts} />)}
-        {renderChartBlock('top-downloads', topDownloadsChartData, topDownloadsChartData && <Bar data={topDownloadsChartData} options={barOpts} />)}
+        )} />
         
-        {renderChartBlock('visitors-vs-sessions', visitorsVsSessionsData, visitorsVsSessionsData && <Line data={visitorsVsSessionsData} options={commonLineOpts} />)}
-        {renderChartBlock('top-pages', topPagesChartData, topPagesChartData && <Bar data={topPagesChartData} options={barOpts} />)}
+        <ChartContainer id="top-searches" supportsDynamicDates={false} fetchFn={fetchSearches} renderChart={(data) => <Bar data={data} options={barOpts} />} />
+        
+        <ChartContainer id="top-downloads" supportsDynamicDates={false} fetchFn={fetchDownloads} renderChart={(data) => <Bar data={data} options={barOpts} />} />
+        
+        <ChartContainer id="visitors-vs-sessions" supportsDynamicDates={true} fetchFn={fetchVisitorsVsSessions} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
+        
+        <ChartContainer id="top-pages" supportsDynamicDates={true} fetchFn={fetchTopPages} renderChart={(data) => <Bar data={data} options={barOpts} />} />
       </div>
     </div>
   )
