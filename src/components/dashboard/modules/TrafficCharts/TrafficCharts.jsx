@@ -116,7 +116,6 @@ const barOpts = {
 }
 
 export default function TrafficCharts() {
-  const [chartType, setChartType] = useState('traffic')
   const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(30)))
   const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
   const [loading, setLoading] = useState(false)
@@ -136,21 +135,22 @@ export default function TrafficCharts() {
     else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
   }
 
-  // Fetch data when dates or chart type change
+  // Fetch data when dates change
   useEffect(() => {
     let mounted = true
     const fetchData = async () => {
       setLoading(true)
       try {
-        if (chartType === 'top-pages') {
-          const res = await http.getData(`/metrics/site-visits/top-pages?from=${fromDate}&to=${toDate}`)
-          if (mounted && res?.data) setTopPagesData(res.data)
-        } else if (chartType === 'plan-clicks') {
-          const res = await http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`)
-          if (mounted && res?.data) setPlanClicksData(res.data)
-        } else {
-          const res = await http.getData(`/metrics/site-visits/timeseries?from=${fromDate}&to=${toDate}`)
-          if (mounted && res?.data) setTsData(res.data)
+        const [visitsRes, topPagesRes, planClicksRes] = await Promise.all([
+          http.getData(`/metrics/site-visits/timeseries?from=${fromDate}&to=${toDate}`),
+          http.getData(`/metrics/site-visits/top-pages?from=${fromDate}&to=${toDate}`),
+          http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`)
+        ])
+
+        if (mounted) {
+          if (visitsRes?.data) setTsData(visitsRes.data)
+          if (topPagesRes?.data) setTopPagesData(topPagesRes.data)
+          if (planClicksRes?.data) setPlanClicksData(planClicksRes.data)
         }
       } catch (e) {
         console.error('TrafficCharts fetch error', e)
@@ -160,7 +160,7 @@ export default function TrafficCharts() {
     }
     fetchData()
     return () => { mounted = false }
-  }, [fromDate, toDate, chartType])
+  }, [fromDate, toDate])
 
   // Handle manual date change (clear active preset)
   const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
@@ -359,57 +359,35 @@ export default function TrafficCharts() {
     )
   }
 
-  const renderChart = () => {
-    if (loading) {
-      return <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
-    }
-
-    if (chartType === 'traffic') {
-      if (!trafficChartData) return <div className="chart-empty">Sin datos para este rango</div>
-      return <Line data={trafficChartData} options={commonLineOpts} />
-    }
-
-    if (chartType === 'visitors-vs-sessions') {
-      if (!visitorsVsSessionsData) return <div className="chart-empty">Sin datos para este rango</div>
-      return <Line data={visitorsVsSessionsData} options={commonLineOpts} />
-    }
-
-    if (chartType === 'top-pages') {
-      if (!topPagesChartData) return <div className="chart-empty">Sin datos para este rango</div>
-      return <Bar data={topPagesChartData} options={barOpts} />
-    }
-
-    if (chartType === 'plan-clicks') {
-      if (!planClicksChartData) return <div className="chart-empty">Sin datos para este rango</div>
-      return <Bar data={planClicksChartData} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />
-    }
-
-    return null
+  const renderChartBlock = (id, data, component) => {
+    return (
+      <div className="chart-block" style={{ marginBottom: '40px', paddingBottom: '30px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="charts-header" style={{ marginBottom: '24px' }}>
+          <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '8px' }}>
+            {CHART_DESCRIPTIONS[id]}
+          </div>
+        </div>
+        <div 
+          className="chart-canvas-wrap" 
+          style={id === 'top-pages' ? { minHeight: `${Math.max(450, (topPagesData?.pages?.slice(0,50).length || 0) * 26)}px`, maxHeight: 'none' } : {}}
+        >
+          {loading ? (
+             <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
+          ) : !data ? (
+             <div className="chart-empty">Sin datos para este rango</div>
+          ) : component}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="traffic-charts-module">
-      <div className="charts-header" style={{ marginBottom: '16px' }}>
-        <h3 style={{ marginBottom: '4px' }}>Gráficas de Tráfico</h3>
-        <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.4 }}>
-          {CHART_DESCRIPTIONS[chartType]}
-        </div>
-      </div>
-
-      <div className="charts-controls">
+      <div className="charts-controls" style={{ marginBottom: '30px' }}>
         <div className="charts-controls-left">
-          <label className="chart-type-label">
-            Tipo:
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value)}
-              className="chart-type-select"
-            >
-              {CHART_TYPES.map((ct) => (
-                <option key={ct.value} value={ct.value}>{ct.label}</option>
-              ))}
-            </select>
-          </label>
+          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-color)' }}>
+            Gráficas de Tráfico
+          </h3>
         </div>
 
         <div className="charts-controls-right">
@@ -447,11 +425,11 @@ export default function TrafficCharts() {
         </div>
       </div>
 
-      <div 
-        className="chart-canvas-wrap" 
-        style={chartType === 'top-pages' ? { minHeight: `${Math.max(450, (topPagesData?.pages?.slice(0,50).length || 0) * 26)}px`, maxHeight: 'none' } : {}}
-      >
-        {renderChart()}
+      <div className="charts-list">
+        {renderChartBlock('traffic', trafficChartData, trafficChartData && <Line data={trafficChartData} options={commonLineOpts} />)}
+        {renderChartBlock('plan-clicks', planClicksChartData, planClicksChartData && <Bar data={planClicksChartData} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />)}
+        {renderChartBlock('visitors-vs-sessions', visitorsVsSessionsData, visitorsVsSessionsData && <Line data={visitorsVsSessionsData} options={commonLineOpts} />)}
+        {renderChartBlock('top-pages', topPagesChartData, topPagesChartData && <Bar data={topPagesChartData} options={barOpts} />)}
       </div>
     </div>
   )
