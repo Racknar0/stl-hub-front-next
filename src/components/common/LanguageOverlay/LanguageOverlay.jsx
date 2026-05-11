@@ -16,15 +16,16 @@ export default function LanguageOverlay() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Mostrar solo si no hay idioma guardado
+  // Mostrar solo si el usuario nunca eligió idioma manualmente
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const saved = window.localStorage.getItem('lang')
-    setShow(!saved)
+    const chosen = window.localStorage.getItem('lang_chosen')
+    setShow(!chosen)
   }, [])
 
   const choose = (lang) => {
     setLanguage(lang)
+    window.localStorage.setItem('lang_chosen', 'true')
     setShow(false)
     if (lang === 'en') router.push('/en')
     // ES: ya está en /, no navega
