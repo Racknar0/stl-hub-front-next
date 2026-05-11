@@ -58,8 +58,10 @@ export default function MercadoPagoCallbackPage() {
         if (status === 'COMPLETED') {
           setState('success');
           setMessage(isEn ? STATUS_TEXT.success.en : STATUS_TEXT.success.es);
+          const amt = response?.data?.amount || 0;
+          const cur = response?.data?.currency || 'USD';
           setTimeout(() => {
-            router.replace('/account');
+            router.replace(`/payment-success?value=${amt}&currency=${cur}`);
           }, 2200);
           return;
         }

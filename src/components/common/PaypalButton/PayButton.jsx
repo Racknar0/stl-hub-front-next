@@ -47,9 +47,10 @@ const PayButton = ({
                     });
                     console.log('onApprove response', response);
                     if (response.data?.success) {
-                        alert('Pago completado ✅ ¡Gracias por tu compra!');
-                        // Opcional: redirigir al usuario o actualizar la UI
-                        window.location.href = '/account';
+                        // Redirigir a la nueva vista de éxito con el valor real
+                        const amt = response.data.amount || plan.total;
+                        const cur = response.data.currency || 'USD';
+                        window.location.href = `/payment-success?value=${amt}&currency=${cur}`;
                     } else {
                         alert('Hubo un problema al procesar tu pago.');
                     }

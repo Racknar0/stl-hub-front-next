@@ -1,24 +1,27 @@
 'use client';
 import React, { useEffect } from 'react';
 import useStore from '../../../store/useStore';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { sendGTMEvent } from '@next/third-parties/google';
 
 export default function PaymentSuccessPage() {
     const language = useStore((s) => s.language);
+    const searchParams = useSearchParams();
     const isEn = String(language || 'es').toLowerCase() === 'en';
 
     useEffect(() => {
-        // Ejemplo de cómo se dispararía el evento (comentado porque no hay datos reales aún)
-        /*
+        const val = Number(searchParams.get('value')) || 0;
+        const cur = searchParams.get('currency') || 'USD';
+
+        // Disparamos el evento de compra para Google Analytics
         sendGTMEvent({ 
             event: 'purchase', 
-            transaction_id: 'T_12345', 
-            value: 15.00,
-            currency: 'USD'
+            transaction_id: `T_${Math.floor(Math.random() * 1000000)}`, // ID temporal para que GA4 no lo cuente como duplicado
+            value: val,
+            currency: cur
         });
-        */
-    }, []);
+    }, [searchParams]);
 
     return (
         <div style={{
