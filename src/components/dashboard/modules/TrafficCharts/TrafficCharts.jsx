@@ -7,12 +7,13 @@ import {
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Filler,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js'
-import { Line, Bar } from 'react-chartjs-2'
+import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import HttpService from '@/services/HttpService'
 import './TrafficCharts.scss'
 
@@ -22,6 +23,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Filler,
   Title,
   Tooltip,
@@ -109,7 +111,17 @@ const barOpts = {
       beginAtZero: true,
     },
     y: {
-      ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+      ticks: { 
+        color: 'rgba(255,255,255,0.7)', 
+        font: { size: 11 },
+        callback: function(value) {
+          const label = this.getLabelForValue(value);
+          if (typeof label === 'string' && label.length > 20) {
+            return label.slice(0, 17) + '...';
+          }
+          return label;
+        }
+      },
       grid: { display: false },
     },
   },
@@ -122,6 +134,12 @@ export default function TrafficCharts() {
   const [tsData, setTsData] = useState(null)
   const [topPagesData, setTopPagesData] = useState(null)
   const [planClicksData, setPlanClicksData] = useState(null)
+  
+  const [searchData, setSearchData] = useState(null)
+  const [topDownloadsData, setTopDownloadsData] = useState(null)
+  const [salesData, setSalesData] = useState(null)
+  const [registrationsData, setRegistrationsData] = useState(null)
+
   const [activePreset, setActivePreset] = useState('30d')
 
   const http = useMemo(() => new HttpService(), [])
@@ -141,16 +159,33 @@ export default function TrafficCharts() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [visitsRes, topPagesRes, planClicksRes] = await Promise.all([
+        const [
+          visitsRes, 
+          topPagesRes, 
+          planClicksRes,
+          searchRes,
+          downloadsRes,
+          salesRes,
+          regRes
+        ] = await Promise.all([
           http.getData(`/metrics/site-visits/timeseries?from=${fromDate}&to=${toDate}`),
           http.getData(`/metrics/site-visits/top-pages?from=${fromDate}&to=${toDate}`),
-          http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`)
+          http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`),
+          http.getData('/metrics/search-insights'),
+          http.getData('/metrics/top-downloads'),
+          http.getData('/metrics/sales'),
+          http.getData('/metrics/registrations')
         ])
 
         if (mounted) {
           if (visitsRes?.data) setTsData(visitsRes.data)
           if (topPagesRes?.data) setTopPagesData(topPagesRes.data)
           if (planClicksRes?.data) setPlanClicksData(planClicksRes.data)
+          
+          if (searchRes?.data) setSearchData(searchRes.data)
+          if (downloadsRes?.data) setTopDownloadsData(downloadsRes.data)
+          if (salesRes?.data) setSalesData(salesRes.data)
+          if (regRes?.data) setRegistrationsData(regRes.data)
         }
       } catch (e) {
         console.error('TrafficCharts fetch error', e)
@@ -165,6 +200,8 @@ export default function TrafficCharts() {
   // Handle manual date change (clear active preset)
   const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
   const onToChange = (e) => { setToDate(e.target.value); setActivePreset(null) }
+
+  const presetKey = activePreset === '7d' ? '1w' : activePreset === '1y' ? '1y' : '1m'
 
   // Build chart data
   const trafficChartData = useMemo(() => {
@@ -241,7 +278,7 @@ export default function TrafficCharts() {
     if (!topPagesData?.pages?.length) return null
     const pages = topPagesData.pages.slice(0, 50)
     return {
-      labels: pages.map((p) => p.path.length > 50 ? p.path.slice(0, 47) + '...' : p.path),
+      labels: pages.map((p) => p.path),
       datasets: [
         {
           label: 'Visitas',
@@ -311,6 +348,77 @@ export default function TrafficCharts() {
     }
   }, [planClicksData])
 
+  const searchChartData = useMemo(() => {
+    const dataObj = searchData?.[presetKey]
+    if (!dataObj?.topQueries?.length) return null
+    const queries = dataObj.topQueries.slice(0, 15)
+    return {
+      labels: queries.map((q) => q.query),
+      datasets: [
+        {
+          label: 'Búsquedas',
+          data: queries.map((q) => q.count),
+          backgroundColor: 'rgba(236, 72, 153, 0.7)',
+          borderColor: 'transparent',
+          borderRadius: 4,
+          barThickness: 16,
+        }
+      ]
+    }
+  }, [searchData, presetKey])
+
+  const topDownloadsChartData = useMemo(() => {
+    const arr = topDownloadsData?.[presetKey]
+    if (!arr?.length) return null
+    const downloads = arr.slice(0, 15)
+    return {
+      labels: downloads.map((d) => d.name),
+      datasets: [
+        {
+          label: 'Descargas',
+          data: downloads.map((d) => d.count),
+          backgroundColor: 'rgba(56, 189, 248, 0.7)',
+          borderColor: 'transparent',
+          borderRadius: 4,
+          barThickness: 16,
+        }
+      ]
+    }
+  }, [topDownloadsData, presetKey])
+
+  const salesChartData = useMemo(() => {
+    const itemsArr = salesData?.items?.[presetKey]
+    if (!itemsArr?.length) return null
+    
+    let paypal = 0
+    let mp = 0
+    let other = 0
+
+    itemsArr.forEach(i => {
+      if (i.method === 'PayPal') paypal += i.amountCop
+      else if (i.method === 'MercadoPago') mp += i.amountCop
+      else other += i.amountCop
+    })
+
+    return {
+      labels: ['PayPal', 'MercadoPago', 'Otros'].filter((_, i) => [paypal, mp, other][i] > 0),
+      datasets: [
+        {
+          data: [paypal, mp, other].filter(v => v > 0),
+          backgroundColor: [
+            'rgba(59, 130, 246, 0.8)', // PayPal Blue
+            'rgba(14, 165, 233, 0.8)', // MP Light Blue
+            'rgba(100, 116, 139, 0.8)', // Gray
+          ],
+          borderColor: 'rgba(15, 23, 42, 0.8)',
+          borderWidth: 2,
+        }
+      ]
+    }
+  }, [salesData, presetKey])
+
+  const registrationsCount = registrationsData?.[presetKey] || 0
+
   const CHART_DESCRIPTIONS = {
     'traffic': (
       <>
@@ -356,12 +464,53 @@ export default function TrafficCharts() {
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que casi nadie le da clic a "30 días", pero el de "180 días" se lleva el 80% de los clics.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el "cuello de botella" de tu negocio.
       </>
+    ),
+    'top-searches': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Top Búsquedas:</strong> Descubre qué está intentando encontrar tu comunidad en el buscador.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#ec4899' }}>Términos más buscados:</strong> Las palabras exactas que la gente escribe buscando modelos.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si mucha gente busca "Pokemon" y tú no tienes esos modelos, la barra será muy alta y sabrás que ahí hay dinero.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si ves términos populares que no tienes en tu tienda, ¡crea o sube esos modelos urgente! Estás perdiendo ventas.
+      </>
+    ),
+    'top-downloads': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Top Descargas (Éxitos Reales):</strong> Qué modelos fueron realmente descargados y llevados a producción.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#38bdf8' }}>Descargas Totales:</strong> Cuántas veces un usuario o suscriptor se descargó tu archivo STL.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> El modelo "Casco Iron Man" se descargó 50 veces esta semana.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Identifica a tus "Best Sellers" y promuévelos en redes sociales o úsalos como gancho principal en tus anuncios.
+      </>
+    ),
+    'sales-revenue': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Ingresos por Pasarela (COP):</strong> Cuánto dinero entró a tu plataforma y de qué manera.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#3b82f6' }}>PayPal:</strong> Pagos internacionales procesados.</li>
+          <li><strong style={{ color: '#0ea5e9' }}>MercadoPago:</strong> Pagos locales y por tarjeta.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que el 90% de tu dinero entra por MercadoPago y casi nada por PayPal.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Te ayuda a ver si te conviene abrirte más a publicidad internacional (PayPal) o si el mercado local es tu fuerte absoluto.
+      </>
+    ),
+    'user-registrations': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Crecimiento de Comunidad (Registros):</strong> La cantidad de personas reales que crearon una cuenta.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#f59e0b' }}>Nuevos Usuarios:</strong> La cantidad exacta de registros en el rango de fechas.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Entraron 120 usuarios nuevos este mes.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tu tráfico es alto pero tus registros son bajos, necesitas optimizar la página de creación de cuenta o regalar algo a cambio de su registro.
+      </>
     )
   }
 
   const renderChartBlock = (id, data, component) => {
     return (
-      <div className="chart-block" style={{ marginBottom: '40px', paddingBottom: '30px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="chart-block" style={{ marginBottom: '60px', paddingBottom: '50px', borderBottom: '2px dashed rgba(255,255,255,0.2)' }}>
         <div className="charts-header" style={{ marginBottom: '24px' }}>
           <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '8px' }}>
             {CHART_DESCRIPTIONS[id]}
@@ -428,6 +577,33 @@ export default function TrafficCharts() {
       <div className="charts-list">
         {renderChartBlock('traffic', trafficChartData, trafficChartData && <Line data={trafficChartData} options={commonLineOpts} />)}
         {renderChartBlock('plan-clicks', planClicksChartData, planClicksChartData && <Bar data={planClicksChartData} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />)}
+        
+        {renderChartBlock('sales-revenue', salesChartData, salesChartData && (
+          <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+            <Doughnut 
+              data={salesChartData} 
+              options={{
+                plugins: {
+                  legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } },
+                  tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' }
+                }
+              }} 
+            />
+          </div>
+        ))}
+        
+        {renderChartBlock('user-registrations', registrationsCount, (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+            <span style={{ fontSize: '1.2rem', color: '#94a3b8', marginBottom: '10px' }}>Nuevos Usuarios Registrados</span>
+            <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#f59e0b', textShadow: '0 0 20px rgba(245,158,11,0.3)' }}>
+              +{registrationsCount}
+            </span>
+          </div>
+        ))}
+
+        {renderChartBlock('top-searches', searchChartData, searchChartData && <Bar data={searchChartData} options={barOpts} />)}
+        {renderChartBlock('top-downloads', topDownloadsChartData, topDownloadsChartData && <Bar data={topDownloadsChartData} options={barOpts} />)}
+        
         {renderChartBlock('visitors-vs-sessions', visitorsVsSessionsData, visitorsVsSessionsData && <Line data={visitorsVsSessionsData} options={commonLineOpts} />)}
         {renderChartBlock('top-pages', topPagesChartData, topPagesChartData && <Bar data={topPagesChartData} options={barOpts} />)}
       </div>
