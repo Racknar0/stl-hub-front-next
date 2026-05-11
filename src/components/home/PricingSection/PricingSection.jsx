@@ -262,6 +262,9 @@ const PricingSection = ({
                                 plan_price: p.total
                             });
 
+                            // Track plan click (fire-and-forget)
+                            try { httpService.postData('metrics/plan-click', { planId: p.id }); } catch {}
+
                             console.log('User ID at plan selection:', userId);
                             if (!userId) {
                                     setNotLoggedInModal(true);

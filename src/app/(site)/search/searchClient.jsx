@@ -270,7 +270,7 @@ export default function SearchClient({ initialParams }) {
         return;
       }
 
-      const res = await axios.post('/metrics/search', { query, resultCount });
+      const res = await axios.post('/metrics/search', { query, resultCount, isAiSearch: !!isAiSearch });
       const id = Number(res?.data?.id);
       if (Number.isFinite(id) && id > 0) {
         searchEventIdRef.current = id;

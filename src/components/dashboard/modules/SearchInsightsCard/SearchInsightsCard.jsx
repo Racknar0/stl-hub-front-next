@@ -128,10 +128,14 @@ const SearchInsightsCard = () => {
                 items.map((it) => (
                   <li key={it.query} className="item-row">
                     <div className="row-main">
-                      <span className="name" title={it.query}>{it.query}</span>
+                      <span className="name" title={it.query}>
+                        {it.aiCount > 0 && <span title={`${it.aiCount} búsquedas IA`} style={{ marginRight: 4, fontSize: '.85em' }}>🤖</span>}
+                        {it.query}
+                      </span>
                       <span className="count">{Number(it.count || 0).toLocaleString()}</span>
                     </div>
                     <div className="row-sub">
+                      {it.aiCount > 0 && <span style={{ color: '#a78bfa' }}>IA: {Number(it.aiCount).toLocaleString()}</span>}
                       <span>0res: {Number(it.zeroCount || 0).toLocaleString()}</span>
                       <span>avg: {Number(it.avgResults || 0).toLocaleString()}</span>
                       <span>clicks: {Number(it.clicks || 0).toLocaleString()}</span>

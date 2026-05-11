@@ -32,6 +32,7 @@ const CHART_TYPES = [
   { value: 'traffic', label: 'Tráfico Diario' },
   { value: 'top-pages', label: 'Páginas más visitadas' },
   { value: 'visitors-vs-sessions', label: 'Visitantes vs Sesiones' },
+  { value: 'plan-clicks', label: 'Clicks en Elegir Plan' },
 ]
 
 function formatDateForInput(date) {
@@ -121,6 +122,7 @@ export default function TrafficCharts() {
   const [loading, setLoading] = useState(false)
   const [tsData, setTsData] = useState(null)
   const [topPagesData, setTopPagesData] = useState(null)
+  const [planClicksData, setPlanClicksData] = useState(null)
   const [activePreset, setActivePreset] = useState('30d')
 
   const http = useMemo(() => new HttpService(), [])
@@ -143,6 +145,9 @@ export default function TrafficCharts() {
         if (chartType === 'top-pages') {
           const res = await http.getData(`/metrics/site-visits/top-pages?from=${fromDate}&to=${toDate}`)
           if (mounted && res?.data) setTopPagesData(res.data)
+        } else if (chartType === 'plan-clicks') {
+          const res = await http.getData(`/metrics/plan-clicks/timeseries?from=${fromDate}&to=${toDate}`)
+          if (mounted && res?.data) setPlanClicksData(res.data)
         } else {
           const res = await http.getData(`/metrics/site-visits/timeseries?from=${fromDate}&to=${toDate}`)
           if (mounted && res?.data) setTsData(res.data)
@@ -261,6 +266,71 @@ export default function TrafficCharts() {
     }
   }, [topPagesData])
 
+  const planClicksChartData = useMemo(() => {
+    if (!planClicksData?.series?.length) return null
+    const labels = planClicksData.series.map((s) => formatLabel(s.date, planClicksData.granularity))
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Total',
+          data: planClicksData.series.map((s) => s.total),
+          borderColor: '#a78bfa',
+          backgroundColor: 'rgba(167,139,250,0.15)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: planClicksData.series.length > 60 ? 0 : 3,
+          pointHoverRadius: 5,
+          borderWidth: 2.5,
+        },
+        {
+          label: '30 días',
+          data: planClicksData.series.map((s) => s['1m']),
+          borderColor: '#4facfe',
+          backgroundColor: 'rgba(79,172,254,0.1)',
+          fill: false,
+          tension: 0.35,
+          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
+          pointHoverRadius: 4,
+          borderDash: [4, 2],
+        },
+        {
+          label: '90 días',
+          data: planClicksData.series.map((s) => s['3m']),
+          borderColor: '#00f2fe',
+          backgroundColor: 'rgba(0,242,254,0.1)',
+          fill: false,
+          tension: 0.35,
+          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
+          pointHoverRadius: 4,
+          borderDash: [4, 2],
+        },
+        {
+          label: '180 días',
+          data: planClicksData.series.map((s) => s['6m']),
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.1)',
+          fill: false,
+          tension: 0.35,
+          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
+          pointHoverRadius: 4,
+          borderDash: [4, 2],
+        },
+        {
+          label: '365 días',
+          data: planClicksData.series.map((s) => s['12m']),
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.1)',
+          fill: false,
+          tension: 0.35,
+          pointRadius: planClicksData.series.length > 60 ? 0 : 2,
+          pointHoverRadius: 4,
+          borderDash: [4, 2],
+        },
+      ],
+    }
+  }, [planClicksData])
+
   const renderChart = () => {
     if (loading) {
       return <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
@@ -279,6 +349,11 @@ export default function TrafficCharts() {
     if (chartType === 'top-pages') {
       if (!topPagesChartData) return <div className="chart-empty">Sin datos para este rango</div>
       return <Bar data={topPagesChartData} options={barOpts} />
+    }
+
+    if (chartType === 'plan-clicks') {
+      if (!planClicksChartData) return <div className="chart-empty">Sin datos para este rango</div>
+      return <Line data={planClicksChartData} options={commonLineOpts} />
     }
 
     return null
