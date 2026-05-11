@@ -6,7 +6,7 @@ import Button from '../Buttons/Button'
 import './SubscribeBar.scss'
 import useStore from '@/store/useStore'
 import axiosInstance from '@/services/AxiosInterceptor'
-import { usePromo } from '@/hooks/usePromo'
+import HttpService from '@/services/HttpService'
 
 
 const SubscribeBar = () => {
@@ -14,21 +14,29 @@ const SubscribeBar = () => {
     const language = useStore((s) => s.language);
     const token = useStore((s) => s.token);
     const isEn = String(language || 'es').toLowerCase() === 'en';
-    const promo = usePromo();
-
-    // Prevent SSR hydration mismatch: promo state is only available client-side
-    const [mounted, setMounted] = React.useState(false);
-    React.useEffect(() => { setMounted(true); }, []);
 
     const [daysRemaining, setDaysRemaining] = React.useState(null);
     const [checkedSubscription, setCheckedSubscription] = React.useState(false);
+    const [promo, setPromo] = React.useState({ active: false, daysLeft: null });
+    const [ready, setReady] = React.useState(false);
+
+    // Fetch promo status directly (no context dependency)
+    React.useEffect(() => {
+      const http = new HttpService();
+      http.getData('/promo/status')
+        .then((res) => {
+          if (res?.data) setPromo(res.data);
+        })
+        .catch(() => {})
+        .finally(() => setReady(true));
+    }, []);
 
     React.useEffect(() => {
-      let mounted = true;
+      let cancelled = false;
 
       const readProfile = async () => {
         if (!token) {
-          if (!mounted) return;
+          if (cancelled) return;
           setDaysRemaining(null);
           setCheckedSubscription(true);
           return;
@@ -38,22 +46,19 @@ const SubscribeBar = () => {
         try {
           const res = await axiosInstance.get('/me/profile');
           const rawDays = Number(res?.data?.subscription?.daysRemaining ?? 0);
-          if (!mounted) return;
+          if (cancelled) return;
           setDaysRemaining(Number.isFinite(rawDays) ? rawDays : 0);
         } catch {
-          if (!mounted) return;
-          // Si falla la consulta, mostramos la barra para no perder el CTA.
+          if (cancelled) return;
           setDaysRemaining(0);
         } finally {
-          if (!mounted) return;
+          if (cancelled) return;
           setCheckedSubscription(true);
         }
       };
 
       readProfile();
-      return () => {
-        mounted = false;
-      };
+      return () => { cancelled = true; };
     }, [token]);
 
     const showForGuest = !token;
@@ -61,7 +66,7 @@ const SubscribeBar = () => {
     const showBar = showForGuest || showForNoDays;
 
     // 🚀 Premium Free Pass: always show when promo is active (client-only)
-    if (mounted && promo.active) {
+    if (ready && promo.active) {
       const promoMsg = isEn
         ? '🎉 Premium Free Pass — Sign up and download ALL models for free!'
         : '🎉 Premium Free Pass — ¡Regístrate y descarga TODOS los modelos gratis!';
