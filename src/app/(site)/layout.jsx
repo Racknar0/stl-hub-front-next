@@ -4,6 +4,7 @@ import Layout from '../../components/layout/Layout/Layout';
 import { usePathname } from 'next/navigation';
 import HttpService from '@/services/HttpService';
 import useStore from '@/store/useStore';
+import { PromoProvider } from '@/hooks/usePromo';
 
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
@@ -53,11 +54,13 @@ export default function SiteLayout({ children }) {
 
   // Público: usar Layout con Header/Footer
   return (
-    <Suspense fallback={null}>
-      <Layout>
-        {children}
-      </Layout>
-    </Suspense>
+    <PromoProvider>
+      <Suspense fallback={null}>
+        <Layout>
+          {children}
+        </Layout>
+      </Suspense>
+    </PromoProvider>
   );
 }
 

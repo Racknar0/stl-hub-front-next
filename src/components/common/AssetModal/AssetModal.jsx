@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import { useNSFW } from '../../../hooks/useNSFW';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
+import { usePromo } from '../../../hooks/usePromo';
 
 export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
@@ -27,6 +28,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     const { t } = useI18n();
 
     const isEn = String(language || 'es').toLowerCase() === 'en';
+    const promo = usePromo();
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
     const imgUrl = (rel) => {
@@ -184,6 +186,37 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
       // Premium y NO logueado → pedir login
       if (data.isPremium && !token) {
         setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
+        return;
+      }
+
+      // 🚀 Promo active + logged in → skip subscription check, go straight to backend
+      if (data.isPremium && token && promo.active) {
+        try {
+          setDownloading(true);
+          const tmpWin = openWindowSafely();
+          try {
+            const r = await http.postData(`/assets/${data.id}/request-download`, {});
+            const link = r.data?.link;
+            if (link) {
+              tmpWin.location = link;
+            } else {
+              try { tmpWin.close(); } catch {}
+              setAccessModal({ open: true, kind: 'error', expiredAt: null });
+            }
+          } catch (err) {
+            try { tmpWin.close(); } catch {}
+            const status = err?.response?.status;
+            if (status === 401) {
+              setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
+            } else {
+              setAccessModal({ open: true, kind: 'error', expiredAt: null });
+            }
+          } finally {
+            setDownloading(false);
+          }
+        } catch {
+          setDownloading(false);
+        }
         return;
       }
 
@@ -716,8 +749,13 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                 </div>
 
                                                 <div className="head-badges">
-                                                    <span className={`head-badge ${data?.isPremium ? 'is-premium' : 'is-free'}`}>
-                                                        {data?.isPremium ? (isEn ? 'Premium' : 'Premium') : (isEn ? 'Free' : 'Gratis')}
+                                                    <span className={`head-badge ${data?.isPremium ? (promo.active ? 'is-promo' : 'is-premium') : 'is-free'}`}>
+                                                        {data?.isPremium
+                                                          ? (promo.active
+                                                            ? (isEn ? '🎉 FREE' : '🎉 GRATIS')
+                                                            : 'Premium')
+                                                          : (isEn ? 'Free' : 'Gratis')
+                                                        }
                                                     </span>
                                                     {data?.slug && (
                                                         <Link
@@ -778,7 +816,9 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                     {downloading
                                                         ? t('asset.modal.processing')
                                                         : data.isPremium
-                                                        ? t('asset.modal.downloadPremium')
+                                                        ? (promo.active
+                                                          ? (isEn ? 'Download Free 🎉' : 'Descargar Gratis 🎉')
+                                                          : t('asset.modal.downloadPremium'))
                                                         : t('asset.modal.downloadNow')}
                                                 </Button>
                                             </div>

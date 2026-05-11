@@ -1,0 +1,90 @@
+.promo-banner {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 48px 10px 20px;
+  background: linear-gradient(90deg, #7c6bff 0%, #a78bfa 35%, #34d399 100%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Outfit', 'Poppins', sans-serif;
+  letter-spacing: 0.2px;
+  animation: promo-slide-down 0.4s ease-out;
+}
+
+@keyframes promo-slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.promo-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.promo-banner__icon {
+  font-size: 1.3rem;
+}
+
+.promo-banner__text {
+  text-align: center;
+  line-height: 1.4;
+}
+
+.promo-banner__days {
+  color: #ffd84d;
+  font-weight: 800;
+}
+
+.promo-banner__cta {
+  display: inline-block;
+  padding: 5px 16px;
+  background: #fff;
+  color: #7c6bff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.promo-banner__close {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+@media (max-width: 640px) {
+  .promo-banner {
+    font-size: 0.8rem;
+    padding: 8px 36px 8px 12px;
+  }
+  .promo-banner__cta {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+  }
+}

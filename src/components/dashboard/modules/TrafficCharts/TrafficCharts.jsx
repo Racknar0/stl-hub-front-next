@@ -100,6 +100,7 @@ const commonLineOpts = {
 const barOpts = {
   ...commonLineOpts,
   indexAxis: 'y',
+  interaction: { mode: 'nearest', intersect: true },
   plugins: {
     ...commonLineOpts.plugins,
     legend: { display: false },
@@ -397,9 +398,27 @@ export default function TrafficCharts() {
   }, [http])
 
   // 6. Registrations Fetcher
-  const fetchRegistrations = React.useCallback(async (from, to, presetKey) => {
+  const fetchRegistrations = React.useCallback(async () => {
     const res = await http.getData('/metrics/registrations')
-    return res?.data?.[presetKey] || 0
+    const d = res?.data
+    if (!d) return null
+    return {
+      labels: ['Hoy', '3D', '7D', '30D', '1A', 'Total'],
+      datasets: [{
+        label: 'Registros',
+        data: [d['1d'] || 0, d['3d'] || 0, d['1w'] || 0, d['1m'] || 0, d['1y'] || 0, d.all || 0],
+        backgroundColor: [
+          'rgba(245,158,11,0.85)',
+          'rgba(251,191,36,0.75)',
+          'rgba(52,211,153,0.75)',
+          'rgba(56,189,248,0.75)',
+          'rgba(167,139,250,0.75)',
+          'rgba(244,114,182,0.75)',
+        ],
+        borderColor: 'transparent',
+        borderRadius: 6,
+      }]
+    }
   }, [http])
 
   // 7. Top Searches Fetcher
@@ -458,10 +477,15 @@ export default function TrafficCharts() {
         )} />
         
         <ChartContainer id="user-registrations" supportsDynamicDates={false} fetchFn={fetchRegistrations} renderChart={(data) => (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
-            <span style={{ fontSize: '1.2rem', color: '#94a3b8', marginBottom: '10px' }}>Nuevos Usuarios Registrados</span>
-            <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#f59e0b', textShadow: '0 0 20px rgba(245,158,11,0.3)' }}>+{data}</span>
-          </div>
+          <Bar data={data} options={{
+            ...commonLineOpts,
+            interaction: { mode: 'nearest', intersect: true },
+            plugins: { ...commonLineOpts.plugins, legend: { display: false } },
+            scales: {
+              x: { ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+              y: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true }
+            }
+          }} />
         )} />
         
         <ChartContainer id="top-searches" supportsDynamicDates={false} fetchFn={fetchSearches} renderChart={(data) => <Bar data={data} options={barOpts} />} />

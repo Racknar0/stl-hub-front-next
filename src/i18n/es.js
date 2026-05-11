@@ -57,9 +57,9 @@ const es = {
   },
   hero: {
     slides: [
-      { id: 1, title: 'STL gratis Premium', subtitle: 'Descarga archivos STL premium gratis cada día', cta: '', image: '/hero/hero1.jpg' },
-      { id: 2, title: 'Enlaces MEGA Directos', subtitle: 'Descargas rápidas y seguras', cta: '', image: '/hero/hero2.jpg' },
-      { id: 3, title: 'Vista Integrada', subtitle: 'Previsualiza cada modelo al detalle', cta: '', image: '/hero/hero3.jpg' },
+      { id: 1, title: 'Todos los STL que Puedas Imaginar', subtitle: 'Miles y miles de modelos listos para tu impresora, actualizados cada semana', cta: '', image: '/hero/hero1.jpg' },
+      { id: 2, title: 'STL Gratis Cada Día', subtitle: 'Modelos premium liberados diariamente. Hoy uno, mañana otro. ¡No te los pierdas!', cta: '', image: '/hero/hero2.jpg' },
+      { id: 3, title: 'Busca con Inteligencia Artificial', subtitle: 'Describe lo que necesitas o sube una imagen y nuestra IA encuentra el modelo perfecto para ti', cta: '', image: '/hero/hero3.jpg' },
     ]
   },
   home: {

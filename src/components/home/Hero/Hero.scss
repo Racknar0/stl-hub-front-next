@@ -3,6 +3,7 @@
 .hero-iron {
     position: relative;
 }
+
 .slide {
     position: relative;
     height: 56vh;
@@ -10,15 +11,17 @@
     background-size: cover;
     background-position: center;
 }
+
 .overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(
         180deg,
-        rgba(0, 0, 0, 0.25),
-        rgba(0, 0, 0, 0.5)
+        rgba(8, 6, 20, 0.15) 0%,
+        rgba(8, 6, 20, 0.5) 100%
     );
 }
+
 .content {
     position: relative;
     z-index: 1;
@@ -28,50 +31,123 @@
     align-items: center;
     justify-content: center;
     color: #fff;
-    gap: 0.6rem;
+    gap: 1.2rem;
     text-align: center;
+    padding: 0 1.5rem;
 }
 
-/* Tipografías y tamaños fijos */
+/* ── Título principal ── */
 .hero-title {
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-family: 'Poppins', sans-serif;
-    font-size: clamp(2rem, 4vw, 3rem);
-}
-.hero-subtitle {
-    display: inline-block;
-    margin-top: 0.15rem;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-    background: transparent; /* sin fondo */
-    border: none; /* sin borde */
-    color: #ffd84d; /* texto con el color del borde anterior */
+    letter-spacing: 2px;
+    font-family: 'Syne', 'Montserrat', sans-serif;
     font-weight: 800;
-    font-size: clamp(0.9rem, 2vw, 2rem);
-}
-.hero-cta {
-    align-self: center;
-    margin-top: 0.6rem;
-    background: #7c6bff;
+    font-size: clamp(2rem, 5vw, 3.8rem);
+    line-height: 1.1;
     color: #fff;
-    box-shadow: 0 8px 22px rgba(124, 107, 255, 0.45);
-    padding: 0.6rem 1.1rem;
-    font-weight: 800;
-    width: clamp(220px, 28vw, 320px); /* ancho fluido */
-    font-size: clamp(1.1rem, 2.6vw, 1.5rem); /* texto más grande y responsive */
-    line-height: 1.15;
+
+    /* Gradiente animado */
+    background: linear-gradient(
+        90deg,
+        #ffffff 0%,
+        #ffffff 30%,
+        #ffd84d 50%,
+        #ffffff 70%,
+        #ffffff 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: hero-shimmer 4s linear infinite;
+
+    /* Glow fuerte alrededor */
+    filter:
+        drop-shadow(0 0 8px rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 25px rgba(124, 107, 255, 0.7))
+        drop-shadow(0 0 50px rgba(124, 107, 255, 0.4));
 }
 
-/* Swiper UI (global) */
+@keyframes hero-shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+/* ── Subtítulo ── */
+.hero-subtitle {
+    display: inline-block;
+    margin-top: 0.25rem;
+    padding: 0.5rem 1.6rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffd84d;
+    font-family: 'Outfit', 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: clamp(0.85rem, 1.8vw, 1.35rem);
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+    animation: hero-fade-up 0.8s ease-out both;
+}
+
+@keyframes hero-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── CTA Button ── */
+.hero-cta {
+    align-self: center;
+    margin-top: 0.8rem;
+    background: linear-gradient(135deg, #7c6bff 0%, #a78bfa 100%);
+    color: #fff;
+    box-shadow:
+        0 8px 28px rgba(124, 107, 255, 0.45),
+        0 0 0 1px rgba(124, 107, 255, 0.2);
+    padding: 0.7rem 1.4rem;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    width: clamp(220px, 28vw, 320px);
+    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+    line-height: 1.15;
+    border-radius: 999px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow:
+            0 12px 36px rgba(124, 107, 255, 0.55),
+            0 0 0 1px rgba(124, 107, 255, 0.3);
+    }
+}
+
+/* ── Swiper UI ── */
 .swiper-pagination-bullet {
-    background: rgba(255, 255, 255, 0.7);
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.35);
+    transition: all 0.3s ease;
 }
 .swiper-pagination-bullet-active {
-    background: #fff;
+    background: #7c6bff;
+    width: 28px;
+    border-radius: 6px;
 }
 .swiper-button-prev,
 .swiper-button-next {
-    color: #fff;
+    color: rgba(255, 255, 255, 0.8);
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+    transition: color 0.2s ease;
+
+    &:hover {
+        color: #fff;
+    }
 }

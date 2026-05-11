@@ -6,6 +6,7 @@ import Button from '../Buttons/Button'
 import './SubscribeBar.scss'
 import useStore from '@/store/useStore'
 import axiosInstance from '@/services/AxiosInterceptor'
+import { usePromo } from '@/hooks/usePromo'
 
 
 const SubscribeBar = () => {
@@ -13,6 +14,11 @@ const SubscribeBar = () => {
     const language = useStore((s) => s.language);
     const token = useStore((s) => s.token);
     const isEn = String(language || 'es').toLowerCase() === 'en';
+    const promo = usePromo();
+
+    // Prevent SSR hydration mismatch: promo state is only available client-side
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
 
     const [daysRemaining, setDaysRemaining] = React.useState(null);
     const [checkedSubscription, setCheckedSubscription] = React.useState(false);
@@ -54,8 +60,47 @@ const SubscribeBar = () => {
     const showForNoDays = !!token && checkedSubscription && Number(daysRemaining || 0) <= 0;
     const showBar = showForGuest || showForNoDays;
 
+    // 🚀 Premium Free Pass: always show when promo is active (client-only)
+    if (mounted && promo.active) {
+      const promoMsg = isEn
+        ? '🎉 Premium Free Pass — Sign up and download ALL models for free!'
+        : '🎉 Premium Free Pass — ¡Regístrate y descarga TODOS los modelos gratis!';
+      const promoMsgLogged = isEn
+        ? '🎉 Premium Free Pass active! Download ALL premium models at no cost.'
+        : '🎉 ¡Premium Free Pass activo! Descarga TODOS los modelos premium sin costo.';
+      const promoDaysMsg = promo.daysLeft
+        ? (isEn ? ` (${promo.daysLeft} days left)` : ` (${promo.daysLeft} días restantes)`)
+        : '';
+
+      return (
+        <div className="subscribe-bar promo-mode" role="region" aria-label="Premium Free Pass">
+          <div className="container-narrow subscribe-shell">
+            <div className="promo-bar-content">
+              <p className="promo-msg">
+                {token ? promoMsgLogged : promoMsg}
+                {promoDaysMsg && <span className="promo-days">{promoDaysMsg}</span>}
+              </p>
+              {!token && (
+                <Button
+                  as={Link}
+                  href="/register"
+                  variant="cyan"
+                  className="bar-btn promo-cta-btn"
+                  aria-label={isEn ? 'Create account' : 'Crear cuenta'}
+                >
+                  {isEn ? 'Create free account' : 'Crear cuenta gratis'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // If no promo, use normal subscribe bar visibility rules
     if (!showBar) return null;
 
+    // Normal subscribe mode
     const subscribeMessage = isEn ? 'Subscribe to download without limits!' : '¡Suscríbete para descargar sin límites!';
     const subscribeHref = isEn ? '/en/suscripcion' : '/suscripcion';
     const subscribeCta = isEn ? 'Subscribe' : 'Suscríbete';
