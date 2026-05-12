@@ -38,7 +38,9 @@ const CHART_TYPES = [
 ]
 
 function formatDateForInput(date) {
-  return date.toISOString().slice(0, 10)
+  const offset = date.getTimezoneOffset()
+  const localDate = new Date(date.getTime() - (offset * 60 * 1000))
+  return localDate.toISOString().slice(0, 10)
 }
 
 function daysAgo(n) {
