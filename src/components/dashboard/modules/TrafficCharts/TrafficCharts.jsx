@@ -309,14 +309,14 @@ const CHART_DESCRIPTIONS = {
   }
 
 
-// Map active preset to backend key (solo para los que no usan timeseries como sales)
-const getPresetKey = (preset) => preset === '1D' ? '1w' : preset === '7D' ? '1m' : '1y'
+// Map active preset to backend key
+const getPresetKey = (preset) => preset
 
 // --- ChartContainer Component ---
 function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, renderChart }) {
   const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(7)))
   const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
-  const [activePreset, setActivePreset] = useState('1D')
+  const [activePreset, setActivePreset] = useState('7d')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
   const [expanded, setExpanded] = useState(false)
@@ -325,9 +325,14 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
     const today = formatDateForInput(new Date())
     setActivePreset(preset)
     setToDate(today)
-    if (preset === '1D') setFromDate(formatDateForInput(daysAgo(7))) // Diario: ultimos 7 dias
-    else if (preset === '7D') setFromDate(formatDateForInput(daysAgo(70))) // Semanal: ultimas 10 semanas
-    else if (preset === '30D') setFromDate(formatDateForInput(daysAgo(365))) // Mensual: ultimos 12 meses
+    if (preset === 'hoy') setFromDate(today)
+    else if (preset === '2d') setFromDate(formatDateForInput(daysAgo(2)))
+    else if (preset === '3d') setFromDate(formatDateForInput(daysAgo(3)))
+    else if (preset === '7d') setFromDate(formatDateForInput(daysAgo(7)))
+    else if (preset === '15d') setFromDate(formatDateForInput(daysAgo(15)))
+    else if (preset === '1m') setFromDate(formatDateForInput(daysAgo(30)))
+    else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
+    else if (preset === 'all') setFromDate(formatDateForInput(daysAgo(3650)))
   }
 
   const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
@@ -363,7 +368,16 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
 
         <div className="charts-controls-right" style={{ flexShrink: 0 }}>
           <div className="preset-btns">
-            {[{ key: '1D', label: '1D (Diario)' }, { key: '7D', label: '7D (Semanal)' }, { key: '30D', label: '30D (Mensual)' }].map(({ key, label }) => (
+            {[
+              { key: 'hoy', label: 'Hoy' },
+              { key: '2d', label: '2D' },
+              { key: '3d', label: '3D' },
+              { key: '7d', label: '7D' },
+              { key: '15d', label: '15D' },
+              { key: '1m', label: '1M' },
+              { key: '1y', label: '1A' },
+              { key: 'all', label: 'Todos' }
+            ].map(({ key, label }) => (
               <button
                 key={key}
                 className={`preset-btn ${activePreset === key ? 'active' : ''}`}
