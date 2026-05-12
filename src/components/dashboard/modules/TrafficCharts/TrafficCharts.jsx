@@ -85,8 +85,17 @@ function fillMissingBuckets(series, fromStr, toStr, granularity) {
   }
   
   let limit = 0;
-  // Avanzamos hasta end + un pequeño margen para asegurar el último bucket
-  const finalBoundary = new Date(end.getTime() + 2 * 24 * 60 * 60 * 1000); 
+  // Avanzamos hasta end + un pequeño margen proporcional para asegurar el último bucket
+  const finalBoundary = new Date(end.getTime());
+  if (granularity === 'day') {
+    finalBoundary.setDate(finalBoundary.getDate() + 2);
+  } else if (granularity === 'week') {
+    finalBoundary.setDate(finalBoundary.getDate() + 14); // 2 semanas
+  } else if (granularity === 'month') {
+    finalBoundary.setMonth(finalBoundary.getMonth() + 1); // 1 mes suele ser suficiente para padding
+  } else {
+    finalBoundary.setDate(finalBoundary.getDate() + 2);
+  }
   
   while (current <= finalBoundary && limit < 400) {
     const y = current.getFullYear();
