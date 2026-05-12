@@ -313,12 +313,13 @@ const CHART_DESCRIPTIONS = {
 const getPresetKey = (preset) => preset === '1D' ? '1w' : preset === '7D' ? '1m' : '1y'
 
 // --- ChartContainer Component ---
-function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart }) {
+function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, renderChart }) {
   const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(7)))
   const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
   const [activePreset, setActivePreset] = useState('1D')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
+  const [expanded, setExpanded] = useState(false)
 
   const applyPreset = (preset) => {
     const today = formatDateForInput(new Date())
@@ -385,15 +386,29 @@ function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart 
       </div>
 
       {/* Render Area */}
-      <div className="chart-canvas-wrap" style={id === 'top-pages' ? { minHeight: `${Math.max(450, (data?.datasets?.[0]?.data?.length || 0) * 26)}px`, maxHeight: 'none' } : {}}>
+      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches'].includes(id) ? { minHeight: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 26)}px`, maxHeight: 'none', transition: 'min-height 0.3s ease' } : {}}>
         {loading ? (
           <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
         ) : !data ? (
           <div className="chart-empty">Sin datos para este rango</div>
         ) : (
-          renderChart(data)
+          renderChart(data, expanded)
         )}
       </div>
+
+      {expandable && data && data.labels?.length > 20 && (
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <button 
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a78bfa', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s ease' }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+          >
+            {expanded ? '▲ Ver menos' : `▼ Ver más (${data.labels.length})`}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -540,7 +555,7 @@ export default function TrafficCharts() {
     const searchData = res?.data
     const dataObj = searchData?.[presetKey]
     if (!dataObj?.topQueries?.length) return null
-    const queries = dataObj.topQueries.slice(0, 15)
+    const queries = dataObj.topQueries
     return {
       labels: queries.map((q) => q.query),
       datasets: [{
@@ -593,7 +608,21 @@ export default function TrafficCharts() {
           <Bar data={data} options={commonLineOpts} />
         )} />
         
-        <ChartContainer id="top-searches" supportsDynamicDates={false} fetchFn={fetchSearches} renderChart={(data) => <Bar data={data} options={barOpts} />} />
+        <ChartContainer 
+          id="top-searches" 
+          supportsDynamicDates={false} 
+          expandable={true} 
+          fetchFn={fetchSearches} 
+          renderChart={(data, expanded) => {
+            const limit = expanded ? 100 : 20;
+            const limitedData = {
+              ...data,
+              labels: data.labels.slice(0, limit),
+              datasets: data.datasets.map(d => ({ ...d, data: d.data.slice(0, limit) }))
+            };
+            return <Bar data={limitedData} options={{...barOpts, maintainAspectRatio: false}} />
+          }} 
+        />
         
         <ChartContainer id="top-downloads" supportsDynamicDates={false} fetchFn={fetchDownloads} renderChart={(data) => <Bar data={data} options={barOpts} />} />
         
