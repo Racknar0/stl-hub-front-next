@@ -69,14 +69,26 @@ function formatLabel(dateStr, granularity) {
 
 function fillMissingBuckets(series, fromStr, toStr, granularity) {
   if (!series) return [];
-  if (granularity !== 'day') return series;
+  if (granularity === 'hour') return series;
 
   const result = [];
   let current = new Date(fromStr + 'T00:00:00');
   const end = new Date(toStr + 'T00:00:00');
   
+  // Alinear la fecha inicial al inicio de la semana o mes para que coincida con MySQL
+  if (granularity === 'week') {
+    const day = current.getDay();
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1); // Lunes como inicio
+    current.setDate(diff);
+  } else if (granularity === 'month') {
+    current.setDate(1);
+  }
+  
   let limit = 0;
-  while (current <= end && limit < 100) {
+  // Avanzamos hasta end + un pequeño margen para asegurar el último bucket
+  const finalBoundary = new Date(end.getTime() + 2 * 24 * 60 * 60 * 1000); 
+  
+  while (current <= finalBoundary && limit < 400) {
     const y = current.getFullYear();
     const m = String(current.getMonth() + 1).padStart(2, '0');
     const d = String(current.getDate()).padStart(2, '0');
@@ -93,9 +105,28 @@ function fillMissingBuckets(series, fromStr, toStr, granularity) {
         count: 0
       });
     }
-    current.setDate(current.getDate() + 1);
+
+    if (granularity === 'day') {
+      current.setDate(current.getDate() + 1);
+    } else if (granularity === 'week') {
+      current.setDate(current.getDate() + 7);
+    } else if (granularity === 'month') {
+      current.setMonth(current.getMonth() + 1);
+    }
     limit++;
   }
+  
+  // Asegurarnos de que no falte ningún elemento extra devuelto por la BD
+  const mappedDates = new Set(result.map(r => r.date));
+  for (const s of series) {
+    if (!mappedDates.has(s.date)) {
+      result.push(s);
+    }
+  }
+  
+  // Ordenar de más antiguo a más reciente
+  result.sort((a, b) => a.date.localeCompare(b.date));
+
   return result;
 }
 

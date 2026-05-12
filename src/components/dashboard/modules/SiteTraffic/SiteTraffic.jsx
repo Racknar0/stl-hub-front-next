@@ -4,12 +4,12 @@ import './SiteTraffic.scss'
 import HttpService from '@/services/HttpService'
 
 export default function SiteTraffic() {
-  const [range, setRange] = useState('1d')
+  const [range, setRange] = useState('hoy')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({
-    pv: { '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: 0 },
-    sessions: { '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: 0 },
-    visitors: { '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: 0 },
+    pv: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
+    sessions: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
+    visitors: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
   })
   const http = new HttpService()
 
@@ -42,13 +42,13 @@ export default function SiteTraffic() {
       <div className="traffic-header">
         <h2>Tráfico General</h2>
         <div className="range-controls">
-          {['1d', '1w', '1m', '1y', 'all'].map((r) => (
+          {['30m', '1h', '3h', '6h', '12h', 'hoy', '2d', '3d', '7d', '15d', '1m', '1y', 'all'].map((r) => (
             <button 
               key={r} 
               className={`range-btn ${r === range ? 'active' : ''}`} 
               onClick={() => setRange(r)}
             >
-              {r === '1d' ? 'Hoy' : r === '1w' ? '7D' : r === '1m' ? '30D' : r === '1y' ? '1A' : 'Todos'}
+              {r === '30m' ? '30Min' : r === '1h' ? '1H' : r === '3h' ? '3H' : r === '6h' ? '6H' : r === '12h' ? '12H' : r === 'hoy' ? 'Hoy' : r === '2d' ? '2D' : r === '3d' ? '3D' : r === '7d' ? '7D' : r === '15d' ? '15D' : r === '1m' ? '1M' : r === '1y' ? '1A' : 'Todos'}
             </button>
           ))}
         </div>
