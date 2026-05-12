@@ -172,145 +172,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
     };
 
 
-    // Helper para abrir ventana sin ser bloqueado (devuelve el handle)
-    const openWindowSafely = () => {
-      // No pasar 'noopener,noreferrer' aquí porque Chrome/Safari devolverán null
-      const win = window.open('about:blank', '_blank');
-      return win || null;
-    };
-
-    // --- Descargar con chequeo de acceso ---
-    const handleDownload = async () => {
-      if (!data) return;
-
-      // Premium y NO logueado → pedir login
-      if (data.isPremium && !token) {
-        setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
-        return;
-      }
-
-      // 🚀 Promo active + logged in → skip subscription check, go straight to backend
-      if (data.isPremium && token && promo.active) {
-        try {
-          setDownloading(true);
-          const tmpWin = openWindowSafely();
-          try {
-            const r = await http.postData(`/assets/${data.id}/request-download`, {});
-            const link = r.data?.link;
-            if (link) {
-              tmpWin.location = link;
-            } else {
-              try { tmpWin.close(); } catch {}
-              setAccessModal({ open: true, kind: 'error', expiredAt: null });
-            }
-          } catch (err) {
-            try { tmpWin.close(); } catch {}
-            const status = err?.response?.status;
-            if (status === 401) {
-              setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
-            } else {
-              setAccessModal({ open: true, kind: 'error', expiredAt: null });
-            }
-          } finally {
-            setDownloading(false);
-          }
-        } catch {
-          setDownloading(false);
-        }
-        return;
-      }
-
-      // Premium y logueado → revisar suscripción y descargar
-      if (data.isPremium && token) {
-        try {
-          setDownloading(true);
-
-          // 1) Perfil (usa HttpService con Authorization header)
-          const res = await http.getData('/me/profile');
-          const user = res?.data || {};
-          const sub = user?.subscription;
-
-          if (sub?.status === 'ACTIVE' && (sub?.daysRemaining ?? 0) > 0) {
-            // 2) Solicitar link (NO pasar token en body)
-            const tmpWin = openWindowSafely();
-            try {
-              const r = await http.postData(`/assets/${data.id}/request-download`, {});
-              const link = r.data?.link;
-              if (link) {
-                tmpWin.location = link; // usar ventana ya abierta para evitar bloqueos
-              } else {
-                try { tmpWin.close(); } catch {}
-                setAccessModal({ open: true, kind: 'error', expiredAt: null });
-              }
-            } catch (err) {
-              try { tmpWin.close(); } catch {}
-              const status = err?.response?.status;
-              const code = err?.response?.data?.code;
-
-              if (status === 401) {
-                setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
-              } else if (status === 403 && code === 'EXPIRED') {
-                setAccessModal({
-                  open: true,
-                  kind: 'expired',
-                  expiredAt: err?.response?.data?.expiredAt || sub?.currentPeriodEnd || null,
-                });
-              } else if (status === 403 && code === 'NO_SUB') {
-                setAccessModal({ open: true, kind: 'no-sub', expiredAt: null });
-              } else if (status === 409) {
-                // asset no publicado o link no listo
-                setAccessModal({ open: true, kind: 'error', expiredAt: null });
-              } else {
-                setAccessModal({ open: true, kind: 'error', expiredAt: null });
-              }
-            } finally {
-              setDownloading(false);
-            }
-          } else if (sub?.status === 'EXPIRED') {
-            setAccessModal({
-              open: true,
-              kind: 'expired',
-              expiredAt: sub?.currentPeriodEnd || null,
-            });
-            setDownloading(false);
-          } else {
-            // sin suscripción o estado desconocido
-            setAccessModal({ open: true, kind: 'no-sub', expiredAt: null });
-            setDownloading(false);
-          }
-        } catch {
-          // Error al consultar perfil
-          setAccessModal({ open: true, kind: 'error', expiredAt: null });
-          setDownloading(false);
-        }
-        return;
-      }
-
-      // Asset gratuito → descarga directa
-      try {
-        setDownloading(true);
-        const tmpWin = openWindowSafely();
-        try {
-          const r = await http.postData(`/assets/${data.id}/request-download`, {}); // sin token en body
-          const link = r.data?.link;
-          if (link) {
-            tmpWin.location = link;
-          } else {
-            try { tmpWin.close(); } catch {}
-            setAccessModal({ open: true, kind: 'error', expiredAt: null });
-          }
-        } catch {
-          try { tmpWin.close(); } catch {}
-          // Para free normalmente no debería pedir auth, pero maneja por si acaso:
-          setAccessModal({ open: true, kind: 'error', expiredAt: null });
-        } finally {
-          setDownloading(false);
-        }
-      } catch {
-        setDownloading(false);
-      }
-    };
-
+    // Eliminar handleDownload de aquí porque ahora se hace redirect.
 
     // Derivar campos según idioma actual
     const displayTitle = isEn
@@ -807,19 +669,17 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
 
                                             <div className="actions center actions-top">
                                                 <Button
-                                                    onClick={handleDownload}
-                                                    disabled={downloading}
+                                                    as="link"
+                                                    href={isEn ? `/en/asset/${data.slug}` : `/asset/${data.slug}`}
                                                     variant={data.isPremium ? 'purple' : 'cyan'}
                                                     className="btn-big"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    {downloading && <span className="btn-spinner" aria-hidden />}
-                                                    {downloading
-                                                        ? t('asset.modal.processing')
-                                                        : data.isPremium
+                                                    {data.isPremium
                                                         ? (promo.active
-                                                          ? (isEn ? 'Download (Free Pass) 🎉' : 'Descargar (Free Pass) 🎉')
-                                                          : t('asset.modal.downloadPremium'))
-                                                        : t('asset.modal.downloadNow')}
+                                                          ? (isEn ? 'View Details & Download (Free Pass) 🎉' : 'Ver y Descargar (Free Pass) 🎉')
+                                                          : (isEn ? 'View & Download Premium' : 'Ver y Descargar Premium'))
+                                                        : (isEn ? 'View & Download Free' : 'Ver y Descargar Gratis')}
                                                 </Button>
                                             </div>
 
