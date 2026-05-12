@@ -16,7 +16,7 @@ export default function RelatedAssetsClient({ relatedCats, relatedTags, isEn }) 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem', width: '100%', overflow: 'hidden' }}>
             {relatedCats.length > 0 && (
                 <SectionRow
-                    title={isEn ? 'Related' : 'Relacionados'}
+                    title={isEn ? 'Related by Category' : 'Similares por Categoría'}
                     items={relatedCats}
                     variantClass="dark-row"
                     onItemClick={handleItemClick}
@@ -24,7 +24,7 @@ export default function RelatedAssetsClient({ relatedCats, relatedTags, isEn }) 
             )}
             {relatedTags.length > 0 && (
                 <SectionRow
-                    title={isEn ? 'Related' : 'Relacionados'}
+                    title={isEn ? 'Related by Tags' : 'Relacionados por Tags'}
                     items={relatedTags}
                     variantClass="dark-row"
                     onItemClick={handleItemClick}
