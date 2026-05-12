@@ -510,14 +510,27 @@ export default function TrafficCharts() {
 
     return {
       labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
-      datasets: [{
-        label: 'Registros',
-        data: filledSeries.map((s) => s.count),
-        backgroundColor: 'rgba(245,158,11,0.85)',
-        borderColor: 'transparent',
-        borderRadius: 4,
-        barThickness: 16
-      }]
+      datasets: [
+        { 
+          type: 'line', 
+          label: 'Tendencia', 
+          data: filledSeries.map((s) => s.count), 
+          borderColor: 'rgba(245,158,11,1)', 
+          backgroundColor: 'transparent', 
+          borderWidth: 2, 
+          tension: 0.3, 
+          pointRadius: filledSeries.length > 60 ? 0 : 3, 
+          pointHoverRadius: 5 
+        },
+        {
+          type: 'bar',
+          label: 'Registros',
+          data: filledSeries.map((s) => s.count),
+          backgroundColor: 'rgba(245,158,11,0.7)',
+          borderColor: 'transparent',
+          borderRadius: 4
+        }
+      ]
     }
   }, [http])
 
@@ -577,7 +590,7 @@ export default function TrafficCharts() {
         )} />
         
         <ChartContainer id="user-registrations" supportsDynamicDates={true} fetchFn={fetchRegistrations} renderChart={(data) => (
-          <Bar data={data} options={barOpts} />
+          <Bar data={data} options={commonLineOpts} />
         )} />
         
         <ChartContainer id="top-searches" supportsDynamicDates={false} fetchFn={fetchSearches} renderChart={(data) => <Bar data={data} options={barOpts} />} />
