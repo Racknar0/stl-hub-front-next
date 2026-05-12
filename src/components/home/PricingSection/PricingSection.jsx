@@ -257,9 +257,22 @@ const PricingSection = ({
                                 p.highlight ? 'fill' : 'outline'
                             }`}
                             onClick={(e) => {
-                            sendGTMEvent({ event: 'checkout_initiated',
-                                plan_id: p.id,
-                                plan_price: p.total
+                            sendGTMEvent({ 
+                                event: 'begin_checkout',
+                                value: p.total,
+                                currency: 'USD',
+                                ecommerce: {
+                                    currency: 'USD',
+                                    value: p.total,
+                                    items: [
+                                        {
+                                            item_id: p.id,
+                                            item_name: `Plan ${p.name} days`,
+                                            price: p.total,
+                                            quantity: 1
+                                        }
+                                    ]
+                                }
                             });
 
                             // Track plan click (fire-and-forget)

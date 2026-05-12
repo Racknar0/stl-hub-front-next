@@ -9,6 +9,7 @@ import useStore from '../../../store/useStore';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
 import { getTrackingFromMiddlewareCookie, getVisitIdentityFromMiddlewareCookie } from '../../../helpers/attributionCookie';
+import { sendGTMEvent } from '@next/third-parties/google';
 
 const Register = () => {
     // ⚠️ mantener instancia estable de HttpService
@@ -182,6 +183,12 @@ const Register = () => {
 
             const response = await httpService.postData('/auth/register', data);
             if (response.status === 201) {
+                try {
+                    sendGTMEvent({ event: 'sign_up', method: 'email' });
+                } catch (e) {
+                    console.error('GTM sign_up error', e);
+                }
+                
                 setSuccess(
                     isEn
                         ? 'Registration successful! Check your email to activate your account.'
