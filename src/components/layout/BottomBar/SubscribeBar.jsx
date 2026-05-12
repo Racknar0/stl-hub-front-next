@@ -56,8 +56,12 @@ const SubscribeBar = () => {
     const showForNoDays = !!token && checkedSubscription && Number(daysRemaining || 0) <= 0;
     const showBar = showForGuest || showForNoDays;
 
-    // 🚀 Premium Free Pass: always show when promo is active (client-only to avoid SSR mismatch)
-    if (clientReady && promo.active) {
+    // 🛑 Evitar SSR mismatch e hidratación inconsistente 🛑
+    if (!clientReady) return null;
+    if (promo.loading) return null;
+
+    // 🚀 Premium Free Pass: always show when promo is active
+    if (promo.active) {
       const promoMsg = isEn
         ? '🎉 Premium Free Pass — Sign up and download ALL models for free!'
         : '🎉 Premium Free Pass — ¡Regístrate y descarga TODOS los modelos gratis!';
@@ -92,9 +96,6 @@ const SubscribeBar = () => {
         </div>
       );
     }
-
-    // Wait for promo status to resolve before showing fallback bar
-    if (promo.loading) return null;
 
     // If no promo, use normal subscribe bar visibility rules
     if (!showBar) return null;
