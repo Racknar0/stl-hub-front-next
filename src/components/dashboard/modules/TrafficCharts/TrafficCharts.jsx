@@ -656,15 +656,43 @@ export default function TrafficCharts() {
               labels: data.labels.slice(0, limit),
               datasets: data.datasets.map(d => ({ ...d, data: d.data.slice(0, limit) }))
             };
-            return <Bar data={limitedData} options={{...barOpts, maintainAspectRatio: false}} />
+            return <Bar data={limitedData} options={dynamicBarOpts} />
           }} 
         />
         
-        <ChartContainer id="top-downloads" supportsDynamicDates={false} fetchFn={fetchDownloads} renderChart={(data) => <Bar data={data} options={barOpts} />} />
+        <ChartContainer 
+          id="top-downloads" 
+          supportsDynamicDates={false} 
+          expandable={true}
+          fetchFn={fetchDownloads} 
+          renderChart={(data, expanded) => {
+            const limit = expanded ? 100 : 20;
+            const limitedData = {
+              ...data,
+              labels: data.labels.slice(0, limit),
+              datasets: data.datasets.map(d => ({ ...d, data: d.data.slice(0, limit) }))
+            };
+            return <Bar data={limitedData} options={dynamicBarOpts} />
+          }} 
+        />
         
         <ChartContainer id="visitors-vs-sessions" supportsDynamicDates={true} fetchFn={fetchVisitorsVsSessions} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
-        <ChartContainer id="top-pages" supportsDynamicDates={true} fetchFn={fetchTopPages} renderChart={(data) => <Bar data={data} options={barOpts} />} />
+        <ChartContainer 
+          id="top-pages" 
+          supportsDynamicDates={true} 
+          expandable={true}
+          fetchFn={fetchTopPages} 
+          renderChart={(data, expanded) => {
+            const limit = expanded ? 50 : 20;
+            const limitedData = {
+              ...data,
+              labels: data.labels.slice(0, limit),
+              datasets: data.datasets.map(d => ({ ...d, data: d.data.slice(0, limit) }))
+            };
+            return <Bar data={limitedData} options={dynamicBarOpts} />
+          }} 
+        />
       </div>
 
       {copiedToast && (
