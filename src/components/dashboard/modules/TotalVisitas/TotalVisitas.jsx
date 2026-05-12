@@ -4,7 +4,7 @@ import './TotalVisitas.scss'
 import HttpService from '@/services/HttpService'
 
 export default function TotalVisitas({ value }) {
-  const [range, setRange] = useState('all')
+  const [range, setRange] = useState('1d')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({ '1d': 0, '1w': 0, '1m': 0, '1y': 0, all: value || 0 })
   const http = new HttpService()
