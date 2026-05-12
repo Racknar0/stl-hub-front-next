@@ -388,6 +388,7 @@
 
 .dashboard-page-theme .stat-card,
 .dashboard-page-theme .top-downloads-card,
+.dashboard-page-theme .recent-downloads-card,
 .dashboard-page-theme .reports-card,
 .dashboard-page-theme .taxonomy-counts-card,
 .dashboard-page-theme .search-insights-card,
@@ -401,6 +402,7 @@
 .dashboard-page-theme .stat-card .label,
 .dashboard-page-theme .stat-card .sub,
 .dashboard-page-theme .top-downloads-card .label,
+.dashboard-page-theme .recent-downloads-card .time,
 .dashboard-page-theme .reports-card .meta,
 .dashboard-page-theme .search-insights-card .item-row .row-sub,
 .dashboard-page-theme .last-checks-card .lc-meta,
@@ -413,6 +415,7 @@
 .dashboard-page-theme .stat-card .value,
 .dashboard-page-theme .top-downloads-card .summary-value,
 .dashboard-page-theme .top-downloads-card .download-item .count,
+.dashboard-page-theme .recent-downloads-card .download-item .count,
 .dashboard-page-theme .reports-card .report-item .count,
 .dashboard-page-theme .taxonomy-counts-card .summary-value,
 .dashboard-page-theme .taxonomy-counts-card .item-row .count,
@@ -425,13 +428,15 @@
 }
 
 .dashboard-page-theme .top-downloads-card .card-header h6,
+.dashboard-page-theme .recent-downloads-card .card-header h6,
 .dashboard-page-theme .reports-card .card-header h6,
 .dashboard-page-theme .taxonomy-counts-card .card-header h6,
 .dashboard-page-theme .search-insights-card .card-header h6,
 .dashboard-page-theme .reports-card .report-item .name,
 .dashboard-page-theme .taxonomy-counts-card .item-row .name,
 .dashboard-page-theme .search-insights-card .item-row .name,
-.dashboard-page-theme .top-downloads-card .download-item .name {
+.dashboard-page-theme .top-downloads-card .download-item .name,
+.dashboard-page-theme .recent-downloads-card .download-item .name {
   color: #e2e8f0;
 }
 
@@ -457,6 +462,7 @@
 }
 
 .dashboard-page-theme .top-downloads-card .card-header .collapse-btn,
+.dashboard-page-theme .recent-downloads-card .card-header .collapse-btn,
 .dashboard-page-theme .reports-card .collapse-btn,
 .dashboard-page-theme .taxonomy-counts-card .card-header .collapse-btn,
 .dashboard-page-theme .search-insights-card .card-header .collapse-btn {
@@ -464,6 +470,7 @@
 }
 
 .dashboard-page-theme .top-downloads-card .download-item,
+.dashboard-page-theme .recent-downloads-card .download-item,
 .dashboard-page-theme .reports-card .report-item,
 .dashboard-page-theme .taxonomy-counts-card .item-row,
 .dashboard-page-theme .search-insights-card .item-row {
