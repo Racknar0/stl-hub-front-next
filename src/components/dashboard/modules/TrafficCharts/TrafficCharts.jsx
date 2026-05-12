@@ -67,6 +67,38 @@ function formatLabel(dateStr, granularity) {
   return `${d.getDate()} ${months[d.getMonth()]}`
 }
 
+function fillMissingBuckets(series, fromStr, toStr, granularity) {
+  if (!series) return [];
+  if (granularity !== 'day') return series;
+
+  const result = [];
+  let current = new Date(fromStr + 'T00:00:00');
+  const end = new Date(toStr + 'T00:00:00');
+  
+  let limit = 0;
+  while (current <= end && limit < 100) {
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const d = String(current.getDate()).padStart(2, '0');
+    const dStr = `${y}-${m}-${d}`;
+    const existing = series.find(s => s.date === dStr);
+    
+    if (existing) {
+      result.push(existing);
+    } else {
+      result.push({ 
+        date: dStr, 
+        pv: 0, sessions: 0, visitors: 0,
+        total: 0, '1m': 0, '3m': 0, '6m': 0, '12m': 0,
+        count: 0
+      });
+    }
+    current.setDate(current.getDate() + 1);
+    limit++;
+  }
+  return result;
+}
+
 const chartColors = {
   pv: { border: '#4facfe', bg: 'rgba(79,172,254,0.15)' },
   sessions: { border: '#00f2fe', bg: 'rgba(0,242,254,0.15)' },
@@ -324,13 +356,17 @@ export default function TrafficCharts() {
   const fetchTraffic = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/site-visits/timeseries?from=${from}&to=${to}`)
     const tsData = res?.data
-    if (!tsData?.series?.length) return null
+    if (!tsData?.series?.length && !tsData?.granularity) return null
+    
+    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day')
+    if (!filledSeries.length) return null
+
     return {
-      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
+      labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
       datasets: [
-        { label: 'Vistas de Página', data: tsData.series.map((s) => s.pv), borderColor: chartColors.pv.border, backgroundColor: chartColors.pv.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
-        { label: 'Sesiones', data: tsData.series.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
-        { label: 'Visitantes', data: tsData.series.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Vistas de Página', data: filledSeries.map((s) => s.pv), borderColor: chartColors.pv.border, backgroundColor: chartColors.pv.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Sesiones', data: filledSeries.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Visitantes', data: filledSeries.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
       ]
     }
   }, [http])
@@ -339,12 +375,16 @@ export default function TrafficCharts() {
   const fetchVisitorsVsSessions = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/site-visits/timeseries?from=${from}&to=${to}`)
     const tsData = res?.data
-    if (!tsData?.series?.length) return null
+    if (!tsData?.series?.length && !tsData?.granularity) return null
+    
+    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day')
+    if (!filledSeries.length) return null
+
     return {
-      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
+      labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
       datasets: [
-        { label: 'Sesiones', data: tsData.series.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
-        { label: 'Visitantes Únicos', data: tsData.series.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: tsData.series.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Sesiones', data: filledSeries.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Visitantes Únicos', data: filledSeries.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
       ]
     }
   }, [http])
@@ -353,15 +393,19 @@ export default function TrafficCharts() {
   const fetchPlanClicks = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/plan-clicks/timeseries?from=${from}&to=${to}`)
     const planClicksData = res?.data
-    if (!planClicksData?.series?.length) return null
+    if (!planClicksData?.series?.length && !planClicksData?.granularity) return null
+    
+    const filledSeries = fillMissingBuckets(planClicksData.series || [], from, to, planClicksData.granularity || 'day')
+    if (!filledSeries.length) return null
+
     return {
-      labels: planClicksData.series.map((s) => formatLabel(s.date, planClicksData.granularity)),
+      labels: filledSeries.map((s) => formatLabel(s.date, planClicksData.granularity)),
       datasets: [
-        { label: 'Total', data: planClicksData.series.map((s) => s.total), borderColor: 'transparent', backgroundColor: 'rgba(167,139,250,0.85)', borderRadius: 4 },
-        { label: '30 días', data: planClicksData.series.map((s) => s['1m']), borderColor: 'transparent', backgroundColor: 'rgba(79,172,254,0.7)', borderRadius: 4 },
-        { label: '90 días', data: planClicksData.series.map((s) => s['3m']), borderColor: 'transparent', backgroundColor: 'rgba(0,242,254,0.7)', borderRadius: 4 },
-        { label: '180 días', data: planClicksData.series.map((s) => s['6m']), borderColor: 'transparent', backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 4 },
-        { label: '365 días', data: planClicksData.series.map((s) => s['12m']), borderColor: 'transparent', backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 },
+        { label: 'Total', data: filledSeries.map((s) => s.total), borderColor: 'transparent', backgroundColor: 'rgba(167,139,250,0.85)', borderRadius: 4 },
+        { label: '30 días', data: filledSeries.map((s) => s['1m']), borderColor: 'transparent', backgroundColor: 'rgba(79,172,254,0.7)', borderRadius: 4 },
+        { label: '90 días', data: filledSeries.map((s) => s['3m']), borderColor: 'transparent', backgroundColor: 'rgba(0,242,254,0.7)', borderRadius: 4 },
+        { label: '180 días', data: filledSeries.map((s) => s['6m']), borderColor: 'transparent', backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 4 },
+        { label: '365 días', data: filledSeries.map((s) => s['12m']), borderColor: 'transparent', backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 },
       ]
     }
   }, [http])
@@ -409,12 +453,16 @@ export default function TrafficCharts() {
   const fetchRegistrations = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/registrations/timeseries?from=${from}&to=${to}`)
     const tsData = res?.data
-    if (!tsData?.series?.length) return null
+    if (!tsData?.series?.length && !tsData?.granularity) return null
+    
+    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day')
+    if (!filledSeries.length) return null
+
     return {
-      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
+      labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
       datasets: [{
         label: 'Registros',
-        data: tsData.series.map((s) => s.count),
+        data: filledSeries.map((s) => s.count),
         backgroundColor: 'rgba(245,158,11,0.85)',
         borderColor: 'transparent',
         borderRadius: 4,
