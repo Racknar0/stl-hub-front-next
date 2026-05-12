@@ -93,6 +93,9 @@ const SubscribeBar = () => {
       );
     }
 
+    // Wait for promo status to resolve before showing fallback bar
+    if (promo.loading) return null;
+
     // If no promo, use normal subscribe bar visibility rules
     if (!showBar) return null;
 
