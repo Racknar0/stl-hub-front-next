@@ -48,14 +48,20 @@ function daysAgo(n) {
 function formatLabel(dateStr, granularity) {
   if (!dateStr) return ''
   if (granularity === 'hour') {
-    // "2026-04-26T14:00" → "14:00"
     const parts = dateStr.split('T')
     return parts[1] || dateStr.slice(11, 16) || dateStr
   }
-  // "2026-04-26" → "26 Abr"
   const d = new Date(dateStr + 'T00:00:00')
   if (Number.isNaN(d.getTime())) return dateStr
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  
+  if (granularity === 'month') {
+     return `${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`
+  }
+  if (granularity === 'week') {
+     return `Sem ${d.getDate()} ${months[d.getMonth()]}`
+  }
+  
   return `${d.getDate()} ${months[d.getMonth()]}`
 }
 
@@ -219,14 +225,14 @@ const CHART_DESCRIPTIONS = {
   }
 
 
-// Map active preset to backend key
-const getPresetKey = (preset) => preset === '7d' ? '1w' : preset === '1y' ? '1y' : '1m'
+// Map active preset to backend key (solo para los que no usan timeseries como sales)
+const getPresetKey = (preset) => preset === '1D' ? '1w' : preset === '7D' ? '1m' : '1y'
 
 // --- ChartContainer Component ---
 function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart }) {
-  const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(30)))
+  const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(7)))
   const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
-  const [activePreset, setActivePreset] = useState('30d')
+  const [activePreset, setActivePreset] = useState('1D')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
 
@@ -234,9 +240,9 @@ function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart 
     const today = formatDateForInput(new Date())
     setActivePreset(preset)
     setToDate(today)
-    if (preset === '7d') setFromDate(formatDateForInput(daysAgo(7)))
-    else if (preset === '30d') setFromDate(formatDateForInput(daysAgo(30)))
-    else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
+    if (preset === '1D') setFromDate(formatDateForInput(daysAgo(7))) // Diario: ultimos 7 dias
+    else if (preset === '7D') setFromDate(formatDateForInput(daysAgo(70))) // Semanal: ultimas 10 semanas
+    else if (preset === '30D') setFromDate(formatDateForInput(daysAgo(365))) // Mensual: ultimos 12 meses
   }
 
   const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
@@ -272,7 +278,7 @@ function ChartContainer({ id, title, supportsDynamicDates, fetchFn, renderChart 
 
         <div className="charts-controls-right" style={{ flexShrink: 0 }}>
           <div className="preset-btns">
-            {[{ key: '7d', label: '7D' }, { key: '30d', label: '30D' }, { key: '1y', label: '1A' }].map(({ key, label }) => (
+            {[{ key: '1D', label: '1D (Diario)' }, { key: '7D', label: '7D (Semanal)' }, { key: '30D', label: '30D (Mensual)' }].map(({ key, label }) => (
               <button
                 key={key}
                 className={`preset-btn ${activePreset === key ? 'active' : ''}`}
@@ -397,26 +403,20 @@ export default function TrafficCharts() {
     }
   }, [http])
 
-  // 6. Registrations Fetcher
-  const fetchRegistrations = React.useCallback(async () => {
-    const res = await http.getData('/metrics/registrations')
-    const d = res?.data
-    if (!d) return null
+  // 6. Registrations Fetcher (Ahora usa Timeseries)
+  const fetchRegistrations = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/registrations/timeseries?from=${from}&to=${to}`)
+    const tsData = res?.data
+    if (!tsData?.series?.length) return null
     return {
-      labels: ['Hoy', '3D', '7D', '30D', '1A', 'Total'],
+      labels: tsData.series.map((s) => formatLabel(s.date, tsData.granularity)),
       datasets: [{
         label: 'Registros',
-        data: [d['1d'] || 0, d['3d'] || 0, d['1w'] || 0, d['1m'] || 0, d['1y'] || 0, d.all || 0],
-        backgroundColor: [
-          'rgba(245,158,11,0.85)',
-          'rgba(251,191,36,0.75)',
-          'rgba(52,211,153,0.75)',
-          'rgba(56,189,248,0.75)',
-          'rgba(167,139,250,0.75)',
-          'rgba(244,114,182,0.75)',
-        ],
+        data: tsData.series.map((s) => s.count),
+        backgroundColor: 'rgba(245,158,11,0.85)',
         borderColor: 'transparent',
-        borderRadius: 6,
+        borderRadius: 4,
+        barThickness: 16
       }]
     }
   }, [http])
@@ -476,16 +476,8 @@ export default function TrafficCharts() {
           </div>
         )} />
         
-        <ChartContainer id="user-registrations" supportsDynamicDates={false} fetchFn={fetchRegistrations} renderChart={(data) => (
-          <Bar data={data} options={{
-            ...commonLineOpts,
-            interaction: { mode: 'nearest', intersect: true },
-            plugins: { ...commonLineOpts.plugins, legend: { display: false } },
-            scales: {
-              x: { ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-              y: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true }
-            }
-          }} />
+        <ChartContainer id="user-registrations" supportsDynamicDates={true} fetchFn={fetchRegistrations} renderChart={(data) => (
+          <Bar data={data} options={barOpts} />
         )} />
         
         <ChartContainer id="top-searches" supportsDynamicDates={false} fetchFn={fetchSearches} renderChart={(data) => <Bar data={data} options={barOpts} />} />
