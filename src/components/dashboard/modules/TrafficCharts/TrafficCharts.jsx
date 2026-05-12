@@ -400,7 +400,7 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
       </div>
 
       {/* Render Area */}
-      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads'].includes(id) ? { height: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 26)}px`, transition: 'height 0.3s ease' } : {}}>
+      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads'].includes(id) ? { height: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 32)}px`, maxHeight: 'none', transition: 'height 0.3s ease' } : {}}>
         {loading ? (
           <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
         ) : !data ? (
