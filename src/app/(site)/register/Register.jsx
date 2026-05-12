@@ -24,12 +24,60 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Gift code
+    const [giftCode, setGiftCode] = useState('');
+    const [giftCodeStatus, setGiftCodeStatus] = useState(null); // null | 'valid' | 'invalid' | 'checking'
+    const [giftCodeDays, setGiftCodeDays] = useState(null);
+    const [giftCodeMsg, setGiftCodeMsg] = useState('');
+    const giftCodeTimer = useRef(null);
+
     // Activación automática por token en query param
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const activationToken = searchParams ? searchParams.get('activate') : null;
+    const urlCode = searchParams ? searchParams.get('code') : null;
     const [activationStatus, setActivationStatus] = useState(null); // null | 'success' | 'error'
     const [activationMessage, setActivationMessage] = useState('');
     const [showActivationModal, setShowActivationModal] = useState(false);
+
+    // Auto-fill gift code from URL
+    useEffect(() => {
+        if (urlCode && !giftCode) {
+            setGiftCode(urlCode.toUpperCase());
+        }
+    }, [urlCode]);
+
+    // Validate gift code with debounce
+    useEffect(() => {
+        if (giftCodeTimer.current) clearTimeout(giftCodeTimer.current);
+        const code = giftCode.trim();
+        if (!code) {
+            setGiftCodeStatus(null);
+            setGiftCodeDays(null);
+            setGiftCodeMsg('');
+            return;
+        }
+        setGiftCodeStatus('checking');
+        giftCodeTimer.current = setTimeout(async () => {
+            try {
+                const res = await httpService.getData(`/gift-codes/validate?code=${encodeURIComponent(code)}`);
+                if (res?.data?.valid) {
+                    setGiftCodeStatus('valid');
+                    setGiftCodeDays(res.data.days);
+                    setGiftCodeMsg(isEn ? `✓ Valid — ${res.data.days} premium days` : `✓ Válido — ${res.data.days} días premium`);
+                } else {
+                    setGiftCodeStatus('invalid');
+                    setGiftCodeDays(null);
+                    setGiftCodeMsg(isEn ? 'Invalid or expired code' : 'Código inválido o expirado');
+                }
+            } catch {
+                setGiftCodeStatus('invalid');
+                setGiftCodeDays(null);
+                setGiftCodeMsg(isEn ? 'Could not validate code' : 'No se pudo validar el código');
+            }
+        }, 500);
+        return () => { if (giftCodeTimer.current) clearTimeout(giftCodeTimer.current); };
+    }, [giftCode, isEn]);
 
     // guard para evitar dobles llamadas (StrictMode y re-renders)
     const activatedRef = useRef(null); // guarda el último token procesado
@@ -38,17 +86,29 @@ const Register = () => {
     const handleActivation = async (token) => {
         setShowActivationModal(true);
         try {
+            // Read pending gift code saved during registration
+            const pendingCode = typeof window !== 'undefined'
+                ? window.localStorage.getItem('pending_gift_code') || ''
+                : '';
             const response = await httpService.postData('/auth/activate', {
                 token,
                 language: isEn ? 'en' : 'es',
+                giftCode: pendingCode || undefined,
             });
 
             if (response.status === 200) {
+                // Clear pending gift code
+                try { window.localStorage.removeItem('pending_gift_code'); } catch {}
+                const giftMsg = response.data?.giftRedeemed
+                    ? (isEn
+                        ? ` You received ${response.data.giftDays} days of premium!`
+                        : ` ¡Recibiste ${response.data.giftDays} días de premium!`)
+                    : '';
                 setActivationStatus('success');
                 setActivationMessage(
-                    isEn
+                    (isEn
                         ? 'Your account has been activated! You can now log in.'
-                        : '¡Tu cuenta ha sido activada! Ya puedes iniciar sesión.'
+                        : '¡Tu cuenta ha sido activada! Ya puedes iniciar sesión.') + giftMsg
                 );
             } else {
                 setActivationStatus('error');
@@ -97,6 +157,15 @@ const Register = () => {
             );
             return;
         }
+        // Block registration if gift code is filled but invalid
+        if (giftCode.trim() && giftCodeStatus !== 'valid') {
+            setError(
+                isEn
+                    ? 'Please enter a valid gift code or remove it.'
+                    : 'Por favor ingresa un código válido o quítalo.'
+            );
+            return;
+        }
         setLoading(true);
         try {
             const tracking = getTrackingFromMiddlewareCookie('first');
@@ -108,6 +177,7 @@ const Register = () => {
                 tracking,
                 anonId,
                 sessionId,
+                giftCode: giftCode.trim() || undefined,
             };
 
             const response = await httpService.postData('/auth/register', data);
@@ -117,6 +187,10 @@ const Register = () => {
                         ? 'Registration successful! Check your email to activate your account.'
                         : '¡Registro exitoso! Revisa tu correo para activar tu cuenta.'
                 );
+                // Save gift code for post-activation redemption
+                if (giftCode.trim()) {
+                    try { window.localStorage.setItem('pending_gift_code', giftCode.trim()); } catch {}
+                }
                 await timerAlert(
                     isEn ? 'Registration successful!' : '¡Registro exitoso!',
                     isEn
@@ -303,6 +377,54 @@ const Register = () => {
                                             autoComplete="new-password"
                                         />
                                     </div>
+                                </label>
+                                <label className="login-field" style={{ position: 'relative' }}>
+                                    <span className="label">
+                                        {isEn ? 'Gift code (optional)' : 'Código de regalo (opcional)'}
+                                    </span>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            id="giftCode"
+                                            value={giftCode}
+                                            onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
+                                            placeholder={isEn ? 'e.g. TIKTOK3DIAS' : 'ej. TIKTOK3DIAS'}
+                                            autoComplete="off"
+                                            maxLength={30}
+                                            style={{
+                                                paddingRight: 36,
+                                                borderColor: giftCodeStatus === 'valid' ? '#22c55e'
+                                                    : giftCodeStatus === 'invalid' ? '#ef4444'
+                                                    : undefined,
+                                            }}
+                                        />
+                                        {giftCodeStatus === 'valid' && (
+                                            <span style={{
+                                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                                color: '#22c55e', fontSize: '1.2rem', fontWeight: 700,
+                                            }}>✓</span>
+                                        )}
+                                        {giftCodeStatus === 'invalid' && (
+                                            <span style={{
+                                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                                color: '#ef4444', fontSize: '1.1rem', fontWeight: 700,
+                                            }}>✕</span>
+                                        )}
+                                        {giftCodeStatus === 'checking' && (
+                                            <span style={{
+                                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                                color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem',
+                                            }}>...</span>
+                                        )}
+                                    </div>
+                                    {giftCodeMsg && (
+                                        <span style={{
+                                            fontSize: '0.78rem', marginTop: 2,
+                                            color: giftCodeStatus === 'valid' ? '#22c55e' : '#ef4444',
+                                        }}>
+                                            {giftCodeMsg}
+                                        </span>
+                                    )}
                                 </label>
                                 {error && (
                                     <div

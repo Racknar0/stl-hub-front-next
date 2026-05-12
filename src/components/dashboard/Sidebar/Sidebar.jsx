@@ -167,6 +167,11 @@ const Sidebar = () => {
                     Campanas publicitarias
                   </Link>
                 </li>
+                <li>
+                  <Link href="/dashboard?tab=gift-codes" className="item submenu-item" onClick={() => setOpen(false)}>
+                    🎁 Gift Codes
+                  </Link>
+                </li>
               </ul>
             </li>
 

@@ -20,6 +20,7 @@ import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCar
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
 import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic';
 import TrafficCharts from '@/components/dashboard/modules/TrafficCharts/TrafficCharts';
+import GiftCodes from '@/components/dashboard/modules/GiftCodes/GiftCodes';
 
 
 export default function Page() {
@@ -67,6 +68,7 @@ export default function Page() {
       const tab = String(new URLSearchParams(window.location.search).get('tab') || '').toLowerCase();
       if (tab === 'campaigns') setActiveTab('campaigns');
       if (tab === 'traffic') setActiveTab('traffic');
+      if (tab === 'gift-codes') setActiveTab('gift-codes');
     } catch {
       // noop
     }
@@ -256,6 +258,14 @@ export default function Page() {
             onClick={() => setActiveTab('traffic')}
           >
             Tráfico
+          </button>
+          <button
+            className={`dashboard-tab-btn ${activeTab === 'gift-codes' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'gift-codes'}
+            onClick={() => setActiveTab('gift-codes')}
+          >
+            🎁 Gift Codes
           </button>
         </div>
 
@@ -469,6 +479,12 @@ export default function Page() {
                 </div>
               )}
             </section>
+          </div>
+        )}
+
+        {activeTab === 'gift-codes' && (
+          <div className="dashboard-traffic-tab">
+            <GiftCodes />
           </div>
         )}
       </div>

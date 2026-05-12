@@ -3,6 +3,7 @@ import React from 'react'
 import './Account.scss'
 import Button from '../../../components/layout/Buttons/Button';
 import axiosInstance from '../../../services/AxiosInterceptor';
+import HttpService from '../../../services/HttpService';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import { useRouter } from 'next/navigation';
 import useStore from '../../../store/useStore';
@@ -30,6 +31,40 @@ const Account = () => {
   const [loading, setLoading] = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalAsset, setModalAsset] = React.useState(null);
+
+  // Gift code redeem
+  const [redeemCode, setRedeemCode] = React.useState('');
+  const [redeemLoading, setRedeemLoading] = React.useState(false);
+  const [redeemMsg, setRedeemMsg] = React.useState(null); // { type: 'ok'|'err', text }
+
+  const onRedeemCode = async () => {
+    if (!redeemCode.trim()) return;
+    setRedeemLoading(true);
+    setRedeemMsg(null);
+    try {
+      const http = new HttpService();
+      const res = await http.postData('/gift-codes/redeem', { code: redeemCode.trim() });
+      setRedeemMsg({
+        type: 'ok',
+        text: isEn
+          ? `✓ Code redeemed! You received ${res?.data?.daysGranted || '?'} premium days.`
+          : `✓ ¡Código canjeado! Recibiste ${res?.data?.daysGranted || '?'} días premium.`,
+      });
+      setRedeemCode('');
+      // Reload profile to reflect new subscription
+      try {
+        const p = await axiosInstance.get('/me/profile');
+        setProfile(p.data);
+      } catch {}
+    } catch (e) {
+      setRedeemMsg({
+        type: 'err',
+        text: e?.response?.data?.message || (isEn ? 'Could not redeem code' : 'No se pudo canjear el código'),
+      });
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
 
   React.useEffect(()=>{
     let mounted = true;
@@ -95,6 +130,35 @@ const Account = () => {
               </div>
             </>
           )}
+
+          {/* Gift Code Redeem */}
+          <div className="gift-redeem-section">
+            <h5>{isEn ? '🎁 Redeem a gift code' : '🎁 Canjear código de regalo'}</h5>
+            <div className="gift-redeem-row">
+              <input
+                type="text"
+                value={redeemCode}
+                onChange={(e) => { setRedeemCode(e.target.value.toUpperCase()); setRedeemMsg(null); }}
+                placeholder={isEn ? 'Enter your code' : 'Ingresa tu código'}
+                maxLength={30}
+                disabled={redeemLoading}
+              />
+              <button
+                className="btn-pill fill"
+                onClick={onRedeemCode}
+                disabled={redeemLoading || !redeemCode.trim()}
+              >
+                {redeemLoading
+                  ? (isEn ? 'Redeeming...' : 'Canjeando...')
+                  : (isEn ? 'Redeem' : 'Canjear')}
+              </button>
+            </div>
+            {redeemMsg && (
+              <p className={`redeem-msg ${redeemMsg.type === 'ok' ? 'is-ok' : 'is-err'}`}>
+                {redeemMsg.text}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="card">
