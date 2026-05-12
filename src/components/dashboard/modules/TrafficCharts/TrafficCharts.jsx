@@ -400,7 +400,7 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
       </div>
 
       {/* Render Area */}
-      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches'].includes(id) ? { minHeight: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 26)}px`, maxHeight: 'none', transition: 'min-height 0.3s ease' } : {}}>
+      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads'].includes(id) ? { height: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 26)}px`, transition: 'height 0.3s ease' } : {}}>
         {loading ? (
           <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
         ) : !data ? (
@@ -430,6 +430,28 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
 // --- Main Component ---
 export default function TrafficCharts() {
   const http = useMemo(() => new HttpService(), [])
+  const [copiedToast, setCopiedToast] = useState(null)
+
+  const handleBarClick = (evt, elements, chart) => {
+    if (elements && elements.length > 0) {
+      const idx = elements[0].index
+      const label = chart.data.labels[idx]
+      navigator.clipboard.writeText(label)
+      setCopiedToast(label)
+      setTimeout(() => setCopiedToast(null), 2000)
+    }
+  }
+
+  const dynamicBarOpts = {
+    ...barOpts,
+    maintainAspectRatio: false,
+    onClick: handleBarClick,
+    onHover: (evt, elements) => {
+      if (evt.native && evt.native.target) {
+        evt.native.target.style.cursor = elements && elements.length ? 'pointer' : 'default'
+      }
+    }
+  }
 
   // 1. Traffic Fetcher
   const fetchTraffic = React.useCallback(async (from, to) => {
@@ -585,9 +607,9 @@ export default function TrafficCharts() {
     const topDownloadsData = res?.data
     const arr = topDownloadsData?.[presetKey]
     if (!arr?.length) return null
-    const downloads = arr.slice(0, 15)
+    const downloads = arr
     return {
-      labels: downloads.map((d) => d.name),
+      labels: downloads.map((d) => d.name.replace(/^STL\s*-\s*/i, '').trim()),
       datasets: [{
         label: 'Descargas', data: downloads.map((d) => d.count),
         backgroundColor: 'rgba(56, 189, 248, 0.7)', borderColor: 'transparent', borderRadius: 4, barThickness: 16
@@ -644,6 +666,19 @@ export default function TrafficCharts() {
         
         <ChartContainer id="top-pages" supportsDynamicDates={true} fetchFn={fetchTopPages} renderChart={(data) => <Bar data={data} options={barOpts} />} />
       </div>
+
+      {copiedToast && (
+        <div style={{
+          position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(52, 211, 153, 0.95)', color: '#0f172a', padding: '12px 24px',
+          borderRadius: '30px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)',
+          zIndex: 9999, fontWeight: '700', fontSize: '1rem',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>✓</span> ¡Copiado! {copiedToast.length > 25 ? copiedToast.substring(0, 25) + '...' : copiedToast}
+        </div>
+      )}
     </div>
   )
 }
