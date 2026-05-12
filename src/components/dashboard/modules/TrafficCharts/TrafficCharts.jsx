@@ -58,7 +58,7 @@ function formatLabel(dateStr, granularity) {
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
   
   if (granularity === 'month') {
-     return `${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`
+     return months[d.getMonth()]
   }
   if (granularity === 'week') {
      return `Sem ${d.getDate()} ${months[d.getMonth()]}`
@@ -174,6 +174,16 @@ const commonLineOpts = {
       grid: { color: 'rgba(255,255,255,0.06)' },
       beginAtZero: true,
     },
+  },
+}
+
+const stackedBarOpts = {
+  ...commonLineOpts,
+  interaction: { mode: 'index', intersect: false },
+  scales: {
+    ...commonLineOpts.scales,
+    x: { ...commonLineOpts.scales.x, stacked: true },
+    y: { ...commonLineOpts.scales.y, stacked: true },
   },
 }
 
@@ -441,11 +451,11 @@ export default function TrafficCharts() {
     return {
       labels: filledSeries.map((s) => formatLabel(s.date, planClicksData.granularity)),
       datasets: [
-        { label: 'Total', data: filledSeries.map((s) => s.total), borderColor: 'transparent', backgroundColor: 'rgba(167,139,250,0.85)', borderRadius: 4 },
-        { label: '30 días', data: filledSeries.map((s) => s['1m']), borderColor: 'transparent', backgroundColor: 'rgba(79,172,254,0.7)', borderRadius: 4 },
-        { label: '90 días', data: filledSeries.map((s) => s['3m']), borderColor: 'transparent', backgroundColor: 'rgba(0,242,254,0.7)', borderRadius: 4 },
-        { label: '180 días', data: filledSeries.map((s) => s['6m']), borderColor: 'transparent', backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 4 },
-        { label: '365 días', data: filledSeries.map((s) => s['12m']), borderColor: 'transparent', backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 },
+        { type: 'line', label: 'Total', data: filledSeries.map((s) => s.total), borderColor: 'rgba(167,139,250,1)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { type: 'bar', label: '30 días', data: filledSeries.map((s) => s['1m']), borderColor: 'transparent', backgroundColor: 'rgba(79,172,254,0.7)', borderRadius: 4 },
+        { type: 'bar', label: '90 días', data: filledSeries.map((s) => s['3m']), borderColor: 'transparent', backgroundColor: 'rgba(0,242,254,0.7)', borderRadius: 4 },
+        { type: 'bar', label: '180 días', data: filledSeries.map((s) => s['6m']), borderColor: 'transparent', backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 4 },
+        { type: 'bar', label: '365 días', data: filledSeries.map((s) => s['12m']), borderColor: 'transparent', backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 },
       ]
     }
   }, [http])
@@ -558,7 +568,7 @@ export default function TrafficCharts() {
       <div className="charts-list">
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
-        <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={{...commonLineOpts, interaction: { mode: 'index', intersect: false } }} />} />
+        <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={stackedBarOpts} />} />
         
         <ChartContainer id="sales-revenue" supportsDynamicDates={false} fetchFn={fetchSales} renderChart={(data) => (
           <div style={{ maxWidth: '400px', margin: '0 auto' }}>
