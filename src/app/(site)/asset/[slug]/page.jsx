@@ -472,14 +472,12 @@ export default async function AssetPage({ params }) {
                 ) : null}
                 
                 {/* ── Related Assets ── */}
-                <div className={styles.contentWrap}>
-                    <RelatedAssets 
-                        currentSlug={asset.slug} 
-                        categories={categories} 
-                        tags={mergedTags} 
-                        isEn={pageIsEn} 
-                    />
-                </div>
+                <RelatedAssets 
+                    currentSlug={asset.slug} 
+                    categories={categories} 
+                    tags={mergedTags} 
+                    isEn={pageIsEn} 
+                />
                 </main>
             </NsfwPageWrapper>
         </>
