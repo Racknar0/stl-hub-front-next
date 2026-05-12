@@ -61,27 +61,21 @@
 }
 
 .recent-downloads-card .download-item{
-  padding:8px;
+  padding:8px 10px;
   border-radius:6px;
   background:linear-gradient(180deg,#ffffff,#fbfbfd);
   border:1px solid #f1f3f5;
   display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.recent-downloads-card .download-item .item-header {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
-}
-
-.recent-downloads-card .download-item .left-info {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-right: 8px;
-}
-
-.recent-downloads-card .download-item .time {
-  font-size: 0.7rem;
-  color: #6b7280;
-  line-height: 1.2;
+  gap: 8px;
 }
 
 .recent-downloads-card .download-item .name{
@@ -91,14 +85,25 @@
   overflow:hidden;
   text-overflow:ellipsis;
   font-weight: 500;
+  flex: 1 1 auto;
 }
 
-.recent-downloads-card .download-item .right-info {
+.recent-downloads-card .download-item .time {
+  font-size: 0.7rem;
+  color: #6b7280;
+  line-height: 1.2;
+  white-space: nowrap;
   flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.recent-downloads-card .download-item .item-footer {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .recent-downloads-card .download-item .user-email {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;

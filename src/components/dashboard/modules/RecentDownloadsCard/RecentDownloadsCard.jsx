@@ -74,11 +74,11 @@ const RecentDownloadsCard = () => {
                 
                 return (
                 <li key={idx} className="download-item">
-                  <div className="left-info">
-                    <span className="time">{dateStr} {timeStr}</span>
-                    <span className="name">{it.assetTitle}</span>
+                  <div className="item-header">
+                    <span className="name" title={it.assetTitle}>{it.assetTitle}</span>
+                    <span className="time">{timeStr}</span>
                   </div>
-                  <div className="right-info">
+                  <div className="item-footer">
                     <span 
                         className={`user-email ${it.userActive ? 'active' : 'inactive'}`} 
                         onClick={() => handleUserClick(it.userId)}
