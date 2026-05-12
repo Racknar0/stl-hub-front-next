@@ -68,9 +68,10 @@ const SubscribeBar = () => {
       const promoMsgLogged = isEn
         ? '🎉 Premium Free Pass active! Download ALL premium models at no cost.'
         : '🎉 ¡Premium Free Pass activo! Descarga TODOS los modelos premium sin costo.';
-      const promoDaysMsg = promo.daysLeft
-        ? (isEn ? ` (${promo.daysLeft} days left)` : ` (${promo.daysLeft} días restantes)`)
-        : '';
+      
+      const hasDays = !!promo.daysLeft;
+      const daysText = isEn ? ` (${promo.daysLeft} days left)` : ` (${promo.daysLeft} días restantes)`;
+      const limitedText = isEn ? ` (Valid for a limited time)` : ` (Válido por tiempo limitado)`;
 
       return (
         <div className="subscribe-bar promo-mode" role="region" aria-label="Premium Free Pass">
@@ -78,7 +79,13 @@ const SubscribeBar = () => {
             <div className="promo-bar-content">
               <p className="promo-msg">
                 {token ? promoMsgLogged : promoMsg}
-                {promoDaysMsg && <span className="promo-days">{promoDaysMsg}</span>}
+                {hasDays ? (
+                  <span className="promo-days">{daysText}</span>
+                ) : (
+                  <span className="promo-limited" style={{ color: '#ff6b6b', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                    {limitedText}
+                  </span>
+                )}
               </p>
               {!token && (
                 <Button

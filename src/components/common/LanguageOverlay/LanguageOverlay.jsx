@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import useStore from '../../../store/useStore'
+import { usePromo } from '@/hooks/usePromo'
 import './LanguageOverlay.scss'
 
 const FLAG_ES_64 = '/spain-flag-button-round-icon-32.png'
@@ -10,6 +11,7 @@ const FLAG_EN_64 = '/united-states-of-america-flag-button-round-icon-32.png'
 
 export default function LanguageOverlay() {
   const setLanguage = useStore((s) => s.setLanguage)
+  const promo = usePromo()
   const [show, setShow] = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
@@ -49,8 +51,21 @@ export default function LanguageOverlay() {
 
   const overlay = (
     <div className="lang-overlay" role="dialog" aria-modal="true" aria-label="Language selector">
-      <div className="lang-card">
+      <div className={`lang-card ${promo.active ? 'promo-active' : ''}`}>
         <img className="brand" src="/nuevo_horizontal.png" alt="STL HUB" />
+        
+        {promo.active && (
+          <div className="lang-promo-banner">
+            <strong>🎉 ¡Premium Free Pass!</strong>
+            <span>Descarga TODOS los modelos gratis hoy. / Download ALL models for free today.</span>
+            {!promo.daysLeft && (
+              <span style={{ color: '#ff6b6b', fontSize: '11px', marginTop: '2px', fontWeight: '800' }}>
+                Válido por tiempo limitado / Valid for a limited time
+              </span>
+            )}
+          </div>
+        )}
+
         <h2>Selecciona tu idioma</h2>
         <p className="hint">Choose your language</p>
         <div className="options">
