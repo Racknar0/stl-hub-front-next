@@ -7,21 +7,27 @@ import HttpService from '../../../../services/HttpService';
 import { errorAlert, warningAlert } from '../../../../helpers/alerts';
 import styles from './AssetSeoBackground.module.css';
 import { sendGTMEvent } from '@next/third-parties/google';
+import { usePromo } from '../../../../hooks/usePromo';
 
 export default function AssetDownloadCtaClient({ assetId, isPremium = false, isEn = false }) {
   const token = useStore((s) => s.token);
   const router = useRouter();
   const pathname = usePathname();
   const [downloading, setDownloading] = useState(false);
+  const promo = usePromo();
 
   const http = useMemo(() => new HttpService(), []);
 
   const label = downloading
     ? (isEn ? 'Preparing...' : 'Preparando...')
-    : (isPremium ? (isEn ? 'Download (Premium)' : 'Descargar (Premium)') : (isEn ? 'Download' : 'Descargar'));
+    : (isPremium 
+        ? (promo.active ? (isEn ? 'Download (Free Pass) 🎉' : 'Descargar (Free Pass) 🎉') : (isEn ? 'Download (Premium)' : 'Descargar (Premium)')) 
+        : (isEn ? 'Download' : 'Descargar'));
 
   const hint = isPremium
-    ? (isEn ? 'Premium content requires login and an active plan.' : 'El contenido premium requiere login y plan activo.')
+    ? (promo.active 
+        ? (isEn ? 'Free Pass is active! Enjoy premium downloads.' : '¡Free Pass activo! Disfruta descargas premium.')
+        : (isEn ? 'Premium content requires login and an active plan.' : 'El contenido premium requiere login y plan activo.'))
     : (isEn ? 'Free download available now.' : 'Descarga gratuita disponible ahora.');
 
   const openWindowSafely = () => {

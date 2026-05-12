@@ -49,6 +49,8 @@ export default function AssetDetailCore({ asset }) {
         const pTags = tagSlugs ? http.getData(`/assets/search?tags=${encodeURIComponent(tagSlugs)}&pageSize=20`) : Promise.resolve({ data: { items: [] }});
 
         const [rCats, rTags] = await Promise.all([pCats, pTags]);
+        console.log("RCATS", rCats?.data);
+        console.log("RTAGS", rTags?.data);
         
         // Formatear items para el SectionRow y excluir el actual
         const formatItem = (it) => {

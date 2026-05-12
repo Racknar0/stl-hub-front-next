@@ -61,7 +61,6 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
             navigation
             slidesPerView="auto"
             spaceBetween={12}
-            grabCursor
             watchOverflow
           >
             {items.map((it, index) => {

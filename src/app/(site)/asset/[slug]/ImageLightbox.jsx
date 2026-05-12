@@ -26,7 +26,7 @@ export default function ImageLightbox({ images, alt }) {
       {images.map((img, i) => (
         <figure
           key={`${img}-${i}`}
-          style={{ margin: 0, cursor: 'zoom-in', position: 'relative' }}
+          style={{ margin: 0, cursor: 'pointer', position: 'relative' }}
           onClick={() => openFull(i)}
         >
           <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
