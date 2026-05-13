@@ -236,7 +236,7 @@ export default async function AssetPage({ params }) {
                   label: String(t?.name || t?.nameEn || t?.slug || t?.slugEn || '').trim(),
               }))
               .filter((t) => t.slug && t.label)
-              .slice(0, 20)
+              .slice(0, 8)
         : [];
     const descriptionEsRaw = String(asset.description || '').trim();
     const descriptionEnRaw = String(asset.descriptionEn || '').trim();
@@ -475,7 +475,7 @@ export default async function AssetPage({ params }) {
                 <RelatedAssets 
                     currentSlug={asset.slug} 
                     categories={categories} 
-                    tags={mergedTags} 
+                    tags={mergedTags.slice(0, 5)} 
                     isEn={pageIsEn} 
                 />
                 </main>

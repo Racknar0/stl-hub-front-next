@@ -32,8 +32,8 @@ export default async function RelatedAssets({ currentSlug, categories = [], tags
     };
 
     try {
-        const fetchCats = catSlug ? fetch(`${base}/api/assets/search?categories=${catSlug}&pageSize=20`, { next: { revalidate: false } }) : Promise.resolve({ ok: false });
-        const fetchTags = tagSlugs ? fetch(`${base}/api/assets/search?tags=${encodeURIComponent(tagSlugs)}&pageSize=20`, { next: { revalidate: false } }) : Promise.resolve({ ok: false });
+        const fetchCats = catSlug ? fetch(`${base}/api/assets/search?categories=${catSlug}&pageSize=6`, { next: { revalidate: false } }) : Promise.resolve({ ok: false });
+        const fetchTags = tagSlugs ? fetch(`${base}/api/assets/search?tags=${encodeURIComponent(tagSlugs)}&pageSize=6`, { next: { revalidate: false } }) : Promise.resolve({ ok: false });
         
         const [resCats, resTags] = await Promise.all([fetchCats, fetchTags]);
         
