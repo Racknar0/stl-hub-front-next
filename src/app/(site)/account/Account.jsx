@@ -1,5 +1,5 @@
 "use client";
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import './Account.scss'
 import Button from '../../../components/layout/Buttons/Button';
 import axiosInstance from '../../../services/AxiosInterceptor';
@@ -27,6 +27,10 @@ const Account = () => {
   };
   const [profile, setProfile] = React.useState(null);
   const [downloads, setDownloads] = React.useState([]);
+  const [dlTotal, setDlTotal] = useState(0);
+  const [dlPage, setDlPage] = useState(1);
+  const [dlLoading, setDlLoading] = useState(false);
+  const DL_PAGE_SIZE = 20;
   const [stats, setStats] = React.useState({ totalDownloads: 0, topCategories: [] });
   const [loading, setLoading] = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -66,6 +70,18 @@ const Account = () => {
     }
   };
 
+  const fetchDownloads = useCallback(async (page = 1) => {
+    setDlLoading(true);
+    try {
+      const d = await axiosInstance.get(`/me/downloads?page=${page}&pageSize=${DL_PAGE_SIZE}`);
+      setDownloads(d.data?.data || []);
+      setDlTotal(d.data?.total || 0);
+      setDlPage(page);
+    } catch (e) {
+      console.warn('Downloads load error', e?.response?.data || e.message);
+    } finally { setDlLoading(false); }
+  }, []);
+
   React.useEffect(()=>{
     let mounted = true;
     async function load(){
@@ -73,12 +89,14 @@ const Account = () => {
         setLoading(true);
         const [p, d, s] = await Promise.all([
           axiosInstance.get('/me/profile'),
-          axiosInstance.get('/me/downloads'),
+          axiosInstance.get(`/me/downloads?page=1&pageSize=${DL_PAGE_SIZE}`),
           axiosInstance.get('/me/stats'),
         ]);
         if (!mounted) return;
         setProfile(p.data);
-        setDownloads(d.data || []);
+        setDownloads(d.data?.data || []);
+        setDlTotal(d.data?.total || 0);
+        setDlPage(1);
         setStats(s.data || { totalDownloads: 0, topCategories: [] });
       } catch (e) {
         console.warn('Account load error', e?.response?.data || e.message);
@@ -177,8 +195,31 @@ const Account = () => {
             </ul>
           ) : null}
 
-          <h5 style={{marginTop:'1rem'}}>{isEn ? 'Download history' : 'Historial de descargas'}</h5>
-          {downloads?.length ? (
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'1rem'}}>
+            <h5 style={{margin:0}}>{isEn ? 'Download history' : 'Historial de descargas'}</h5>
+            {dlTotal > DL_PAGE_SIZE && (
+              <div style={{display:'flex', alignItems:'center', gap:'.4rem'}}>
+                <button
+                  className="btn-pill outline"
+                  style={{padding:'.2rem .5rem', fontSize:'.8rem', minWidth:'auto'}}
+                  disabled={dlPage <= 1 || dlLoading}
+                  onClick={() => fetchDownloads(dlPage - 1)}
+                >←</button>
+                <span style={{fontSize:'.8rem', color:'#818199'}}>
+                  {dlPage} / {Math.ceil(dlTotal / DL_PAGE_SIZE)}
+                </span>
+                <button
+                  className="btn-pill outline"
+                  style={{padding:'.2rem .5rem', fontSize:'.8rem', minWidth:'auto'}}
+                  disabled={dlPage >= Math.ceil(dlTotal / DL_PAGE_SIZE) || dlLoading}
+                  onClick={() => fetchDownloads(dlPage + 1)}
+                >→</button>
+              </div>
+            )}
+          </div>
+          {dlLoading ? (
+            <p style={{color:'#818199', textAlign:'center', padding:'.5rem 0'}}>{isEn ? 'Loading...' : 'Cargando...'}</p>
+          ) : downloads?.length ? (
             <ul>
               {downloads.map((it, index) => (
                 <li key={index} style={{display:'flex', alignItems:'center', gap:'.6rem', justifyContent:'space-between', padding:'.4rem 0', borderBottom:'1px dashed #eee'}}>

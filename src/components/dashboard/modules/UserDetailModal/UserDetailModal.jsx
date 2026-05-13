@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Dialog, DialogTitle, DialogContent, Box, IconButton, CircularProgress, Chip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import HttpService from '@/services/HttpService';
 
 const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
@@ -11,34 +13,47 @@ const imgUrl = (rel) => {
     return `${UPLOAD_BASE}/${s.replace(/\\/g, '/').replace(/^\/+/, '')}`;
 };
 
+const DL_PAGE_SIZE = 20;
+
 export default function UserDetailModal({ open, onClose, userId }) {
     const [detailUser, setDetailUser] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [dlPage, setDlPage] = useState(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const http = new HttpService();
 
+    const fetchUser = useCallback(async (page = 1) => {
+        if (!userId) return;
+        setDetailLoading(true);
+        try {
+            const res = await http.getData(`/users/${userId}?dlPage=${page}&dlPageSize=${DL_PAGE_SIZE}`);
+            setDetailUser(res.data);
+        } catch (e) {
+            console.error('Error loading user detail', e);
+        } finally {
+            setDetailLoading(false);
+        }
+    }, [userId]);
+
     useEffect(() => {
         if (open && userId) {
-            let mounted = true;
-            const fetchUser = async () => {
-                setDetailLoading(true);
-                setDetailUser(null);
-                try {
-                    const res = await http.getData(`/users/${userId}`);
-                    if (mounted) setDetailUser(res.data);
-                } catch (e) {
-                    console.error('Error loading user detail', e);
-                } finally {
-                    if (mounted) setDetailLoading(false);
-                }
-            };
-            fetchUser();
-            return () => { mounted = false; };
+            setDlPage(1);
+            fetchUser(1);
+        }
+        if (!open) {
+            setDetailUser(null);
         }
     }, [open, userId]);
 
+    const handleDlPageChange = (newPage) => {
+        setDlPage(newPage);
+        fetchUser(newPage);
+    };
+
     const du = detailUser;
     const sub = du?.subscription;
+    const dlTotal = du?.dlTotal ?? du?.stats?.totalDownloads ?? 0;
+    const dlTotalPages = Math.max(1, Math.ceil(dlTotal / DL_PAGE_SIZE));
 
     return (
         <Dialog
@@ -63,7 +78,7 @@ export default function UserDetailModal({ open, onClose, userId }) {
                 </IconButton>
             </DialogTitle>
             <DialogContent sx={{ pt: 2, pb: 2 }}>
-                {detailLoading ? (
+                {detailLoading && !du ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                         <CircularProgress size={32} sx={{ color: '#a78bfa' }} />
                     </Box>
@@ -108,7 +123,7 @@ export default function UserDetailModal({ open, onClose, userId }) {
                         <Box>
                             <Box sx={{ fontSize: '.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>📊 Actividad</Box>
                             <Box sx={{ fontSize: '.88rem' }}>
-                                <strong>Total descargas:</strong> {du.stats?.totalDownloads ?? 0}
+                                <strong>Total descargas:</strong> {dlTotal}
                             </Box>
                             {du.stats?.topCategories?.length > 0 && (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
@@ -123,8 +138,37 @@ export default function UserDetailModal({ open, onClose, userId }) {
 
                         {/* Downloads */}
                         <Box>
-                            <Box sx={{ fontSize: '.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>📥 Historial de descargas</Box>
-                            {du.downloads?.length > 0 ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                <Box sx={{ fontSize: '.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>📥 Historial de descargas</Box>
+                                {dlTotal > DL_PAGE_SIZE && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <IconButton
+                                            size="small"
+                                            disabled={dlPage <= 1 || detailLoading}
+                                            onClick={() => handleDlPageChange(dlPage - 1)}
+                                            sx={{ color: '#a78bfa', p: 0.3, '&.Mui-disabled': { color: '#334155' } }}
+                                        >
+                                            <ChevronLeftIcon fontSize="small" />
+                                        </IconButton>
+                                        <Box sx={{ fontSize: '.72rem', color: '#94a3b8', minWidth: 50, textAlign: 'center' }}>
+                                            {dlPage} / {dlTotalPages}
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            disabled={dlPage >= dlTotalPages || detailLoading}
+                                            onClick={() => handleDlPageChange(dlPage + 1)}
+                                            sx={{ color: '#a78bfa', p: 0.3, '&.Mui-disabled': { color: '#334155' } }}
+                                        >
+                                            <ChevronRightIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                )}
+                            </Box>
+                            {detailLoading && du ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                    <CircularProgress size={20} sx={{ color: '#a78bfa' }} />
+                                </Box>
+                            ) : du.downloads?.length > 0 ? (
                                 <Box sx={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                     {du.downloads.map((d, i) => (
                                         <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 0.5, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
