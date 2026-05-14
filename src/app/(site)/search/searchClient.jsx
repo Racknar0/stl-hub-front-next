@@ -253,17 +253,27 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const tagList = useMemo(() => normalizeCsvList(tags).split(',').map(s => s.trim()).filter(Boolean), [tags]);
 
   const searchEventKey = useMemo(() => buildSearchEventKey(params), [params]);
-
   // Reset y carga inicial cuando cambian filtros o resultados de imagen
   useEffect(() => {
-    setItems([]);
-    setPage(0);
-    setHasMore(true);
+    // Si hay datos SSR sin consumir, restaurarlos en vez de limpiar
+    if (hasSSRData && !ssrConsumedRef.current) {
+      setItems(ssrItemsRef.current);
+      setLoading(false);
+      setAiFallback(!!initialAiFallback);
+      setPage(1);
+      pageRef.current = 1;
+      setHasMore(!!initialHasMore);
+      hasMoreRef.current = !!initialHasMore;
+    } else {
+      setItems([]);
+      setPage(0);
+      setHasMore(true);
+      setLoading(true);
+      setAiFallback(false);
+      pageRef.current = 0;
+      hasMoreRef.current = true;
+    }
     setIsLoadingMore(false);
-    setLoading(true);
-    setAiFallback(false);
-    pageRef.current = 0;
-    hasMoreRef.current = true;
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
   }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, imageSearchResults]);
@@ -310,7 +320,13 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     // Si tenemos datos SSR y es la primera carga, no hacer fetch
     if (nextPage === 0 && hasSSRData && !ssrConsumedRef.current) {
       ssrConsumedRef.current = true;
+      setItems(ssrItemsRef.current);
       setLoading(false);
+      setAiFallback(!!initialAiFallback);
+      setHasMore(!!initialHasMore);
+      hasMoreRef.current = !!initialHasMore;
+      pageRef.current = 1;
+      setPage(1);
       // Track search event for SSR data
       if (initialTotal > 0) void trackSearchIfNeeded(initialTotal);
       return;
