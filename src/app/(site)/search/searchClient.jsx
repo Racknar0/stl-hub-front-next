@@ -145,13 +145,22 @@ function toDisplayItem(a, lang) {
   };
 }
 
-export default function SearchClient({ initialParams }) {
+export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback }) {
   const { t } = useI18n();
   const language = useStore((s)=>s.language);
   const imageSearchResults = useStore((s) => s.imageSearchResults);
   const clearImageSearchResults = useStore((s) => s.clearImageSearchResults);
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  // Pre-process SSR items into display format
+  const ssrItemsRef = useRef(null);
+  if (ssrItemsRef.current === null && Array.isArray(initialItems) && initialItems.length > 0) {
+    ssrItemsRef.current = initialItems.map(a => toDisplayItem(a, 'es'));
+  }
+  const hasSSRData = ssrItemsRef.current !== null && ssrItemsRef.current.length > 0;
+  const ssrConsumedRef = useRef(false);
+
+  const [items, setItems] = useState(hasSSRData ? ssrItemsRef.current : []);
+  const [loading, setLoading] = useState(!hasSSRData);
   const isEn = String(language || 'es').toLowerCase() === 'en';
   const [q, setQ] = useState(initialParams?.q || '');
   const [categories, setCategories] = useState(initialParams?.categories || '');
@@ -160,9 +169,9 @@ export default function SearchClient({ initialParams }) {
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
   const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
-  const [aiFallback, setAiFallback] = useState(false);
-  const [page, setPage] = useState(0); // zero-based
-  const [hasMore, setHasMore] = useState(true);
+  const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
+  const [page, setPage] = useState(hasSSRData ? 1 : 0); // zero-based
+  const [hasMore, setHasMore] = useState(hasSSRData ? !!initialHasMore : true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef(null);
   const virtualRootRef = useRef(null);
@@ -171,9 +180,9 @@ export default function SearchClient({ initialParams }) {
   const searchEventIdRef = useRef(null);
   
   // Refs para evitar condiciones de carrera y loops
-  const pageRef = useRef(0);
+  const pageRef = useRef(hasSSRData ? 1 : 0);
   const isLoadingRef = useRef(false);
-  const hasMoreRef = useRef(true);
+  const hasMoreRef = useRef(hasSSRData ? !!initialHasMore : true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -297,6 +306,16 @@ export default function SearchClient({ initialParams }) {
 
   const loadPageReal = useCallback(async (nextPage) => {
     if (isLoadingRef.current) return;
+
+    // Si tenemos datos SSR y es la primera carga, no hacer fetch
+    if (nextPage === 0 && hasSSRData && !ssrConsumedRef.current) {
+      ssrConsumedRef.current = true;
+      setLoading(false);
+      // Track search event for SSR data
+      if (initialTotal > 0) void trackSearchIfNeeded(initialTotal);
+      return;
+    }
+
     isLoadingRef.current = true;
     if (nextPage > 0) setIsLoadingMore(true);
     try {

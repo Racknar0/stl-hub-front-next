@@ -53,5 +53,30 @@ export default async function sitemap() {
     if (process.env.NODE_ENV !== 'production') console.warn('[sitemap] falló fetch slugs', e);
   }
 
+  // Popular search queries — Programmatic SEO pages
+  try {
+    const res = await fetch(`${apiBase}/api/metrics/top-search-queries?limit=300&minCount=2`, { next: { revalidate: 3600 } });
+    if (res.ok) {
+      const data = await res.json();
+      const queries = Array.isArray(data?.queries) ? data.queries : [];
+      for (const row of queries) {
+        const q = String(row?.query || '').trim();
+        if (!q || q.length < 2) continue;
+        const encoded = encodeURIComponent(q);
+        const url = `${base}/search?q=${encoded}`;
+        const urlEn = `${base}/en/search?q=${encoded}`;
+        entries.push({
+          url,
+          lastModified: now,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+          alternates: { languages: { 'es-ES': url, 'en-US': urlEn, 'x-default': url } },
+        });
+      }
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV !== 'production') console.warn('[sitemap] falló fetch top-search-queries', e);
+  }
+
   return entries;
 }
