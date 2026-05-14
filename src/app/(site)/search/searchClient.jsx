@@ -160,6 +160,7 @@ export default function SearchClient({ initialParams }) {
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
   const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
+  const [aiFallback, setAiFallback] = useState(false);
   const [page, setPage] = useState(0); // zero-based
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -251,6 +252,7 @@ export default function SearchClient({ initialParams }) {
     setHasMore(true);
     setIsLoadingMore(false);
     setLoading(true);
+    setAiFallback(false);
     pageRef.current = 0;
     hasMoreRef.current = true;
     isLoadingRef.current = false;
@@ -330,6 +332,7 @@ export default function SearchClient({ initialParams }) {
       });
       const list = (res.data?.items || []).map(a => toDisplayItem(a, language));
       setItems(prev => nextPage === 0 ? list : [...prev, ...list]);
+      if (nextPage === 0) setAiFallback(!!res.data?.aiFallback);
       const total = Number(res.data?.total ?? 0);
       const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
       const computedHasMore = typeof res.data?.hasMore === 'boolean'
@@ -572,6 +575,13 @@ export default function SearchClient({ initialParams }) {
     </div>
   ) : null}
   {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
+
+        {aiFallback && !loading && items.length > 0 && (
+          <div className="ai-fallback-notice">
+            <span className="ai-fallback-icon">✨</span>
+            <span>{isEn ? 'No exact results found. Showing similar suggestions powered by AI.' : 'No encontramos resultados exactos. Mostrando sugerencias similares con IA.'}</span>
+          </div>
+        )}
 
         <div className="results-virtual-shell" ref={virtualRootRef}>
           {canVirtualize ? (

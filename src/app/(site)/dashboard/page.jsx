@@ -22,6 +22,7 @@ import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic'
 import TrafficCharts from '@/components/dashboard/modules/TrafficCharts/TrafficCharts';
 import GiftCodes from '@/components/dashboard/modules/GiftCodes/GiftCodes';
 import RecentDownloadsCard from '@/components/dashboard/modules/RecentDownloadsCard/RecentDownloadsCard';
+import RecentSearchesCard from '@/components/dashboard/modules/RecentSearchesCard/RecentSearchesCard';
 
 
 export default function Page() {
@@ -296,6 +297,7 @@ export default function Page() {
               <div className="dashboard-card-cell"><LastChecksCard /></div>
               <div className="dashboard-card-cell"><TopDownloadsCard /></div>
               <div className="dashboard-card-cell"><RecentDownloadsCard /></div>
+              <div className="dashboard-card-cell"><RecentSearchesCard /></div>
               <div className="dashboard-card-cell"><ReportsCard /></div>
               <div className="dashboard-card-cell"><TotalVentas /></div>
             </div>

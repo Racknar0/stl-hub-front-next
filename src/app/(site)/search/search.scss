@@ -211,3 +211,38 @@
         }
     }
 }
+
+/* AI Fallback notice banner */
+.ai-fallback-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.2rem;
+    margin-bottom: 1rem;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(99, 102, 241, 0.10) 100%);
+    border: 1px solid rgba(129, 140, 248, 0.25);
+    color: #c7d2fe;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    animation: aiFallbackSlideIn 0.4s ease-out;
+
+    .ai-fallback-icon {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+}
+
+@keyframes aiFallbackSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
