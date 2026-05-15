@@ -21,6 +21,10 @@ export default function SystemConfigPage() {
   const [editValues, setEditValues] = useState({});
   const [editDescriptions, setEditDescriptions] = useState({});
 
+  // Plan prices state
+  const DEFAULT_PLAN_PRICES = { '1m': '5.00', '3m': '10.00', '6m': '17.00', '12m': '25.00' };
+  const [planPrices, setPlanPrices] = useState(DEFAULT_PLAN_PRICES);
+
   const http = new HttpService();
 
   useEffect(() => { hydrateToken() }, [hydrateToken]);
@@ -56,6 +60,16 @@ export default function SystemConfigPage() {
       
       setEditValues(values);
       setEditDescriptions(descs);
+
+      // Parse PLAN_PRICES if exists
+      if (values['PLAN_PRICES']) {
+        try {
+          const parsed = JSON.parse(values['PLAN_PRICES']);
+          if (parsed && typeof parsed === 'object') {
+            setPlanPrices({ ...DEFAULT_PLAN_PRICES, ...parsed });
+          }
+        } catch {}
+      }
     } catch (e) {
       console.error(e);
       await errorAlert('Error', 'No se pudieron cargar las configuraciones del sistema.');
@@ -242,8 +256,87 @@ export default function SystemConfigPage() {
               </div>
             </article>
 
+            {/* 💰 Plan Prices */}
+            <article className="setting-card" style={{ border: '1px solid rgba(168,85,247,0.3)' }}>
+              <div className="setting-header">
+                <div className="icon-wrapper" style={{ background: 'rgba(168,85,247,0.15)', color: '#a855f7' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h2>💰 Precios de Planes</h2>
+              </div>
+              <div className="setting-body">
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  Configura el precio de cada plan de suscripción. Los periodos (30, 90, 180, 365 días) son fijos.
+                  El cambio se refleja <strong style={{ color: '#a855f7' }}>inmediatamente</strong> en la pasarela de pago y en la página de pricing.
+                </p>
+
+                {[{ key: '1m', label: '30 Días', days: 30 }, { key: '3m', label: '90 Días', days: 90 }, { key: '6m', label: '180 Días', days: 180 }, { key: '12m', label: '365 Días', days: 365 }].map((plan) => {
+                  const price = Number(planPrices[plan.key] || 0);
+                  const months = plan.days / 30;
+                  const monthly = months > 0 ? (price / months).toFixed(2) : '0.00';
+                  const baseMonthly = Number(planPrices['1m'] || 5);
+                  const fullPrice = baseMonthly * months;
+                  const saved = Math.max(0, fullPrice - price).toFixed(2);
+                  return (
+                    <div key={plan.key} className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <label style={{ minWidth: '70px', margin: 0, fontWeight: 600 }}>{plan.label}</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#64748b', fontSize: '1.1rem' }}>$</span>
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={planPrices[plan.key] || ''}
+                          onChange={(e) => setPlanPrices({ ...planPrices, [plan.key]: e.target.value })}
+                          style={{ width: '100px', textAlign: 'right' }}
+                        />
+                        <span style={{ color: '#64748b', fontSize: '0.8rem' }}>USD</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem' }}>
+                        <span style={{ color: '#38bdf8' }}>${monthly}/mes</span>
+                        {Number(saved) > 0 && plan.key !== '1m' && (
+                          <span style={{ color: '#4ade80' }}>Ahorra ${Math.round(Number(saved))}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="setting-footer">
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      setSavingKey('PLAN_PRICES');
+                      const cleanPrices = {};
+                      for (const k of ['1m', '3m', '6m', '12m']) {
+                        const v = Number(planPrices[k] || 0);
+                        cleanPrices[k] = v > 0 ? v.toFixed(2) : DEFAULT_PLAN_PRICES[k];
+                      }
+                      await http.putData('/admin/settings', 'PLAN_PRICES', {
+                        value: JSON.stringify(cleanPrices),
+                        description: 'Precios de los 4 planes de suscripción en USD.',
+                      });
+                      await successAlert('Guardado', 'Los precios de los planes han sido actualizados.');
+                      await loadSettings();
+                    } catch (e) {
+                      console.error(e);
+                      await errorAlert('Error', 'No se pudieron guardar los precios.');
+                    } finally {
+                      setSavingKey(null);
+                    }
+                  }}
+                  disabled={savingKey === 'PLAN_PRICES'}
+                >
+                  {savingKey === 'PLAN_PRICES' ? 'Guardando...' : 'Guardar Precios'}
+                </button>
+              </div>
+            </article>
+
             {/* Render any other settings from DB that are not explicitly handled above */}
-            {settings.filter(s => !['FREEBIES_DAILY_COUNT','LAUNCH_PROMO_ACTIVE','LAUNCH_PROMO_DAYS','LAUNCH_PROMO_START'].includes(s.key)).map((setting) => (
+            {settings.filter(s => !['FREEBIES_DAILY_COUNT','LAUNCH_PROMO_ACTIVE','LAUNCH_PROMO_DAYS','LAUNCH_PROMO_START','PLAN_PRICES'].includes(s.key)).map((setting) => (
               <article className="setting-card" key={setting.key}>
                 <div className="setting-header">
                   <div className="icon-wrapper">

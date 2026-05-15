@@ -45,38 +45,12 @@ const getFeatures = (t, isEn) => {
           ];
 };
 
-const plans = [
-    {
-        id: '1m',
-        name: '30',
-        monthly: 5.0,
-        total: 5.0,
-        save: null,
-    },
-    {
-        id: '3m',
-        name: '90',
-        monthly: 3.33,
-        total: 10.0,
-        save: { amount: '$5' },
-    },
-    {
-        id: '6m',
-        name: '180',
-        monthly: 2.83,
-        total: 17.0,
-        save: { amount: '$13' },
-        tag: 'recommended',
-        highlight: true,
-    },
-    {
-        id: '12m',
-        name: '365',
-        monthly: 2.08,
-        total: 25.0,
-        save: { amount: '$35' },
-        tag: 'bestValue',
-    },
+// Fallback plans in case API is unreachable
+const FALLBACK_PLANS = [
+    { id: '1m', name: '30', monthly: 5.0, total: 5.0, save: null },
+    { id: '3m', name: '90', monthly: 3.33, total: 10.0, save: { amount: '$5' } },
+    { id: '6m', name: '180', monthly: 2.83, total: 17.0, save: { amount: '$13' }, tag: 'recommended', highlight: true },
+    { id: '12m', name: '365', monthly: 2.08, total: 25.0, save: { amount: '$35' }, tag: 'bestValue' },
 ];
 
 const currency = (n, locale) =>
@@ -105,6 +79,25 @@ const PricingSection = ({
     const [notLoggedInModal, setNotLoggedInModal] = React.useState(false);
     const [isMercadoPagoLoading, setIsMercadoPagoLoading] = React.useState(false);
     const httpService = React.useMemo(() => new HttpService(), []);
+
+    // Dynamic plans from API
+    const [plans, setPlans] = React.useState(FALLBACK_PLANS);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        const fetchPlans = async () => {
+            try {
+                const res = await httpService.getData('/admin/settings/public/plans');
+                if (!cancelled && res?.data?.plans?.length > 0) {
+                    setPlans(res.data.plans);
+                }
+            } catch (err) {
+                console.warn('[PricingSection] Could not fetch dynamic plans, using fallback:', err?.message);
+            }
+        };
+        fetchPlans();
+        return () => { cancelled = true; };
+    }, [httpService]);
 
     const title =
         (typeof t === 'function' && t('pricing.title')) ||
