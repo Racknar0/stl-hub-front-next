@@ -108,14 +108,6 @@ background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness:
     padding:.4rem 0; 
     position: relative;
     padding-left: 1.5rem;
-    
-    &:before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: $primary;
-      font-weight: bold;
-    }
   }
 }
 

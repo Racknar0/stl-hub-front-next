@@ -104,20 +104,48 @@
   padding:0; 
   margin: 1rem 0 1.5rem; 
   color:#4a4a5c; 
+  font-size: 0.95rem;
   
   li { 
-    padding:.4rem 0; 
+    padding: .6rem 0; 
     position: relative;
-    padding-left: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     
-    &:before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: $primary;
-      font-weight: bold;
+    .icon {
+      flex-shrink: 0;
+      width: 24px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    &.glow-feature {
+      background: rgba($primary, 0.05);
+      border: 1px solid rgba($primary, 0.2);
+      border-radius: 10px;
+      padding: .8rem;
+      margin-bottom: .8rem;
+      box-shadow: 0 4px 15px rgba($primary, 0.1);
+
+      .icon {
+        font-size: 1.3rem;
+        animation: floatPulse 2s ease-in-out infinite;
+      }
+
+      .glow-text {
+        color: $primary;
+        font-weight: 900;
+        font-size: 1.1rem;
+        text-shadow: 0 0 10px rgba($primary, 0.6), 0 0 20px rgba($primary, 0.3);
+      }
     }
   }
+}
+
+@keyframes floatPulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.1); text-shadow: 0 0 15px rgba($primary, 0.8); }
 }
 
 .btn-pill {

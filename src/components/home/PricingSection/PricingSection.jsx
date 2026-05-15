@@ -3,6 +3,7 @@ import React from 'react';
 import './PricingSection.scss';
 import SimplyModal from '../../common/SimplyModal/SimplyModal';
 import PayButton from '../../common/PaypalButton/PayButton';
+import SocialProofPopup from '../../common/SocialProofPopup/SocialProofPopup';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
 import Button from '@/components/layout/Buttons/Button';
@@ -13,37 +14,6 @@ import {
 } from '../../../helpers/attributionCookie';
 import { sendGTMEvent } from '@next/third-parties/google';
 
-const getFeatures = (t, isEn) => {
-    if (typeof t === 'function') {
-        return [
-            t('pricing.features.unlimitedDownloads'),
-            t('pricing.features.fullCatalogAccess'),
-            t('pricing.features.downloadPreview'),
-            t('pricing.features.megaDownload'),
-            t('pricing.features.multipleFormats'),
-            t('pricing.features.constantUpdates'),
-        ];
-    }
-
-    // Fallback si no hay traducción
-    return isEn
-        ? [
-              'Unlimited downloads',
-              'Full catalog access',
-              'Download preview',
-              'Download via Mega',
-              'Multiple formats (STL, OBJ, 3MF)',
-              'Constant updates',
-          ]
-        : [
-              'Descargas ilimitadas',
-              'Acceso completo al catálogo',
-              'Vista previa de tus descargas',
-              'Descarga via mega',
-              'Formatos múltiples (STL, OBJ, 3MF)',
-              'Actualización constante',
-          ];
-};
 
 // Fallback plans in case API is unreachable
 const FALLBACK_PLANS = [
@@ -70,7 +40,7 @@ const PricingSection = ({
     const language = useStore((s) => s.language);
     const isEn = String(language || 'es').toLowerCase() === 'en';
     const locale = isEn ? 'en-US' : 'es-CO';
-    const features = getFeatures(t, isEn);
+
     const [showModal, setShowModal] = React.useState(false);
     const [selectedPlan, setSelectedPlan] = React.useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
@@ -82,6 +52,7 @@ const PricingSection = ({
 
     // Dynamic plans from API
     const [plans, setPlans] = React.useState(FALLBACK_PLANS);
+    const [totalAssets, setTotalAssets] = React.useState(5000); // Fallback base amount
 
     React.useEffect(() => {
         let cancelled = false;
@@ -90,6 +61,9 @@ const PricingSection = ({
                 const res = await httpService.getData('/admin/settings/public/plans');
                 if (!cancelled && res?.data?.plans?.length > 0) {
                     setPlans(res.data.plans);
+                    if (res?.data?.totalAssets) {
+                        setTotalAssets(res.data.totalAssets);
+                    }
                 }
             } catch (err) {
                 console.warn('[PricingSection] Could not fetch dynamic plans, using fallback:', err?.message);
@@ -239,9 +213,41 @@ const PricingSection = ({
                         </div>
 
                         <ul className="features">
-                            {features.map((f, i) => (
-                                <li key={i}>{f}</li>
-                            ))}
+                            <li className="glow-feature">
+                                <span className="icon">✨</span>
+                                <span>
+                                    {isEn ? 'Access to' : 'Acceso a'}{' '}
+                                    <strong className="glow-text">+{Number(totalAssets * 2).toLocaleString()}</strong>{' '}
+                                    {isEn ? 'Premium Assets' : 'Assets Premium'}
+                                </span>
+                            </li>
+                            <li>
+                                <span className="icon">🤖</span>
+                                {isEn ? 'AI-powered smart search' : 'Búsqueda Inteligente impulsada por IA'}
+                            </li>
+                            <li>
+                                <span className="icon">🚀</span>
+                                {isEn ? 'Unlimited downloads' : 'Descargas ilimitadas sin restricciones'}
+                            </li>
+                            <li>
+                                <span className="icon">🖼️</span>
+                                {isEn ? 'Detailed gallery and asset previews' : 'Galería detallada y vista previa de cada asset'}
+                            </li>
+                            <li>
+                                <span className="icon">⚡</span>
+                                {isEn ? 'High-speed servers (via Mega)' : 'Servidores de alta velocidad (vía Mega)'}
+                            </li>
+                            <li>
+                                <span className="icon">🔄</span>
+                                {isEn ? 'Guaranteed weekly updates' : 'Actualización semanal garantizada'}
+                            </li>
+                            <li>
+                                <span className="icon">🎯</span>
+                                {p.id === '1m' && (isEn ? 'Ideal for urgent short-term projects' : 'Ideal para proyectos urgentes')}
+                                {p.id === '3m' && (isEn ? 'A full quarter of non-stop creativity' : 'Un trimestre de creatividad sin pausas')}
+                                {p.id === '6m' && (isEn ? 'Half a year of guaranteed models' : 'Medio año de modelos garantizados')}
+                                {p.id === '12m' && (isEn ? 'Annual license with maximum savings' : 'Licencia anual con el mayor ahorro')}
+                            </li>
                         </ul>
 
                         <button
@@ -501,6 +507,7 @@ const PricingSection = ({
                 )
             }
 
+            <SocialProofPopup />
         </section>
     );
 };
