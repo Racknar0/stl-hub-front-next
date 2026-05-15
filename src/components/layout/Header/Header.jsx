@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef, Suspense, useCallback } from 'react'
+import React, { useEffect, useState, useRef, Suspense, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Tooltip from '@mui/material/Tooltip'
 import './Header.scss'
@@ -172,10 +172,14 @@ const Header = () => {
     return () => { mounted = false }
   }, [])
 
-  // useEffect para detectar cambios de ruta y resetear si es necesario (limpio)
+  // Limpiar estados de búsqueda al cambiar de ruta (la nueva página ya cargó)
   useEffect(() => {
-    // Si queremos que el buscador siempre empiece cerrado en nuevas navegaciones:
-    // setSearchMode('normal')
+    setSearchLoading(false)
+    setAiVisualSearching(false)
+    if (aiVisualTimerRef.current) {
+      clearTimeout(aiVisualTimerRef.current)
+      aiVisualTimerRef.current = null
+    }
   }, [pathname])
 
   // Limpiar imagen al salir de modo IA
@@ -327,19 +331,19 @@ const Header = () => {
               setAiDropzoneOpen(false)
               let url = `/search?image_search=true`
               if (val) url += `&q=${encodeURIComponent(val)}`
-              await router.push(url)
+              router.push(url)
             } else {
               console.error('Image search error:', data?.message)
               // Fallback to text AI search
               let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
               url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
-              await router.push(url)
+              router.push(url)
             }
           } catch (fetchErr) {
             console.error('Image search fetch error:', fetchErr)
             let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
             url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
-            await router.push(url)
+            router.push(url)
           }
           return
         }
@@ -348,15 +352,14 @@ const Header = () => {
         setAiDropzoneOpen(false)
         let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
         url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
-        await router.push(url)
+        router.push(url)
         return
       }
       setSearchLoading(true)
       let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
-      await router.push(url)
+      router.push(url)
     } catch (err) {
       console.error('Navigation error on search submit', err)
-    } finally {
       setSearchLoading(false)
       setAiVisualSearching(false)
       if (aiVisualTimerRef.current) {
@@ -454,7 +457,7 @@ const Header = () => {
     setImageSearchPreview('')
   }
 
-  const ImageDropzone = () => (
+  const imageDropzoneElement = useMemo(() => (
     <div
       className={`ai-image-dropzone ${imageDragActive ? 'drag-active' : ''} ${imageSearchPreview ? 'has-image' : ''}`}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setImageDragActive(true) }}
@@ -503,7 +506,7 @@ const Header = () => {
         </div>
       )}
     </div>
-  )
+  ), [imageDragActive, imageSearchPreview, imageSearchFile, isEn])
 
   const SpinnerMini = () => (
     <div className="sk-circle" style={{ width: 16, height: 16 }}>
@@ -880,7 +883,7 @@ const Header = () => {
                 )}
               </button>
             </form>
-            {searchMode === 'ai' && aiDropzoneOpen && <ImageDropzone />}
+            {searchMode === 'ai' && aiDropzoneOpen && imageDropzoneElement}
           </div>
 
           <div className="header-cta d-flex gap-2 align-items-center desktop-only">
@@ -1096,7 +1099,7 @@ const Header = () => {
               )}
             </button>
           </form>
-          {searchMode === 'ai' && aiDropzoneOpen && <ImageDropzone />}
+          {searchMode === 'ai' && aiDropzoneOpen && imageDropzoneElement}
         </div>
       </div>
     </header>
@@ -1112,6 +1115,35 @@ const Header = () => {
       </div>
 
       <div className="mobile-drawer-body">
+        {/* Stats ribbon */}
+        {megaStats.totalAssets > 0 && (
+          <div className="mega-stats-bar" style={{ marginBottom: 12 }}>
+            <div className="mega-stat">
+              <span className="mega-stat-icon">✨</span>
+              <span className="mega-stat-value">{(megaStats.totalAssets * 2).toLocaleString()}+</span>
+              <span className="mega-stat-label">Assets</span>
+            </div>
+            <div className="mega-stat-divider" />
+            <div className="mega-stat">
+              <span className="mega-stat-icon">📦</span>
+              <span className="mega-stat-value">
+                {(() => {
+                  const bytes = megaStats.totalSizeBytes * 3;
+                  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
+                  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(0)} GB`;
+                  return `${(bytes / 1e6).toFixed(0)} MB`;
+                })()}
+              </span>
+              <span className="mega-stat-label">3D</span>
+            </div>
+            <div className="mega-stat-divider" />
+            <div className="mega-stat">
+              <span className="mega-stat-icon">🎯</span>
+              <span className="mega-stat-value">{categories.length}+</span>
+              <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
+            </div>
+          </div>
+        )}
         {/* AI Spotlight Card */}
         <div className="drawer-section">
           <div className="mega-spotlight-card" style={{ margin: '0 0 8px' }}>
