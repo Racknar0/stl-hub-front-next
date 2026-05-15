@@ -100,6 +100,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [headerHidden, setHeaderHidden] = useState(false)
   const [aiDropzoneOpen, setAiDropzoneOpen] = useState(false)
+  const [aiRingsVisible, setAiRingsVisible] = useState(false)
   const lastScrollY = useRef(0)
   const headerRef = useRef(null)
 
@@ -184,8 +185,12 @@ const Header = () => {
       setImageSearchPreview('')
       setImageDragActive(false)
       setAiDropzoneOpen(false)
+      setAiRingsVisible(false)
     } else {
       setAiDropzoneOpen(true)
+      setAiRingsVisible(true)
+      const timer = setTimeout(() => setAiRingsVisible(false), 800)
+      return () => clearTimeout(timer)
     }
   }, [searchMode])
 
@@ -806,7 +811,7 @@ const Header = () => {
           {/* Búsqueda inline solo en desktop */}
           <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
             <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
-              {searchMode === 'ai' && (
+              {aiRingsVisible && (
                 <>
                   <div className="ai-ring ai-ring-1" />
                   <div className="ai-ring ai-ring-2" />
