@@ -13,6 +13,7 @@ import {
     getVisitIdentityFromMiddlewareCookie,
 } from '../../../helpers/attributionCookie';
 import { sendGTMEvent } from '@next/third-parties/google';
+import { usePromo } from '@/hooks/usePromo';
 
 
 // Fallback plans in case API is unreachable
@@ -38,7 +39,7 @@ const PricingSection = ({
 }) => {
     const { t } = useI18n?.() || { t: () => undefined };
     const language = useStore((s) => s.language);
-    const siteConfig = useStore((s) => s.siteConfig);
+    const promo = usePromo();
     const isEn = String(language || 'es').toLowerCase() === 'en';
     const locale = isEn ? 'en-US' : 'es-CO';
 
@@ -508,7 +509,7 @@ const PricingSection = ({
                 )
             }
 
-            {siteConfig?.LAUNCH_PROMO_ACTIVE !== 'true' && <SocialProofPopup />}
+            {!promo.active && <SocialProofPopup />}
         </section>
     );
 };

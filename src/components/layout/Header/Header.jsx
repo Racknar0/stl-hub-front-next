@@ -1156,6 +1156,12 @@ const Header = () => {
               <span className="mega-stat-value">{categories.length}+</span>
               <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
             </div>
+            <div className="mega-stat-divider" />
+            <div className="mega-stat">
+              <span className="mega-stat-icon mega-stat-arrow">↑</span>
+              <span className="mega-stat-value mega-stat-green">{(Math.max(100, megaStats.weeklyAssets) * 2).toLocaleString()}</span>
+              <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos'}</span>
+            </div>
           </div>
         )}
         {/* AI Spotlight Card */}

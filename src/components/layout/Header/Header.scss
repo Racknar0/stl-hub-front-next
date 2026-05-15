@@ -1341,15 +1341,15 @@
    ═══════════════════════════════════════════════════════ */
 .mobile-hamburger { display: none; }
 
-@media (min-width: 769px) {
+@media (min-width: 993px) {
     .mobile-drawer-overlay,
     .mobile-drawer { display: none !important; }
 }
 
 /* ═══════════════════════════════════════════════════════
-   Mobile ≤768px — Hamburger + Drawer
+   Mobile ≤992px — Hamburger + Drawer
    ═══════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
     .desktop-only { display: none !important; }
 
     .navbar {
