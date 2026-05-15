@@ -621,121 +621,153 @@ const Header = () => {
 
             <div className="mega-menu" role="menu" aria-label={t('header.explore')}>
               <div className="mega-container">
-                <div className="col col-categories">
-                  <div className="col-title">{t('header.categories')}</div>
-                  <ul>
+                {/* ── Zone 1: Categories with icons ── */}
+                <div className="mega-zone mega-zone-categories">
+                  <div className="mega-zone-title">{t('header.categories')}</div>
+                  <div className="mega-cat-grid">
                     {categories.length > 0 ? (
-                      categories.map((c) => {
-
+                      categories.slice(0, 12).map((c) => {
                         const name = isEn && c.nameEn ? c.nameEn : c.name;
-                        const dinamycHref = `/search?categories=${encodeURIComponent(name)}`;
-
+                        const href = `/search?categories=${encodeURIComponent(name)}`;
                         return (
-                            <li key={c.id}>
-                                <a
-                                    href={dinamycHref}
-                                    onClick={() => {
-                                        sendGTMEvent({ event: 'category_viewed', category_name: name });
-                                        setExploreOpen(false);
-                                    }}
-                                >
-                                    {isEn ? `${c.nameEn}` : `${c.name}`}
-                                </a>
-                            </li>
+                          <a
+                            key={c.id}
+                            href={href}
+                            className="mega-cat-item"
+                            onClick={() => {
+                              sendGTMEvent({ event: 'category_viewed', category_name: name });
+                              setExploreOpen(false);
+                            }}
+                          >
+                            <span className="mega-cat-name">{name}</span>
+                          </a>
                         );
                       })
                     ) : (
-                      <>
-                        <li>{t('header.loading')}</li>
-                      </>
+                      <span className="mega-loading">{t('header.loading')}</span>
                     )}
-                  </ul>
+                  </div>
+                  {categories.length > 12 && (
+                    <a
+                      href={isEn ? '/en/search' : '/search'}
+                      className="mega-see-all"
+                      onClick={() => setExploreOpen(false)}
+                    >
+                      {isEn ? 'View all categories →' : 'Ver todas las categorías →'}
+                    </a>
+                  )}
                 </div>
 
-                <div className="col">
-                  <div className="col-title">{t('header.collectionsNow')}</div>
-                  <ul>
-                    {megaMenuLoaded ? (
-                      <>
-                        {seasonalCollections.slice(0, 6).map((it, idx) => {
+                {/* ── Zone 2: Spotlight / Featured ── */}
+                <div className="mega-zone mega-zone-spotlight">
+                  <div className="mega-spotlight-card">
+                    <div className="spotlight-glow" />
+                    <div className="spotlight-content">
+                      <span className="spotlight-badge">🤖 {isEn ? 'NEW' : 'NUEVO'}</span>
+                      <h4>{isEn ? 'AI-Powered Search' : 'Búsqueda con IA'}</h4>
+                      <p>{isEn
+                        ? 'Describe what you need or drop an image. Our AI finds the perfect model for you.'
+                        : 'Describe lo que necesitas o sube una imagen. Nuestra IA encuentra el modelo perfecto.'
+                      }</p>
+                      <button
+                        type="button"
+                        className="spotlight-cta"
+                        onClick={() => { setExploreOpen(false); setSearchMode('ai'); }}
+                      >
+                        {isEn ? 'Try it now' : 'Pruébalo ahora'} →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Seasonal collections as chips */}
+                  <div className="mega-seasonal">
+                    <div className="mega-zone-title">{t('header.collectionsNow')}</div>
+                    <div className="mega-seasonal-chips">
+                      {megaMenuLoaded ? (
+                        seasonalCollections.slice(0, 6).map((it, idx) => {
                           const label = isEn
                             ? (it?.labelEn || it?.labelEs || it?.slug || '')
                             : (it?.labelEs || it?.labelEn || it?.slug || '');
                           const query = encodeURIComponent(label);
                           const href = `${isEn ? '/en/search' : '/search'}?q=${query}&is_ai_search=true`;
-
                           return (
-                            <li key={`${it?.slug || 'seasonal'}-${idx}`}>
-                              <a
-                                href={href}
-                                onClick={() => setExploreOpen(false)}
-                              >
-                                {label}
-                              </a>
-                            </li>
+                            <a
+                              key={`${it?.slug || 'seasonal'}-${idx}`}
+                              href={href}
+                              className="mega-chip"
+                              onClick={() => setExploreOpen(false)}
+                            >
+                              {label}
+                            </a>
                           );
-                        })}
-                      </>
-                    ) : (
-                      <li>{t('header.loading')}</li>
-                    )}
-                  </ul>
+                        })
+                      ) : (
+                        <span className="mega-loading">{t('header.loading')}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="col">
-                  <div className="col-title">{t('header.tops')}</div>
-                  <ul>
-                    <li>
-                      <a
-                        href={(isEn ? '/en/search' : '/search') + '?order=downloads'}
-                        onClick={() => setExploreOpen(false)}
-                      >
-                        {isEn ? 'Most downloaded' : 'Mas descargados'}
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href={(isEn ? '/en/search' : '/search')}
-                        onClick={() => setExploreOpen(false)}
-                      >
-                        {isEn ? 'Latest 3D models' : 'Latest 3D models'}
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`}
-                        onClick={() => setExploreOpen(false)}
-                      >
-                        Anime
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('video game')}&is_ai_search=true`}
-                        onClick={() => setExploreOpen(false)}
-                      >
-                        Video game
-                      </a>
-                    </li>
-                  </ul>
-                </div>
+                {/* ── Zone 3: Quick Access ── */}
+                <div className="mega-zone mega-zone-quick">
+                  <div className="mega-quick-section">
+                    <div className="mega-zone-title">{t('header.tops')}</div>
+                    <ul>
+                      <li>
+                        <a href={(isEn ? '/en/search' : '/search') + '?order=downloads'} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">🔥</span> {isEn ? 'Most downloaded' : 'Más descargados'}
+                        </a>
+                      </li>
+                      <li>
+                        <a href={isEn ? '/en/search' : '/search'} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">✨</span> {isEn ? 'Latest models' : 'Últimos modelos'}
+                        </a>
+                      </li>
+                      <li>
+                        <a href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">⚔️</span> Anime
+                        </a>
+                      </li>
+                      <li>
+                        <a href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('video game')}&is_ai_search=true`} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">🎮</span> {isEn ? 'Video games' : 'Videojuegos'}
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
 
-                <div className="col">
-                  <div className="col-title">{t('header.exploreTitle')}</div>
-                  <ul>
-                    <li>
-                      <a
-                        href={`${isEn ? '/en/search' : '/search'}?randomizer=true`}
-                        onClick={() => setExploreOpen(false)}
-                      >
-                        Randomizer
-                      </a>
-                    </li>
-                    <li>
-                      <span>{isEn ? 'Guides' : 'Guias'}</span>
-                    </li>
-                  </ul>
+                  <div className="mega-quick-divider" />
+
+                  <div className="mega-quick-section">
+                    <div className="mega-zone-title">{t('header.exploreTitle')}</div>
+                    <ul>
+                      <li>
+                        <a href={`${isEn ? '/en/search' : '/search'}?randomizer=true`} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">🎲</span> Randomizer
+                        </a>
+                      </li>
+                      <li>
+                        <a href={isEn ? '/en/suscripcion' : '/suscripcion'} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">💎</span> {isEn ? 'Premium Plans' : 'Planes Premium'}
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
+              </div>
+
+              {/* ── Quick Search Tags ── */}
+              <div className="mega-quick-tags">
+                {['Warhammer', 'Dragon Ball', 'Mandalorian', 'Cosplay', 'Pokemon', 'Marvel', 'Naruto', 'Zelda'].map((tag) => (
+                  <a
+                    key={tag}
+                    href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent(tag)}&is_ai_search=true`}
+                    className="mega-tag"
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    {tag}
+                  </a>
+                ))}
               </div>
             </div>
           </div>
