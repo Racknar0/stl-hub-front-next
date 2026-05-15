@@ -827,7 +827,7 @@ const Header = () => {
 
           {/* Búsqueda inline solo en desktop */}
           <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
-            <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
+            <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching || searchLoading ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
               {aiRingsVisible && (
                 <>
                   <div className="ai-ring ai-ring-1" />
@@ -1050,7 +1050,7 @@ const Header = () => {
 
         {/* Búsqueda móvil (debajo), visible solo en < lg */}
         <div className={`search-panel d-lg-none ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
-          <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
+          <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching || searchLoading ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
             <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
               <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
                 <button
