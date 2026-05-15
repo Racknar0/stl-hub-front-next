@@ -269,6 +269,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       pageRef.current = 1;
       setHasMore(!!initialHasMore);
       hasMoreRef.current = !!initialHasMore;
+      setSuggestions(ssrSugRef.current || []);
     } else {
       setItems([]);
       setPage(0);
@@ -277,11 +278,11 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setAiFallback(false);
       pageRef.current = 0;
       hasMoreRef.current = true;
+      setSuggestions([]);
     }
     setIsLoadingMore(false);
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
-    setSuggestions([]);
   }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, imageSearchResults]);
 
   const trackSearchIfNeeded = useCallback(async (resultCount) => {
