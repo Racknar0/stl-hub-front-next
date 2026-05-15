@@ -1073,6 +1073,28 @@ const Header = () => {
       </div>
 
       <div className="mobile-drawer-body">
+        {/* AI Spotlight Card */}
+        <div className="drawer-section">
+          <div className="mega-spotlight-card" style={{ margin: '0 0 8px' }}>
+            <div className="spotlight-glow" />
+            <div className="spotlight-content">
+              <span className="spotlight-badge">🤖 {isEn ? 'NEW' : 'NUEVO'}</span>
+              <h4>{isEn ? 'AI-Powered Search' : 'Búsqueda con IA'}</h4>
+              <p>{isEn
+                ? 'Describe what you need or drop an image. Our AI finds the perfect model.'
+                : 'Describe lo que necesitas o sube una imagen. Nuestra IA encuentra el modelo perfecto.'
+              }</p>
+              <button
+                type="button"
+                className="spotlight-cta"
+                onClick={() => { setMobileMenuOpen(false); setSearchMode('ai'); }}
+              >
+                {isEn ? 'Try it now' : 'Pruébalo ahora'} →
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Explorar — categories */}
         <div className="drawer-section">
           <div className="drawer-section-title">{t('header.categories')}</div>
