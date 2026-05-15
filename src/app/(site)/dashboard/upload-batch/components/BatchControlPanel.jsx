@@ -390,6 +390,38 @@ export default function BatchControlPanel({
               Purgar Todo
             </Button>
           </Tooltip>
+
+          {useTelegramSource && (
+            <Tooltip title="Elimina TODOS los archivos de la carpeta telegram_downloads_organized">
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={async () => {
+                  if (!(await confirmAlert('¿Purgar Organized?', 'Esto eliminará TODOS los archivos y carpetas dentro de telegram_downloads_organized. Úsalo si quedaron residuos tras el batch.', 'Purgar', 'Cancelar', 'warning'))) return
+                  try {
+                    const res = await http.deleteRaw('/batch-imports/purge-organized')
+                    if (res.data?.success) {
+                      setToast({ open: true, msg: res.data.message, type: 'success' })
+                    } else {
+                      setToast({ open: true, msg: 'Error al purgar organized', type: 'error' })
+                    }
+                  } catch (e) {
+                    setToast({ open: true, msg: 'Error de red', type: 'error' })
+                  }
+                }}
+                startIcon={<TelegramIcon />}
+                sx={{
+                  ...compactActionBtnSx,
+                  minHeight: 32,
+                  borderColor: 'rgba(0,136,204,0.5)',
+                  color: '#7dd3fc',
+                  '&:hover': { borderColor: '#0088cc', bgcolor: 'rgba(0,136,204,0.1)', color: '#bae6fd' }
+                }}
+              >
+                Purgar Organized
+              </Button>
+            </Tooltip>
+          )}
         </Stack>
       </Stack>
     </Box>
