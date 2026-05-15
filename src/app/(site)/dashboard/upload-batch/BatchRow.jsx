@@ -67,9 +67,9 @@ export default function BatchRow({
     const cellBorder = '1px solid rgba(148,163,184,0.24)';
     const reviewThumbSize = 250;
     const baseRowBg = isError
-        ? 'rgba(239, 68, 68, 0.22)'
+        ? 'rgba(239, 68, 68, 0.35)'
         : isOk
-          ? 'rgba(22, 163, 74, 0.18)'
+          ? 'rgba(22, 163, 74, 0.30)'
           : 'rgba(15, 23, 42, 0.38)';
     const focusedBg = 'rgba(8, 145, 178, 0.26)';
 
@@ -82,7 +82,7 @@ export default function BatchRow({
                 sx={{
                     backgroundColor: isSimilarityFocused
                         ? `${focusedBg} !important`
-                        : baseRowBg,
+                        : `${baseRowBg} !important`,
                     boxShadow: isSimilarityFocused
                         ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
                         : 'none',
@@ -525,7 +525,7 @@ export default function BatchRow({
             ref={measureElement}
             data-index={virtualIndex}
             sx={{
-                backgroundColor: isSimilarityFocused ? `${focusedBg} !important` : baseRowBg,
+                backgroundColor: isSimilarityFocused ? `${focusedBg} !important` : `${baseRowBg} !important`,
                 boxShadow: isSimilarityFocused
                     ? 'inset 4px 0 0 rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.45)'
                     : 'none',

@@ -79,7 +79,7 @@ export default function BatchTable() {
   const reviewScrollRef = React.useRef(null)
 
   // SIMILARS SIDEBAR STATES
-  const [searchSidebarOpen, setSearchSidebarOpen] = useState(true)
+  const [searchSidebarOpen, setSearchSidebarOpen] = useState(false)
   const [searchSidebarSide, setSearchSidebarSide] = useState('right')
   const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
   const [similarityMap, setSimilarityMap] = useState({})
