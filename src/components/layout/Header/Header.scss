@@ -251,7 +251,24 @@
     &.ai-mode {
         border-color: rgba(0, 231, 255, 0.45);
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(0, 231, 255, 0.08);
+        overflow: visible;
     }
+
+    /* Sniper scope converging rings */
+    .ai-ring {
+        position: absolute;
+        inset: -2px;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: -1;
+        border: 2px solid rgba(0, 231, 255, 0.55);
+        box-shadow: 0 0 12px rgba(0, 231, 255, 0.3), inset 0 0 12px rgba(0, 231, 255, 0.1);
+        opacity: 0;
+        transform: scale(2.5);
+        animation: aiScopeRing 650ms ease-in forwards;
+    }
+    .ai-ring-2 { animation-delay: 130ms; }
+    .ai-ring-3 { animation-delay: 260ms; }
 
     &.ai-searching::before {
         opacity: 1;
@@ -411,6 +428,23 @@
     }
     100% {
         transform: translateX(120%);
+    }
+}
+
+@keyframes aiScopeRing {
+    0% {
+        opacity: 0;
+        transform: scale(2.5);
+    }
+    15% {
+        opacity: 0.7;
+    }
+    70% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1);
     }
 }
 

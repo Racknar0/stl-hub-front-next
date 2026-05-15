@@ -772,6 +772,13 @@ const Header = () => {
           {/* Búsqueda inline solo en desktop */}
           <div className={`search-inline d-none d-lg-flex flex-grow-1 px-3 ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
             <form className={`search-form w-100 ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
+              {searchMode === 'ai' && (
+                <>
+                  <div className="ai-ring ai-ring-1" />
+                  <div className="ai-ring ai-ring-2" />
+                  <div className="ai-ring ai-ring-3" />
+                </>
+              )}
               <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
                 <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
                   <button
