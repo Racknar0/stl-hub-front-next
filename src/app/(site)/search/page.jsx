@@ -160,6 +160,7 @@ export default async function Page({ searchParams }) {
   const initialTotal = ssrData?.total || 0;
   const initialHasMore = ssrData?.hasMore ?? false;
   const initialAiFallback = ssrData?.aiFallback ?? false;
+  const initialSuggestions = ssrData?.suggestions || [];
 
   return (
     <Suspense fallback={<div>Cargando...</div>}>
@@ -169,6 +170,7 @@ export default async function Page({ searchParams }) {
         initialTotal={initialTotal}
         initialHasMore={initialHasMore}
         initialAiFallback={initialAiFallback}
+        initialSuggestions={initialSuggestions}
       />
     </Suspense>
   );

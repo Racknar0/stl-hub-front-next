@@ -145,7 +145,7 @@ function toDisplayItem(a, lang) {
   };
 }
 
-export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback }) {
+export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback, initialSuggestions }) {
   const { t } = useI18n();
   const language = useStore((s)=>s.language);
   const imageSearchResults = useStore((s) => s.imageSearchResults);
@@ -178,7 +178,11 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [scrollElement, setScrollElement] = useState(null);
   const [virtualMetrics, setVirtualMetrics] = useState({ width: 0, top: 0, windowW: 0 });
   const searchEventIdRef = useRef(null);
-  const [suggestions, setSuggestions] = useState([]);
+  const ssrSugRef = useRef(null);
+  if (ssrSugRef.current === null && Array.isArray(initialSuggestions) && initialSuggestions.length > 0) {
+    ssrSugRef.current = initialSuggestions.map(a => toDisplayItem(a, 'es'));
+  }
+  const [suggestions, setSuggestions] = useState(ssrSugRef.current || []);
   
   // Refs para evitar condiciones de carrera y loops
   const pageRef = useRef(hasSSRData ? 1 : 0);
