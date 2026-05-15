@@ -246,3 +246,33 @@
         transform: translateY(0);
     }
 }
+
+/* ── AI Suggestions Section ── */
+.suggestions-section {
+    margin-top: 2rem;
+    animation: aiFallbackSlideIn 0.5s ease-out;
+}
+.suggestions-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(106, 92, 255, 0.4), rgba(0, 231, 255, 0.3), rgba(106, 92, 255, 0.4), transparent);
+    margin-bottom: 1.5rem;
+}
+.suggestions-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #e9efff;
+    margin: 0 0 1rem;
+    text-shadow: 0 0 16px rgba(0, 231, 255, 0.25);
+}
+.suggestions-icon {
+    font-size: 1.3rem;
+}
+.suggestions-subtitle {
+    font-size: 0.85rem;
+    color: rgba(199, 210, 254, 0.6);
+    margin: -0.5rem 0 1.2rem;
+    font-weight: 400;
+}

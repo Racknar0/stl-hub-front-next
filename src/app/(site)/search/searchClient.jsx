@@ -178,6 +178,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [scrollElement, setScrollElement] = useState(null);
   const [virtualMetrics, setVirtualMetrics] = useState({ width: 0, top: 0, windowW: 0 });
   const searchEventIdRef = useRef(null);
+  const [suggestions, setSuggestions] = useState([]);
   
   // Refs para evitar condiciones de carrera y loops
   const pageRef = useRef(hasSSRData ? 1 : 0);
@@ -276,6 +277,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     setIsLoadingMore(false);
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
+    setSuggestions([]);
   }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, imageSearchResults]);
 
   const trackSearchIfNeeded = useCallback(async (resultCount) => {
@@ -367,7 +369,11 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       });
       const list = (res.data?.items || []).map(a => toDisplayItem(a, language));
       setItems(prev => nextPage === 0 ? list : [...prev, ...list]);
-      if (nextPage === 0) setAiFallback(!!res.data?.aiFallback);
+      if (nextPage === 0) {
+        setAiFallback(!!res.data?.aiFallback);
+        const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, language));
+        setSuggestions(sugList);
+      }
       const total = Number(res.data?.total ?? 0);
       const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
       const computedHasMore = typeof res.data?.hasMore === 'boolean'
@@ -668,6 +674,25 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
                 {isEn ? 'No more results' : 'No hay más resultados'}
               </div>
             )}
+          </div>
+        )}
+
+        {/* AI Suggestions */}
+        {suggestions.length > 0 && !loading && (
+          <div className="suggestions-section">
+            <div className="suggestions-divider" />
+            <h2 className="suggestions-title">
+              <span className="suggestions-icon">🤖</span>
+              {isEn ? 'AI-Powered Suggestions' : 'Sugerencias con IA'}
+            </h2>
+            <p className="suggestions-subtitle">
+              {isEn
+                ? 'Our AI found these related models you might love'
+                : 'Nuestra IA encontró estos modelos relacionados que te pueden gustar'}
+            </p>
+            <div className="results-grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+              {suggestions.map((it) => renderResultCard(it))}
+            </div>
           </div>
         )}
       </div>
