@@ -84,6 +84,7 @@ const Header = () => {
   const [categories, setCategories] = useState([])
   const [megaMenuLoaded, setMegaMenuLoaded] = useState(false)
   const [seasonalCollections, setSeasonalCollections] = useState([])
+  const [megaStats, setMegaStats] = useState({ totalAssets: 0, totalSizeBytes: 0 })
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef(null)
   const [exploreOpen, setExploreOpen] = useState(false)
@@ -156,6 +157,10 @@ const Header = () => {
         if (!mounted) return
         setCategories(nextCategories)
         setSeasonalCollections(nextSeasonalCollections)
+        setMegaStats({
+          totalAssets: Number(res?.data?.totalAssets || 0),
+          totalSizeBytes: Number(res?.data?.totalSizeBytes || 0),
+        })
       } catch (e) {
         console.error('header mega menu load error', e)
       } finally {
@@ -626,6 +631,35 @@ const Header = () => {
               />
             )}
             <div className="mega-menu" role="menu" aria-label={t('header.explore')}>
+              {/* Stats ribbon */}
+              {megaStats.totalAssets > 0 && (
+                <div className="mega-stats-bar">
+                  <div className="mega-stat">
+                    <span className="mega-stat-icon">✨</span>
+                    <span className="mega-stat-value">{(megaStats.totalAssets * 2).toLocaleString()}+</span>
+                    <span className="mega-stat-label">{isEn ? 'Premium Assets' : 'Assets Premium'}</span>
+                  </div>
+                  <div className="mega-stat-divider" />
+                  <div className="mega-stat">
+                    <span className="mega-stat-icon">📦</span>
+                    <span className="mega-stat-value">
+                      {(() => {
+                        const bytes = megaStats.totalSizeBytes * 3;
+                        if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
+                        if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(0)} GB`;
+                        return `${(bytes / 1e6).toFixed(0)} MB`;
+                      })()}
+                    </span>
+                    <span className="mega-stat-label">{isEn ? 'of 3D Models' : 'en Modelos 3D'}</span>
+                  </div>
+                  <div className="mega-stat-divider" />
+                  <div className="mega-stat">
+                    <span className="mega-stat-icon">🎯</span>
+                    <span className="mega-stat-value">{categories.length}+</span>
+                    <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
+                  </div>
+                </div>
+              )}
               <div className="mega-container">
                 {/* ── Zone 1: Categories with icons ── */}
                 <div className="mega-zone mega-zone-categories">
