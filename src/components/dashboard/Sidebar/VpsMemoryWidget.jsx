@@ -4,13 +4,18 @@ import React, { useEffect, useMemo, useState } from 'react'
 import HttpService from '@/services/HttpService'
 import styles from './VpsMemoryWidget.module.scss'
 
-const POLL_MS = 15000
+const POLL_MS = 3000
 
 function buildWindowsPreviewMemory() {
   const totalBytes = 240 * 1024 * 1024 * 1024
   const usagePct = 57.4
   const usedBytes = Math.round((usagePct / 100) * totalBytes)
   const availableBytes = Math.max(0, totalBytes - usedBytes)
+
+  const ramTotalBytes = 16 * 1024 * 1024 * 1024
+  const ramUsagePct = 42.1
+  const ramUsedBytes = Math.round((ramUsagePct / 100) * ramTotalBytes)
+  const ramFreeBytes = Math.max(0, ramTotalBytes - ramUsedBytes)
 
   return {
     supported: true,
@@ -20,6 +25,10 @@ function buildWindowsPreviewMemory() {
     usedBytes,
     usagePct,
     dangerThresholdPct: 90,
+    ramTotalBytes,
+    ramFreeBytes,
+    ramUsedBytes,
+    ramUsagePct,
   }
 }
 
@@ -34,8 +43,14 @@ export default function VpsMemoryWidget() {
   const [loading, setLoading] = useState(false)
   const runningOnWindowsClient = typeof window !== 'undefined' && /win/i.test(String(window.navigator?.platform || ''))
 
-  const pct = useMemo(() => {
+  const diskPct = useMemo(() => {
     const n = Number(memory?.usagePct || 0)
+    if (!Number.isFinite(n)) return 0
+    return Math.max(0, Math.min(100, n))
+  }, [memory])
+
+  const ramPct = useMemo(() => {
+    const n = Number(memory?.ramUsagePct || 0)
     if (!Number.isFinite(n)) return 0
     return Math.max(0, Math.min(100, n))
   }, [memory])
@@ -77,18 +92,39 @@ export default function VpsMemoryWidget() {
 
   if (!memory && !loading) return null
 
-  const danger = pct >= 90
-  const totalText = toGB(memory?.totalBytes)
-  const freeText = toGB(memory?.availableBytes)
+  const diskDanger = diskPct >= 90
+  const diskTotalText = toGB(memory?.totalBytes)
+  const diskFreeText = toGB(memory?.availableBytes)
+  const diskUsedText = toGB(memory?.usedBytes)
+
+  const ramDanger = ramPct >= 90
+  const ramTotalText = toGB(memory?.ramTotalBytes)
+  const ramFreeText = toGB(memory?.ramFreeBytes)
+  const ramUsedText = toGB(memory?.ramUsedBytes)
 
   return (
-    <div className={styles.widget} role="status" aria-label="Almacenamiento del VPS">
-      <div className={styles.header}>Almacenamiento VPS</div>
-      <div className={styles.meta}>Total: {totalText} GB · Restante: {freeText} GB</div>
-      <div className={styles.track}>
-        <div className={[styles.fill, danger ? styles.fillDanger : ''].filter(Boolean).join(' ')} style={{ width: `${pct}%` }} />
+    <div className={styles.widget} role="status" aria-label="Recursos del VPS">
+      <div className={styles.header}>Servidor VPS</div>
+      
+      <div className={styles.metricBlock}>
+        <div className={styles.meta}>
+          <strong>Disco:</strong> {diskUsedText} GB de {diskTotalText} GB <span>({diskPct.toFixed(1)}%)</span>
+        </div>
+        <div className={styles.track}>
+          <div className={[styles.fill, diskDanger ? styles.fillDanger : ''].filter(Boolean).join(' ')} style={{ width: `${diskPct}%` }} />
+        </div>
+        <div className={styles.footer}>Libre: {diskFreeText} GB</div>
       </div>
-      <div className={styles.footer}>{loading ? 'Actualizando...' : `${pct.toFixed(1)}% ocupado`}</div>
+
+      <div className={styles.metricBlock}>
+        <div className={styles.meta}>
+          <strong>RAM:</strong> {ramUsedText} GB de {ramTotalText} GB <span>({ramPct.toFixed(1)}%)</span>
+        </div>
+        <div className={styles.track}>
+          <div className={[styles.fill, styles.fillRam, ramDanger ? styles.fillDanger : ''].filter(Boolean).join(' ')} style={{ width: `${ramPct}%` }} />
+        </div>
+        <div className={styles.footer}>Libre: {ramFreeText} GB</div>
+      </div>
     </div>
   )
 }

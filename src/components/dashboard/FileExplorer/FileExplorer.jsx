@@ -156,6 +156,12 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         breadcrumbs.push({ label: part, path: accum });
     }
 
+    const formatSize = (bytes) => {
+        if (!bytes || bytes <= 0) return '--';
+        if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    };
+
     const getFileVisual = (file) => {
         const size = viewMode === 'grid' ? gridIconSize : 24;
         if (file.isDir) return <FolderIcon sx={{ color: '#60a5fa', fontSize: size }} />;
@@ -262,7 +268,8 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                                                     <Typography sx={{ color: 'white', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word', fontSize: '0.85rem', lineHeight: 1.3, mb: 0.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                         {file.name}
                                                     </Typography>
-                                                    {!file.isDir && file.size > 0 && <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</Typography>}
+                                                    {!file.isDir && file.size > 0 && <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>{formatSize(file.size)}</Typography>}
+                                                    {file.isDir && file.size > 0 && currentPath === '/' && <Typography sx={{ color: '#10b981', fontSize: '0.75rem' }}>{formatSize(file.size)}</Typography>}
                                                 </Box>
                                                 <IconButton className="action-menu" size="small" onClick={(e) => handleMenuClick(e, file)} sx={{ position: 'absolute', top: 4, right: 4, color: '#64748b', opacity: 0, transition: 'opacity 0.2s', '&:hover': { color: 'white' } }}>
                                                     <MoreVertIcon />
@@ -303,7 +310,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                                                 {getFileVisual(file)} {file.name}
                                             </TableCell>
                                             <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                {!file.isDir ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : '--'}
+                                                {file.size > 0 && (!file.isDir || currentPath === '/') ? formatSize(file.size) : '--'}
                                             </TableCell>
                                             <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                                                 {file.modDate ? new Date(file.modDate).toLocaleDateString() : '--'}
