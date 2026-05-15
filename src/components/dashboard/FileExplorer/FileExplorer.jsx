@@ -6,7 +6,8 @@ import {
     Menu, MenuItem, ListItemIcon, ListItemText,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField,
     Select, FormControl, InputLabel, Tooltip, ToggleButtonGroup, ToggleButton,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Slider
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Slider,
+    CircularProgress
 } from '@mui/material';
 import {
     Folder as FolderIcon,
@@ -24,7 +25,8 @@ import {
     Archive as ArchiveIcon,
     Description as DescriptionIcon,
     ViewInAr as ViewInArIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    DeleteSweep as PurgeIcon
 } from '@mui/icons-material';
 
 export default function FileExplorer({ initialPath = '/', isModal = false, onClose = null }) {
@@ -34,6 +36,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     const [selectedFile, setSelectedFile] = useState(null);
     const [viewMode, setViewMode] = useState('grid');
     const [gridIconSize, setGridIconSize] = useState(60);
+    const [loading, setLoading] = useState(false);
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     
     const [dialogMode, setDialogMode] = useState(null);
@@ -59,6 +62,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
 
     const loadFiles = useCallback(async (path = '/') => {
         try {
+            setLoading(true);
             const res = await http.getData(`/file-explorer/list?path=${encodeURIComponent(path)}`);
             if (res.data?.success) {
                 const sortedFiles = res.data.files.sort((a, b) => {
@@ -73,6 +77,8 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         } catch (error) {
             console.error('Error loadFiles:', error);
             alert('Error de conexión');
+        } finally {
+            setLoading(false);
         }
     }, [http]);
 
@@ -111,7 +117,28 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     const handleDelete = async () => {
         handleMenuClose();
         if (confirm(`¿Borrar "${selectedFile.name}" permanentemente?`)) {
-            await http.postData('/file-explorer/delete', { files: [selectedFile.id] });
+            try {
+                const res = await http.postData('/file-explorer/delete', { files: [selectedFile.id] });
+                if (res.data?.success === false) {
+                    alert(`Error al borrar: ${res.data?.message || 'desconocido'}`);
+                }
+            } catch (e) {
+                alert(`Error al borrar: ${e?.response?.data?.message || e.message}`);
+            }
+            loadFiles(currentPath);
+        }
+    };
+
+    const handlePurge = async () => {
+        handleMenuClose();
+        if (!selectedFile?.isDir) return;
+        if (confirm(`¿Purgar TODO el contenido de "${selectedFile.name}"?\n\nSe eliminarán todos los archivos y subcarpetas dentro, pero la carpeta se mantiene.`)) {
+            try {
+                const res = await http.postData('/file-explorer/purge', { folder: selectedFile.id });
+                alert(res.data?.message || 'Carpeta purgada');
+            } catch (e) {
+                alert(`Error al purgar: ${e?.response?.data?.message || e.message}`);
+            }
             loadFiles(currentPath);
         }
     };
@@ -186,7 +213,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     const itemWidth = Math.max(160, gridIconSize + 60);
     const columns = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
     const rowCount = Math.ceil(files.length / columns);
-    const itemHeight = gridIconSize + 100; // estimated fixed height for grid item
+    const itemHeight = gridIconSize + 120;
 
     const gridVirtualizer = useVirtualizer({
         count: viewMode === 'grid' ? rowCount : 0,
@@ -239,9 +266,18 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
             </Box>
 
             <Box ref={parentRef} sx={{ flex: 1, overflowY: 'auto', pr: 1 }}>
-                {files.length === 0 && <Typography sx={{ color: '#64748b', textAlign: 'center', mt: 5 }}>La carpeta está vacía</Typography>}
+                {loading && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', mt: 8, gap: 2 }}>
+                        <CircularProgress size={40} sx={{ color: '#8b5cf6' }} />
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                            {currentPath === '/' ? 'Calculando tamaño de carpetas...' : 'Cargando archivos...'}
+                        </Typography>
+                    </Box>
+                )}
 
-                {files.length > 0 && viewMode === 'grid' && (
+                {!loading && files.length === 0 && <Typography sx={{ color: '#64748b', textAlign: 'center', mt: 5 }}>La carpeta está vacía</Typography>}
+
+                {!loading && files.length > 0 && viewMode === 'grid' && (
                     <Box sx={{ position: 'relative', width: '100%', height: `${gridVirtualizer.getTotalSize()}px` }}>
                         {gridVirtualizer.getVirtualItems().map((virtualRow) => {
                             const y = virtualRow.start;
@@ -259,7 +295,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                                                 sx={{
                                                     position: 'relative', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px',
                                                     p: 2, pt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1,
-                                                    cursor: 'pointer', transition: 'all 0.2s', width: itemWidth, height: itemHeight,
+                                                    cursor: 'pointer', transition: 'all 0.2s', width: itemWidth, minHeight: itemHeight,
                                                     '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(139, 92, 246, 0.5)', '& .action-menu': { opacity: 1 } }
                                                 }}
                                             >
@@ -269,7 +305,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                                                         {file.name}
                                                     </Typography>
                                                     {!file.isDir && file.size > 0 && <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>{formatSize(file.size)}</Typography>}
-                                                    {file.isDir && file.size > 0 && currentPath === '/' && <Typography sx={{ color: '#10b981', fontSize: '0.75rem' }}>{formatSize(file.size)}</Typography>}
+                                                    {file.isDir && file.size > 0 && currentPath === '/' && <Typography sx={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 600 }}>{formatSize(file.size)}</Typography>}
                                                 </Box>
                                                 <IconButton className="action-menu" size="small" onClick={(e) => handleMenuClick(e, file)} sx={{ position: 'absolute', top: 4, right: 4, color: '#64748b', opacity: 0, transition: 'opacity 0.2s', '&:hover': { color: 'white' } }}>
                                                     <MoreVertIcon />
@@ -283,7 +319,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                     </Box>
                 )}
 
-                {files.length > 0 && viewMode === 'list' && (
+                {!loading && files.length > 0 && viewMode === 'list' && (
                     <TableContainer component={Paper} sx={{ bgcolor: 'rgba(15, 23, 42, 0.4)', backgroundImage: 'none', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <Table size="small" sx={{ tableLayout: 'fixed' }}>
                             <TableHead>
@@ -309,7 +345,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
                                             <TableCell sx={{ color: 'white', flex: 1, display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                                 {getFileVisual(file)} {file.name}
                                             </TableCell>
-                                            <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                            <TableCell align="right" sx={{ color: file.isDir && file.size > 0 ? '#10b981' : '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                                                 {file.size > 0 && (!file.isDir || currentPath === '/') ? formatSize(file.size) : '--'}
                                             </TableCell>
                                             <TableCell align="right" sx={{ color: '#94a3b8', width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -332,6 +368,9 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} PaperProps={{ sx: { bgcolor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white' } }}>
                 <MenuItem onClick={() => openDialog('rename')}><ListItemIcon><RenameIcon fontSize="small" sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText>Renombrar</ListItemText></MenuItem>
                 <MenuItem onClick={() => openDialog('move')}><ListItemIcon><MoveIcon fontSize="small" sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText>Mover a...</ListItemText></MenuItem>
+                {selectedFile?.isDir && (
+                    <MenuItem onClick={handlePurge} sx={{ color: '#f59e0b' }}><ListItemIcon><PurgeIcon fontSize="small" sx={{ color: '#f59e0b' }} /></ListItemIcon><ListItemText>Purgar carpeta</ListItemText></MenuItem>
+                )}
                 <MenuItem onClick={handleDelete} sx={{ color: '#ef4444' }}><ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#ef4444' }} /></ListItemIcon><ListItemText>Eliminar</ListItemText></MenuItem>
             </Menu>
 
