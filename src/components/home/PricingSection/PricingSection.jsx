@@ -38,6 +38,7 @@ const PricingSection = ({
 }) => {
     const { t } = useI18n?.() || { t: () => undefined };
     const language = useStore((s) => s.language);
+    const siteConfig = useStore((s) => s.siteConfig);
     const isEn = String(language || 'es').toLowerCase() === 'en';
     const locale = isEn ? 'en-US' : 'es-CO';
 
@@ -507,7 +508,7 @@ const PricingSection = ({
                 )
             }
 
-            <SocialProofPopup />
+            {siteConfig?.LAUNCH_PROMO_ACTIVE !== 'true' && <SocialProofPopup />}
         </section>
     );
 };
