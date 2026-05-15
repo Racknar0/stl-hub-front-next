@@ -515,30 +515,35 @@
 
 /* Mostrar menú por clase .open (sin hover) para que cierre con el botón */
 .mega-menu {
-    position: absolute;
-    left: 0;
-    top: calc(100% + 8px);
-    width: 960px;
+    position: fixed;
+    left: 50%;
+    top: 60px;
+    width: 1200px;
+    max-width: calc(100vw - 40px);
+    transform: translateX(-50%) translateY(-8px);
+    width: min(1200px, calc(100vw - 40px));
     background: rgba(15, 20, 35, 0.96);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     color: #e9efff;
     border-radius: 16px;
-    padding: 28px 24px 18px;
+    padding: 28px 28px 18px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(106, 92, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.06);
     display: none;
     z-index: 2000;
     opacity: 0;
-    transform: translateY(-8px);
     animation: megaFadeIn 220ms ease forwards;
 }
 @keyframes megaFadeIn {
-    to { opacity: 1; transform: translateY(0); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-/* Añadido nuevamente: abrir también por hover en desktop */
-.explore-wrap:hover .mega-menu {
-    display: block;
+/* Only open via JS .open class — no hover override */
+.mega-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1999;
+    cursor: default;
 }
 .explore-wrap.open .mega-menu {
     display: block;
@@ -546,8 +551,8 @@
 
 .mega-container {
     display: grid;
-    grid-template-columns: 1fr 1fr 0.8fr;
-    gap: 24px;
+    grid-template-columns: 1.4fr 1fr 0.7fr;
+    gap: 28px;
 }
 
 .mega-zone-title {
@@ -562,9 +567,21 @@
 }
 
 /* ── Zone 1: Categories ── */
+.mega-zone-categories {
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 107, 255, 0.5) rgba(255, 255, 255, 0.04);
+
+    &::-webkit-scrollbar { width: 6px; }
+    &::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); border-radius: 6px; }
+    &::-webkit-scrollbar-thumb { background: rgba(124, 107, 255, 0.5); border-radius: 6px; }
+    &::-webkit-scrollbar-thumb:hover { background: rgba(124, 107, 255, 0.7); }
+}
 .mega-cat-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 4px;
 }
 .mega-cat-item {
@@ -785,9 +802,9 @@
 }
 
 /* Responsive mega-menu */
-@media (max-width: 1200px) {
-    .mega-menu {
-        width: 780px;
+@media (max-width: 1280px) {
+    .mega-cat-grid {
+        grid-template-columns: 1fr 1fr;
     }
 }
 

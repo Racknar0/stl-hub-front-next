@@ -619,6 +619,12 @@ const Header = () => {
               {t('header.explore')}
             </button>
 
+            {exploreOpen && (
+              <div
+                className="mega-backdrop"
+                onClick={() => setExploreOpen(false)}
+              />
+            )}
             <div className="mega-menu" role="menu" aria-label={t('header.explore')}>
               <div className="mega-container">
                 {/* ── Zone 1: Categories with icons ── */}
@@ -626,7 +632,7 @@ const Header = () => {
                   <div className="mega-zone-title">{t('header.categories')}</div>
                   <div className="mega-cat-grid">
                     {categories.length > 0 ? (
-                      categories.slice(0, 12).map((c) => {
+                      categories.map((c) => {
                         const name = isEn && c.nameEn ? c.nameEn : c.name;
                         const href = `/search?categories=${encodeURIComponent(name)}`;
                         return (
@@ -647,15 +653,6 @@ const Header = () => {
                       <span className="mega-loading">{t('header.loading')}</span>
                     )}
                   </div>
-                  {categories.length > 12 && (
-                    <a
-                      href={isEn ? '/en/search' : '/search'}
-                      className="mega-see-all"
-                      onClick={() => setExploreOpen(false)}
-                    >
-                      {isEn ? 'View all categories →' : 'Ver todas las categorías →'}
-                    </a>
-                  )}
                 </div>
 
                 {/* ── Zone 2: Spotlight / Featured ── */}
