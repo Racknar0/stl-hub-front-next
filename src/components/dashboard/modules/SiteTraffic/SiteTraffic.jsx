@@ -10,6 +10,7 @@ export default function SiteTraffic() {
     pv: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
     sessions: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
     visitors: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
+    downloads: { '30m': 0, '1h': 0, '3h': 0, '6h': 0, '12h': 0, 'hoy': 0, '2d': 0, '3d': 0, '7d': 0, '15d': 0, '1m': 0, '1y': 0, all: 0 },
   })
   const http = new HttpService()
 
@@ -36,6 +37,7 @@ export default function SiteTraffic() {
   const pv = loading ? '...' : (data.pv[range] || 0)
   const sessions = loading ? '...' : (data.sessions[range] || 0)
   const visitors = loading ? '...' : (data.visitors[range] || 0)
+  const downloads = loading ? '...' : (data.downloads[range] || 0)
 
   return (
     <div className="site-traffic-module">
@@ -71,6 +73,12 @@ export default function SiteTraffic() {
           <div className="label">Visitantes Únicos</div>
           <div className="value">{visitors === '...' ? '...' : Number(visitors).toLocaleString()}</div>
           <div className="desc">Usuarios únicos (Cookies)</div>
+        </div>
+
+        <div className="traffic-card downloads">
+          <div className="label">Descargas</div>
+          <div className="value">{downloads === '...' ? '...' : Number(downloads).toLocaleString()}</div>
+          <div className="desc">Archivos descargados</div>
         </div>
       </div>
     </div>

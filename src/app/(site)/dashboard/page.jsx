@@ -10,8 +10,8 @@ import TotalArchivo from '@/components/dashboard/modules/TotalArchivo/TotalArchi
 import TotalUsers from '@/components/dashboard/modules/TotalUsers/TotalUsers';
 import ConexionesHoy from '@/components/dashboard/modules/ConexionesHoy/ConexionesHoy';
 import Storage from '@/components/dashboard/modules/Storage/Storage';
-import TotalDescargas from '@/components/dashboard/modules/TotalDescargas/TotalDescargas';
-import TotalVisitas from '@/components/dashboard/modules/TotalVisitas/TotalVisitas';
+
+
 import TotalRegistros from '@/components/dashboard/modules/TotalRegistros/TotalRegistros';
 import ReportsCard from '@/components/dashboard/modules/ReportsCard/ReportsCard';
 import TotalVentas from '@/components/dashboard/modules/TotalVentas/TotalVentas';
@@ -286,8 +286,6 @@ export default function Page() {
               <TotalUsers />
               <ConexionesHoy value={42} />
               <Storage />
-              <TotalDescargas value={98765} />
-              <TotalVisitas value={54321} />
               <TotalRegistros value={4321} />
             </div>
 
