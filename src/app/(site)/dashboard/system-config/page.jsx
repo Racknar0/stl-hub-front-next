@@ -184,6 +184,42 @@ export default function SystemConfigPage() {
                       : `La promo durará ${editValues['LAUNCH_PROMO_DAYS']} día(s) desde que la actives.`
                     }
                   </small>
+
+                  {/* ⏱️ Countdown indicator */}
+                  {editValues['LAUNCH_PROMO_ACTIVE'] === 'true' && editValues['LAUNCH_PROMO_START'] && (() => {
+                    const start = new Date(editValues['LAUNCH_PROMO_START']);
+                    if (isNaN(start.getTime())) return null;
+                    const days = Number(editValues['LAUNCH_PROMO_DAYS'] || 0);
+                    const elapsed = (Date.now() - start.getTime()) / (1000 * 60 * 60 * 24);
+                    const startStr = start.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    if (days === 0) {
+                      return (
+                        <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+                          <span>♾️</span>
+                          <span style={{ color: '#94a3b8' }}>Activo desde <strong style={{ color: '#34d399' }}>{startStr}</strong></span>
+                          <span style={{ color: '#64748b' }}>•</span>
+                          <span style={{ color: '#34d399', fontWeight: 700 }}>Ilimitado</span>
+                        </div>
+                      );
+                    }
+
+                    const daysLeft = Math.ceil(days - elapsed);
+                    const expired = daysLeft <= 0;
+                    const urgentColor = daysLeft <= 3 ? '#ef4444' : daysLeft <= 7 ? '#f59e0b' : '#34d399';
+
+                    return (
+                      <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: expired ? 'rgba(239,68,68,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${expired ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.2)'}`, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+                        <span>{expired ? '⏰' : '⏱️'}</span>
+                        <span style={{ color: '#94a3b8' }}>Desde <strong style={{ color: expired ? '#ef4444' : '#34d399' }}>{startStr}</strong></span>
+                        <span style={{ color: '#64748b' }}>•</span>
+                        {expired
+                          ? <span style={{ color: '#ef4444', fontWeight: 700 }}>Expirada (terminó hace {Math.abs(daysLeft)} día{Math.abs(daysLeft) !== 1 ? 's' : ''})</span>
+                          : <span style={{ color: urgentColor, fontWeight: 700 }}>Quedan {daysLeft} día{daysLeft !== 1 ? 's' : ''}</span>
+                        }
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="setting-footer">
