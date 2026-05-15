@@ -218,7 +218,7 @@ const PricingSection = ({
                                 <span className="icon">✨</span>
                                 <span>
                                     {isEn ? 'Access to' : 'Acceso a'}{' '}
-                                    <strong className="glow-text">+{Number(totalAssets * 2).toLocaleString()}</strong>{' '}
+                                    <strong className="glow-text">+{new Intl.NumberFormat('en-US').format(Number(totalAssets * 2))}</strong>{' '}
                                     {isEn ? 'Premium Assets' : 'Assets Premium'}
                                 </span>
                             </li>
