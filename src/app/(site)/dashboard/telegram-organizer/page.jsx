@@ -357,61 +357,63 @@ export default function TelegramOrganizer() {
 
 
 
-      <div className="grid">
-        {files.map(file => (
-          <div
-            key={file.name}
-            className={`card ${file.type === 'anchor' ? 'anchor' : ''} ${selectedAnchor === file.name ? 'selected-anchor' : ''} ${selectedFiles.has(file.name) ? 'selected-file' : ''}`}
-            onClick={() => handleCardClick(file.name, file.type)}
-          >
-            <input
-              type="checkbox"
-              className="del-check"
-              checked={filesToDelete.has(file.name)}
-              onChange={(e) => toggleDelete(file.name, e.target.checked, e)}
-              onClick={e => e.stopPropagation()}
-            />
-            <button className="delete-btn-quick" title="Eliminar" onClick={(e) => quickDelete(file.name, e)}>🗑️</button>
-            {file.type === 'image' && (
-              <button 
-                className="preview-btn-quick" 
-                title="Ver en grande" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewImage(`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`);
-                }}
-              >
-                <VisibilityIcon fontSize="small" />
-              </button>
-            )}
-
-            {file.type === 'anchor' && (
-              <>
-                <button className="quick-pack left" title="Pack ←" onClick={(e) => quickPackage(file.name, 'left', e)}>⬅️</button>
-                <button className="quick-pack right" title="Pack →" onClick={(e) => quickPackage(file.name, 'right', e)}>➡️</button>
-                <div className="badge">ASSET</div>
-              </>
-            )}
-
-            <div className="card-img">
-              {file.type === 'image' ? (
-                <img src={`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`} loading="lazy" alt={file.name} />
-              ) : (
-                file.isCompressed ? '📚' : '🗿'
+      <div className="scroll-area">
+        <div className="grid">
+          {files.map(file => (
+            <div
+              key={file.name}
+              className={`card ${file.type === 'anchor' ? 'anchor' : ''} ${selectedAnchor === file.name ? 'selected-anchor' : ''} ${selectedFiles.has(file.name) ? 'selected-file' : ''}`}
+              onClick={() => handleCardClick(file.name, file.type)}
+            >
+              <input
+                type="checkbox"
+                className="del-check"
+                checked={filesToDelete.has(file.name)}
+                onChange={(e) => toggleDelete(file.name, e.target.checked, e)}
+                onClick={e => e.stopPropagation()}
+              />
+              <button className="delete-btn-quick" title="Eliminar" onClick={(e) => quickDelete(file.name, e)}>🗑️</button>
+              {file.type === 'image' && (
+                <button 
+                  className="preview-btn-quick" 
+                  title="Ver en grande" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`);
+                  }}
+                >
+                  <VisibilityIcon fontSize="small" />
+                </button>
               )}
-            </div>
-            <div className="card-name">{file.name}</div>
-          </div>
-        ))}
-      </div>
 
-      {remaining > 0 && (
-        <div className="load-more">
-          <button className="btn btn-load" onClick={() => loadFiles(false)} disabled={loading}>
-            📦 Cargar {Math.min(remaining, PAGE_SIZE)} Más ({remaining} restantes)
-          </button>
+              {file.type === 'anchor' && (
+                <>
+                  <button className="quick-pack left" title="Pack ←" onClick={(e) => quickPackage(file.name, 'left', e)}>⬅️</button>
+                  <button className="quick-pack right" title="Pack →" onClick={(e) => quickPackage(file.name, 'right', e)}>➡️</button>
+                  <div className="badge">ASSET</div>
+                </>
+              )}
+
+              <div className="card-img">
+                {file.type === 'image' ? (
+                  <img src={`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`} loading="lazy" alt={file.name} />
+                ) : (
+                  file.isCompressed ? '📚' : '🗿'
+                )}
+              </div>
+              <div className="card-name">{file.name}</div>
+            </div>
+          ))}
         </div>
-      )}
+
+        {remaining > 0 && (
+          <div className="load-more">
+            <button className="btn btn-load" onClick={() => loadFiles(false)} disabled={loading}>
+              📦 Cargar {Math.min(remaining, PAGE_SIZE)} Más ({remaining} restantes)
+            </button>
+          </div>
+        )}
+      </div>
 
       <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="lg">
         {previewImage && (
