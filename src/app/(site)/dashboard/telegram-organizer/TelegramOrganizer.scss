@@ -162,30 +162,21 @@
     inset: 0;
     z-index: 1300;
     background-color: var(--background-default, #0f172a);
-    padding: 20px;
-    padding-top: 100px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 
     .header-review {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1301;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       gap: 15px;
-      padding: 10px 24px;
-      border-radius: 50px;
+      padding: 12px 24px;
       background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(127, 127, 127, 0.2);
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(10px);
-      flex-wrap: nowrap;
-      width: max-content;
-      max-width: 90vw;
-      overflow-x: auto;
-      
+      border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.4);
+      flex-wrap: wrap;
+
       .stat {
         padding: 0.4rem 0.8rem;
         background: transparent;
@@ -197,8 +188,19 @@
 
       .stats-bar, .actions-bar {
         margin-bottom: 0;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
       }
+    }
+
+    .grid {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .load-more {
+      flex-shrink: 0;
+      padding: 12px 20px;
     }
   }
 }
