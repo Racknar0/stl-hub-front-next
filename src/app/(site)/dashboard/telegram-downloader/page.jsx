@@ -176,7 +176,7 @@ export default function TelegramDownloader() {
       const res = await http.getData(`/telegram/quick-scan?channelName=${encodeURIComponent(channelName)}`);
       const d = res.data || res;
       if (d.success) {
-        setScanResults(prev => ({ ...prev, [channelName]: { newMessages: d.newMessages, maxId: d.maxId } }));
+        setScanResults(prev => ({ ...prev, [channelName]: { newFiles: d.newFiles, totalSize: d.totalSize, totalMessages: d.totalMessages, maxId: d.maxId } }));
       }
     } catch (e) {
       setScanResults(prev => ({ ...prev, [channelName]: { error: e.message || 'Error' } }));
@@ -521,8 +521,8 @@ export default function TelegramDownloader() {
                       <td style={{ textAlign: 'center', fontFamily: 'monospace', color: '#4facfe' }}>
                         {lastMsgId}
                         {sr && !sr.error && (
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newMessages > 0 ? '#48bb78' : '#a0aec0' }}>
-                            {sr.newMessages > 0 ? `+${sr.newMessages} nuevos` : 'Al día'}
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0' }}>
+                            {sr.newFiles > 0 ? `${sr.newFiles} archivos (~${sr.totalSize})` : 'Al día'}
                           </span>
                         )}
                         {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
