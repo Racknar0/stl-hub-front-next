@@ -17,12 +17,18 @@ export default function TelegramDownloader() {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('');
   const [newChannel, setNewChannel] = useState('');
+  const [newChannelLabel, setNewChannelLabel] = useState('');
   const [startId, setStartId] = useState('');
   const [endId, setEndId] = useState('');
   const [maxGB, setMaxGB] = useState(150);
   const [channelInfo, setChannelInfo] = useState(null);
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
+
+  // Channel table state
+  const [editedChannels, setEditedChannels] = useState({});
+  const [scanningChannel, setScanningChannel] = useState(null);
+  const [scanResults, setScanResults] = useState({});
 
   const [filesDownloaded, setFilesDownloaded] = useState([]);
   const [showExplorer, setShowExplorer] = useState(false);
@@ -127,10 +133,62 @@ export default function TelegramDownloader() {
   const handleAddChannel = async () => {
     if (!newChannel) return;
     try {
-      const res = await http.postData('/telegram/channels', { name: newChannel });
+      const res = await http.postData('/telegram/channels', { name: newChannel, label: newChannelLabel });
       const d = res.data || res;
-      if (d.success) { setChannels(d.channels); setSelectedChannel(newChannel); setNewChannel(''); }
+      if (d.success) {
+        await fetchChannels();
+        setSelectedChannel(newChannel);
+        setNewChannel('');
+        setNewChannelLabel('');
+      }
     } catch { alert('Error adding channel'); }
+  };
+
+  // --- Channel Table handlers ---
+  const handleEditField = (channelName, field, value) => {
+    setEditedChannels(prev => ({ ...prev, [channelName]: { ...(prev[channelName] || {}), [field]: value } }));
+  };
+
+  const handleSaveChannel = async (originalName) => {
+    const edits = editedChannels[originalName];
+    if (!edits) return;
+    try {
+      await http.patchData('/telegram/channels', encodeURIComponent(originalName), {
+        label: edits.label,
+        newName: edits.name,
+      });
+      setEditedChannels(prev => { const n = { ...prev }; delete n[originalName]; return n; });
+      await fetchChannels();
+    } catch { alert('Error guardando canal'); }
+  };
+
+  const handleDeleteChannel = async (name) => {
+    if (!confirm(`¿Eliminar el canal "${name}"?`)) return;
+    try {
+      await http.deleteData('/telegram/channels', encodeURIComponent(name));
+      await fetchChannels();
+    } catch { alert('Error eliminando canal'); }
+  };
+
+  const handleQuickScan = async (channelName) => {
+    setScanningChannel(channelName);
+    try {
+      const res = await http.getData(`/telegram/quick-scan?channelName=${encodeURIComponent(channelName)}`);
+      const d = res.data || res;
+      if (d.success) {
+        setScanResults(prev => ({ ...prev, [channelName]: { newMessages: d.newMessages, maxId: d.maxId } }));
+      }
+    } catch (e) {
+      setScanResults(prev => ({ ...prev, [channelName]: { error: e.message || 'Error' } }));
+    }
+    setScanningChannel(null);
+  };
+
+  const getTelegramUrl = (channelName) => {
+    if (String(channelName).startsWith('-100')) {
+      return `https://t.me/c/${String(channelName).substring(4)}`;
+    }
+    return `https://t.me/${channelName.replace(/^@/, '')}`;
   };
 
   const handleGetInfo = async () => {
@@ -331,7 +389,8 @@ export default function TelegramDownloader() {
           <div className="form-group">
             <label>Añadir nuevo Canal</label>
             <div className="input-wrapper">
-              <input type="text" placeholder="ej. STL3DPortugal" value={newChannel} onChange={e => setNewChannel(e.target.value)} disabled={isDownloading} />
+              <input type="text" placeholder="Nombre (ej. STLs Anime)" value={newChannelLabel} onChange={e => setNewChannelLabel(e.target.value)} disabled={isDownloading} style={{ flex: '0 0 40%' }} />
+              <input type="text" placeholder="ID o @canal" value={newChannel} onChange={e => setNewChannel(e.target.value)} disabled={isDownloading} />
               <button className="btn btn-secondary" onClick={handleAddChannel} disabled={isDownloading}>Añadir</button>
             </div>
           </div>
@@ -412,6 +471,81 @@ export default function TelegramDownloader() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* CHANNELS TABLE */}
+      <div className="glass-card" style={{ marginTop: '2rem' }}>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem', fontWeight: '600' }}>Canales Configurados</h2>
+        {channels.length === 0 ? (
+          <p style={{ color: '#a0aec0' }}>No hay canales configurados. Añade uno arriba.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="channels-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Canal</th>
+                  <th>Último Msg ID</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {channels.map(c => {
+                  const edits = editedChannels[c.name] || {};
+                  const currentLabel = edits.label !== undefined ? edits.label : (c.label || '');
+                  const currentName = edits.name !== undefined ? edits.name : c.name;
+                  const hasEdits = Object.keys(edits).length > 0;
+                  const lastMsgId = c.lastDownload?.lastMsgId || '—';
+                  const sr = scanResults[c.name];
+                  const isScanning = scanningChannel === c.name;
+
+                  return (
+                    <tr key={c.name}>
+                      <td>
+                        <input
+                          type="text"
+                          value={currentLabel}
+                          onChange={e => handleEditField(c.name, 'label', e.target.value)}
+                          placeholder="Alias"
+                          className="table-input"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={currentName}
+                          onChange={e => handleEditField(c.name, 'name', e.target.value)}
+                          className="table-input"
+                        />
+                      </td>
+                      <td style={{ textAlign: 'center', fontFamily: 'monospace', color: '#4facfe' }}>
+                        {lastMsgId}
+                        {sr && !sr.error && (
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newMessages > 0 ? '#48bb78' : '#a0aec0' }}>
+                            {sr.newMessages > 0 ? `+${sr.newMessages} nuevos` : 'Al día'}
+                          </span>
+                        )}
+                        {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                          {hasEdits && (
+                            <button className="table-action-btn save" onClick={() => handleSaveChannel(c.name)} title="Guardar cambios">💾</button>
+                          )}
+                          <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes">
+                            {isScanning ? '⏳' : '🔍'}
+                          </button>
+                          <a href={getTelegramUrl(c.name)} target="_blank" rel="noopener noreferrer" className="table-action-btn open" title="Abrir en Telegram">🔗</a>
+                          <button className="table-action-btn delete" onClick={() => handleDeleteChannel(c.name)} title="Eliminar canal">🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
