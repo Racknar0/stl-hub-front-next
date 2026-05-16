@@ -184,7 +184,7 @@ const Register = () => {
             const response = await httpService.postData('/auth/register', data);
             if (response.status === 201) {
                 try {
-                    sendGTMEvent({ event: 'sign_up', method: 'email' });
+                    sendGTMEvent({ event: 'sign_up', method: 'email', email: email });
                 } catch (e) {
                     console.error('GTM sign_up error', e);
                 }
