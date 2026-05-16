@@ -71,7 +71,8 @@ export default function TelegramDownloader() {
   };
 
   useEffect(() => {
-    if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const el = logsEndRef.current;
+    if (el?.parentElement) el.parentElement.scrollTop = el.parentElement.scrollHeight;
   }, [logs]);
 
   const checkAuth = async () => {
