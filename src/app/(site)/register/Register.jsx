@@ -169,6 +169,8 @@ const Register = () => {
         }
         setLoading(true);
         try {
+            // Generar eventId para deduplicación de TikTok
+            const eventId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
             const tracking = getTrackingFromMiddlewareCookie('first');
             const { anonId, sessionId } = getVisitIdentityFromMiddlewareCookie();
             const data = {
@@ -178,13 +180,14 @@ const Register = () => {
                 tracking,
                 anonId,
                 sessionId,
+                eventId,
                 giftCode: giftCode.trim() || undefined,
             };
 
             const response = await httpService.postData('/auth/register', data);
             if (response.status === 201) {
                 try {
-                    sendGTMEvent({ event: 'sign_up', method: 'email', email: email });
+                    sendGTMEvent({ event: 'sign_up', method: 'email', email: email, event_id: eventId });
                 } catch (e) {
                     console.error('GTM sign_up error', e);
                 }

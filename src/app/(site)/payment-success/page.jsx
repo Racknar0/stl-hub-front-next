@@ -14,12 +14,17 @@ export default function PaymentSuccessPage() {
         const val = Number(searchParams.get('value')) || 0;
         const cur = searchParams.get('currency') || 'USD';
 
-        // Disparamos el evento de compra para Google Analytics
+        // Extraer IDs reales de pago de la URL para deduplicación (MercadoPago / PayPal)
+        const realPaymentId = searchParams.get('payment_id') || searchParams.get('collection_id') || searchParams.get('token');
+        const transactionId = realPaymentId || `T_${Math.floor(Math.random() * 1000000)}`;
+
+        // Disparamos el evento de compra para Google Analytics y TikTok CAPI
         sendGTMEvent({ 
             event: 'purchase', 
-            transaction_id: `T_${Math.floor(Math.random() * 1000000)}`, // ID temporal para que GA4 no lo cuente como duplicado
+            transaction_id: transactionId, 
             value: val,
-            currency: cur
+            currency: cur,
+            event_id: transactionId
         });
     }, [searchParams]);
 
