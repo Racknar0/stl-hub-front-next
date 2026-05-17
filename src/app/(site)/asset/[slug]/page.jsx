@@ -96,6 +96,17 @@ export async function generateMetadata({ params }) {
     if (!asset || (asset.__error && asset.status === 404)) {
         return { title: 'Modelo no encontrado', robots: { index: false, follow: false } };
     }
+    // NSFW restringido por backend (usuario no logueado en SSR)
+    if (asset?.__nsfw_restricted) {
+        const site = 'https://stl-hub.com';
+        return {
+            title: 'Contenido restringido | STLHUB',
+            description: 'Este contenido requiere inicio de sesión.',
+            robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
+            alternates: { canonical: `${site}/asset/${params.slug}` },
+            other: { rating: 'adult', 'nsfw-content': 'true' },
+        };
+    }
     // No indexar contenido no publicado aunque exista en la BD.
     if (asset?.unpublished) {
         return { title: 'Modelo no disponible', robots: { index: false, follow: false } };
@@ -168,7 +179,7 @@ export async function generateMetadata({ params }) {
                 url: isEn ? `${site}/en/asset/${asset.slug}` : `${site}/asset/${asset.slug}`,
                 images: [{ url: `${site}/logo_horizontal.png` }],
             },
-            other: { rating: 'adult' },
+            other: { rating: 'adult', 'nsfw-content': 'true' },
         };
     }
 
@@ -212,6 +223,16 @@ export default async function AssetPage({ params }) {
       if (asset?.status === 404) notFound();
       // Para otros errores mostrar fallback simple (sin notFound para diferenciar 500)
       return <div style={{padding:'2rem'}}><h1>Error</h1><p>No pudimos cargar el asset.</p></div>;
+    }
+    // --- NSFW restringido (backend devolvió __nsfw_restricted) ---
+    if (asset?.__nsfw_restricted) {
+        return (
+            <NsfwPageWrapper isAdult={true} isEn={false}>
+                <main style={{padding:'2rem', textAlign:'center'}}>
+                    <p>Contenido restringido</p>
+                </main>
+            </NsfwPageWrapper>
+        );
     }
         if (asset?.unpublished) {
             notFound();
@@ -330,8 +351,10 @@ export default async function AssetPage({ params }) {
 
     return (
         <>
-            {/* JSON-LD enriquecido */}
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
+            {/* JSON-LD enriquecido — suprimido para contenido NSFW */}
+            {!isAdult && (
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
+            )}
 
             <NsfwPageWrapper isAdult={isAdult} isEn={pageIsEn}>
                 <main className={styles.page}>

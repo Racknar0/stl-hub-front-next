@@ -1,3 +1,9 @@
+/**
+ * Palabras clave NSFW — deben coincidir con las del backend (nsfwFilter.js).
+ * Se usa `includes()` parcial sobre los slugs y nombres de categorías/tags.
+ */
+const NSFW_KEYWORDS = ['adult', '18', 'nsfw', 'hentai', 'sexy', 'erotic', 'desnud', 'gore'];
+
 export const isAssetNSFW = (item) => {
     if (!item) return false;
     
@@ -6,7 +12,7 @@ export const isAssetNSFW = (item) => {
     const isRestricted = (str) => {
         if (!str) return false;
         const s = toLowerStr(str);
-        return s.includes('adults') || s.includes('adultos') || s.includes('nsfw');
+        return NSFW_KEYWORDS.some(kw => s.includes(kw));
     };
 
     // Check arrays of strings or objects

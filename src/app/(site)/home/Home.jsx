@@ -15,7 +15,6 @@ import Button from '../../../components/layout/Buttons/Button';
 // Categorías fijas
 const CATEGORIES = [
   '3DXM Art',
-  'Adults',
   'Animals',
   'Anime',
   'Articulated Figures',
