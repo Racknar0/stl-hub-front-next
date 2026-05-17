@@ -683,6 +683,12 @@ const Header = () => {
                 {/* ── Zone 1: Categories with icons ── */}
                 <div className="mega-zone mega-zone-categories">
                   <div className="mega-zone-title">{t('header.categories')}</div>
+                  {!token && (
+                    <a href="/login" className="nsfw-catalog-notice">
+                      <span className="nsfw-notice-icon">🔒</span>
+                      <span>{isEn ? 'Log in to see the full catalog' : 'Inicia sesión para ver el catálogo completo'}</span>
+                    </a>
+                  )}
                   <div className="mega-cat-grid">
                     {categories.length > 0 ? (
                       categories.map((c) => {
@@ -1189,6 +1195,12 @@ const Header = () => {
         {/* Explorar — categories */}
         <div className="drawer-section">
           <div className="drawer-section-title">{t('header.categories')}</div>
+          {!token && (
+            <a href="/login" className="nsfw-catalog-notice">
+              <span className="nsfw-notice-icon">🔒</span>
+              <span>{isEn ? 'Log in to see the full catalog' : 'Inicia sesión para ver el catálogo completo'}</span>
+            </a>
+          )}
           <div className="drawer-links-grid">
             {categories.map((c) => {
               const name = isEn && c.nameEn ? c.nameEn : c.name;

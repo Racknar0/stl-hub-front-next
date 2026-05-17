@@ -8,6 +8,7 @@ import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
+const token_selector = (s) => s.token;
 // Importamos el estilo del loader global para reutilizar el mismo spinner inline
 import '../../../components/common/GlobalLoader/GlobalLoader.scss';
 import './search.scss';
@@ -148,6 +149,7 @@ function toDisplayItem(a, lang) {
 export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback, initialSuggestions }) {
   const { t } = useI18n();
   const language = useStore((s)=>s.language);
+  const token = useStore(token_selector);
   const imageSearchResults = useStore((s) => s.imageSearchResults);
   const clearImageSearchResults = useStore((s) => s.clearImageSearchResults);
 
@@ -614,13 +616,33 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           </div>
         </div>
 
+        {/* NSFW catalog notice for anonymous users */}
+        {!token && (
+          <div className="nsfw-search-notice" style={{ maxWidth: '1200px', margin: '0 auto 16px', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 8, background: 'rgba(255, 75, 75, 0.08)', border: '1px solid rgba(255, 75, 75, 0.22)', fontSize: '0.8rem', fontWeight: 600, color: '#ff7b7b', lineHeight: 1.4 }}>
+            <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>🛡️</span>
+            <span>{isEn ? 'For user protection, some content requires authentication. ' : 'Por políticas de protección al usuario, parte del contenido requiere autenticación. '}
+              <a href="/login" style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
+            </span>
+          </div>
+        )}
+
   {/* Loader inline con el mismo estilo que el global */}
   {loading && items.length === 0 ? (
     <div style={{display:'flex',justifyContent:'center',padding:'14px 0'}}>
       <Spinner />
     </div>
   ) : null}
-  {!loading && items.length === 0 ? <p>{t('search.empty')}</p> : null}
+  {!loading && items.length === 0 ? (
+    <div style={{ textAlign: 'center', padding: '24px 0' }}>
+      <p>{t('search.empty')}</p>
+      {!token && (
+        <p style={{ fontSize: '0.85rem', color: '#ff7b7b', marginTop: 8 }}>
+          🔒 {isEn ? 'Some content requires login to be displayed.' : 'Algunos contenidos requieren inicio de sesión para mostrarse.'}{' '}
+          <a href="/login" style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
+        </p>
+      )}
+    </div>
+  ) : null}
 
         {aiFallback && !loading && items.length > 0 && (
           <div className="ai-fallback-notice">

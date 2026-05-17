@@ -226,10 +226,16 @@ export default async function AssetPage({ params }) {
     }
     // --- NSFW restringido (backend devolvió __nsfw_restricted) ---
     if (asset?.__nsfw_restricted) {
+        let restrictedIsEn = false;
+        try {
+            const { headers } = await import('next/headers');
+            const h = await headers();
+            restrictedIsEn = h.get('x-lang') === 'en';
+        } catch {}
         return (
-            <NsfwPageWrapper isAdult={true} isEn={false}>
+            <NsfwPageWrapper isAdult={true} isEn={restrictedIsEn}>
                 <main style={{padding:'2rem', textAlign:'center'}}>
-                    <p>Contenido restringido</p>
+                    <p>{restrictedIsEn ? 'Restricted content' : 'Contenido restringido'}</p>
                 </main>
             </NsfwPageWrapper>
         );

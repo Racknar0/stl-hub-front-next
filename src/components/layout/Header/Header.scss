@@ -654,6 +654,35 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* NSFW catalog notice — visible only to anonymous users */
+.nsfw-catalog-notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background: rgba(255, 75, 75, 0.08);
+    border: 1px solid rgba(255, 75, 75, 0.22);
+    color: #ff7b7b;
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 200ms ease;
+    line-height: 1.3;
+
+    &:hover {
+        background: rgba(255, 75, 75, 0.15);
+        border-color: rgba(255, 75, 75, 0.4);
+        color: #ff9b9b;
+        transform: translateX(2px);
+    }
+}
+.nsfw-notice-icon {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
 /* ── Zone 1: Categories ── */
 .mega-zone-categories {
     max-height: 380px;
