@@ -74,6 +74,15 @@
   }
 }
 
+.legal-red {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.legal-section strong {
+  color: #222;
+}
+
 .legal-section {
   margin-bottom: 1.5rem;
   
@@ -89,7 +98,19 @@
   p {
     line-height: 1.6;
     color: #555;
-    margin: 0;
+    margin: 0 0 0.5rem;
+  }
+}
+
+.legal-list {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+  
+  li {
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
   }
 }
 
