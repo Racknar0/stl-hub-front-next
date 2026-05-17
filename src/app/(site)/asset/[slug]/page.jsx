@@ -224,7 +224,9 @@ export default async function AssetPage({ params }) {
       // Para otros errores mostrar fallback simple (sin notFound para diferenciar 500)
       return <div style={{padding:'2rem'}}><h1>Error</h1><p>No pudimos cargar el asset.</p></div>;
     }
-    // --- NSFW restringido (backend devolvió __nsfw_restricted) ---
+    // --- NSFW restringido (backend devolvió __nsfw_restricted porque SSR no tiene JWT) ---
+    // Delegamos al componente cliente NsfwAssetGate que detecta si el usuario
+    // está logueado (token en localStorage) y re-fetchea con JWT si es necesario.
     if (asset?.__nsfw_restricted) {
         let restrictedIsEn = false;
         try {
@@ -232,13 +234,8 @@ export default async function AssetPage({ params }) {
             const h = await headers();
             restrictedIsEn = h.get('x-lang') === 'en';
         } catch {}
-        return (
-            <NsfwPageWrapper isAdult={true} isEn={restrictedIsEn}>
-                <main style={{padding:'2rem', textAlign:'center'}}>
-                    <p>{restrictedIsEn ? 'Restricted content' : 'Contenido restringido'}</p>
-                </main>
-            </NsfwPageWrapper>
-        );
+        const NsfwAssetGate = (await import('./NsfwAssetGate')).default;
+        return <NsfwAssetGate slug={params.slug} isEn={restrictedIsEn} />;
     }
         if (asset?.unpublished) {
             notFound();
