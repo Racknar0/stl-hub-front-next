@@ -82,8 +82,8 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 180 : 140,
-                                    height: metaExpanded ? 180 : 140,
+                                    width: metaExpanded ? 180 : 250,
+                                    height: metaExpanded ? 180 : 250,
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
@@ -172,7 +172,7 @@ export default function MetaSeoRow({
                     )}
 
                     {!rowImages.length && (
-                        <Box sx={{ width: 140, height: 140, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
+                        <Box sx={{ width: 250, height: 250, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
                             <Typography variant="caption" color="text.secondary">
                                 N/A
                             </Typography>
