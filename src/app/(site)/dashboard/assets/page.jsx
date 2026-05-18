@@ -97,14 +97,13 @@ export default function AssetsAdminPage() {
     const [showFreeOnly, setShowFreeOnly] = useState(false);
     // filtro estado
     const [statusFilter, setStatusFilter] = useState('');
+    // filtro SEO (noDescription, noDescriptionEn, noTags, noCategories, noImages)
+    const [seoFilter, setSeoFilter] = useState('');
 
     // Estado: modal unificado
     const [assetModalOpen, setAssetModalOpen] = useState(false);
     const [assetModalIndex, setAssetModalIndex] = useState(-1);
     const [syncMultimodalVectorsOpen, setSyncMultimodalVectorsOpen] = useState(false);
-    const [dropResultsOpen, setDropResultsOpen] = useState(false);
-    const [dropFound, setDropFound] = useState([]);
-    const [dropNotFound, setDropNotFound] = useState([]);
     // Para dirty-check al navegar
     const [initialEditForm, setInitialEditForm] = useState(null);
 
@@ -235,19 +234,6 @@ export default function AssetsAdminPage() {
         if (!n || n <= 0) return '0 MB';
         return `${(n / (1024 * 1024)).toFixed(1)} MB`;
     };
-
-    const normalizeBase = (name) =>
-        String(name || '')
-            .replace(/^.*[\\/]/, '')
-            .replace(/\.[^/.]+$/, '')
-            .trim()
-            .toLowerCase();
-
-
-
-
-
-
 
 
     const buildPairKey = (a, b) => {
@@ -585,77 +571,6 @@ export default function AssetsAdminPage() {
 
 
 
-    // Drop mÃƒÂºltiple: busca assets por archiveName (exacto) y por nombre base como fallback.
-    const handleDropManyFiles = async (fileNames) => {
-        const names = Array.from(fileNames || [])
-            .map((n) => String(n || '').trim())
-            .filter(Boolean);
-        if (!names.length) return;
-
-        try {
-            setLoading(true);
-
-            // 1) Traer una ventana grande (pero limitada) de assets para poder matchear localmente.
-            // Si necesitas mÃƒÂ¡s de 1000, mÃƒÂ¡s adelante podemos iterar por pÃƒÂ¡ginas.
-            const res = await http.getData(`/assets?pageIndex=0&pageSize=1000`); // admin route
-            const payload = res.data;
-            const items = Array.isArray(payload?.items)
-                ? payload.items
-                : Array.isArray(payload)
-                  ? payload
-                  : [];
-
-            const byArchiveLower = new Map();
-            const byBaseLower = new Map();
-            items.forEach((a) => {
-                const an = String(a?.archiveName || '').trim();
-                if (an) byArchiveLower.set(an.toLowerCase(), a);
-                const bn = normalizeBase(an);
-                if (bn) byBaseLower.set(bn, a);
-            });
-
-            const found = [];
-            const notFound = [];
-            const seenAssetIds = new Set();
-
-            names.forEach((n) => {
-                const key = n.toLowerCase();
-                const base = normalizeBase(n);
-                const asset =
-                    byArchiveLower.get(key) ||
-                    (base ? byBaseLower.get(base) : null);
-                if (asset?.id) {
-                    found.push({
-                        name: n,
-                        match: asset.archiveName || '',
-                        assetId: asset.id,
-                    });
-                    seenAssetIds.add(asset.id);
-                } else {
-                    notFound.push(n);
-                }
-            });
-
-            // 2) Mostrar en tabla los assets encontrados (sin duplicados)
-            const foundAssets = items.filter((a) => seenAssetIds.has(a.id));
-            setAssets(foundAssets);
-            setRowCount(foundAssets.length);
-            setPageIndex(0);
-
-            // 3) Mostrar modal con resumen
-            setDropFound(found);
-            setDropNotFound(notFound);
-            setDropResultsOpen(true);
-        } catch (e) {
-            console.error('drop many search error', e);
-            setDropFound([]);
-            setDropNotFound(Array.from(fileNames || []));
-            setDropResultsOpen(true);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Cargar datos de la tabla (paginación servidor)
     useEffect(() => {
         const load = async () => {
@@ -668,6 +583,8 @@ export default function AssetsAdminPage() {
                 });
                 if (showFreeOnly) params.set('plan', 'free');
                 if (statusFilter) params.set('status', statusFilter);
+                // Filtro SEO
+                if (seoFilter) params.set(seoFilter, 'true');
                 // Añadir filtros por cuenta
                 const accTrim = String(accountQ || '').trim();
                 if (accTrim) {
@@ -700,7 +617,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter]);
+    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -968,58 +885,7 @@ export default function AssetsAdminPage() {
         enableRowActions: true,
         positionActionsColumn: 'first',
         displayColumnDefOptions: { 'mrt-row-actions': { size: 80 } },
-        renderTopToolbarCustomActions: ({ table }) => (
-            <ToolbarBusqueda
-                q={q}
-                setQ={setQ}
-                onBuscar={() => {
-                    setSearchTerm(q);
-                    setPageIndex(0);
-                    setShowFreeOnly(false);
-                }}
-                accountQ={accountQ}
-                setAccountQ={setAccountQ}
-                onBuscarCuenta={() => {
-                    setSearchTerm('');
-                    setPageIndex(0);
-                    setShowFreeOnly(false);
-                    setRefreshTick((n) => n + 1);
-                }}
-                assetIdQ={assetIdQ}
-                setAssetIdQ={setAssetIdQ}
-                showFreeOnly={showFreeOnly}
-                onToggleFreeOnly={() => {
-                    setShowFreeOnly((v) => !v);
-                    setPageIndex(0);
-                }}
-                onBuscarId={async () => {
-                    const idNum = Number(assetIdQ);
-                    if (!Number.isFinite(idNum) || idNum <= 0) return;
-                    try {
-                        setLoading(true);
-                        const res = await http.getData(`/assets/${idNum}`);
-                        const item = res.data;
-                        setAssets(item ? [item] : []);
-                        setRowCount(item ? 1 : 0);
-                        setPageIndex(0);
-                    } catch (e) {
-                        setAssets([]);
-                        setRowCount(0);
-                    } finally {
-                        setLoading(false);
-                    }
-                }}
-                onDropManyFiles={handleDropManyFiles}
-                categories={categories}
-                allTags={allTags}
-                categoryFilter={categoryFilter}
-                setCategoryFilter={(v) => { setCategoryFilter(v); setPageIndex(0); }}
-                tagFilter={tagFilter}
-                setTagFilter={(v) => { setTagFilter(v); setPageIndex(0); }}
-                statusFilter={statusFilter}
-                setStatusFilter={(v) => { setStatusFilter(v); setPageIndex(0); }}
-            />
-        ),
+        enableTopToolbar: false,
         renderRowActions: ({ row }) => (
             <Box sx={{ display: 'flex', gap: 0 }}>
                 <IconButton
@@ -2062,10 +1928,85 @@ export default function AssetsAdminPage() {
         setMetaProfileAssetId(null);
     };
 
+    // Handler: limpiar todos los filtros
+    const handleClearAllFilters = () => {
+        setQ('');
+        setSearchTerm('');
+        setAccountQ('');
+        setAssetIdQ('');
+        setCategoryFilter(null);
+        setTagFilter(null);
+        setStatusFilter('');
+        setSeoFilter('');
+        setShowFreeOnly(false);
+        setPageIndex(0);
+        setRefreshTick((n) => n + 1);
+    };
+
+    // Handler: buscar por ID (movido fuera de MRT)
+    const handleBuscarId = async () => {
+        const idNum = Number(assetIdQ);
+        if (!Number.isFinite(idNum) || idNum <= 0) return;
+        try {
+            setLoading(true);
+            const res = await http.getData(`/assets/${idNum}`);
+            const item = res.data;
+            setAssets(item ? [item] : []);
+            setRowCount(item ? 1 : 0);
+            setPageIndex(0);
+        } catch (e) {
+            setAssets([]);
+            setRowCount(0);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <ThemeProvider theme={darkTheme}>
             <div className="p-3 mb-5">
                 <h1 className="dashboard-title mb-3">Assets & AI Tools</h1>
+
+                {/* Toolbar global compartido entre STL-LIST y META-SEO */}
+                <Box sx={{ mb: 2 }}>
+                    <ToolbarBusqueda
+                        q={q}
+                        setQ={setQ}
+                        onBuscar={() => {
+                            setSearchTerm(q);
+                            setPageIndex(0);
+                            setShowFreeOnly(false);
+                        }}
+                        accountQ={accountQ}
+                        setAccountQ={setAccountQ}
+                        onBuscarCuenta={() => {
+                            setSearchTerm('');
+                            setPageIndex(0);
+                            setShowFreeOnly(false);
+                            setRefreshTick((n) => n + 1);
+                        }}
+                        assetIdQ={assetIdQ}
+                        setAssetIdQ={setAssetIdQ}
+                        showFreeOnly={showFreeOnly}
+                        onToggleFreeOnly={() => {
+                            setShowFreeOnly((v) => !v);
+                            setPageIndex(0);
+                        }}
+                        onBuscarId={handleBuscarId}
+                        categories={categories}
+                        allTags={allTags}
+                        categoryFilter={categoryFilter}
+                        setCategoryFilter={(v) => { setCategoryFilter(v); setPageIndex(0); }}
+                        tagFilter={tagFilter}
+                        setTagFilter={(v) => { setTagFilter(v); setPageIndex(0); }}
+                        statusFilter={statusFilter}
+                        setStatusFilter={(v) => { setStatusFilter(v); setPageIndex(0); }}
+                        seoFilter={seoFilter}
+                        setSeoFilter={(v) => { setSeoFilter(v); setPageIndex(0); }}
+                        onClearAll={handleClearAllFilters}
+                    />
+                </Box>
+
                 <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
@@ -2086,7 +2027,7 @@ export default function AssetsAdminPage() {
                 }}
             >
                 <Tab
-                    label="STL-LIST"
+                    label={`STL-LIST (${rowCount})`}
                     sx={{
                         color: (theme) =>
                             theme.palette.mode === 'dark' ? '#fff' : undefined,
@@ -2100,7 +2041,7 @@ export default function AssetsAdminPage() {
                     }}
                 />
                 <Tab
-                    label="META-SEO"
+                    label={`META-SEO (${rowCount})`}
                     sx={{
                         color: (theme) =>
                             theme.palette.mode === 'dark' ? '#fff' : undefined,
@@ -2143,11 +2084,6 @@ export default function AssetsAdminPage() {
                     assetModalIndex={assetModalIndex}
                     totalAssets={filtered.length}
                     onNavigateWithDirtyCheck={onNavigateWithDirtyCheck}
-                    // drop results
-                    dropResultsOpen={dropResultsOpen}
-                    setDropResultsOpen={setDropResultsOpen}
-                    dropFound={dropFound}
-                    dropNotFound={dropNotFound}
                 />
             )}
             {tab === 1 && (

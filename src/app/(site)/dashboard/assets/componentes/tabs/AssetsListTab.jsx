@@ -3,7 +3,6 @@
 import { Box, LinearProgress } from '@mui/material';
 import { MaterialReactTable } from 'material-react-table';
 import ModalAsset from '../ModalAsset';
-import ModalResultadosDrop from '../ModalResultadosDrop';
 
 export default function AssetsListTab({
     loading,
@@ -40,11 +39,6 @@ export default function AssetsListTab({
     assetModalIndex,
     totalAssets,
     onNavigateWithDirtyCheck,
-    // drop results
-    dropResultsOpen,
-    setDropResultsOpen,
-    dropFound,
-    dropNotFound,
 }) {
     return (
         <>
@@ -87,13 +81,6 @@ export default function AssetsListTab({
                 assetIndex={assetModalIndex}
                 totalAssets={totalAssets}
                 onNavigateWithDirtyCheck={onNavigateWithDirtyCheck}
-            />
-
-            <ModalResultadosDrop
-                open={dropResultsOpen}
-                onClose={() => setDropResultsOpen(false)}
-                found={dropFound}
-                notFound={dropNotFound}
             />
         </>
     );
