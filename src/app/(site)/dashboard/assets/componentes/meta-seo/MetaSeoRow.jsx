@@ -14,6 +14,7 @@ import {
     Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SaveIcon from '@mui/icons-material/Save';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -46,6 +47,7 @@ export default function MetaSeoRow({
     onOpenProfiles,
     onGenerateSingleDescription,
     onSaveRow,
+    onDeleteAsset,
 }) {
     return (
         <TableRow
@@ -62,12 +64,14 @@ export default function MetaSeoRow({
                 />
             </TableCell>
             <TableCell>{id}</TableCell>
+
+            {/* === IMÁGENES === */}
             <TableCell>
                 <Box
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: metaExpanded ? 1 : 0,
+                        gap: metaExpanded ? 1 : 0.5,
                         overflowX: metaExpanded ? 'auto' : 'visible',
                         py: metaExpanded ? 0.5 : 0,
                     }}
@@ -78,13 +82,13 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 180 : 250,
-                                    height: metaExpanded ? 180 : 250,
+                                    width: metaExpanded ? 180 : 140,
+                                    height: metaExpanded ? 180 : 140,
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
                                     cursor: 'pointer',
-                                    ml: metaExpanded ? 0 : idx > 0 ? -20 : 0,
+                                    ml: metaExpanded ? 0 : idx > 0 ? -8 : 0,
                                     overflow: 'hidden',
                                     flexShrink: 0,
                                     zIndex: Math.max(1, 30 - idx),
@@ -146,9 +150,9 @@ export default function MetaSeoRow({
                         );
                     })}
 
-                    {rowImages.length > 3 && (
+                    {rowImages.length > 5 && (
                         <Stack spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }} >
-                            <Tooltip title={ metaExpanded ? 'Mostrar solo 3' : `Mostrar todas (${rowImages.length})` } >
+                            <Tooltip title={ metaExpanded ? 'Mostrar solo 5' : `Mostrar todas (${rowImages.length})` } >
                                 <span>
                                     <IconButton size="small" onClick={() => onToggleExpandedImages(id) } disabled={loading} sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)', }, }} >
                                         {metaExpanded ? (
@@ -162,13 +166,13 @@ export default function MetaSeoRow({
                             <Typography variant="caption" color="text.secondary" >
                                 {metaExpanded
                                     ? `${rowImages.length}`
-                                    : `+${rowImages.length - 3}`}
+                                    : `+${rowImages.length - 5}`}
                             </Typography>
                         </Stack>
                     )}
 
                     {!rowImages.length && (
-                        <Box sx={{ width: 250, height: 250, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
+                        <Box sx={{ width: 140, height: 140, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
                             <Typography variant="caption" color="text.secondary">
                                 N/A
                             </Typography>
@@ -176,6 +180,8 @@ export default function MetaSeoRow({
                     )}
                 </Box>
             </TableCell>
+
+            {/* === NOMBRE ES/EN === */}
             <TableCell>
                 <Stack spacing={1} sx={{ width: '100%' }}>
                     <TextField
@@ -193,6 +199,8 @@ export default function MetaSeoRow({
                     <TextField size="small" fullWidth value={draft.titleEn} placeholder="Name EN" onChange={(e) => onUpdateDraft(id, { titleEn: e.target.value, }) } disabled={metaBusy || loading} />
                 </Stack>
             </TableCell>
+
+            {/* === DESCRIPCIÓN SEO ES/EN === */}
             <TableCell>
                 <Stack
                     spacing={1}
@@ -233,97 +241,114 @@ export default function MetaSeoRow({
                     />
                 </Stack>
             </TableCell>
+
+            {/* === CATEGORÍAS + TAGS (merged into single column) === */}
             <TableCell>
-                <Autocomplete
-                    multiple
-                    limitTags={4}
-                    options={categories}
-                    getOptionLabel={(option) => option?.name || option?.slug || ''}
-                    value={normalizeMetaCategoryList(draft.categories)}
-                    isOptionEqualToValue={(a, b) =>
-                        String(a?.slug || '') === String(b?.slug || '')
-                    }
-                    onChange={(_, value) =>
-                        onUpdateDraft(id, {
-                            categories: normalizeMetaCategoryList(value),
-                        })
-                    }
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            size="small"
-                            placeholder="Categorías"
-                        />
-                    )}
-                    disabled={metaBusy || loading}
-                    renderTags={(value, getTagProps) =>
-                        value.map((option, index) => {
-                            const { key, ...tagProps } = getTagProps({ index });
-                            return (
-                                <Chip
-                                    key={key}
-                                    label={option.name || option.slug}
+                <Stack spacing={1.5} sx={{ width: '100%' }}>
+                    {/* Categorías */}
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 700 }}>
+                            Categorías
+                        </Typography>
+                        <Autocomplete
+                            multiple
+                            limitTags={4}
+                            options={categories}
+                            getOptionLabel={(option) => option?.name || option?.slug || ''}
+                            value={normalizeMetaCategoryList(draft.categories)}
+                            isOptionEqualToValue={(a, b) =>
+                                String(a?.slug || '') === String(b?.slug || '')
+                            }
+                            onChange={(_, value) =>
+                                onUpdateDraft(id, {
+                                    categories: normalizeMetaCategoryList(value),
+                                })
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
                                     size="small"
-                                    {...tagProps}
-                                    sx={{ m: '2px' }}
+                                    placeholder="Categorías"
                                 />
-                            );
-                        })
-                    }
-                    sx={{
-                        '& .MuiInputBase-root': {
-                            maxHeight: 110,
-                            minHeight: 110,
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            alignItems: 'flex-start',
-                            alignContent: 'flex-start',
-                            p: '4px 34px 4px 4px !important',
-                        },
-                    }}
-                />
+                            )}
+                            disabled={metaBusy || loading}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => {
+                                    const { key, ...tagProps } = getTagProps({ index });
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={option.name || option.slug}
+                                            size="small"
+                                            {...tagProps}
+                                            sx={{ m: '2px' }}
+                                        />
+                                    );
+                                })
+                            }
+                            sx={{
+                                '& .MuiInputBase-root': {
+                                    maxHeight: 90,
+                                    minHeight: 50,
+                                    overflowY: 'auto',
+                                    overflowX: 'hidden',
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    alignItems: 'flex-start',
+                                    alignContent: 'flex-start',
+                                    p: '4px 34px 4px 4px !important',
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Tags */}
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 700 }}>
+                            Tags
+                        </Typography>
+                        <Autocomplete
+                            multiple
+                            freeSolo
+                            limitTags={9}
+                            options={allTags}
+                            getOptionLabel={(option) => {
+                                if (typeof option === 'string') return option;
+                                return option?.name || option?.slug || '';
+                            }}
+                            value={normalizeMetaTagList(draft.tags)}
+                            isOptionEqualToValue={(a, b) => {
+                                const aSlug = String(a?.slug || a?.name || '')
+                                    .trim()
+                                    .toLowerCase();
+                                const bSlug = String(b?.slug || b?.name || '')
+                                    .trim()
+                                    .toLowerCase();
+                                return !!aSlug && !!bSlug && aSlug === bSlug;
+                            }}
+                            onChange={(_, value) => onUpdateDraft(id, { tags: normalizeMetaTagList(value), }) }
+                            renderInput={(params) => (
+                                <TextField {...params} size="small" placeholder="Tags" />
+                            )}
+                            disabled={metaBusy || loading}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => {
+                                    const { key, ...tagProps } = getTagProps({ index });
+                                    return (
+                                        <Chip key={key} size="small" label={ option.name || option.es || option.nameEn || option.en || option.slug || option } {...tagProps} sx={{ m: '2px' }} />
+                                    );
+                                })
+                            }
+                            sx={{ '& .MuiInputBase-root': { maxHeight: 90, minHeight: 50, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', p: '4px 34px 4px 4px !important', }, }}
+                        />
+                    </Box>
+                </Stack>
             </TableCell>
-            <TableCell>
-                <Autocomplete
-                    multiple
-                    freeSolo
-                    limitTags={9}
-                    options={allTags}
-                    getOptionLabel={(option) => {
-                        if (typeof option === 'string') return option;
-                        return option?.name || option?.slug || '';
-                    }}
-                    value={normalizeMetaTagList(draft.tags)}
-                    isOptionEqualToValue={(a, b) => {
-                        const aSlug = String(a?.slug || a?.name || '')
-                            .trim()
-                            .toLowerCase();
-                        const bSlug = String(b?.slug || b?.name || '')
-                            .trim()
-                            .toLowerCase();
-                        return !!aSlug && !!bSlug && aSlug === bSlug;
-                    }}
-                    onChange={(_, value) => onUpdateDraft(id, { tags: normalizeMetaTagList(value), }) }
-                    renderInput={(params) => (
-                        <TextField {...params} size="small" placeholder="Tags" />
-                    )}
-                    disabled={metaBusy || loading}
-                    renderTags={(value, getTagProps) =>
-                        value.map((option, index) => {
-                            const { key, ...tagProps } = getTagProps({ index });
-                            return (
-                                <Chip key={key} size="small" label={ option.name || option.es || option.nameEn || option.en || option.slug || option } {...tagProps} sx={{ m: '2px' }} />
-                            );
-                        })
-                    }
-                    sx={{ '& .MuiInputBase-root': { maxHeight: 110, minHeight: 110, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', p: '4px 34px 4px 4px !important', }, }}
-                />
-            </TableCell>
-            <TableCell align="right">
-                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="Perfiles rápidos">
+
+            {/* === ACCIONES (vertical) === */}
+            <TableCell align="center">
+                <Stack direction="column" spacing={0.5} alignItems="center">
+                    <Tooltip title="Perfiles rápidos" placement="left">
                         <span>
                             <IconButton
                                 size="small"
@@ -340,7 +365,7 @@ export default function MetaSeoRow({
                         </span>
                     </Tooltip>
 
-                    <Tooltip title="Generar descripción IA">
+                    <Tooltip title="Generar descripción IA" placement="left">
                         <span>
                             <IconButton size="small" onClick={() => onGenerateSingleDescription(id)} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, }} >
                                 <AutoAwesomeIcon fontSize="small" />
@@ -348,10 +373,29 @@ export default function MetaSeoRow({
                         </span>
                     </Tooltip>
 
-                    <Tooltip title="Guardar fila">
+                    <Tooltip title="Guardar fila" placement="left">
                         <span>
                             <IconButton size="small" onClick={() => { void onSaveRow(id); }} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, color: '#16a34a', }} >
                                 <SaveIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Eliminar asset" placement="left">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onDeleteAsset?.({ id, title: draft.title })}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'rgba(239,68,68,0.4)',
+                                    borderRadius: 1.5,
+                                    color: '#ef4444',
+                                    '&:hover': { bgcolor: 'rgba(239,68,68,0.1)' },
+                                }}
+                            >
+                                <DeleteForeverIcon fontSize="small" />
                             </IconButton>
                         </span>
                     </Tooltip>

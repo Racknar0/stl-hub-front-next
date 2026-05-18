@@ -63,6 +63,7 @@ export default function MetaSeoTab({
     openMetaProfiles,
     handleGenerateSingleDescription,
     handleSaveMetaRow,
+    onDeleteAsset,
     paddingBottom,
     pageIndex,
     setPageIndex,
@@ -287,26 +288,23 @@ export default function MetaSeoTab({
                             <TableCell sx={{ minWidth: 270, width: 270 }}>
                                 Imagenes
                             </TableCell>
-                            <TableCell sx={{ minWidth: 280, width: 280 }}>
+                            <TableCell sx={{ minWidth: 240, width: 240 }}>
                                 Asset / Name (ES/EN)
                             </TableCell>
                             <TableCell sx={{ minWidth: 400, width: 400 }}>
                                 SEO Description (ES/EN)
                             </TableCell>
-                            <TableCell sx={{ minWidth: 300, width: 300 }}>
-                                Categorias
-                            </TableCell>
                             <TableCell sx={{ minWidth: 400, width: 400 }}>
-                                Tags
+                                Categorías / Tags
                             </TableCell>
-                            <TableCell align="right">Acciones</TableCell>
+                            <TableCell align="center" sx={{ width: 60, minWidth: 60 }}>Acciones</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {paddingTop > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={10}
+                                    colSpan={8}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -325,7 +323,7 @@ export default function MetaSeoTab({
                             const metaExpanded = !!metaExpandedImagesMap[id];
                             const visibleImages = metaExpanded
                                 ? rowImages
-                                : rowImages.slice(0, 3);
+                                : rowImages.slice(0, 5);
                             const draft = metaDraftMap[id] || {
                                 id,
                                 title: String(row?.title || ''),
@@ -371,6 +369,7 @@ export default function MetaSeoTab({
                                         handleGenerateSingleDescription
                                     }
                                     onSaveRow={handleSaveMetaRow}
+                                    onDeleteAsset={onDeleteAsset}
                                 />
                             );
                         })}

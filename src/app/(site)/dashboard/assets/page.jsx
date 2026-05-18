@@ -2190,6 +2190,7 @@ export default function AssetsAdminPage() {
                         handleGenerateSingleDescription
                     }
                     handleSaveMetaRow={handleSaveMetaRow}
+                    onDeleteAsset={handleDelete}
                     paddingBottom={paddingBottom}
                     pageIndex={pageIndex}
                     setPageIndex={setPageIndex}
