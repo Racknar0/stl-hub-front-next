@@ -70,9 +70,12 @@ export default function MetaSeoRow({
                 <Box
                     sx={{
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: metaExpanded ? 1 : 0.5,
-                        overflowX: metaExpanded ? 'auto' : 'visible',
+                        alignItems: metaExpanded ? 'flex-start' : 'center',
+                        gap: metaExpanded ? 0.75 : 0.5,
+                        flexWrap: metaExpanded ? 'wrap' : 'nowrap',
+                        overflowY: metaExpanded ? 'auto' : 'visible',
+                        overflowX: 'hidden',
+                        maxHeight: metaExpanded ? 420 : 'none',
                         py: metaExpanded ? 0.5 : 0,
                     }}
                 >
@@ -82,8 +85,8 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 180 : 250,
-                                    height: metaExpanded ? 180 : 250,
+                                    width: metaExpanded ? 160 : 250,
+                                    height: metaExpanded ? 160 : 250,
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',

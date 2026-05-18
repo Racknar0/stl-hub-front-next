@@ -167,9 +167,12 @@ export default function BatchRow({
                         <Box
                             sx={{
                                 display: 'flex',
-                                alignItems: 'center',
-                                gap: reviewExpanded ? 1 : 0,
-                                overflowX: reviewExpanded ? 'auto' : 'visible',
+                                alignItems: reviewExpanded ? 'flex-start' : 'center',
+                                gap: reviewExpanded ? 0.75 : 0,
+                                flexWrap: reviewExpanded ? 'wrap' : 'nowrap',
+                                overflowY: reviewExpanded ? 'auto' : 'visible',
+                                overflowX: 'hidden',
+                                maxHeight: reviewExpanded ? 420 : 'none',
                                 py: reviewExpanded ? 0.5 : 0,
                                 mr: 1,
                                 flexShrink: 0,
@@ -184,8 +187,8 @@ export default function BatchRow({
                                         const isPrimary = i === 0;
                                         return (
                                             <Box key={i} sx={{
-                                                width: reviewExpanded ? 180 : reviewThumbSize,
-                                                height: reviewExpanded ? 180 : reviewThumbSize,
+                                                width: reviewExpanded ? 160 : reviewThumbSize,
+                                                height: reviewExpanded ? 160 : reviewThumbSize,
                                                 position: 'relative',
                                                 borderRadius: 1.5,
                                                 border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
