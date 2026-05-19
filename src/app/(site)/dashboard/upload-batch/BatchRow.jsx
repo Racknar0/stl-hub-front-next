@@ -194,7 +194,7 @@ export default function BatchRow({
                                                 border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
                                                 boxShadow: isPrimary ? '0 0 0 2px rgba(250,204,21,0.25)' : 'none',
                                                 cursor: 'pointer',
-                                                ml: reviewExpanded ? 0 : i > 0 ? -20 : 0,
+                                                ml: 0,
                                                 overflow: 'hidden',
                                                 flexShrink: 0,
                                                 zIndex: Math.max(1, 30 - i),
