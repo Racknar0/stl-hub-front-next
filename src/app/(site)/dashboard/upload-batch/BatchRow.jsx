@@ -168,7 +168,7 @@ export default function BatchRow({
                             sx={{
                                 display: 'flex',
                                 alignItems: reviewExpanded ? 'flex-start' : 'center',
-                                gap: reviewExpanded ? 0.75 : 0,
+                                gap: reviewExpanded ? 0.75 : 0.5,
                                 flexWrap: reviewExpanded ? 'wrap' : 'nowrap',
                                 overflowY: reviewExpanded ? 'auto' : 'visible',
                                 overflowX: 'hidden',
@@ -180,7 +180,7 @@ export default function BatchRow({
                         >
                             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? (
                                 <>
-                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 3)).map((img, i) => {
+                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 5)).map((img, i) => {
                                         const srcUrl = img.startsWith('http')
                                             ? img
                                             : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
@@ -245,9 +245,9 @@ export default function BatchRow({
                                             </Box>
                                         );
                                     })}
-                                    {row.imagenes.length > 3 && (
+                                    {row.imagenes.length > 5 && (
                                         <Stack spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }}>
-                                            <Tooltip title={reviewExpanded ? 'Mostrar solo 3' : `Mostrar todas (${row.imagenes.length})`}>
+                                            <Tooltip title={reviewExpanded ? 'Mostrar solo 5' : `Mostrar todas (${row.imagenes.length})`}>
                                                 <span>
                                                     <IconButton size="small" onClick={() => setReviewExpanded(!reviewExpanded)}
                                                         sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' } }}
@@ -257,7 +257,7 @@ export default function BatchRow({
                                                 </span>
                                             </Tooltip>
                                             <Typography variant="caption" sx={{ color: '#7dd3fc', fontWeight: 700 }}>
-                                                {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 3}`}
+                                                {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 5}`}
                                             </Typography>
                                         </Stack>
                                     )}
