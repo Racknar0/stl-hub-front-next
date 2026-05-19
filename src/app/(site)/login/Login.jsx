@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
+import { useGoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
 
@@ -58,12 +59,12 @@ const Login = () => {
                     console.error('Error fetching profile after login', errProfile);
                 }
 
-                await timerAlert(
-                    isEn ? 'Success' : 'Éxito',
-                    isEn ? 'Logged in successfully!' : '¡Has iniciado sesión con éxito!',
-                    2000
-                );
-                router.push('/');
+                timerAlert('success', response.data.message);
+                if (isEn) {
+                    router.push('/en');
+                } else {
+                    router.push('/');
+                }
             } else {
                 setPassword('');
                 await timerAlert(
@@ -84,7 +85,41 @@ const Login = () => {
         }
     };
 
+    const handleGoogleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            setLoading(true);
+            try {
+                const response = await httpService.postData('/auth/google', {
+                    token: tokenResponse.access_token,
+                    language: isEn ? 'en' : 'es'
+                });
+                if (response.status === 200) {
+                    const jwtToken = response.data.token;
+                    await login(jwtToken);
+                    try {
+                        const profileRes = await httpService.getData('/me/profile');
+                        const userLang = profileRes?.data?.language || 'es';
+                        setLanguage(userLang);
+                    } catch (e) {}
 
+                    timerAlert('success', response.data.message);
+                    if (isEn) {
+                        router.push('/en');
+                    } else {
+                        router.push('/');
+                    }
+                }
+            } catch (error) {
+                console.error('Google login error', error);
+                timerAlert('error', error.response?.data?.message || (isEn ? 'Google login failed' : 'Error con Google'));
+            } finally {
+                setLoading(false);
+            }
+        },
+        onError: () => {
+            timerAlert('error', isEn ? 'Google login failed' : 'Error al iniciar con Google');
+        }
+    });
 
 
     useEffect(() => {
@@ -190,9 +225,7 @@ const Login = () => {
                             <button
                                 type="button"
                                 className="login-social-btn"
-                                onClick={() => {
-                                    console.log('Google login clicked');
-                                }}
+                                onClick={() => handleGoogleLogin()}
                             >
                                 <svg viewBox="0 0 48 48">
                                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"></path>

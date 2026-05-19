@@ -79,6 +79,11 @@ const Sidebar = () => {
                     Upload Batch
                   </Link>
                 </li>
+                <li>
+                  <Link href="/dashboard/pinterest" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Pinterest Publisher
+                  </Link>
+                </li>
               </ul>
             </li>
 

@@ -10,6 +10,7 @@ import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
 import { getTrackingFromMiddlewareCookie, getVisitIdentityFromMiddlewareCookie } from '../../../helpers/attributionCookie';
 import { sendGTMEvent } from '@next/third-parties/google';
+import { useGoogleLogin } from '@react-oauth/google';
 
 const Register = () => {
     // ⚠️ mantener instancia estable de HttpService
@@ -225,6 +226,48 @@ const Register = () => {
         }
     };
 
+    const handleGoogleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            setLoading(true);
+            try {
+                // Generar eventId para deduplicación de TikTok
+                const eventId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                const response = await httpService.postData('/auth/google', {
+                    token: tokenResponse.access_token,
+                    language: isEn ? 'en' : 'es',
+                    eventId,
+                });
+                if (response.status === 200) {
+                    const loginFn = useStore.getState().login;
+                    const setLangFn = useStore.getState().setLanguage;
+                    const jwtToken = response.data.token;
+                    
+                    await loginFn(jwtToken);
+                    try {
+                        const profileRes = await httpService.getData('/me/profile');
+                        const userLang = profileRes?.data?.language || 'es';
+                        setLangFn(userLang);
+                    } catch (e) {}
+
+                    timerAlert('success', response.data.message);
+                    if (isEn) {
+                        router.push('/en');
+                    } else {
+                        router.push('/');
+                    }
+                }
+            } catch (error) {
+                console.error('Google register error', error);
+                timerAlert('error', error.response?.data?.message || (isEn ? 'Google register failed' : 'Error al registrarse con Google'));
+            } finally {
+                setLoading(false);
+            }
+        },
+        onError: () => {
+            timerAlert('error', isEn ? 'Google register failed' : 'Error al registrarse con Google');
+        }
+    });
+
     return (
         <>
             <section className="login-page">
@@ -243,9 +286,7 @@ const Register = () => {
                             <button
                                 type="button"
                                 className="login-social-btn"
-                                onClick={() => {
-                                    console.log('Google register clicked');
-                                }}
+                                onClick={() => handleGoogleLogin()}
                             >
                                 <svg viewBox="0 0 48 48">
                                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"></path>
