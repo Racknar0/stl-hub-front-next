@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import HttpService from '@/services/HttpService';
 import './PinterestCalendar.scss';
 
 export default function PinterestCalendar() {
@@ -24,6 +25,8 @@ export default function PinterestCalendar() {
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -54,6 +57,57 @@ export default function PinterestCalendar() {
       setSelectedImages(selectedImages.filter(img => img !== imgUrl));
     } else {
       setSelectedImages([...selectedImages, imgUrl]);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (selectedImages.length === 0 || !searchedAsset || !selectedDay) return;
+    
+    try {
+      setIsSubmitting(true);
+      const http = new HttpService();
+      
+      // Armar la fecha programada (Año actual, mes actual, día seleccionado, 10:00 AM)
+      const scheduleDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay, 10, 0, 0);
+
+      // Recolectar datos de los inputs (simplificado para el ejemplo)
+      const titleInput = document.querySelector('input[placeholder="Título del Pin"]').value;
+      const descInput = document.querySelector('textarea[placeholder="Descripción detallada"]').value;
+      const linkInput = document.querySelector('input[placeholder="Enlace de destino"]').value;
+      
+      // Obtener valor de los filtros (checkboxes)
+      const filterInputs = document.querySelectorAll('.filters-group input[type="checkbox"]');
+      const filters = {
+        flip: filterInputs[0]?.checked || false,
+        zoom: filterInputs[1]?.checked ? 1.05 : 1.0
+      };
+
+      const payload = {
+        assetId: searchedAsset.id,
+        images: selectedImages,
+        scheduledAt: scheduleDate.toISOString(),
+        boardId: 'Automático', // TODO: Obtener del select
+        title: titleInput,
+        description: descInput,
+        link: linkInput,
+        filters: filters
+      };
+
+      const res = await http.postData('/pinterest/schedule', payload);
+      
+      if (res.success) {
+        alert(`¡Éxito! Se programaron ${res.data.queued} pines en la cola.`);
+        setSelectedDay(null);
+        setSelectedImages([]);
+        setSearchedAsset(null);
+      } else {
+        alert('Error al programar: ' + (res.data?.error || 'Desconocido'));
+      }
+    } catch (e) {
+      alert('Error de conexión con el servidor.');
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -225,10 +279,11 @@ export default function PinterestCalendar() {
             <div className="panel-actions">
               <button className="btn-secondary" onClick={() => setSelectedDay(null)}>Cancelar</button>
               <button 
-                className={`btn-primary ${selectedImages.length === 0 ? 'disabled' : ''}`}
-                disabled={selectedImages.length === 0}
+                className={`btn-primary ${selectedImages.length === 0 || isSubmitting ? 'disabled' : ''}`}
+                disabled={selectedImages.length === 0 || isSubmitting}
+                onClick={handleSchedule}
               >
-                Añadir {selectedImages.length} Pines a la Cola
+                {isSubmitting ? 'Procesando...' : `Añadir ${selectedImages.length} Pines a la Cola`}
               </button>
             </div>
           </div>

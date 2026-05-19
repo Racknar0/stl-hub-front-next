@@ -249,6 +249,15 @@ const Register = () => {
                         setLangFn(userLang);
                     } catch (e) {}
 
+                    // Disparar evento de GTM solo si es un usuario nuevo
+                    if (response.data.isNewUser) {
+                        try {
+                            sendGTMEvent({ event: 'sign_up', method: 'google', event_id: eventId });
+                        } catch (e) {
+                            console.error('GTM sign_up error', e);
+                        }
+                    }
+
                     timerAlert('success', response.data.message);
                     if (isEn) {
                         router.push('/en');
