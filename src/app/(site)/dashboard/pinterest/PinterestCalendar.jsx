@@ -297,6 +297,9 @@ export default function PinterestCalendar() {
           <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
           <button onClick={handleNextMonth} className="nav-btn">→</button>
         </div>
+        <button className="btn-connect-pinterest" onClick={() => window.open('/api/pinterest/auth-test', '_blank')}>
+          🔗 Conectar Pinterest
+        </button>
       </div>
 
       <div className="main-layout">
