@@ -163,7 +163,7 @@ export default function BatchRow({
                         color: primaryText,
                     }}
                 >
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction={reviewExpanded ? 'column' : 'row'} spacing={1} alignItems={reviewExpanded ? 'stretch' : 'center'}>
                         <Box
                             sx={{
                                 display: 'flex',
@@ -174,8 +174,8 @@ export default function BatchRow({
                                 overflowX: 'hidden',
                                 maxHeight: reviewExpanded ? 420 : 'none',
                                 py: reviewExpanded ? 0.5 : 0,
-                                mr: 1,
-                                flexShrink: 0,
+                                mr: reviewExpanded ? 0 : 1,
+                                flexShrink: reviewExpanded ? 1 : 0,
                             }}
                         >
                             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? (
