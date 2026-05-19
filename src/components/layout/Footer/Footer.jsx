@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import './Footer.scss';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
@@ -38,20 +39,31 @@ const Footer = () => {
     `Are you a rights holder and detected a link that affects you? Write to us at ${officialEmail} with evidence and we will remove or block access promptly (24–72 h).`
   ).replace('{email}', officialEmail);
 
-  const policiesText = getTranslation('footer.policies', 'Políticas', 'Policies');
+  const policiesText = getTranslation('footer.policies', 'Términos y Condiciones', 'Terms and Conditions');
+  const privacyText = getTranslation('footer.privacy', 'Política de Privacidad', 'Privacy Policy');
 
   return (
     <>
       <footer className="app-footer">
         <div className="container-narrow footer-inner">
-          <div className="footer-main">
+          <div className="footer-main" style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
             <div className="copyright">{copyright}</div>
-            <button 
-              className="policies-btn"
-              onClick={() => setShowLegalModal(true)}
-            >
-              {policiesText}
-            </button>
+            <div className="footer-links" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <button 
+                className="policies-btn"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'inherit', padding: 0 }}
+                onClick={() => setShowLegalModal(true)}
+              >
+                {policiesText}
+              </button>
+              <Link 
+                href="/privacy-policy" 
+                className="policies-btn"
+                style={{ textDecoration: 'underline', color: 'inherit' }}
+              >
+                {privacyText}
+              </Link>
+            </div>
           </div>
           <div className="legal-text">
             {legalText}
