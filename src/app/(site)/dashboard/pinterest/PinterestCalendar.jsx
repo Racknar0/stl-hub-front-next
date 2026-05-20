@@ -337,11 +337,15 @@ export default function PinterestCalendar() {
               return (
                 <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''}`}
                   onClick={() => !isPast && handleDayClick(day)}>
-                  <div className="day-number">{day}</div>
+                  <div className="day-top">
+                    <div className="day-number">{day}</div>
+                    {pinsCount > 0 && <span className="total-chip">{pinsCount} {pinsCount === 1 ? 'Pin' : 'Pins'}</span>}
+                  </div>
                   {pinsCount > 0 && (
-                    <div className={`pin-indicator ${dayStats.published > 0 ? 'published' : ''} ${dayStats.failed > 0 ? 'has-failed' : ''}`}>
-                      <span className="dot"></span>
-                      <span className="count">{pinsCount} {pinsCount === 1 ? 'Pin' : 'Pines'}</span>
+                    <div className="day-stats">
+                      {dayStats.published > 0 && <span className="mini-badge published">{dayStats.published} ✓</span>}
+                      {dayStats.pending > 0 && <span className="mini-badge pending">{dayStats.pending} ⏳</span>}
+                      {dayStats.failed > 0 && <span className="mini-badge failed">{dayStats.failed} ✕</span>}
                     </div>
                   )}
                 </div>

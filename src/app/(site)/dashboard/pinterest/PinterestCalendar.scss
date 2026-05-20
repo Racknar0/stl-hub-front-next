@@ -217,16 +217,33 @@
       &.empty { background: rgba(0, 0, 0, 0.1); cursor: default; }
 
       &.today {
-        background: rgba(220, 38, 38, 0.05);
-        .day-number { color: #ef4444; font-weight: 700; }
+        background: rgba(147, 51, 234, 0.08);
+        .day-number { color: #a855f7; font-weight: 700; }
       }
 
       &.selected {
-        background: rgba(220, 38, 38, 0.1);
-        border: 1px solid rgba(220, 38, 38, 0.3);
+        background: rgba(147, 51, 234, 0.12);
+        border: 1px solid rgba(147, 51, 234, 0.3);
       }
 
       .day-number { font-size: 1.1rem; color: #d4d4d8; font-weight: 500; }
+
+      .day-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .total-chip {
+        font-size: 0.65rem;
+        font-weight: 700;
+        background: rgba(147, 51, 234, 0.15);
+        color: #c084fc;
+        padding: 0.15rem 0.45rem;
+        border-radius: 10px;
+        white-space: nowrap;
+        text-align: center;
+      }
 
       &.past {
         opacity: 0.35;
@@ -234,30 +251,41 @@
         &:hover { background: transparent; }
       }
 
-      .pin-indicator {
-        margin-top: 0.5rem;
-        background: rgba(220, 38, 38, 0.1);
-        border: 1px solid rgba(220, 38, 38, 0.2);
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.75rem;
-        color: #fca5a5;
-        
-        .dot {
-          width: 6px; height: 6px;
-          background: #ef4444;
-          border-radius: 50%;
-          box-shadow: 0 0 8px #ef4444;
+      .day-stats {
+        margin-top: 0.35rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .mini-badge {
+          font-size: 0.6rem;
+          font-weight: 700;
+          padding: 0.1rem 0.35rem;
+          border-radius: 4px;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.2rem;
+          width: fit-content;
+
+          &.published {
+            background: rgba(34, 197, 94, 0.12);
+            color: #4ade80;
+          }
+          &.pending {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+          }
+          &.failed {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+          }
         }
       }
 
       .add-pin-btn {
         position: absolute;
         bottom: 0.75rem; right: 0.75rem;
-        background: #ef4444; color: white;
+        background: #a855f7; color: white;
         border: none; padding: 0.4rem 0.75rem;
         border-radius: 6px; font-size: 0.75rem;
         font-weight: 600; cursor: pointer;
