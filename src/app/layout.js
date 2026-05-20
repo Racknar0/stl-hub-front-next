@@ -1,9 +1,45 @@
 // src/app/layout.jsx
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./globals.css";
 import "../styles/bundle.scss";
+import "./globals.css";
 import LangSetter from "./LangSetter";
 import { GoogleTagManager } from '@next/third-parties/google';
+import { DM_Sans, Syne, Outfit, Montserrat, Poppins } from 'next/font/google';
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['500', '600', '700', '800'],
+  variable: '--font-syne',
+  display: 'swap',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-montserrat',
+  display: 'swap',
+});
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['700', '800'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
 
 const SITE_URL = 'https://stl-hub.com';
 
@@ -61,15 +97,9 @@ export async function generateMetadata() {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${montserrat.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         <LangSetter />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@500;600;700;800&family=Outfit:wght@300;400;500;600&family=Montserrat:wght@400;600;700;800&family=Poppins:wght@700;800&display=swap"
-          rel="stylesheet"
-        />
         {/* Meta keywords fallback for some crawlers */}
         <meta name="keywords" content="descargar stl gratis, descargar stl por mega gratis, stl mega, free stl download, 3d models" />
         {/* JSON-LD structured data */}

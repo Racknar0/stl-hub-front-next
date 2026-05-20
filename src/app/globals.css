@@ -94,3 +94,28 @@ a {
     0% { transform: translate(0, 0) scale(1); }
     100% { transform: translate(5%, 10%) scale(1.1); }
 }
+
+/* ==========================================
+   Mapeo de Fuentes next/font/google
+   ========================================== */
+html, body, p, span, a, div, button, input, select, textarea, * {
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, 
+.tags-title, 
+.simply-modal-title, 
+.row-slider h3, 
+.section-row .header h3,
+.feature-section .intro-title,
+.feature-section .ftitle,
+.hero-title,
+.nsfw-title,
+.card-item .title {
+  font-family: var(--font-syne), 'Syne', var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.hero-subtitle,
+.promo-banner {
+  font-family: var(--font-outfit), 'Outfit', sans-serif;
+}
