@@ -95,10 +95,7 @@ const Home = () => {
   const [topRaw, setTopRaw] = useState([]);
   // Nuevo: lista Free
   const [freeRaw, setFreeRaw] = useState([]);
-  // Listas listas para mostrar (posible enriquecimiento en EN)
-  const [latestData, setLatestData] = useState([]);
-  const [topData, setTopData] = useState([]);
-  const [freeData, setFreeData] = useState([]);
+
   const [topRotationStep, setTopRotationStep] = useState(0);
   // Categorías y sliders
   const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
@@ -268,33 +265,14 @@ const Home = () => {
     }
   };
 
-  // Enriquecer cuando el idioma es EN y falten campos EN
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (String(language).toLowerCase() === 'en') {
-        setLatestData(latestRaw);
-        setTopData(topRaw);
-        setFreeData(freeRaw);
-      } else {
-        setLatestData(latestRaw);
-        setTopData(topRaw);
-        setFreeData(freeRaw);
-      }
-    };
-    run();
-    return () => { cancelled = true };
-  }, [language, latestRaw, topRaw, freeRaw]);
-
   // Derivar listas según idioma
   // Limitar sliders a 20 elementos por seguridad adicional
-  const latest = useMemo(() => latestData.slice(0,20).map(a => toCardItem(a, language)), [latestData, language]);
+  const latest = useMemo(() => latestRaw.slice(0,20).map(a => toCardItem(a, language)), [latestRaw, language]);
   const top = useMemo(() => {
-    const rotated = rotateListBy(topData, topRotationStep);
+    const rotated = rotateListBy(topRaw, topRotationStep);
     return rotated.slice(0,20).map(a => toCardItem(a, language));
-  }, [topData, topRotationStep, language]);
-  const free = useMemo(() => freeData.slice(0,20).map(a => toCardItem(a, language)), [freeData, language]);
+  }, [topRaw, topRotationStep, language]);
+  const free = useMemo(() => freeRaw.slice(0,20).map(a => toCardItem(a, language)), [freeRaw, language]);
 
   const catSliders = useMemo(() => (
     catOrder.map(slug => {
