@@ -87,14 +87,15 @@ const CardImageSlider = ({
   const list = useMemo(() => normalizeImages(images, fallback), [images, fallback]);
 
   const [index, setIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   const timerRef = useRef(null);
   const didInitRef = useRef(false);
   const autoplayDelayRef = useRef(getRandInt(MIN_MS, MAX_MS));
 
-  // Prefetch: cuando el slider está activo, precargar TODAS las imágenes del card
+  // Prefetch: cuando el slider está activo y el usuario hace hover, precargar las imágenes del card
   useEffect(() => {
-    if (!isEnabled) return;
+    if (!isEnabled || !isHovered) return;
     if (typeof window === 'undefined') return;
     if (list.length <= 1) return;
 
@@ -110,7 +111,7 @@ const CardImageSlider = ({
     } catch {
       // ignore
     }
-  }, [isEnabled, list]);
+  }, [isEnabled, isHovered, list]);
 
   // Índice inicial / reseteo (solo aleatorio cuando el slider está activo)
   useEffect(() => {
@@ -147,9 +148,17 @@ const CardImageSlider = ({
   const src = list[index] || list[0];
   const safeSrc = typeof src === 'string' && src ? encodeURI(src) : '/vite.svg';
 
-  if (!isEnabled || list.length <= 1) {
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
+
+  if (!isEnabled || list.length <= 1 || !isHovered) {
     return (
-      <div className="card-image-slider-root single-image" aria-label="Imagen">
+      <div 
+        className="card-image-slider-root single-image" 
+        aria-label="Imagen"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <Image
           src={safeSrc}
           alt={alt}
@@ -176,7 +185,12 @@ const CardImageSlider = ({
   };
 
   return (
-    <div className="card-image-slider-root" aria-label="Galería de imágenes">
+    <div 
+      className="card-image-slider-root" 
+      aria-label="Galería de imágenes"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <Swiper
         className="card-image-slider-swiper"
         modules={[Navigation, Autoplay]}
