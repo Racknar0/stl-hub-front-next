@@ -173,25 +173,27 @@ const Home = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await http.getData('/assets/latest?limit=20');
+        const [res, resTopRandomPool, resFree, resCats] = await Promise.all([
+          http.getData('/assets/latest?limit=20'),
+          http.getData('/assets/search?pageIndex=0&pageSize=80'),
+          http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20'),
+          http.getData('/categories')
+        ]);
+
         const latestArr = Array.isArray(res.data) ? res.data : [];
         setLatestRaw(latestArr);
 
         // "Lo más descargado" simulado con assets aleatorios y refrescado en cada carga.
-        const resTopRandomPool = await http.getData('/assets/search?pageIndex=0&pageSize=80');
         const topPool = Array.isArray(resTopRandomPool.data?.items) ? resTopRandomPool.data.items : [];
         const topArr = pickRandomItems(topPool, 20);
         setTopRaw(topArr.length ? topArr : latestArr);
         setTopRotationStep(0);
 
         // Nuevo: FREE actuales (público vía /assets/search)
-        // Orden: últimos primero (id desc) y límite 20
-        const resFree = await http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20');
         const freeArr = Array.isArray(resFree.data?.items) ? resFree.data.items : [];
         setFreeRaw(freeArr);
 
         // Cargar categorías disponibles
-        const resCats = await http.getData('/categories');
         const catItems = (resCats.data?.items || []).map(c => ({ id: c.id, name: c.name, nameEn: c.nameEn || c.name, slug: c.slug, slugEn: c.slugEn || c.slug }));
         setCats(catItems);
         // Barajar el orden para que cada visita muestre categorías distintas primero
