@@ -63,6 +63,18 @@ export default function PinterestCalendar() {
     http.getData('/pinterest/connection-status').then(r => { if (r.data) setPinterestStatus(r.data); }).catch(() => {});
   }, []);
 
+  const handleDisconnect = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar tu cuenta de Pinterest?')) return;
+    try {
+      const http = new HttpService();
+      await http.postData('/pinterest/disconnect');
+      setPinterestStatus({ connected: false, username: '' });
+    } catch (err) {
+      alert('Error al desconectar: ' + err.message);
+    }
+  };
+
   // Calendar
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -313,11 +325,21 @@ export default function PinterestCalendar() {
           <span className="stat pending">⏳ {stats.pending} Programados</span>
           <span className="stat failed">❌ {stats.failed} Errores</span>
         </div>
-        <button className={`btn-connect-pinterest ${pinterestStatus.connected ? 'connected' : 'disconnected'}`}
-          onClick={() => window.open('/api/pinterest/auth-test', '_blank')}>
-          <span className="status-dot" />
-          {pinterestStatus.connected ? `@${pinterestStatus.username}` : 'Conectar Pinterest'}
-        </button>
+        {pinterestStatus.connected ? (
+          <div className="btn-connect-pinterest connected">
+            <span className="status-dot" />
+            <span className="username-link" onClick={() => window.open('/api/pinterest/auth-test', '_blank')} title="Re-conectar / Cambiar cuenta">
+              @{pinterestStatus.username}
+            </span>
+            <button className="btn-disconnect" onClick={handleDisconnect} title="Desconectar cuenta">✕</button>
+          </div>
+        ) : (
+          <button className="btn-connect-pinterest disconnected"
+            onClick={() => window.open('/api/pinterest/auth-test', '_blank')}>
+            <span className="status-dot" />
+            Conectar Pinterest
+          </button>
+        )}
       </div>
 
       <div className="main-layout">
