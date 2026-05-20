@@ -328,14 +328,14 @@ export default function PinterestCalendar() {
         {pinterestStatus.connected ? (
           <div className="btn-connect-pinterest connected">
             <span className="status-dot" />
-            <span className="username-link" onClick={() => window.open('/api/pinterest/auth-test', '_blank')} title="Re-conectar / Cambiar cuenta">
+            <span className="username-link" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/pinterest/auth-test`, '_blank')} title="Re-conectar / Cambiar cuenta">
               @{pinterestStatus.username}
             </span>
             <button className="btn-disconnect" onClick={handleDisconnect} title="Desconectar cuenta">✕</button>
           </div>
         ) : (
           <button className="btn-connect-pinterest disconnected"
-            onClick={() => window.open('/api/pinterest/auth-test', '_blank')}>
+            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/pinterest/auth-test`, '_blank')}>
             <span className="status-dot" />
             Conectar Pinterest
           </button>
