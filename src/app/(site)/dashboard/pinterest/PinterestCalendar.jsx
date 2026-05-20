@@ -10,7 +10,18 @@ const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:30
 
 function resolveImgUrl(img) {
   if (!img) return '';
-  if (img.startsWith('http')) return img;
+  
+  // If it's a full localhost URL, rewrite it to use the production base URL
+  if (img.startsWith('http')) {
+    if (img.includes('localhost:3001/uploads/') || img.includes('localhost:3000/uploads/')) {
+      const parts = img.split('/uploads/');
+      if (parts.length > 1) {
+        return `${UPLOAD_BASE}/${parts[1]}`;
+      }
+    }
+    return img;
+  }
+  
   const clean = String(img).replace(/^\\+|^\/+/, '');
   return `${UPLOAD_BASE}/${clean}`;
 }
@@ -394,9 +405,10 @@ export default function PinterestCalendar() {
                   ) : (
                     <div className="pins-list">
                       {dayPins.map(pin => {
-                        const imageUrl = typeof pin.filters === 'string'
-                          ? (JSON.parse(pin.filters)?.imageUrl || '')
-                          : (pin.filters?.imageUrl || '');
+                        const filtersObj = typeof pin.filters === 'string'
+                          ? JSON.parse(pin.filters)
+                          : pin.filters;
+                        const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
                         return (
                           <div key={pin.id} className={`pin-item ${expandedPinId === pin.id ? 'expanded' : ''}`}>
                             <div className={`pin-row status-${pin.status?.toLowerCase()}`} onClick={() => {
@@ -416,7 +428,9 @@ export default function PinterestCalendar() {
                                 </div>
                               </div>
                               <div className="pin-row-actions">
-                                {pin.status === 'PENDING' && <button className="btn-delete-pin" onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}>🗑</button>}
+                                {(pin.status === 'PENDING' || pin.status === 'FAILED') && (
+                                  <button className="btn-delete-pin" onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}>🗑</button>
+                                )}
                                 {pin.status === 'PUBLISHED' && pin.publishedPinId && <a href={`https://pinterest.com/pin/${pin.publishedPinId}`} target="_blank" rel="noreferrer" className="btn-view-pin" onClick={(e) => e.stopPropagation()}>↗</a>}
                                 {pin.status === 'FAILED' && <span className="fail-icon" title={pin.errorMessage || 'Error'}>⚠️</span>}
                                 <span className="expand-arrow">{expandedPinId === pin.id ? '▲' : '▼'}</span>
@@ -448,6 +462,11 @@ export default function PinterestCalendar() {
                                   <div className="detail-field"><strong>Descripción:</strong> {pin.description || '—'}</div>
                                   <div className="detail-field"><strong>Link:</strong> <a href={pin.link} target="_blank" rel="noreferrer">{pin.link || '—'}</a></div>
                                   {pin.errorMessage && <div className="detail-field error"><strong>Error:</strong> {pin.errorMessage}</div>}
+                                  {pin.status === 'FAILED' && (
+                                    <div className="pin-detail-actions" style={{ marginTop: '0.75rem' }}>
+                                      <button className="btn-delete-pin-full" onClick={() => handleDeletePin(pin.id)}>🗑 Eliminar</button>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </div>
