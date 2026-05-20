@@ -370,26 +370,42 @@ export default function PinterestCalendar() {
                     <div className="empty-day"><p>No hay pines programados.</p></div>
                   ) : (
                     <div className="pins-list">
-                      {dayPins.map(pin => (
-                        <div key={pin.id} className={`pin-item ${expandedPinId === pin.id ? 'expanded' : ''}`}>
-                          <div className={`pin-row status-${pin.status?.toLowerCase()}`} onClick={() => {
-                            if (expandedPinId === pin.id) setExpandedPinId(null);
-                            else { setExpandedPinId(pin.id); setEditPin({ title: pin.title || '', description: pin.description || '', link: pin.link || '' }); }
-                          }}>
-                            <div className="pin-row-info">
-                              <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
-                              <span className="pin-row-title">{pin.title || 'Sin título'}</span>
-                              <span className="pin-row-time">{new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                      {dayPins.map(pin => {
+                        const imageUrl = typeof pin.filters === 'string'
+                          ? (JSON.parse(pin.filters)?.imageUrl || '')
+                          : (pin.filters?.imageUrl || '');
+                        return (
+                          <div key={pin.id} className={`pin-item ${expandedPinId === pin.id ? 'expanded' : ''}`}>
+                            <div className={`pin-row status-${pin.status?.toLowerCase()}`} onClick={() => {
+                              if (expandedPinId === pin.id) setExpandedPinId(null);
+                              else { setExpandedPinId(pin.id); setEditPin({ title: pin.title || '', description: pin.description || '', link: pin.link || '' }); }
+                            }}>
+                              <div className="pin-row-info">
+                                {imageUrl && (
+                                  <div className="pin-row-img-wrapper">
+                                    <img src={imageUrl} alt="" className="pin-row-img" />
+                                  </div>
+                                )}
+                                <div className="pin-row-text">
+                                  <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
+                                  <span className="pin-row-title">{pin.title || 'Sin título'}</span>
+                                  <span className="pin-row-time">{new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              </div>
+                              <div className="pin-row-actions">
+                                {pin.status === 'PENDING' && <button className="btn-delete-pin" onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}>🗑</button>}
+                                {pin.status === 'PUBLISHED' && pin.publishedPinId && <a href={`https://pinterest.com/pin/${pin.publishedPinId}`} target="_blank" rel="noreferrer" className="btn-view-pin" onClick={(e) => e.stopPropagation()}>↗</a>}
+                                {pin.status === 'FAILED' && <span className="fail-icon" title={pin.errorMessage || 'Error'}>⚠️</span>}
+                                <span className="expand-arrow">{expandedPinId === pin.id ? '▲' : '▼'}</span>
+                              </div>
                             </div>
-                            <div className="pin-row-actions">
-                              {pin.status === 'PENDING' && <button className="btn-delete-pin" onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}>🗑</button>}
-                              {pin.status === 'PUBLISHED' && pin.publishedPinId && <a href={`https://pinterest.com/pin/${pin.publishedPinId}`} target="_blank" rel="noreferrer" className="btn-view-pin" onClick={(e) => e.stopPropagation()}>↗</a>}
-                              {pin.status === 'FAILED' && <span className="fail-icon" title={pin.errorMessage || 'Error'}>⚠️</span>}
-                              <span className="expand-arrow">{expandedPinId === pin.id ? '▲' : '▼'}</span>
-                            </div>
-                          </div>
-                          {expandedPinId === pin.id && (
-                            <div className="pin-detail">
+                            {expandedPinId === pin.id && (
+                              <div className="pin-detail">
+                                {imageUrl && (
+                                  <div className="pin-detail-preview">
+                                    <img src={imageUrl} alt="Pin preview" />
+                                  </div>
+                                )}
                               {pin.status === 'PENDING' ? (
                                 <>
                                   <label>Título</label>
@@ -412,9 +428,10 @@ export default function PinterestCalendar() {
                                 </>
                               )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pines (Bulk)</button>
