@@ -37,6 +37,7 @@ export default function PinterestCalendar() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [filters, setFilters] = useState({ flip: true, zoom: true });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // CropperJS editor
   const [editingImage, setEditingImage] = useState(null); // { assetId, imageUrl, key }
   const [editedImages, setEditedImages] = useState({}); // key -> dataURL (visual)
@@ -434,7 +435,7 @@ export default function PinterestCalendar() {
                       })}
                     </div>
                   )}
-                  <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pines (Bulk)</button>
+                  <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pin</button>
                 </div>
               )}
 
@@ -445,9 +446,9 @@ export default function PinterestCalendar() {
 
                   {/* Search */}
                   <div className="form-group search-group">
-                    <label>IDs separados por coma</label>
+                    <label>ID pin</label>
                     <div className="search-bar">
-                      <input type="text" className="form-input" placeholder="Ej: 12878, 15432, 9876"
+                      <input type="text" className="form-input" placeholder="ID pin"
                         value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
                       <button className="btn-search" onClick={handleBulkSearch}>Buscar</button>
@@ -506,7 +507,7 @@ export default function PinterestCalendar() {
                                   <button className={`btn-ai-optimize ${isOptimizing === asset.id ? 'loading' : ''}`}
                                     disabled={isOptimizing === asset.id}
                                     onClick={() => handleAiOptimize(asset)}>
-                                    {isOptimizing === asset.id ? '⏳ Optimizing...' : '✨ AI Variations'}
+                                    {isOptimizing === asset.id ? '⏳ Generando...' : '✨ Sugerencias SEO'}
                                   </button>
                                 </div>
 
@@ -516,10 +517,10 @@ export default function PinterestCalendar() {
                                     <span className="variation-label">Pin #{i + 1}</span>
                                     <input type="text" className="form-input" value={pin.pinTitle}
                                       onChange={(e) => updatePinField(pin.key, 'pinTitle', e.target.value)}
-                                      placeholder="Title" />
+                                      placeholder="Título del Pin" />
                                     <textarea className="form-input" rows="4" value={pin.pinDescription}
                                       onChange={(e) => updatePinField(pin.key, 'pinDescription', e.target.value)}
-                                      placeholder="Description" />
+                                      placeholder="Descripción del Pin" />
                                     {pin.pinHashtags?.length > 0 && (
                                       <div className="pin-hashtags">
                                         {pin.pinHashtags.map((tag, ti) => (
@@ -546,16 +547,23 @@ export default function PinterestCalendar() {
                   })}
                   {/* Global Filters */}
                   {selectedPins.length > 0 && (
-                    <div className="global-filters">
-                      <span className="filters-label">Filtros Anti-Detección:</span>
-                      <label className="filter-check">
-                        <input type="checkbox" checked={filters.flip} onChange={(e) => setFilters(f => ({...f, flip: e.target.checked}))} />
-                        <span>🔄 Espejo</span>
-                      </label>
-                      <label className="filter-check">
-                        <input type="checkbox" checked={filters.zoom} onChange={(e) => setFilters(f => ({...f, zoom: e.target.checked}))} />
-                        <span>🔍 Micro-Zoom</span>
-                      </label>
+                    <div className={`global-filters ${showAdvancedFilters ? 'expanded' : ''}`}>
+                      <div className="filters-header" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
+                        <span className="filters-label">⚙️ Ajustes Visuales</span>
+                        <span className="expand-arrow">{showAdvancedFilters ? '▲' : '▼'}</span>
+                      </div>
+                      {showAdvancedFilters && (
+                        <div className="filters-body">
+                          <label className="filter-check">
+                            <input type="checkbox" checked={filters.flip} onChange={(e) => setFilters(f => ({...f, flip: e.target.checked}))} />
+                            <span>🔄 Espejo (Variar imagen)</span>
+                          </label>
+                          <label className="filter-check">
+                            <input type="checkbox" checked={filters.zoom} onChange={(e) => setFilters(f => ({...f, zoom: e.target.checked}))} />
+                            <span>🔍 Auto-Enfoque (Mejorar resolución)</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
 
