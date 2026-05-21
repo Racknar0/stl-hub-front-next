@@ -99,6 +99,7 @@ export default function TelegramDownloader() {
   const [importUrl, setImportUrl] = useState('');
   const [importUrlLabel, setImportUrlLabel] = useState('');
   const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [newlyAddedChannel, setNewlyAddedChannel] = useState(null);
 
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [startId, setStartId] = useState('');
@@ -286,6 +287,19 @@ export default function TelegramDownloader() {
         setSelectedChannel(channelName);
         setImportUrl('');
         setImportUrlLabel('');
+
+        // Resaltar y hacer scroll hacia el nuevo canal
+        setNewlyAddedChannel(channelName);
+        setTimeout(() => {
+          const el = document.getElementById(`channel-row-${channelName}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 150);
+        setTimeout(() => {
+          setNewlyAddedChannel(null);
+        }, 4000);
+
         alert('Canal importado y escaneado con éxito');
       } else {
         alert('Error importando el canal: ' + (d.message || 'Error desconocido'));
@@ -323,6 +337,19 @@ export default function TelegramDownloader() {
         setNewChannelLabel('');
         setIsPrivateChannel(false);
         setInitialLastMsgId('');
+
+        // Resaltar y hacer scroll hacia el nuevo canal
+        setNewlyAddedChannel(formattedName);
+        setTimeout(() => {
+          const el = document.getElementById(`channel-row-${formattedName}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 150);
+        setTimeout(() => {
+          setNewlyAddedChannel(null);
+        }, 4000);
+
         alert('Canal agregado y escaneado con éxito');
       } else {
         alert('Error agregando el canal: ' + (d.message || 'Error desconocido'));
@@ -916,7 +943,11 @@ export default function TelegramDownloader() {
                   } : null);
 
                   return (
-                    <tr key={c.name}>
+                    <tr
+                      key={c.name}
+                      id={`channel-row-${c.name}`}
+                      className={c.name === newlyAddedChannel ? 'newly-added-row' : ''}
+                    >
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <ChannelAvatar channel={c} />
