@@ -24,6 +24,10 @@ import {
     Chip,
     InputAdornment,
     CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/EditOutlined';
@@ -54,6 +58,18 @@ export default function UsersPage() {
     const [showForm, setShowForm] = useState(false);
     const [creating, setCreating] = useState(false);
     const [form, setForm] = useState({ email: '', password: '', daysToAdd: 90 });
+
+    // Form edit
+    const [showEditForm, setShowEditForm] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editForm, setEditForm] = useState({
+        id: null,
+        email: '',
+        password: '',
+        roleId: 1,
+        isActive: true,
+        daysRemaining: 0,
+    });
 
     // User detail modal
     const [detailOpen, setDetailOpen] = useState(false);
@@ -131,34 +147,66 @@ export default function UsersPage() {
         }
     };
 
-    const onUpdate = async (row) => {
+    const onEdit = (row) => {
         const u = row.original;
-        const result = await fireAlert({
-            title: 'Extender suscripción',
-            text: `Ingresa los días a agregar para ${u.email}`,
-            input: 'number',
-            inputAttributes: { min: 1, max: 3650, step: 1 },
-            inputValue: 30,
-            showCancelButton: true,
-            confirmButtonText: 'Extender',
-            cancelButtonText: 'Cancelar',
-            reverseButtons: true,
-            zIndex: 2000,
-            inputValidator: (value) => {
-                const n = Number(value);
-                if (!Number.isFinite(n) || n <= 0) return 'Ingresa un número válido (> 0)';
-                if (n > 3650) return 'Máximo permitido: 3650 días';
-                return undefined;
-            },
+        setEditForm({
+            id: u.id,
+            email: u.email || '',
+            password: '',
+            roleId: u.roleId || 1,
+            isActive: u.isActive !== false,
+            daysRemaining: u.subDaysLeft !== null && u.subDaysLeft !== undefined ? Math.max(0, u.subDaysLeft) : 0,
         });
-        if (!result.isConfirmed) return;
-        const daysToAdd = Number(result.value);
+        setShowEditForm(true);
+    };
+
+    const onSaveEdit = async (e) => {
+        e.preventDefault();
+        if (!editForm.email) {
+            await errorAlert('Datos incompletos', 'Ingresa el email');
+            return;
+        }
+        const ok = await confirmAlert(
+            'Actualizar usuario',
+            `¿Deseas guardar los cambios para el usuario ${editForm.email}?`,
+            'Guardar',
+            'Cancelar',
+            'question'
+        );
+        if (!ok) return;
+
         try {
-            await http.postData(`/users/${u.id}/subscription/extend`, { daysToAdd });
-            await successAlert('Suscripción actualizada', 'Se extendió la suscripción correctamente');
+            setEditing(true);
+            const promises = [];
+
+            // 1. Update basic user info
+            const updateData = {
+                email: editForm.email,
+                isActive: editForm.isActive,
+                roleId: editForm.roleId,
+            };
+            if (editForm.password) {
+                updateData.password = editForm.password;
+            }
+            promises.push(http.putData('/users', editForm.id, updateData));
+
+            // 2. Update subscription days remaining
+            if (editForm.daysRemaining !== '' && editForm.daysRemaining !== null && editForm.daysRemaining !== undefined) {
+                promises.push(
+                    http.postData(`/users/${editForm.id}/subscription/extend`, {
+                        daysRemaining: Number(editForm.daysRemaining),
+                    })
+                );
+            }
+
+            await Promise.all(promises);
+            await successAlert('Usuario actualizado', 'El usuario se actualizó correctamente');
+            setShowEditForm(false);
             fetchUsers();
-        } catch (e) {
-            await errorAlert('Error', e?.response?.data?.message || 'No se pudo actualizar la suscripción');
+        } catch (err) {
+            await errorAlert('Error', err?.response?.data?.message || 'No se pudo actualizar el usuario');
+        } finally {
+            setEditing(false);
         }
     };
 
@@ -278,14 +326,29 @@ export default function UsersPage() {
         positionActionsColumn: 'first',
         renderRowActions: ({ row }) => (
             <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center' }}>
-                <Tooltip title="Extender suscripción">
-                    <IconButton onClick={() => onUpdate(row)} size="small" sx={{ p: 0.5 }}>
+                <Tooltip title="Editar usuario">
+                    <IconButton
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(row);
+                        }}
+                        size="small"
+                        sx={{ p: 0.5 }}
+                    >
                         <EditIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
                 {row.original.roleId !== 2 && (
                     <Tooltip title="Eliminar">
-                        <IconButton color="error" onClick={() => onDelete(row)} size="small" sx={{ p: 0.5 }}>
+                        <IconButton
+                            color="error"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(row);
+                            }}
+                            size="small"
+                            sx={{ p: 0.5 }}
+                        >
                             <DeleteIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
@@ -327,6 +390,88 @@ export default function UsersPage() {
                     <DialogActions>
                         <MUIButton onClick={() => setShowForm(false)} disabled={creating}>Cancelar</MUIButton>
                         <MUIButton type="submit" variant="contained" disabled={creating}>{creating ? 'Creando...' : 'Crear usuario'}</MUIButton>
+                    </DialogActions>
+                </Box>
+            </Dialog>
+
+            {/* Modal Editar usuario */}
+            <Dialog open={showEditForm} onClose={() => setShowEditForm(false)} fullWidth maxWidth="sm">
+                <DialogTitle>Editar usuario</DialogTitle>
+                <Box component="form" onSubmit={onSaveEdit}>
+                    <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <TextField
+                            label="Email"
+                            type="email"
+                            fullWidth
+                            required
+                            margin="dense"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
+                        />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                            <TextField
+                                label="Nueva Password (opcional)"
+                                type="text"
+                                fullWidth
+                                placeholder="Dejar en blanco para no cambiar"
+                                value={editForm.password}
+                                onChange={(e) => setEditForm(f => ({ ...f, password: e.target.value }))}
+                            />
+                            <MUIButton
+                                type="button"
+                                variant="outlined"
+                                sx={{ mt: 1, height: 56 }}
+                                onClick={() => setEditForm(f => ({ ...f, password: generateStrongPassword(12) }))}
+                                disabled={editing}
+                            >
+                                Generar
+                            </MUIButton>
+                        </Box>
+                        
+                        <FormControl fullWidth margin="dense">
+                            <InputLabel id="edit-role-label">Rol</InputLabel>
+                            <Select
+                                labelId="edit-role-label"
+                                label="Rol"
+                                value={editForm.roleId}
+                                onChange={(e) => setEditForm(f => ({ ...f, roleId: Number(e.target.value) }))}
+                            >
+                                <MenuItem value={1}>Usuario</MenuItem>
+                                <MenuItem value={2}>Admin</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth margin="dense">
+                            <InputLabel id="edit-status-label">Estado</InputLabel>
+                            <Select
+                                labelId="edit-status-label"
+                                label="Estado"
+                                value={editForm.isActive ? 'active' : 'inactive'}
+                                onChange={(e) => setEditForm(f => ({ ...f, isActive: e.target.value === 'active' }))}
+                            >
+                                <MenuItem value="active">Activo</MenuItem>
+                                <MenuItem value="inactive">Inactivo</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <TextField
+                            label="Días de suscripción restantes"
+                            type="number"
+                            fullWidth
+                            margin="dense"
+                            inputProps={{ min: 0, max: 3650 }}
+                            value={editForm.daysRemaining !== '' && editForm.daysRemaining !== null && editForm.daysRemaining !== undefined ? editForm.daysRemaining : ''}
+                            onChange={(e) => setEditForm(f => ({ ...f, daysRemaining: e.target.value === '' ? '' : Number(e.target.value) }))}
+                            helperText="Días restantes de suscripción. Pon 0 para quitarla o inhabilitarla."
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <MUIButton onClick={() => setShowEditForm(false)} disabled={editing}>
+                            Cancelar
+                        </MUIButton>
+                        <MUIButton type="submit" variant="contained" color="primary" disabled={editing}>
+                            {editing ? 'Guardando...' : 'Guardar Cambios'}
+                        </MUIButton>
                     </DialogActions>
                 </Box>
             </Dialog>
