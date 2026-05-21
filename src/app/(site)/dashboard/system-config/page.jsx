@@ -474,7 +474,20 @@ export default function SystemConfigPage() {
             </article>
 
             {/* Render any other settings from DB that are not explicitly handled above */}
-            {settings.filter(s => !['FREEBIES_DAILY_COUNT','LAUNCH_PROMO_ACTIVE','LAUNCH_PROMO_DAYS','LAUNCH_PROMO_START','PLAN_PRICES','LIMIT_FREE_PASS_FREE_DOWNLOADS','LIMIT_NORMAL_FREE_DOWNLOADS','LIMIT_SUBSCRIBED_DOWNLOADS'].includes(s.key)).map((setting) => (
+            {settings.filter(s => ![
+              'FREEBIES_DAILY_COUNT',
+              'LAUNCH_PROMO_ACTIVE',
+              'LAUNCH_PROMO_DAYS',
+              'LAUNCH_PROMO_START',
+              'PLAN_PRICES',
+              'LIMIT_FREE_PASS_FREE_DOWNLOADS',
+              'LIMIT_NORMAL_FREE_DOWNLOADS',
+              'LIMIT_SUBSCRIBED_DOWNLOADS',
+              'PINTEREST_ACCESS_TOKEN',
+              'PINTEREST_REFRESH_TOKEN',
+              'PINTEREST_TOKEN_EXPIRES_AT',
+              'PINTEREST_REFRESH_EXPIRES_AT'
+            ].includes(s.key)).map((setting) => (
               <article className="setting-card" key={setting.key}>
                 <div className="setting-header">
                   <div className="icon-wrapper">
