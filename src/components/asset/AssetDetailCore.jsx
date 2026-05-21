@@ -12,7 +12,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/zoom';
 import { usePromo } from '../../hooks/usePromo';
-import SimplyModal from '../SimplyModal/SimplyModal';
+import DownloadLimitModal from '../common/DownloadLimitModal/DownloadLimitModal';
 import { useState, useEffect } from 'react';
 import SectionRow from '../../home/SectionRow/SectionRow';
 import { useRouter } from 'next/navigation';
@@ -28,7 +28,10 @@ export default function AssetDetailCore({ asset }) {
   const router = useRouter();
 
   const [downloading, setDownloading] = useState(false);
-  const [accessModal, setAccessModal] = useState({ open: false, kind: null, expiredAt: null });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalKind, setModalKind] = useState('limit-free');
+  const [modalNextReset, setModalNextReset] = useState(null);
+  const [modalLimit, setModalLimit] = useState(50);
   const [relatedCats, setRelatedCats] = useState([]);
   const [relatedTags, setRelatedTags] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
@@ -76,111 +79,73 @@ export default function AssetDetailCore({ asset }) {
   };
 
   const handleDownload = async () => {
-    if (!asset) return;
+    if (!asset || downloading) return;
 
-    if (asset.isPremium && !token) {
-      setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
+    if (!token) {
+      setModalKind('not-auth');
+      setModalNextReset(null);
+      setModalOpen(true);
       return;
     }
 
-    if (asset.isPremium && token && promo.active) {
-      try {
-        setDownloading(true);
-        const tmpWin = openWindowSafely();
-        try {
-          const r = await http.postData(`/assets/${asset.id}/request-download`, {});
-          const link = r.data?.link;
-          if (link) {
-            tmpWin.location = link;
-          } else {
-            try { tmpWin.close(); } catch {}
-            setAccessModal({ open: true, kind: 'error', expiredAt: null });
-          }
-        } catch (err) {
-          try { tmpWin.close(); } catch {}
-          const status = err?.response?.status;
-          if (status === 401) {
-            setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
-          } else {
-            setAccessModal({ open: true, kind: 'error', expiredAt: null });
-          }
-        } finally {
-          setDownloading(false);
-        }
-      } catch {
-        setDownloading(false);
-      }
-      return;
-    }
-
-    if (asset.isPremium && token) {
-      try {
-        setDownloading(true);
-        const res = await http.getData('/me/profile');
-        const user = res?.data || {};
-        const sub = user?.subscription;
-
-        if (sub?.status === 'ACTIVE' && (sub?.daysRemaining ?? 0) > 0) {
-          const tmpWin = openWindowSafely();
-          try {
-            const r = await http.postData(`/assets/${asset.id}/request-download`, {});
-            const link = r.data?.link;
-            if (link) {
-              tmpWin.location = link;
-            } else {
-              try { tmpWin.close(); } catch {}
-              setAccessModal({ open: true, kind: 'error', expiredAt: null });
-            }
-          } catch (err) {
-            try { tmpWin.close(); } catch {}
-            const status = err?.response?.status;
-            const code = err?.response?.data?.code;
-
-            if (status === 401) {
-              setAccessModal({ open: true, kind: 'not-auth', expiredAt: null });
-            } else if (status === 403 && code === 'EXPIRED') {
-              setAccessModal({ open: true, kind: 'expired', expiredAt: err?.response?.data?.expiredAt || sub?.currentPeriodEnd || null });
-            } else if (status === 403 && code === 'NO_SUB') {
-              setAccessModal({ open: true, kind: 'no-sub', expiredAt: null });
-            } else {
-              setAccessModal({ open: true, kind: 'error', expiredAt: null });
-            }
-          } finally {
-            setDownloading(false);
-          }
-        } else if (sub?.status === 'EXPIRED') {
-          setAccessModal({ open: true, kind: 'expired', expiredAt: sub?.currentPeriodEnd || null });
-          setDownloading(false);
-        } else {
-          setAccessModal({ open: true, kind: 'no-sub', expiredAt: null });
-          setDownloading(false);
-        }
-      } catch {
-        setAccessModal({ open: true, kind: 'error', expiredAt: null });
-        setDownloading(false);
-      }
-      return;
-    }
+    setDownloading(true);
+    const tmpWin = openWindowSafely();
 
     try {
-      setDownloading(true);
-      const tmpWin = openWindowSafely();
-      try {
-        const r = await http.postData(`/assets/${asset.id}/request-download`, {});
-        const link = r.data?.link;
-        if (link) {
+      const r = await http.postData(`/assets/${asset.id}/request-download`, {});
+      const link = r?.data?.link;
+
+      if (link) {
+        if (tmpWin) {
           tmpWin.location = link;
         } else {
-          try { tmpWin.close(); } catch {}
-          setAccessModal({ open: true, kind: 'error', expiredAt: null });
+          window.open(link, '_blank');
         }
-      } catch {
-        try { tmpWin.close(); } catch {}
-        setAccessModal({ open: true, kind: 'error', expiredAt: null });
-      } finally {
-        setDownloading(false);
+        return;
       }
-    } catch {
+
+      if (tmpWin) {
+        try { tmpWin.close(); } catch {}
+      }
+      setModalKind('error');
+      setModalOpen(true);
+    } catch (err) {
+      if (tmpWin) {
+        try { tmpWin.close(); } catch {}
+      }
+
+      const status = err?.response?.status;
+      const code = err?.response?.data?.code;
+
+      if (status === 401 || code === 'ANONYMOUS_BLOCKED') {
+        setModalKind('not-auth');
+        setModalNextReset(null);
+        setModalOpen(true);
+        return;
+      }
+
+      if (status === 403 && (code === 'NO_SUB' || code === 'EXPIRED')) {
+        setModalKind(code === 'NO_SUB' ? 'no-sub' : 'expired');
+        setModalNextReset(null);
+        setModalOpen(true);
+        return;
+      }
+
+      if (status === 403 && code === 'DAILY_LIMIT_REACHED') {
+        const nextReset = err?.response?.data?.nextReset;
+        const isSubscribed = err?.response?.data?.isSubscribed;
+        const limitVal = err?.response?.data?.limit || (isSubscribed ? 500 : 50);
+
+        setModalKind(isSubscribed ? 'limit-premium' : 'limit-free');
+        setModalNextReset(nextReset);
+        setModalLimit(limitVal);
+        setModalOpen(true);
+        return;
+      }
+
+      setModalKind('error');
+      setModalOpen(true);
+    } finally {
       setDownloading(false);
     }
   };
@@ -320,27 +285,14 @@ export default function AssetDetailCore({ asset }) {
         </div>
       )}
 
-      <SimplyModal
-        open={accessModal.open}
-        onClose={() => setAccessModal({ open: false, kind: null, expiredAt: null })}
-        title={accessModal.kind === 'not-auth' ? (isEn ? 'Access restricted' : 'Acceso restringido') :
-               accessModal.kind === 'expired' ? (isEn ? 'Subscription expired' : 'Suscripción vencida') :
-               accessModal.kind === 'no-sub' ? (isEn ? 'Subscription required' : 'Requiere suscripción') :
-               (isEn ? 'We had a problem' : 'Tuvimos un problema')}
-      >
-        <p style={{ marginBottom: '1rem' }}>
-          {accessModal.kind === 'not-auth' ? (isEn ? 'You must be logged in and have an active subscription to download.' : 'Debes iniciar sesión y tener una suscripción activa para descargar.') :
-           accessModal.kind === 'expired' ? (isEn ? 'Your subscription has expired. Please renew to continue.' : 'Tu suscripción ha vencido. Por favor renueva para continuar.') :
-           accessModal.kind === 'no-sub' ? (isEn ? 'You need an active subscription to download premium assets.' : 'Necesitas una suscripción activa para descargar assets premium.') :
-           (isEn ? 'We couldn’t verify your access right now. Please try again.' : 'No pudimos verificar tu acceso. Intenta de nuevo.')}
-        </p>
-        <div className="actions center" style={{ gap: 8, marginTop: 8, justifyContent: 'center', display: 'flex' }}>
-          {accessModal.kind === 'not-auth' && <Button as="link" href="/login" variant="purple" width="160px">{isEn ? 'Log in' : 'Iniciar sesión'}</Button>}
-          {accessModal.kind === 'no-sub' && <Button as="link" href="/suscripcion" variant="purple" width="160px">{isEn ? 'Subscribe' : 'Suscribirse'}</Button>}
-          {accessModal.kind === 'expired' && <Button as="link" href="/suscripcion" variant="purple" width="160px">{isEn ? 'Renew now' : 'Renovar ahora'}</Button>}
-          {accessModal.kind === 'error' && <Button onClick={() => setAccessModal({ open: false, kind: null, expiredAt: null })} variant="purple" width="120px">{isEn ? 'Close' : 'Cerrar'}</Button>}
-        </div>
-      </SimplyModal>
+      <DownloadLimitModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        kind={modalKind}
+        nextReset={modalNextReset}
+        limit={modalLimit}
+        isEn={isEn}
+      />
     </div>
   );
 }

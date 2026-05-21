@@ -4,10 +4,10 @@ import React, { useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import useStore from '../../../../store/useStore';
 import HttpService from '../../../../services/HttpService';
-import { errorAlert, warningAlert } from '../../../../helpers/alerts';
 import styles from './AssetSeoBackground.module.css';
 import { sendGTMEvent } from '@next/third-parties/google';
 import { usePromo } from '../../../../hooks/usePromo';
+import DownloadLimitModal from '../../../../components/common/DownloadLimitModal/DownloadLimitModal';
 
 export default function AssetDownloadCtaClient({ assetId, isPremium = false, isEn = false }) {
   const token = useStore((s) => s.token);
@@ -15,6 +15,12 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
   const pathname = usePathname();
   const [downloading, setDownloading] = useState(false);
   const promo = usePromo();
+
+  // Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalKind, setModalKind] = useState('limit-free');
+  const [modalNextReset, setModalNextReset] = useState(null);
+  const [modalLimit, setModalLimit] = useState(50);
 
   const http = useMemo(() => new HttpService(), []);
 
@@ -35,11 +41,6 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
     return win || null;
   };
 
-  const goToLogin = () => {
-    const redirect = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
-    router.push(`/login${redirect}`);
-  };
-
   const handleDownload = async () => {
     if (!assetId || downloading) return;
 
@@ -48,14 +49,10 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
       is_premium: isPremium
     });
 
-    if (isPremium && !token) {
-      await warningAlert(
-        isEn ? 'Login required' : 'Login requerido',
-        isEn
-          ? 'You need to log in to download premium assets.'
-          : 'Debes iniciar sesión para descargar assets premium.'
-      );
-      goToLogin();
+    if (!token) {
+      setModalKind('not-auth');
+      setModalNextReset(null);
+      setModalOpen(true);
       return;
     }
 
@@ -78,10 +75,8 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
       if (tmpWin) {
         try { tmpWin.close(); } catch {}
       }
-      await errorAlert(
-        isEn ? 'Download unavailable' : 'Descarga no disponible',
-        isEn ? 'Could not generate the download link.' : 'No se pudo generar el enlace de descarga.'
-      );
+      setModalKind('error');
+      setModalOpen(true);
     } catch (err) {
       if (tmpWin) {
         try { tmpWin.close(); } catch {}
@@ -90,56 +85,68 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
       const status = err?.response?.status;
       const code = err?.response?.data?.code;
 
-      if (status === 401 || (isPremium && !token)) {
-        await warningAlert(
-          isEn ? 'Login required' : 'Login requerido',
-          isEn
-            ? 'You need to log in to continue.'
-            : 'Debes iniciar sesión para continuar.'
-        );
-        goToLogin();
+      if (status === 401 || code === 'ANONYMOUS_BLOCKED') {
+        setModalKind('not-auth');
+        setModalNextReset(null);
+        setModalOpen(true);
         return;
       }
 
       if (status === 403 && (code === 'NO_SUB' || code === 'EXPIRED')) {
-        await warningAlert(
-          isEn ? 'Premium access required' : 'Acceso premium requerido',
-          isEn
-            ? 'You need an active subscription to download this premium asset.'
-            : 'Necesitas una suscripción activa para descargar este asset premium.'
-        );
+        setModalKind(code === 'NO_SUB' ? 'no-sub' : 'expired');
+        setModalNextReset(null);
+        setModalOpen(true);
         return;
       }
 
-      await errorAlert(
-        isEn ? 'Download error' : 'Error de descarga',
-        isEn
-          ? 'An unexpected error occurred while requesting the download.'
-          : 'Ocurrió un error inesperado al solicitar la descarga.'
-      );
+      if (status === 403 && code === 'DAILY_LIMIT_REACHED') {
+        const nextReset = err?.response?.data?.nextReset;
+        const isSubscribed = err?.response?.data?.isSubscribed;
+        const limitVal = err?.response?.data?.limit || (isSubscribed ? 500 : 50);
+
+        setModalKind(isSubscribed ? 'limit-premium' : 'limit-free');
+        setModalNextReset(nextReset);
+        setModalLimit(limitVal);
+        setModalOpen(true);
+        return;
+      }
+
+      setModalKind('error');
+      setModalOpen(true);
     } finally {
       setDownloading(false);
     }
   };
 
   return (
-    <div className={styles.heroActions}>
-      <button
-        type="button"
-        className={`${styles.downloadCta} ${isPremium ? styles.downloadCtaPremium : styles.downloadCtaFree}`}
-        onClick={handleDownload}
-        disabled={downloading}
-        aria-label={label}
-        title={label}
-      >
-        <span className={styles.downloadIcon} aria-hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </span>
-        <span>{label}</span>
-      </button>
-      <p className={styles.downloadHint}>{hint}</p>
-    </div>
+    <>
+      <div className={styles.heroActions}>
+        <button
+          type="button"
+          className={`${styles.downloadCta} ${isPremium ? styles.downloadCtaPremium : styles.downloadCtaFree}`}
+          onClick={handleDownload}
+          disabled={downloading}
+          aria-label={label}
+          title={label}
+        >
+          <span className={styles.downloadIcon} aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <span>{label}</span>
+        </button>
+        <p className={styles.downloadHint}>{hint}</p>
+      </div>
+
+      <DownloadLimitModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        kind={modalKind}
+        nextReset={modalNextReset}
+        limit={modalLimit}
+        isEn={isEn}
+      />
+    </>
   );
 }

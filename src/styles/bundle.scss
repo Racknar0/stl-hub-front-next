@@ -17,6 +17,7 @@
 
 /* Common */
 @use '../components/common/AssetModal/AssetModal.scss' as *;
+@use '../components/common/DownloadLimitModal/DownloadLimitModal.scss' as *;
 
 /* Pages (App Router) */
 @use '../app/(site)/suscripcion/Suscripcion.scss' as *;

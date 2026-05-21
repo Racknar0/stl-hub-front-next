@@ -57,6 +57,20 @@ export default function SystemConfigPage() {
         values['FREEBIES_DAILY_COUNT'] = '40';
         descs['FREEBIES_DAILY_COUNT'] = 'Cantidad de freebies diarios que se seleccionaran aleatoriamente en el sistema.';
       }
+
+      // Ensure download limits exist in local state even if not in DB
+      if (!values['LIMIT_FREE_PASS_FREE_DOWNLOADS']) {
+        values['LIMIT_FREE_PASS_FREE_DOWNLOADS'] = '100';
+        descs['LIMIT_FREE_PASS_FREE_DOWNLOADS'] = 'Límite diario de descargas para usuarios gratuitos cuando el Premium Free Pass está activo.';
+      }
+      if (!values['LIMIT_NORMAL_FREE_DOWNLOADS']) {
+        values['LIMIT_NORMAL_FREE_DOWNLOADS'] = '50';
+        descs['LIMIT_NORMAL_FREE_DOWNLOADS'] = 'Límite diario de descargas de archivos gratuitos para usuarios sin suscripción en modo normal.';
+      }
+      if (!values['LIMIT_SUBSCRIBED_DOWNLOADS']) {
+        values['LIMIT_SUBSCRIBED_DOWNLOADS'] = '500';
+        descs['LIMIT_SUBSCRIBED_DOWNLOADS'] = 'Límite diario de descargas para usuarios con suscripción de pago activa.';
+      }
       
       setEditValues(values);
       setEditDescriptions(descs);
@@ -251,6 +265,94 @@ export default function SystemConfigPage() {
               </div>
             </article>
 
+            {/* 📊 Límites de Descargas Diarias */}
+            <article className="setting-card" style={{ border: '1px solid rgba(14, 165, 233, 0.3)' }}>
+              <div className="setting-header">
+                <div className="icon-wrapper" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0ea5e9' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h2>📊 Límites de Descargas Diarias</h2>
+              </div>
+              <div className="setting-body">
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  Define cuántas descargas pueden realizar los usuarios cada 24 horas según su estado y el modo del sistema. El reinicio de cuotas se calcula dinámicamente desde la primera descarga.
+                </p>
+
+                <div className="form-group">
+                  <label>Límite Free con "Free Pass" Activo</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editValues['LIMIT_FREE_PASS_FREE_DOWNLOADS'] || ''}
+                    onChange={(e) => setEditValues({ ...editValues, 'LIMIT_FREE_PASS_FREE_DOWNLOADS': e.target.value })}
+                  />
+                  <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Cantidad de descargas diarias permitidas para usuarios Free cuando el Premium Free Pass está encendido (aplica a todo el catálogo).
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label>Límite Free en Modo Normal</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editValues['LIMIT_NORMAL_FREE_DOWNLOADS'] || ''}
+                    onChange={(e) => setEditValues({ ...editValues, 'LIMIT_NORMAL_FREE_DOWNLOADS': e.target.value })}
+                  />
+                  <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Cantidad de descargas diarias permitidas para usuarios Free en modo normal (solo aplica a modelos Freebies/gratuitos, los Premium están bloqueados).
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label>Límite de Suscriptores Premium</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editValues['LIMIT_SUBSCRIBED_DOWNLOADS'] || ''}
+                    onChange={(e) => setEditValues({ ...editValues, 'LIMIT_SUBSCRIBED_DOWNLOADS': e.target.value })}
+                  />
+                  <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Límite diario de descargas para usuarios con suscripción Premium activa. Funciona como un límite de seguridad.
+                  </small>
+                </div>
+              </div>
+              <div className="setting-footer">
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      setSavingKey('DOWNLOAD_LIMITS');
+                      await http.putData('/admin/settings', 'LIMIT_FREE_PASS_FREE_DOWNLOADS', {
+                        value: editValues['LIMIT_FREE_PASS_FREE_DOWNLOADS'] || '100',
+                        description: 'Limite diario de descargas para usuarios gratuitos cuando el Premium Free Pass esta activo.'
+                      });
+                      await http.putData('/admin/settings', 'LIMIT_NORMAL_FREE_DOWNLOADS', {
+                        value: editValues['LIMIT_NORMAL_FREE_DOWNLOADS'] || '50',
+                        description: 'Limite diario de descargas de archivos gratuitos para usuarios sin suscripcion en modo normal.'
+                      });
+                      await http.putData('/admin/settings', 'LIMIT_SUBSCRIBED_DOWNLOADS', {
+                        value: editValues['LIMIT_SUBSCRIBED_DOWNLOADS'] || '500',
+                        description: 'Limite diario de descargas para usuarios con suscripcion de pago activa.'
+                      });
+                      await successAlert('Guardado', 'Los límites de descargas diarias han sido actualizados.');
+                      await loadSettings();
+                    } catch (e) {
+                      console.error(e);
+                      await errorAlert('Error', 'No se pudieron guardar los límites de descarga.');
+                    } finally {
+                      setSavingKey(null);
+                    }
+                  }}
+                  disabled={savingKey === 'DOWNLOAD_LIMITS'}
+                >
+                  {savingKey === 'DOWNLOAD_LIMITS' ? 'Guardando...' : 'Guardar Límites'}
+                </button>
+              </div>
+            </article>
+
             {/* Freebies Daily Count Setting */}
             <article className="setting-card">
               <div className="setting-header">
@@ -372,7 +474,7 @@ export default function SystemConfigPage() {
             </article>
 
             {/* Render any other settings from DB that are not explicitly handled above */}
-            {settings.filter(s => !['FREEBIES_DAILY_COUNT','LAUNCH_PROMO_ACTIVE','LAUNCH_PROMO_DAYS','LAUNCH_PROMO_START','PLAN_PRICES'].includes(s.key)).map((setting) => (
+            {settings.filter(s => !['FREEBIES_DAILY_COUNT','LAUNCH_PROMO_ACTIVE','LAUNCH_PROMO_DAYS','LAUNCH_PROMO_START','PLAN_PRICES','LIMIT_FREE_PASS_FREE_DOWNLOADS','LIMIT_NORMAL_FREE_DOWNLOADS','LIMIT_SUBSCRIBED_DOWNLOADS'].includes(s.key)).map((setting) => (
               <article className="setting-card" key={setting.key}>
                 <div className="setting-header">
                   <div className="icon-wrapper">
