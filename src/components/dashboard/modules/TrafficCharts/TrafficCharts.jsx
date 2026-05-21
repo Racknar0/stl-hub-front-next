@@ -305,6 +305,16 @@ const CHART_DESCRIPTIONS = {
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Entraron 120 usuarios nuevos este mes.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tu tráfico es alto pero tus registros son bajos, necesitas optimizar la página de creación de cuenta o regalar algo a cambio de su registro.
       </>
+    ),
+    'downloads-timeseries': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Histórico de Descargas:</strong> Mide la cantidad de archivos descargados día a día.<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#38bdf8' }}>Descargas Totales:</strong> Suma de todos los modelos STL descargados en el período seleccionado.</li>
+        </ul>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves un pico alto de descargas el día martes, puede coincidir con un nuevo lanzamiento de modelo o una mención en redes.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Compáralo con la "Visión General del Tráfico". Si el tráfico sube pero las descargas no, es probable que los modelos cargados no llamen la atención o haya problemas con las descargas.
+      </>
     )
   }
 
@@ -617,6 +627,41 @@ export default function TrafficCharts() {
     }
   }, [http])
 
+  // 9. Downloads Timeseries Fetcher
+  const fetchDownloadsTimeseries = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/downloads/timeseries?from=${from}&to=${to}`)
+    const tsData = res?.data
+    if (!tsData?.series?.length && !tsData?.granularity) return null
+    
+    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day')
+    if (!filledSeries.length) return null
+
+    return {
+      labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
+      datasets: [
+        { 
+          type: 'line', 
+          label: 'Tendencia', 
+          data: filledSeries.map((s) => s.count), 
+          borderColor: 'rgba(56, 189, 248, 1)', 
+          backgroundColor: 'transparent', 
+          borderWidth: 2, 
+          tension: 0.3, 
+          pointRadius: filledSeries.length > 60 ? 0 : 3, 
+          pointHoverRadius: 5 
+        },
+        {
+          type: 'bar',
+          label: 'Descargas',
+          data: filledSeries.map((s) => s.count),
+          backgroundColor: 'rgba(56, 189, 248, 0.7)',
+          borderColor: 'transparent',
+          borderRadius: 4
+        }
+      ]
+    }
+  }, [http])
+
 
   return (
     <div className="traffic-charts-module">
@@ -632,6 +677,8 @@ export default function TrafficCharts() {
       <div className="charts-list">
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
+        <ChartContainer id="downloads-timeseries" supportsDynamicDates={true} fetchFn={fetchDownloadsTimeseries} renderChart={(data) => <Bar data={data} options={commonLineOpts} />} />
+
         <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={stackedBarOpts} />} />
         
         <ChartContainer id="sales-revenue" supportsDynamicDates={false} fetchFn={fetchSales} renderChart={(data) => (
