@@ -6,6 +6,79 @@ import { Dialog } from '@mui/material';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramDownloader.scss';
 
+function ChannelAvatar({ channel }) {
+  const [hasError, setHasError] = useState(false);
+  const size = '32px';
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const imageUrl = channel.avatarUrl ? `${baseUrl}${channel.avatarUrl}` : null;
+
+  if (imageUrl && !hasError) {
+    return (
+      <img
+        src={imageUrl}
+        alt={channel.label || channel.name}
+        onError={() => setHasError(true)}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          flexShrink: 0,
+          border: '1px solid rgba(255, 255, 255, 0.15)'
+        }}
+      />
+    );
+  }
+
+  // Fallback avatar with initials and gradient
+  const initials = (channel.label || channel.name || '?')
+    .trim()
+    .split(/\s+/)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  // Generate a stable gradient based on the channel name
+  let hash = 0;
+  const str = channel.name || '';
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    ['#ff4e50', '#f9d423'],
+    ['#4facfe', '#00f2fe'],
+    ['#b180f2', '#5ea3ff'],
+    ['#11998e', '#38ef7d'],
+    ['#fc466b', '#3f5efb'],
+    ['#f12711', '#f5af19']
+  ];
+  const colorIndex = Math.abs(hash) % colors.length;
+  const [c1, c2] = colors[colorIndex];
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: `linear-gradient(135deg, ${c1}, ${c2})`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontSize: '0.85rem',
+        fontWeight: 'bold',
+        textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+        flexShrink: 0,
+        border: '1px solid rgba(255, 255, 255, 0.15)'
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function TelegramDownloader() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authStep, setAuthStep] = useState('phone');
@@ -32,6 +105,8 @@ export default function TelegramDownloader() {
   const [editedChannels, setEditedChannels] = useState({});
   const [scanningChannel, setScanningChannel] = useState(null);
   const [scanResults, setScanResults] = useState({});
+  const [sortBy, setSortBy] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
 
   const [filesDownloaded, setFilesDownloaded] = useState([]);
   const [showExplorer, setShowExplorer] = useState(false);
@@ -41,6 +116,7 @@ export default function TelegramDownloader() {
   const [logs, setLogs] = useState([]);
 
   const logsEndRef = useRef(null);
+  const eventSourceRef = useRef(null);
   const http = new HttpService();
 
   useEffect(() => { checkAuth(); }, []);
@@ -51,6 +127,12 @@ export default function TelegramDownloader() {
       recoverState();
       connectSSE();
     }
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
   }, [isAuthorized]);
 
   // Recover download state if browser was closed and reopened
@@ -239,6 +321,71 @@ export default function TelegramDownloader() {
     return `https://t.me/${channelName.replace(/^@/, '')}`;
   };
 
+  const handleLoadChannelToDownloader = (c) => {
+    setSelectedChannel(c.name);
+    setChannelInfo(null);
+    setScanResult(null);
+
+    // Resolver valores recomendados
+    const lastLd = c.lastDownload;
+    const lastScan = c.lastScanResult;
+    const manualScan = scanResults[c.name];
+
+    const resolvedStartId = lastLd ? lastLd.lastMsgId + 1 : 1;
+    const resolvedEndId = manualScan?.maxId || lastScan?.maxId || lastLd?.lastMsgId || '';
+
+    setStartId(resolvedStartId);
+    setEndId(resolvedEndId);
+
+    // Scroll suave hacia la cabecera/panel de descargas
+    const element = document.querySelector('.telegram-downloader');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const toggleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'size' ? 'desc' : 'asc'); // por defecto descendente para peso, ascendente para nombre
+    }
+  };
+
+  const renderSortIndicator = (field) => {
+    if (sortBy !== field) {
+      return <span style={{ opacity: 0.3, marginLeft: '4px', fontSize: '0.8rem' }}>↕</span>;
+    }
+    return sortOrder === 'asc' ? (
+      <span style={{ color: '#4facfe', marginLeft: '4px', fontSize: '0.8rem' }}>▲</span>
+    ) : (
+      <span style={{ color: '#4facfe', marginLeft: '4px', fontSize: '0.8rem' }}>▼</span>
+    );
+  };
+
+  const getSortedChannels = () => {
+    if (!sortBy) return channels;
+
+    return [...channels].sort((a, b) => {
+      if (sortBy === 'name') {
+        const nameA = (editedChannels[a.name]?.label || a.label || a.name || '').trim().toLowerCase();
+        const nameB = (editedChannels[b.name]?.label || b.label || b.name || '').trim().toLowerCase();
+        return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      }
+
+      if (sortBy === 'size') {
+        const sizeA = scanResults[a.name]?.totalSizeBytes || a.lastScanResult?.totalSizeBytes || 0;
+        const sizeB = scanResults[b.name]?.totalSizeBytes || b.lastScanResult?.totalSizeBytes || 0;
+        return sortOrder === 'asc' ? sizeA - sizeB : sizeB - sizeA;
+      }
+
+      return 0;
+    });
+  };
+
   const handleGetInfo = async () => {
     if (!selectedChannel) return;
     try {
@@ -278,8 +425,14 @@ export default function TelegramDownloader() {
   };
 
   const connectSSE = () => {
+    // Close any previous connection to avoid saturation
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     const eventSource = new EventSource(`${baseUrl}/api/telegram/stream`);
+    eventSourceRef.current = eventSource;
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.active) setIsDownloading(true);
@@ -556,32 +709,47 @@ export default function TelegramDownloader() {
             <table className="channels-table">
               <thead>
                 <tr>
-                  <th>Nombre</th>
+                  <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Nombre {renderSortIndicator('name')}
+                  </th>
                   <th>Canal</th>
-                  <th>Último Msg ID</th>
+                  <th onClick={() => toggleSort('size')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>
+                    Último Msg ID / Novedades {renderSortIndicator('size')}
+                  </th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {channels.map(c => {
+                {getSortedChannels().map(c => {
                   const edits = editedChannels[c.name] || {};
                   const currentLabel = edits.label !== undefined ? edits.label : (c.label || '');
                   const currentName = edits.name !== undefined ? edits.name : c.name;
                   const currentLastMsgId = edits.lastMsgId !== undefined ? edits.lastMsgId : (c.lastDownload?.lastMsgId || '');
-                  const lastMsgId = c.lastDownload?.lastMsgId || '—';
-                  const sr = scanResults[c.name];
+                  
                   const isScanning = scanningChannel === c.name;
+                  
+                  // Combinar resultado de escaneo manual y automático
+                  const lastScan = c.lastScanResult || {};
+                  const sr = scanResults[c.name] || (lastScan.newFiles !== undefined ? {
+                    newFiles: lastScan.newFiles,
+                    totalSize: lastScan.totalSize,
+                    maxId: lastScan.maxId,
+                    error: lastScan.error
+                  } : null);
 
                   return (
                     <tr key={c.name}>
                       <td>
-                        <input
-                          type="text"
-                          value={currentLabel}
-                          onChange={e => handleEditField(c.name, 'label', e.target.value)}
-                          placeholder="Alias"
-                          className="table-input"
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <ChannelAvatar channel={c} />
+                          <input
+                            type="text"
+                            value={currentLabel}
+                            onChange={e => handleEditField(c.name, 'label', e.target.value)}
+                            placeholder="Alias"
+                            className="table-input"
+                          />
+                        </div>
                       </td>
                       <td>
                         <input
@@ -607,10 +775,38 @@ export default function TelegramDownloader() {
                             </span>
                           )}
                           {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
+                          {c.lastCheckedAt ? (
+                            <span style={{ display: 'block', fontSize: '0.65rem', color: '#718096', marginTop: '2px' }}>
+                              Verificado {timeAgo(c.lastCheckedAt)}
+                            </span>
+                          ) : (
+                            <span style={{ display: 'block', fontSize: '0.65rem', color: '#a0aec0', marginTop: '2px', fontStyle: 'italic' }}>
+                              Cola de verificación
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            className="table-action-btn scan"
+                            onClick={() => handleLoadChannelToDownloader(c)}
+                            title="Cargar en panel de descarga"
+                            style={{
+                              width: 'auto',
+                              padding: '0 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: '600',
+                              fontSize: '0.8rem',
+                              color: '#00f2fe',
+                              borderColor: 'rgba(0, 242, 254, 0.3)',
+                              background: 'rgba(0, 242, 254, 0.08)'
+                            }}
+                          >
+                            ⚡ Cargar
+                          </button>
                           <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes">
                             {isScanning ? '⏳' : '🔍'}
                           </button>
