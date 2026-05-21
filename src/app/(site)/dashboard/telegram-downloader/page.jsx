@@ -18,6 +18,9 @@ export default function TelegramDownloader() {
   const [selectedChannel, setSelectedChannel] = useState('');
   const [newChannel, setNewChannel] = useState('');
   const [newChannelLabel, setNewChannelLabel] = useState('');
+  const [isPrivateChannel, setIsPrivateChannel] = useState(false);
+  const [initialLastMsgId, setInitialLastMsgId] = useState('');
+  const [isSavingAll, setIsSavingAll] = useState(false);
   const [startId, setStartId] = useState('');
   const [endId, setEndId] = useState('');
   const [maxGB, setMaxGB] = useState(150);
@@ -133,14 +136,24 @@ export default function TelegramDownloader() {
 
   const handleAddChannel = async () => {
     if (!newChannel) return;
+    let formattedName = newChannel.trim();
+    if (isPrivateChannel && !formattedName.startsWith('-100')) {
+      formattedName = `-100${formattedName}`;
+    }
     try {
-      const res = await http.postData('/telegram/channels', { name: newChannel, label: newChannelLabel });
+      const res = await http.postData('/telegram/channels', {
+        name: formattedName,
+        label: newChannelLabel,
+        lastMsgId: initialLastMsgId ? Number(initialLastMsgId) : undefined
+      });
       const d = res.data || res;
       if (d.success) {
         await fetchChannels();
-        setSelectedChannel(newChannel);
+        setSelectedChannel(formattedName);
         setNewChannel('');
         setNewChannelLabel('');
+        setIsPrivateChannel(false);
+        setInitialLastMsgId('');
       }
     } catch { alert('Error adding channel'); }
   };
@@ -154,13 +167,47 @@ export default function TelegramDownloader() {
     const edits = editedChannels[originalName];
     if (!edits) return;
     try {
+      // Find existing channel info to preserve untouched values
+      const chan = channels.find(c => c.name === originalName);
+      const label = edits.label !== undefined ? edits.label : (chan?.label || '');
+      const newName = edits.name !== undefined ? edits.name : originalName;
+      const lastMsgId = edits.lastMsgId !== undefined ? (edits.lastMsgId === '' ? null : Number(edits.lastMsgId)) : undefined;
+
       await http.patchData('/telegram/channels', encodeURIComponent(originalName), {
-        label: edits.label,
-        newName: edits.name,
+        label,
+        newName,
+        lastMsgId,
       });
       setEditedChannels(prev => { const n = { ...prev }; delete n[originalName]; return n; });
       await fetchChannels();
     } catch { alert('Error guardando canal'); }
+  };
+
+  const handleSaveAllChannels = async () => {
+    setIsSavingAll(true);
+    try {
+      const editKeys = Object.keys(editedChannels);
+      for (const originalName of editKeys) {
+        const edits = editedChannels[originalName];
+        const chan = channels.find(c => c.name === originalName);
+        const label = edits.label !== undefined ? edits.label : (chan?.label || '');
+        const newName = edits.name !== undefined ? edits.name : originalName;
+        const lastMsgId = edits.lastMsgId !== undefined ? (edits.lastMsgId === '' ? null : Number(edits.lastMsgId)) : undefined;
+
+        await http.patchData('/telegram/channels', encodeURIComponent(originalName), {
+          label,
+          newName,
+          lastMsgId,
+        });
+      }
+      setEditedChannels({});
+      await fetchChannels();
+      alert('Cambios guardados con éxito');
+    } catch (e) {
+      alert('Error guardando los cambios: ' + (e.message || ''));
+    } finally {
+      setIsSavingAll(false);
+    }
   };
 
   const handleDeleteChannel = async (name) => {
@@ -389,10 +436,35 @@ export default function TelegramDownloader() {
 
           <div className="form-group">
             <label>Añadir nuevo Canal</label>
-            <div className="input-wrapper">
-              <input type="text" placeholder="Nombre (ej. STLs Anime)" value={newChannelLabel} onChange={e => setNewChannelLabel(e.target.value)} disabled={isDownloading} style={{ flex: '0 0 40%' }} />
-              <input type="text" placeholder="ID o @canal" value={newChannel} onChange={e => setNewChannel(e.target.value)} disabled={isDownloading} />
-              <button className="btn btn-secondary" onClick={handleAddChannel} disabled={isDownloading}>Añadir</button>
+            <div className="input-wrapper" style={{ marginBottom: '0.5rem' }}>
+              <input type="text" placeholder="Alias (ej. STLs Anime)" value={newChannelLabel} onChange={e => setNewChannelLabel(e.target.value)} disabled={isDownloading} style={{ flex: '0 0 40%' }} />
+              <input type="text" placeholder="ID o @canal (ej. 1670826168)" value={newChannel} onChange={e => setNewChannel(e.target.value)} disabled={isDownloading} />
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: '#cbd5e0' }}>
+                <input
+                  type="checkbox"
+                  checked={isPrivateChannel}
+                  onChange={e => setIsPrivateChannel(e.target.checked)}
+                  disabled={isDownloading}
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                ¿Canal Privado? (añade -100)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '0.85rem', color: '#cbd5e0' }}>Último ID Msg:</span>
+                <input
+                  type="number"
+                  placeholder="Ej: 891"
+                  value={initialLastMsgId}
+                  onChange={e => setInitialLastMsgId(e.target.value)}
+                  disabled={isDownloading}
+                  style={{ width: '120px', padding: '0.4rem 0.6rem', fontSize: '0.9rem' }}
+                />
+              </div>
+              <button className="btn btn-secondary" onClick={handleAddChannel} disabled={isDownloading} style={{ padding: '0.5rem 1.2rem', fontSize: '0.9rem' }}>
+                Añadir Canal
+              </button>
             </div>
           </div>
 
@@ -495,7 +567,7 @@ export default function TelegramDownloader() {
                   const edits = editedChannels[c.name] || {};
                   const currentLabel = edits.label !== undefined ? edits.label : (c.label || '');
                   const currentName = edits.name !== undefined ? edits.name : c.name;
-                  const hasEdits = Object.keys(edits).length > 0;
+                  const currentLastMsgId = edits.lastMsgId !== undefined ? edits.lastMsgId : (c.lastDownload?.lastMsgId || '');
                   const lastMsgId = c.lastDownload?.lastMsgId || '—';
                   const sr = scanResults[c.name];
                   const isScanning = scanningChannel === c.name;
@@ -519,20 +591,26 @@ export default function TelegramDownloader() {
                           className="table-input"
                         />
                       </td>
-                      <td style={{ textAlign: 'center', fontFamily: 'monospace', color: '#4facfe' }}>
-                        {lastMsgId}
-                        {sr && !sr.error && (
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0' }}>
-                            {sr.newFiles > 0 ? `${sr.newFiles} archivos (~${sr.totalSize})` : 'Al día'}
-                          </span>
-                        )}
-                        {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <input
+                            type="number"
+                            value={currentLastMsgId}
+                            onChange={e => handleEditField(c.name, 'lastMsgId', e.target.value)}
+                            placeholder="Sin ID"
+                            className="table-input"
+                            style={{ textAlign: 'center', width: '100px', fontFamily: 'monospace', color: '#4facfe', marginBottom: sr ? '0.2rem' : '0' }}
+                          />
+                          {sr && !sr.error && (
+                            <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0' }}>
+                              {sr.newFiles > 0 ? `${sr.newFiles} arch. (~${sr.totalSize})` : 'Al día'}
+                            </span>
+                          )}
+                          {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
+                        </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                          {hasEdits && (
-                            <button className="table-action-btn save" onClick={() => handleSaveChannel(c.name)} title="Guardar cambios">💾</button>
-                          )}
                           <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes">
                             {isScanning ? '⏳' : '🔍'}
                           </button>
@@ -545,6 +623,25 @@ export default function TelegramDownloader() {
                 })}
               </tbody>
             </table>
+
+            {Object.keys(editedChannels).length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setEditedChannels({})}
+                  disabled={isSavingAll}
+                >
+                  Cancelar Cambios
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveAllChannels}
+                  disabled={isSavingAll}
+                >
+                  {isSavingAll ? 'Guardando...' : 'Guardar Todos los Cambios'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

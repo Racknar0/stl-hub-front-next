@@ -15,10 +15,10 @@
   display: flex !important;
   align-items: center;
   justify-content: center;
-  background: rgba(4, 6, 12, 0.6);
-  backdrop-filter: blur(8px);
-  z-index: 1050;
+  background: transparent;
+  z-index: 1060;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 
   .modal-dialog {
     width: 100%;
@@ -286,12 +286,16 @@
   }
 }
 
-// Background overlay style helper
-.modal-backdrop.show {
-  opacity: 0.65;
-  background-color: #030508;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+// Background overlay style helper scoped to dl-limit-modal to prevent conflicts
+.dl-limit-modal + .modal-backdrop {
+  z-index: 1050 !important;
+
+  &.show {
+    opacity: 0.55;
+    background-color: #040814;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 }
 
 @keyframes pulseGlow {

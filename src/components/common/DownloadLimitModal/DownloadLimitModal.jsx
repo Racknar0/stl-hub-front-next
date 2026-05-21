@@ -77,7 +77,7 @@ export default function DownloadLimitModal({
         </svg>
       ),
       primaryBtnText: isEn ? 'Create Free Account' : 'Crear Cuenta Gratis',
-      primaryBtnUrl: '/login?register=true',
+      primaryBtnUrl: '/register',
       secondaryBtnText: isEn ? 'I have an account, Log In' : 'Ya tengo cuenta, Iniciar Sesión',
       secondaryBtnUrl: '/login'
     },
@@ -98,8 +98,7 @@ export default function DownloadLimitModal({
       ),
       primaryBtnText: isEn ? '👑 View Premium Plans' : '👑 Ver Planes Premium',
       primaryBtnUrl: '/suscripcion',
-      secondaryBtnText: isEn ? 'Understood, I\'ll wait' : 'Entendido, esperaré',
-      action: onClose
+      secondaryBtnText: isEn ? 'Understood, I\'ll wait' : 'Entendido, esperaré'
     },
     'limit-premium': {
       title: isEn ? 'Security Limit Reached' : 'Límite diario de seguridad alcanzado',
@@ -130,8 +129,7 @@ export default function DownloadLimitModal({
       ),
       primaryBtnText: isEn ? '👑 View Premium Plans' : '👑 Ver Planes Premium',
       primaryBtnUrl: '/suscripcion',
-      secondaryBtnText: isEn ? 'Close' : 'Cerrar',
-      action: onClose
+      secondaryBtnText: isEn ? 'Close' : 'Cerrar'
     },
     'expired': {
       title: isEn ? 'Subscription Expired' : 'Suscripción Vencida',
@@ -145,8 +143,7 @@ export default function DownloadLimitModal({
       ),
       primaryBtnText: isEn ? '⚡ Renew Now' : '⚡ Renovar Ahora',
       primaryBtnUrl: '/suscripcion',
-      secondaryBtnText: isEn ? 'Close' : 'Cerrar',
-      action: onClose
+      secondaryBtnText: isEn ? 'Close' : 'Cerrar'
     },
     'error': {
       title: isEn ? 'Download Error' : 'Error de descarga',
@@ -170,7 +167,7 @@ export default function DownloadLimitModal({
   return (
     <>
       <div
-        className="simply-modal dl-limit-modal modal fade show"
+        className="dl-limit-modal modal fade show"
         style={{ display: 'block' }}
         role="dialog"
         aria-modal="true"
