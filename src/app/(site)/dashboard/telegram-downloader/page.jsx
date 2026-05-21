@@ -788,13 +788,22 @@ export default function TelegramDownloader() {
                             {sr?.maxId || '—'}
                           </span>
                           {sr && !sr.error && (
-                            <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0', marginTop: '0.2rem' }}>
+                            <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#f56565' : '#48bb78', marginTop: '0.2rem' }}>
                               {sr.newFiles > 0 ? `${sr.newFiles} arch. (~${sr.totalSize})` : 'Al día'}
                             </span>
                           )}
                           {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565', marginTop: '0.2rem' }}>Error</span>}
                           {c.lastCheckedAt ? (
-                            <span style={{ display: 'block', fontSize: '0.65rem', color: '#718096', marginTop: '2px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: '#718096', marginTop: '2px' }}>
+                              {!sr?.error && (
+                                <span style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#48bb78',
+                                  display: 'inline-block'
+                                }} />
+                              )}
                               Verificado {timeAgo(c.lastCheckedAt)}
                             </span>
                           ) : (
