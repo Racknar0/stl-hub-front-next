@@ -306,7 +306,17 @@ export default function TelegramDownloader() {
       const res = await http.getData(`/telegram/quick-scan?channelName=${encodeURIComponent(channelName)}`);
       const d = res.data || res;
       if (d.success) {
-        setScanResults(prev => ({ ...prev, [channelName]: { newFiles: d.newFiles, totalSize: d.totalSize, totalMessages: d.totalMessages, maxId: d.maxId } }));
+        setScanResults(prev => ({
+          ...prev,
+          [channelName]: {
+            newFiles: d.newFiles,
+            totalSize: d.totalSize,
+            totalMessages: d.totalMessages,
+            totalSizeBytes: d.totalSizeBytes,
+            maxId: d.maxId
+          }
+        }));
+        await fetchChannels();
       }
     } catch (e) {
       setScanResults(prev => ({ ...prev, [channelName]: { error: e.message || 'Error' } }));
@@ -605,7 +615,7 @@ export default function TelegramDownloader() {
                 ¿Canal Privado? (añade -100)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
-                <span style={{ fontSize: '0.85rem', color: '#cbd5e0' }}>Último ID Msg:</span>
+                <span style={{ fontSize: '0.85rem', color: '#cbd5e0' }}>Último Descargado:</span>
                 <input
                   type="number"
                   placeholder="Ej: 891"
@@ -713,8 +723,11 @@ export default function TelegramDownloader() {
                     Nombre {renderSortIndicator('name')}
                   </th>
                   <th>Canal</th>
+                  <th style={{ textAlign: 'center' }}>
+                    Último Descargado
+                  </th>
                   <th onClick={() => toggleSort('size')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>
-                    Último Msg ID / Novedades {renderSortIndicator('size')}
+                    Último Msg {renderSortIndicator('size')}
                   </th>
                   <th>Acciones</th>
                 </tr>
@@ -760,21 +773,26 @@ export default function TelegramDownloader() {
                         />
                       </td>
                       <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="number"
+                          value={currentLastMsgId}
+                          onChange={e => handleEditField(c.name, 'lastMsgId', e.target.value)}
+                          placeholder="Sin ID"
+                          className="table-input"
+                          style={{ textAlign: 'center', width: '100px', fontFamily: 'monospace', color: '#4facfe' }}
+                        />
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <input
-                            type="number"
-                            value={currentLastMsgId}
-                            onChange={e => handleEditField(c.name, 'lastMsgId', e.target.value)}
-                            placeholder="Sin ID"
-                            className="table-input"
-                            style={{ textAlign: 'center', width: '100px', fontFamily: 'monospace', color: '#4facfe', marginBottom: sr ? '0.2rem' : '0' }}
-                          />
+                          <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1rem', color: '#cbd5e0' }}>
+                            {sr?.maxId || '—'}
+                          </span>
                           {sr && !sr.error && (
-                            <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0' }}>
+                            <span style={{ display: 'block', fontSize: '0.75rem', color: sr.newFiles > 0 ? '#48bb78' : '#a0aec0', marginTop: '0.2rem' }}>
                               {sr.newFiles > 0 ? `${sr.newFiles} arch. (~${sr.totalSize})` : 'Al día'}
                             </span>
                           )}
-                          {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565' }}>Error</span>}
+                          {sr?.error && <span style={{ display: 'block', fontSize: '0.75rem', color: '#f56565', marginTop: '0.2rem' }}>Error</span>}
                           {c.lastCheckedAt ? (
                             <span style={{ display: 'block', fontSize: '0.65rem', color: '#718096', marginTop: '2px' }}>
                               Verificado {timeAgo(c.lastCheckedAt)}
