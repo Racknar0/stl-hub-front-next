@@ -93,6 +93,13 @@ export default function TelegramDownloader() {
   const [newChannelLabel, setNewChannelLabel] = useState('');
   const [isPrivateChannel, setIsPrivateChannel] = useState(false);
   const [initialLastMsgId, setInitialLastMsgId] = useState('');
+
+  // Estados para importar canal
+  const [activeImportTab, setActiveImportTab] = useState('url'); // 'url' o 'manual'
+  const [importUrl, setImportUrl] = useState('');
+  const [importUrlLabel, setImportUrlLabel] = useState('');
+  const [isAddingChannel, setIsAddingChannel] = useState(false);
+
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [startId, setStartId] = useState('');
   const [endId, setEndId] = useState('');
@@ -216,12 +223,88 @@ export default function TelegramDownloader() {
     } catch (e) { console.error(e); }
   };
 
+  const parseTelegramUrl = (url) => {
+    if (!url) return null;
+    const cleanUrl = url.trim().split('?')[0].split('#')[0];
+    
+    // Formato canal privado: /c/ID/MSG_ID o /c/ID
+    const matchPrivate = cleanUrl.match(/\/c\/(\d+)(?:\/(\d+))?/);
+    if (matchPrivate) {
+      return {
+        channelName: `-100${matchPrivate[1]}`,
+        lastMsgId: matchPrivate[2] ? Number(matchPrivate[2]) : undefined,
+        isPrivate: true
+      };
+    }
+    
+    // Formato público: /username/msgId o /username
+    const cleanPath = cleanUrl.replace(/^(https?:\/\/)?(www\.)?(t\.me|telegram\.me|telegram\.dog)\//i, '');
+    const segments = cleanPath.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const channelName = segments[0];
+      const lastMsgId = segments[1];
+      if (lastMsgId && /^\d+$/.test(lastMsgId)) {
+        return {
+          channelName,
+          lastMsgId: Number(lastMsgId),
+          isPrivate: false
+        };
+      } else {
+        return {
+          channelName,
+          lastMsgId: undefined,
+          isPrivate: false
+        };
+      }
+    }
+    return null;
+  };
+
+  const handleImportUrl = async () => {
+    if (!importUrl) return;
+    const parsed = parseTelegramUrl(importUrl);
+    if (!parsed) {
+      alert('Enlace de Telegram no reconocido. Por favor usa un enlace válido, por ejemplo: https://t.me/lixeirastl/2751 o https://t.me/c/1738938518/223');
+      return;
+    }
+    
+    const { channelName, lastMsgId } = parsed;
+    setIsAddingChannel(true);
+    try {
+      const res = await http.postData('/telegram/channels', {
+        name: channelName,
+        label: importUrlLabel,
+        lastMsgId: lastMsgId
+      });
+      const d = res.data || res;
+      if (d.success) {
+        if (d.channels) {
+          setChannels(d.channels);
+        } else {
+          await fetchChannels();
+        }
+        setSelectedChannel(channelName);
+        setImportUrl('');
+        setImportUrlLabel('');
+        alert('Canal importado y escaneado con éxito');
+      } else {
+        alert('Error importando el canal: ' + (d.message || 'Error desconocido'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de red o del servidor al importar el canal.');
+    } finally {
+      setIsAddingChannel(false);
+    }
+  };
+
   const handleAddChannel = async () => {
     if (!newChannel) return;
     let formattedName = newChannel.trim();
     if (isPrivateChannel && !formattedName.startsWith('-100')) {
       formattedName = `-100${formattedName}`;
     }
+    setIsAddingChannel(true);
     try {
       const res = await http.postData('/telegram/channels', {
         name: formattedName,
@@ -230,14 +313,25 @@ export default function TelegramDownloader() {
       });
       const d = res.data || res;
       if (d.success) {
-        await fetchChannels();
+        if (d.channels) {
+          setChannels(d.channels);
+        } else {
+          await fetchChannels();
+        }
         setSelectedChannel(formattedName);
         setNewChannel('');
         setNewChannelLabel('');
         setIsPrivateChannel(false);
         setInitialLastMsgId('');
+        alert('Canal agregado y escaneado con éxito');
+      } else {
+        alert('Error agregando el canal: ' + (d.message || 'Error desconocido'));
       }
-    } catch { alert('Error adding channel'); }
+    } catch { 
+      alert('Error agregando el canal'); 
+    } finally {
+      setIsAddingChannel(false);
+    }
   };
 
   // --- Channel Table handlers ---
@@ -599,36 +693,107 @@ export default function TelegramDownloader() {
 
           <div className="form-group">
             <label>Añadir nuevo Canal</label>
-            <div className="input-wrapper" style={{ marginBottom: '0.5rem' }}>
-              <input type="text" placeholder="Alias (ej. STLs Anime)" value={newChannelLabel} onChange={e => setNewChannelLabel(e.target.value)} disabled={isDownloading} style={{ flex: '0 0 40%' }} />
-              <input type="text" placeholder="ID o @canal (ej. 1670826168)" value={newChannel} onChange={e => setNewChannel(e.target.value)} disabled={isDownloading} />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: '#cbd5e0' }}>
-                <input
-                  type="checkbox"
-                  checked={isPrivateChannel}
-                  onChange={e => setIsPrivateChannel(e.target.checked)}
-                  disabled={isDownloading}
-                  style={{ width: 'auto', margin: 0 }}
-                />
-                ¿Canal Privado? (añade -100)
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
-                <span style={{ fontSize: '0.85rem', color: '#cbd5e0' }}>Último Descargado:</span>
-                <input
-                  type="number"
-                  placeholder="Ej: 891"
-                  value={initialLastMsgId}
-                  onChange={e => setInitialLastMsgId(e.target.value)}
-                  disabled={isDownloading}
-                  style={{ width: '120px', padding: '0.4rem 0.6rem', fontSize: '0.9rem' }}
-                />
-              </div>
-              <button className="btn btn-secondary" onClick={handleAddChannel} disabled={isDownloading} style={{ padding: '0.5rem 1.2rem', fontSize: '0.9rem' }}>
-                Añadir Canal
+            <div className="import-tabs-header">
+              <button
+                type="button"
+                className={`import-tab-btn ${activeImportTab === 'url' ? 'active' : ''}`}
+                onClick={() => setActiveImportTab('url')}
+                disabled={isDownloading || isAddingChannel}
+              >
+                🔗 Importar por URL
+              </button>
+              <button
+                type="button"
+                className={`import-tab-btn ${activeImportTab === 'manual' ? 'active' : ''}`}
+                onClick={() => setActiveImportTab('manual')}
+                disabled={isDownloading || isAddingChannel}
+              >
+                ⚙️ Canal + Info (Manual)
               </button>
             </div>
+
+            {activeImportTab === 'url' ? (
+              <div className="import-container-box">
+                <div className="input-wrapper" style={{ marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Alias opcional (ej. STL Anime)"
+                    value={importUrlLabel}
+                    onChange={e => setImportUrlLabel(e.target.value)}
+                    disabled={isDownloading || isAddingChannel}
+                    style={{ flex: '0 0 40%' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Pega URL (ej. https://t.me/lixeirastl/2751)"
+                    value={importUrl}
+                    onChange={e => setImportUrl(e.target.value)}
+                    disabled={isDownloading || isAddingChannel}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleImportUrl}
+                    disabled={isDownloading || isAddingChannel || !importUrl}
+                    style={{ padding: '0.5rem 1.2rem', fontSize: '0.9rem' }}
+                  >
+                    {isAddingChannel ? '⏳ Importando...' : 'Importar y Escanear'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="import-container-box">
+                <div className="input-wrapper" style={{ marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Alias opcional (ej. STL Anime)"
+                    value={newChannelLabel}
+                    onChange={e => setNewChannelLabel(e.target.value)}
+                    disabled={isDownloading || isAddingChannel}
+                    style={{ flex: '0 0 40%' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="ID o @canal (ej. 1670826168)"
+                    value={newChannel}
+                    onChange={e => setNewChannel(e.target.value)}
+                    disabled={isDownloading || isAddingChannel}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: '#cbd5e0' }}>
+                    <input
+                      type="checkbox"
+                      checked={isPrivateChannel}
+                      onChange={e => setIsPrivateChannel(e.target.checked)}
+                      disabled={isDownloading || isAddingChannel}
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    ¿Canal Privado? (añade -100)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#cbd5e0' }}>Último Descargado:</span>
+                    <input
+                      type="number"
+                      placeholder="Ej: 891"
+                      value={initialLastMsgId}
+                      onChange={e => setInitialLastMsgId(e.target.value)}
+                      disabled={isDownloading || isAddingChannel}
+                      style={{ width: '100px', padding: '0.4rem 0.6rem', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleAddChannel}
+                    disabled={isDownloading || isAddingChannel || !newChannel}
+                    style={{ padding: '0.5rem 1.2rem', fontSize: '0.9rem' }}
+                  >
+                    {isAddingChannel ? '⏳ Guardando...' : 'Añadir Canal'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

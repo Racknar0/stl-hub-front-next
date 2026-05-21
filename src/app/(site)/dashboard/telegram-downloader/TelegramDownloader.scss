@@ -317,4 +317,47 @@
       &:hover { background: rgba(245, 101, 101, 0.15); }
     }
   }
+
+  .import-tabs-header {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+
+    .import-tab-btn {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #718096;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+
+      &:hover {
+        color: #cbd5e0;
+      }
+
+      &.active {
+        color: #00f2fe;
+        border-bottom-color: #00f2fe;
+        background: rgba(0, 242, 254, 0.03);
+      }
+    }
+  }
+
+  .import-container-box {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+  }
 }
