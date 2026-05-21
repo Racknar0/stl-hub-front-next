@@ -58,7 +58,8 @@ export default function DownloadLimitModal({
 
   const handleAction = (url) => {
     onClose?.();
-    router.push(url);
+    const targetUrl = isEn ? `/en${url}` : url;
+    router.push(targetUrl);
   };
 
   if (!isOpen) return null;

@@ -12,6 +12,11 @@
   --text-muted: rgba(245, 246, 250, 0.65);
   --text-ultra-muted: rgba(245, 246, 250, 0.4);
 
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex !important;
   align-items: center;
   justify-content: center;
