@@ -25,6 +25,7 @@ export default function BatchDataTable({
   categoriesCatalog,
   tagsCatalog,
   cuentas,
+  distributionAccountIds,
   similaritySelectedId,
   // ─── Handlers de BatchRow ───
   handleNombreChange,
@@ -119,6 +120,7 @@ export default function BatchDataTable({
                 categoriesCatalog={categoriesCatalog}
                 tagsCatalog={tagsCatalog}
                 cuentas={cuentas}
+                distributionAccountIds={distributionAccountIds}
                 onNombreChange={handleNombreChange}
                 onNombreEnChange={handleNombreEnChange}
                 onDescriptionChange={handleDescriptionChange}

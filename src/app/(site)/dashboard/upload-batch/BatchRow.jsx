@@ -37,6 +37,7 @@ export default function BatchRow({
     categoriesCatalog = [],
     tagsCatalog = [],
     cuentas = [],
+    distributionAccountIds = [],
     onNombreChange = () => {},
     onNombreEnChange = () => {},
     onDescriptionChange = () => {},
@@ -62,6 +63,23 @@ export default function BatchRow({
     const backupStatus = String(row.backupStatus || 'PENDING').toUpperCase();
     const rowInFlight =
         isProcesso || (isOk && ['PENDING', 'UPLOADING'].includes(backupStatus));
+
+    const activeCuentas = React.useMemo(() => {
+        const selectedIds = Array.isArray(distributionAccountIds) ? distributionAccountIds.map(Number) : [];
+        let filtered = cuentas;
+        if (selectedIds.length > 0) {
+            filtered = cuentas.filter(c => selectedIds.includes(Number(c.id)));
+        }
+        // Asegurar que la cuenta asignada actualmente a la fila esté en las opciones
+        const rowAccId = Number(row.cuenta || 0);
+        if (rowAccId > 0 && !filtered.some(c => Number(c.id) === rowAccId)) {
+            const currentAcc = cuentas.find(c => Number(c.id) === rowAccId);
+            if (currentAcc) {
+                filtered = [...filtered, currentAcc];
+            }
+        }
+        return filtered;
+    }, [cuentas, distributionAccountIds, row.cuenta]);
     const primaryText = '#eef4ff';
     const secondaryText = 'rgba(220,232,255,0.82)';
     const cellBorder = '1px solid rgba(148,163,184,0.24)';
@@ -1090,6 +1108,13 @@ export default function BatchRow({
                     <Select
                         value={row.cuenta || ''}
                         displayEmpty
+                        renderValue={(value) => {
+                            if (!value) {
+                                return <span style={{ color: '#94a3b8' }}>Sin asignar</span>;
+                            }
+                            const selectedAcc = cuentas.find(c => String(c.id) === String(value));
+                            return selectedAcc ? selectedAcc.alias : 'Cuenta...';
+                        }}
                         onChange={(e) => onCuentaChange(idx, e.target.value)}
                         size="small"
                         variant="outlined"
@@ -1112,10 +1137,10 @@ export default function BatchRow({
                         }}
                         disabled={isOk || isProcesso}
                     >
-                        <MenuItem value="" disabled sx={{ color: '#94a3b8' }}>
-                            Cuenta...
+                        <MenuItem value="" sx={{ color: '#94a3b8' }}>
+                            <em>Desasignar cuenta</em>
                         </MenuItem>
-                        {cuentas.map((c) => (
+                        {activeCuentas.map((c) => (
                             <MenuItem
                                 key={c.id}
                                 value={c.id}

@@ -1126,6 +1126,22 @@ export default function BatchTable() {
     setRows(updated)
   }
 
+  const handleClearAccounts = () => {
+    const updated = rows.map((r) => {
+      const st = String(r?.estado || '').toLowerCase()
+      if (st === 'borrador' || st === 'error') {
+        return { ...r, cuenta: '' }
+      }
+      return r
+    })
+    setRows(updated)
+    setDistributionAccountIds([])
+    distributionAccountIdsRef.current = []
+    distributionSelectionDirtyRef.current = false
+    setToast({ open: true, msg: 'Cuentas desasignadas de todos los assets.', type: 'info' })
+  }
+
+
   const handleNombreChange = (idx, value) => {
     const updated = [...rows]
     updated[idx].nombre = value
@@ -1839,6 +1855,7 @@ export default function BatchTable() {
           handleApplyAiMetadata={handleApplyAiMetadata}
           handleRetryFailedAi={handleRetryFailedAi}
           handleAutoDistribute={handleAutoDistribute}
+          handleClearAccounts={handleClearAccounts}
           distributionAccountIdsRef={distributionAccountIdsRef}
           distributionAccountIds={distributionAccountIds}
           handleDistributionAccountsChange={handleDistributionAccountsChange}
@@ -1899,6 +1916,7 @@ export default function BatchTable() {
         categoriesCatalog={categoriesCatalog}
         tagsCatalog={tagsCatalog}
         cuentas={cuentas}
+        distributionAccountIds={distributionAccountIds}
         similaritySelectedId={similaritySelectedId}
         handleNombreChange={handleNombreChange}
         handleNombreEnChange={handleNombreEnChange}

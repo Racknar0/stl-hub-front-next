@@ -47,6 +47,7 @@ export default function BatchControlPanel({
   handleApplyAiMetadata,
   handleRetryFailedAi,
   handleAutoDistribute,
+  handleClearAccounts,
   distributionAccountIdsRef,
   // ─── Distribución de cuentas ───
   distributionAccountIds,
@@ -276,6 +277,27 @@ export default function BatchControlPanel({
                 }}
               >
                 Distribuir
+              </Button>
+            </Tooltip>
+
+            <Tooltip title="Quitar todas las cuentas asignadas a los assets y deseleccionarlas">
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                onClick={async () => {
+                  if (await confirmAlert('¿Deseleccionar cuentas?', '¿Quitar todas las cuentas asignadas a los assets y desmarcar las cuentas de destino?')) {
+                    handleClearAccounts()
+                  }
+                }}
+                sx={{
+                  borderRadius: 1.5, textTransform: 'none', fontWeight: 600, height: 30, px: 2,
+                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                  color: '#fca5a5',
+                  '&:hover': { borderColor: '#ef4444', bgcolor: 'rgba(239,68,68,0.1)' }
+                }}
+              >
+                Quitar Cuentas
               </Button>
             </Tooltip>
           </Box>
