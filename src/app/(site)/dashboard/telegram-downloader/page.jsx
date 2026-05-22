@@ -6,9 +6,8 @@ import { Dialog } from '@mui/material';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramDownloader.scss';
 
-function ChannelAvatar({ channel }) {
+function ChannelAvatar({ channel, size = '70px' }) {
   const [hasError, setHasError] = useState(false);
-  const size = '32px';
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
   const imageUrl = channel.avatarUrl ? `${baseUrl}${channel.avatarUrl}` : null;
 
@@ -56,6 +55,10 @@ function ChannelAvatar({ channel }) {
   const colorIndex = Math.abs(hash) % colors.length;
   const [c1, c2] = colors[colorIndex];
 
+  // Dynamically calculate font size based on avatar size
+  const parsedSize = parseInt(size, 10) || 32;
+  const fontSize = `${Math.max(12, Math.floor(parsedSize * 0.4))}px`;
+
   return (
     <div
       style={{
@@ -67,7 +70,7 @@ function ChannelAvatar({ channel }) {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#fff',
-        fontSize: '0.85rem',
+        fontSize: fontSize,
         fontWeight: 'bold',
         textShadow: '0 1px 2px rgba(0,0,0,0.2)',
         flexShrink: 0,
@@ -78,6 +81,7 @@ function ChannelAvatar({ channel }) {
     </div>
   );
 }
+
 
 export default function TelegramDownloader() {
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -116,6 +120,12 @@ export default function TelegramDownloader() {
   const [sortBy, setSortBy] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Custom dropdown states & search filters
+  const dropdownRef = useRef(null);
+  const [isChannelDropdownOpen, setIsChannelDropdownOpen] = useState(false);
+  const [channelSearchQuery, setChannelSearchQuery] = useState('');
+  const [tableSearchQuery, setTableSearchQuery] = useState('');
+
   const [filesDownloaded, setFilesDownloaded] = useState([]);
   const [showExplorer, setShowExplorer] = useState(false);
 
@@ -143,6 +153,37 @@ export default function TelegramDownloader() {
       }
     };
   }, [isAuthorized]);
+
+  // Sincronizar el input de búsqueda de canal con el canal seleccionado actual
+  useEffect(() => {
+    if (selectedChannel && channels.length > 0) {
+      const activeChan = channels.find(c => c.name === selectedChannel);
+      if (activeChan) {
+        setChannelSearchQuery(activeChan.label || activeChan.name);
+      }
+    } else {
+      setChannelSearchQuery('');
+    }
+  }, [selectedChannel, channels]);
+
+  // Manejar el click fuera del dropdown de canales para cerrarlo
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsChannelDropdownOpen(false);
+        if (selectedChannel) {
+          const activeChan = channels.find(c => c.name === selectedChannel);
+          if (activeChan) {
+            setChannelSearchQuery(activeChan.label || activeChan.name);
+          }
+        } else {
+          setChannelSearchQuery('');
+        }
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedChannel, channels]);
 
   // Recover download state if browser was closed and reopened
   const recoverState = async () => {
@@ -500,9 +541,19 @@ export default function TelegramDownloader() {
   };
 
   const getSortedChannels = () => {
-    if (!sortBy) return channels;
+    let list = [...channels];
+    if (tableSearchQuery.trim()) {
+      const q = tableSearchQuery.toLowerCase();
+      list = list.filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const label = (c.label || '').toLowerCase();
+        return name.includes(q) || label.includes(q);
+      });
+    }
 
-    return [...channels].sort((a, b) => {
+    if (!sortBy) return list;
+
+    return list.sort((a, b) => {
       if (sortBy === 'name') {
         const nameA = (editedChannels[a.name]?.label || a.label || a.name || '').trim().toLowerCase();
         const nameB = (editedChannels[b.name]?.label || b.label || b.name || '').trim().toLowerCase();
@@ -708,22 +759,129 @@ export default function TelegramDownloader() {
         <div className="glass-card">
           <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem', fontWeight: '600' }}>Configuración</h2>
 
-          <div className="form-group">
+          <div className="form-group" style={{ position: 'relative' }} ref={dropdownRef}>
             <label>Canal Guardado</label>
-            <select value={selectedChannel} onChange={e => { setSelectedChannel(e.target.value); setChannelInfo(null); setScanResult(null); }} disabled={isDownloading}>
-              <option value="">-- Selecciona --</option>
-              {[...channels]
-                .sort((a, b) => {
-                  const labelA = (a.label || a.name || '').trim().toLowerCase();
-                  const labelB = (b.label || b.name || '').trim().toLowerCase();
-                  return labelA.localeCompare(labelB);
-                })
-                .map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.label || c.name}
-                  </option>
-                ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                value={channelSearchQuery}
+                placeholder="-- Buscar o seleccionar canal --"
+                onChange={e => {
+                  setChannelSearchQuery(e.target.value);
+                  setIsChannelDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  if (!isDownloading) setIsChannelDropdownOpen(true);
+                }}
+                disabled={isDownloading}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 2.5rem 0.75rem 1rem',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '1rem',
+                  cursor: isDownloading ? 'not-allowed' : 'text'
+                }}
+              />
+              <span 
+                onClick={() => {
+                  if (!isDownloading) setIsChannelDropdownOpen(!isChannelDropdownOpen);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#cbd5e0',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  userSelect: 'none',
+                  opacity: 0.7
+                }}
+              >
+                {isChannelDropdownOpen ? '▲' : '▼'}
+              </span>
+              
+              {isChannelDropdownOpen && !isDownloading && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '0.25rem',
+                  background: 'rgba(17, 25, 40, 0.96)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  zIndex: 9999
+                }}>
+                  {(() => {
+                    const filtered = [...channels]
+                      .sort((a, b) => {
+                        const labelA = (a.label || a.name || '').trim().toLowerCase();
+                        const labelB = (b.label || b.name || '').trim().toLowerCase();
+                        return labelA.localeCompare(labelB);
+                      })
+                      .filter(c => {
+                        const term = (c.label || c.name || '').trim().toLowerCase();
+                        return term.includes(channelSearchQuery.toLowerCase());
+                      });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div style={{ padding: '0.75rem 1rem', color: '#a0aec0', fontSize: '0.9rem', textAlign: 'center' }}>
+                          No se encontraron canales
+                        </div>
+                      );
+                    }
+
+                    return filtered.map(c => {
+                      const isSelected = selectedChannel === c.name;
+                      const displayName = c.label || c.name;
+                      return (
+                        <div
+                          key={c.name}
+                          onClick={() => {
+                            setSelectedChannel(c.name);
+                            setChannelSearchQuery(displayName);
+                            setIsChannelDropdownOpen(false);
+                            setChannelInfo(null);
+                            setScanResult(null);
+                          }}
+                          style={{
+                            padding: '0.6rem 1rem',
+                            cursor: 'pointer',
+                            fontSize: '0.95rem',
+                            color: isSelected ? '#00f2fe' : '#e2e8f0',
+                            background: isSelected ? 'rgba(0, 242, 254, 0.08)' : 'transparent',
+                            transition: 'background 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = isSelected ? 'rgba(0, 242, 254, 0.12)' : 'rgba(255, 255, 255, 0.05)';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = isSelected ? 'rgba(0, 242, 254, 0.08)' : 'transparent';
+                          }}
+                        >
+                          <ChannelAvatar channel={c} size="40px" />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {displayName}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* LAST DOWNLOAD INFO - shows immediately from local data */}
@@ -958,7 +1116,44 @@ export default function TelegramDownloader() {
 
       {/* CHANNELS TABLE */}
       <div className="glass-card" style={{ marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem', fontWeight: '600' }}>Canales Configurados</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            Canales Configurados
+            <span style={{
+              fontSize: '0.85rem',
+              background: 'rgba(255, 255, 255, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              color: '#cbd5e0',
+              fontWeight: '600'
+            }}>
+              {channels.length}
+            </span>
+          </h2>
+          {channels.length > 0 && (
+            <div style={{ position: 'relative', width: '300px' }}>
+              <input
+                type="text"
+                placeholder="🔍 Buscar canal en la tabla..."
+                value={tableSearchQuery}
+                onChange={e => setTableSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  transition: 'all 0.3s'
+                }}
+                onFocus={e => e.target.style.borderColor = '#4facfe'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+              />
+            </div>
+          )}
+        </div>
         {channels.length === 0 ? (
           <p style={{ color: '#a0aec0' }}>No hay canales configurados. Añade uno arriba.</p>
         ) : (
@@ -966,6 +1161,7 @@ export default function TelegramDownloader() {
             <table className="channels-table">
               <thead>
                 <tr>
+                  <th style={{ width: '50px', textAlign: 'center' }}>#</th>
                   <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                     Nombre {renderSortIndicator('name')}
                   </th>
@@ -980,7 +1176,7 @@ export default function TelegramDownloader() {
                 </tr>
               </thead>
               <tbody>
-                {getSortedChannels().map(c => {
+                {getSortedChannels().map((c, index) => {
                   const edits = editedChannels[c.name] || {};
                   const currentLabel = edits.label !== undefined ? edits.label : (c.label || '');
                   const currentName = edits.name !== undefined ? edits.name : c.name;
@@ -1003,6 +1199,9 @@ export default function TelegramDownloader() {
                       id={`channel-row-${c.name}`}
                       className={c.name === newlyAddedChannel ? 'newly-added-row' : ''}
                     >
+                      <td style={{ textAlign: 'center', color: '#718096', fontWeight: 'bold', fontSize: '0.9rem', verticalAlign: 'middle' }}>
+                        {index + 1}
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <ChannelAvatar channel={c} />
