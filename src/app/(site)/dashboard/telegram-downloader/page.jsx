@@ -698,7 +698,17 @@ export default function TelegramDownloader() {
             <label>Canal Guardado</label>
             <select value={selectedChannel} onChange={e => { setSelectedChannel(e.target.value); setChannelInfo(null); setScanResult(null); }} disabled={isDownloading}>
               <option value="">-- Selecciona --</option>
-              {channels.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+              {[...channels]
+                .sort((a, b) => {
+                  const labelA = (a.label || a.name || '').trim().toLowerCase();
+                  const labelB = (b.label || b.name || '').trim().toLowerCase();
+                  return labelA.localeCompare(labelB);
+                })
+                .map(c => (
+                  <option key={c.name} value={c.name}>
+                    {c.label ? `${c.label} (${c.name})` : c.name}
+                  </option>
+                ))}
             </select>
           </div>
 
