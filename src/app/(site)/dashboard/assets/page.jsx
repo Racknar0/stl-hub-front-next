@@ -1887,12 +1887,12 @@ export default function AssetsAdminPage() {
                     const next = { ...prev };
                     const current = next[id] || {
                         id,
-                        title: '',
-                        titleEn: '',
-                        description: '',
-                        descriptionEn: '',
-                        categories: [],
-                        tags: [],
+                        title: String(row?.title || ''),
+                        titleEn: String(row?.titleEn || ''),
+                        description: String(row?.description || ''),
+                        descriptionEn: String(row?.descriptionEn || ''),
+                        categories: normalizeMetaCategoryList(row?.categories),
+                        tags: normalizeMetaTagList(row?.tags),
                     };
                     next[id] = {
                         ...current,
