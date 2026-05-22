@@ -122,6 +122,7 @@ export default function TelegramDownloader() {
 
   // Custom dropdown states & search filters
   const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
   const [isChannelDropdownOpen, setIsChannelDropdownOpen] = useState(false);
   const [channelSearchQuery, setChannelSearchQuery] = useState('');
   const [tableSearchQuery, setTableSearchQuery] = useState('');
@@ -154,36 +155,22 @@ export default function TelegramDownloader() {
     };
   }, [isAuthorized]);
 
-  // Sincronizar el input de búsqueda de canal con el canal seleccionado actual
-  useEffect(() => {
-    if (selectedChannel && channels.length > 0) {
-      const activeChan = channels.find(c => c.name === selectedChannel);
-      if (activeChan) {
-        setChannelSearchQuery(activeChan.label || activeChan.name);
-      }
-    } else {
-      setChannelSearchQuery('');
-    }
-  }, [selectedChannel, channels]);
+  const getSelectedChannelName = () => {
+    if (!selectedChannel) return '';
+    const chan = channels.find(c => c.name === selectedChannel);
+    return chan ? (chan.label || chan.name) : '';
+  };
 
   // Manejar el click fuera del dropdown de canales para cerrarlo
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsChannelDropdownOpen(false);
-        if (selectedChannel) {
-          const activeChan = channels.find(c => c.name === selectedChannel);
-          if (activeChan) {
-            setChannelSearchQuery(activeChan.label || activeChan.name);
-          }
-        } else {
-          setChannelSearchQuery('');
-        }
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedChannel, channels]);
+  }, []);
 
   // Recover download state if browser was closed and reopened
   const recoverState = async () => {
@@ -262,7 +249,6 @@ export default function TelegramDownloader() {
       const d = res.data || res;
       if (d.success) {
         setChannels(d.channels);
-        if (d.channels.length > 0 && !selectedChannel) setSelectedChannel(d.channels[0].name);
       }
     } catch (e) { console.error(e); }
   };
@@ -763,15 +749,19 @@ export default function TelegramDownloader() {
             <label>Canal Guardado</label>
             <div style={{ position: 'relative' }}>
               <input
+                ref={inputRef}
                 type="text"
-                value={channelSearchQuery}
-                placeholder="-- Buscar o seleccionar canal --"
+                value={isChannelDropdownOpen ? channelSearchQuery : getSelectedChannelName()}
+                placeholder={selectedChannel ? getSelectedChannelName() : "-- Buscar o seleccionar canal --"}
                 onChange={e => {
                   setChannelSearchQuery(e.target.value);
                   setIsChannelDropdownOpen(true);
                 }}
                 onFocus={() => {
-                  if (!isDownloading) setIsChannelDropdownOpen(true);
+                  if (!isDownloading) {
+                    setIsChannelDropdownOpen(true);
+                    setChannelSearchQuery('');
+                  }
                 }}
                 disabled={isDownloading}
                 style={{
@@ -787,7 +777,16 @@ export default function TelegramDownloader() {
               />
               <span 
                 onClick={() => {
-                  if (!isDownloading) setIsChannelDropdownOpen(!isChannelDropdownOpen);
+                  if (!isDownloading) {
+                    const nextOpen = !isChannelDropdownOpen;
+                    setIsChannelDropdownOpen(nextOpen);
+                    if (nextOpen) {
+                      setChannelSearchQuery('');
+                      setTimeout(() => {
+                        inputRef.current?.focus();
+                      }, 0);
+                    }
+                  }
                 }}
                 style={{
                   position: 'absolute',

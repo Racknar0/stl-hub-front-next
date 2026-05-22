@@ -292,9 +292,22 @@ export default function MetaSeoRow({
                                 title: e.target.value,
                             })
                         }
+                        onBlur={() => onSaveRow(id)}
                         disabled={metaBusy || loading}
                     />
-                    <TextField size="small" fullWidth value={draft.titleEn} placeholder="Name EN" onChange={(e) => onUpdateDraft(id, { titleEn: e.target.value, }) } disabled={metaBusy || loading} />
+                    <TextField
+                        size="small"
+                        fullWidth
+                        value={draft.titleEn}
+                        placeholder="Name EN"
+                        onChange={(e) =>
+                            onUpdateDraft(id, {
+                                titleEn: e.target.value,
+                            })
+                        }
+                        onBlur={() => onSaveRow(id)}
+                        disabled={metaBusy || loading}
+                    />
                 </Stack>
             </TableCell>
 
@@ -319,6 +332,7 @@ export default function MetaSeoRow({
                                 description: e.target.value,
                             })
                         }
+                        onBlur={() => onSaveRow(id)}
                         disabled={metaBusy || loading}
                         sx={{ '& .MuiInputBase-root': { alignItems: 'stretch', }, '& .MuiInputBase-inputMultiline': { overflow: 'auto !important', resize: 'vertical', minHeight: '25px', }, }}
                     />
@@ -334,6 +348,7 @@ export default function MetaSeoRow({
                                 descriptionEn: e.target.value,
                             })
                         }
+                        onBlur={() => onSaveRow(id)}
                         disabled={metaBusy || loading}
                         sx={{ '& .MuiInputBase-root': { alignItems: 'stretch', }, '& .MuiInputBase-inputMultiline': { overflow: 'auto !important', resize: 'vertical', minHeight: '25px', }, }}
                     />
@@ -357,11 +372,13 @@ export default function MetaSeoRow({
                             isOptionEqualToValue={(a, b) =>
                                 String(a?.slug || '') === String(b?.slug || '')
                             }
-                            onChange={(_, value) =>
+                            onChange={(_, value) => {
+                                const nextCats = normalizeMetaCategoryList(value);
                                 onUpdateDraft(id, {
-                                    categories: normalizeMetaCategoryList(value),
-                                })
-                            }
+                                    categories: nextCats,
+                                });
+                                void onSaveRow(id, { categories: nextCats });
+                            }}
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
@@ -424,7 +441,11 @@ export default function MetaSeoRow({
                                     .toLowerCase();
                                 return !!aSlug && !!bSlug && aSlug === bSlug;
                             }}
-                            onChange={(_, value) => onUpdateDraft(id, { tags: normalizeMetaTagList(value), }) }
+                            onChange={(_, value) => {
+                                const nextTags = normalizeMetaTagList(value);
+                                onUpdateDraft(id, { tags: nextTags });
+                                void onSaveRow(id, { tags: nextTags });
+                            }}
                             renderInput={(params) => (
                                 <TextField {...params} size="small" placeholder="Tags" />
                             )}

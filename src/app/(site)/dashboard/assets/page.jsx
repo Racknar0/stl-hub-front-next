@@ -1276,21 +1276,23 @@ export default function AssetsAdminPage() {
     }, []);
 
     useEffect(() => {
-        if (tab !== 3) return;
+        if (tab !== 2) return;
         setMetaDraftMap((prev) => {
             const next = { ...prev };
             (Array.isArray(assets) ? assets : []).forEach((asset) => {
                 const id = Number(asset?.id || 0);
                 if (!Number.isFinite(id) || id <= 0) return;
-                next[id] = {
-                    id,
-                    title: String(asset?.title || ''),
-                    titleEn: String(asset?.titleEn || ''),
-                    description: String(asset?.description || ''),
-                    descriptionEn: String(asset?.descriptionEn || ''),
-                    categories: normalizeMetaCategoryList(asset?.categories),
-                    tags: normalizeMetaTagList(asset?.tags),
-                };
+                if (!next[id]) {
+                    next[id] = {
+                        id,
+                        title: String(asset?.title || ''),
+                        titleEn: String(asset?.titleEn || ''),
+                        description: String(asset?.description || ''),
+                        descriptionEn: String(asset?.descriptionEn || ''),
+                        categories: normalizeMetaCategoryList(asset?.categories),
+                        tags: normalizeMetaTagList(asset?.tags),
+                    };
+                }
             });
             return next;
         });
@@ -1359,29 +1361,6 @@ export default function AssetsAdminPage() {
                 next[id] = setTo;
             });
             return next;
-        });
-    };
-
-    const updateMetaDraft = (assetId, patch) => {
-        const id = Number(assetId);
-        if (!Number.isFinite(id) || id <= 0) return;
-        setMetaDraftMap((prev) => {
-            const current = prev[id] || {
-                id,
-                title: '',
-                titleEn: '',
-                description: '',
-                descriptionEn: '',
-                categories: [],
-                tags: [],
-            };
-            return {
-                ...prev,
-                [id]: {
-                    ...current,
-                    ...patch,
-                },
-            };
         });
     };
 
@@ -1506,6 +1485,33 @@ export default function AssetsAdminPage() {
         return null;
     }, [metaRows, visualSimilarGroups]);
 
+    const updateMetaDraft = useCallback((assetId, patch) => {
+        const id = Number(assetId);
+        if (!Number.isFinite(id) || id <= 0) return;
+        setMetaDraftMap((prev) => {
+            let current = prev[id];
+            if (!current) {
+                const asset = findAssetInAllSources(id);
+                current = {
+                    id,
+                    title: String(asset?.title || ''),
+                    titleEn: String(asset?.titleEn || ''),
+                    description: String(asset?.description || ''),
+                    descriptionEn: String(asset?.descriptionEn || ''),
+                    categories: normalizeMetaCategoryList(asset?.categories || []),
+                    tags: normalizeMetaTagList(asset?.tags || []),
+                };
+            }
+            return {
+                ...prev,
+                [id]: {
+                    ...current,
+                    ...patch,
+                },
+            };
+        });
+    }, [findAssetInAllSources, normalizeMetaCategoryList, normalizeMetaTagList]);
+
     const handleMetaSetFirstImage = useCallback(
         async (assetId, imgIndex) => {
             const id = Number(assetId);
@@ -1527,13 +1533,14 @@ export default function AssetsAdminPage() {
                 applyMetaImagesInRow(id, reordered);
                 await fireAlert({
                     toast: true,
-                    position: 'bottom',
+                    position: 'top',
                     icon: 'success',
                     title: `Imagen principal actualizada en #${id}`,
                     showConfirmButton: false,
                     timer: 1400,
                     timerProgressBar: true,
                     zIndex: 2000,
+                    width: '400px',
                 });
             } catch (e) {
                 await errorAlert(
@@ -1567,19 +1574,34 @@ export default function AssetsAdminPage() {
         [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave],
     );
 
-    const saveMetaRow = async (assetId, { silent = false } = {}) => {
+    const saveMetaRow = async (assetId, patch = {}, { silent = false } = {}) => {
         const id = Number(assetId);
-        const draft = metaDraftMap[id];
-        if (!Number.isFinite(id) || id <= 0 || !draft) return false;
+        let draft = metaDraftMap[id];
+        if (!draft) {
+            const asset = findAssetInAllSources(id);
+            draft = {
+                id,
+                title: String(asset?.title || ''),
+                titleEn: String(asset?.titleEn || ''),
+                description: String(asset?.description || ''),
+                descriptionEn: String(asset?.descriptionEn || ''),
+                categories: normalizeMetaCategoryList(asset?.categories || []),
+                tags: normalizeMetaTagList(asset?.tags || []),
+            };
+        }
+        const mergedDraft = {
+            ...draft,
+            ...patch,
+        };
 
-        const categoriesPayload = normalizeMetaCategoryList(draft.categories)
+        const categoriesPayload = normalizeMetaCategoryList(mergedDraft.categories)
             .map((c) =>
                 String(c.slug || c.name || '')
                     .trim()
                     .toLowerCase(),
             )
             .filter(Boolean);
-        const tagsPayload = normalizeMetaTagList(draft.tags)
+        const tagsPayload = normalizeMetaTagList(mergedDraft.tags)
             .map((t) =>
                 String(t.slug || t.name || '')
                     .trim()
@@ -1587,11 +1609,16 @@ export default function AssetsAdminPage() {
             )
             .filter(Boolean);
 
+        setMetaDraftMap((prev) => ({
+            ...prev,
+            [id]: mergedDraft,
+        }));
+
         await http.putData('/assets', id, {
-            title: String(draft.title || '').trim(),
-            titleEn: String(draft.titleEn || '').trim(),
-            description: String(draft.description || '').trim(),
-            descriptionEn: String(draft.descriptionEn || '').trim(),
+            title: String(mergedDraft.title || '').trim(),
+            titleEn: String(mergedDraft.titleEn || '').trim(),
+            description: String(mergedDraft.description || '').trim(),
+            descriptionEn: String(mergedDraft.descriptionEn || '').trim(),
             categories: categoriesPayload,
             tags: tagsPayload,
         });
@@ -1599,13 +1626,14 @@ export default function AssetsAdminPage() {
         if (!silent) {
             await fireAlert({
                 toast: true,
-                position: 'bottom',
+                position: 'top',
                 icon: 'success',
                 title: `Metadata guardada para asset #${id}`,
                 showConfirmButton: false,
                 timer: 1700,
                 timerProgressBar: true,
                 zIndex: 2000,
+                width: '400px',
             });
         }
         return true;
@@ -1690,19 +1718,20 @@ export default function AssetsAdminPage() {
         }
     };
 
-    const handleSaveMetaRow = async (assetId) => {
+    const handleSaveMetaRow = async (assetId, patch = {}) => {
         try {
             // Guardado en segundo plano sin bloquear (sin setMetaBusy)
-            saveMetaRow(assetId).catch(async (e) => {
+            saveMetaRow(assetId, patch).catch(async (e) => {
                 await fireAlert({
                     toast: true,
-                    position: 'bottom',
+                    position: 'top',
                     icon: 'error',
                     title: e?.response?.data?.message || 'No se pudo guardar el asset',
                     showConfirmButton: false,
                     timer: 2200,
                     timerProgressBar: true,
                     zIndex: 2000,
+                    width: '400px',
                 });
             });
             // NOTA: Eliminamos setRefreshTick para evitar que la tabla se recargue y pierdas el foco
@@ -1918,13 +1947,14 @@ export default function AssetsAdminPage() {
 
             await fireAlert({
                 toast: true,
-                position: 'bottom',
+                position: 'top',
                 icon: 'success',
                 title: `Asset #${id} marcado como adultos`,
                 showConfirmButton: false,
                 timer: 1700,
                 timerProgressBar: true,
                 zIndex: 2000,
+                width: '400px',
             });
         } catch (e) {
             console.error('Error al marcar adultos:', e);
@@ -1976,13 +2006,14 @@ export default function AssetsAdminPage() {
 
                 await fireAlert({
                     toast: true,
-                    position: 'bottom',
+                    position: 'top',
                     icon: 'success',
                     title: `Metadata autogenerada y guardada para #${id}`,
                     showConfirmButton: false,
                     timer: 1700,
                     timerProgressBar: true,
                     zIndex: 2000,
+                    width: '400px',
                 });
             } else {
                 await errorAlert('Error', 'No se pudo autogenerar la metadata');
