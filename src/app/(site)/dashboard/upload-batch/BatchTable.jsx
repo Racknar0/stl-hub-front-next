@@ -1120,13 +1120,24 @@ export default function BatchTable() {
     setCreateModalType('')
   }
 
-  const handleCuentaChange = (idx, value) => {
+  const handleCuentaChange = async (idx, value) => {
     const updated = [...rows]
     updated[idx].cuenta = value
     setRows(updated)
+
+    const row = updated[idx]
+    if (row && row.id) {
+      try {
+        await http.patchData('/batch-imports/items', row.id, {
+          targetAccount: value ? Number(value) : null
+        })
+      } catch (e) {
+        console.error('Error saving account to DB:', e)
+      }
+    }
   }
 
-  const handleClearAccounts = () => {
+  const handleClearAccounts = async () => {
     const updated = rows.map((r) => {
       const st = String(r?.estado || '').toLowerCase()
       if (st === 'borrador' || st === 'error') {
@@ -1138,7 +1149,28 @@ export default function BatchTable() {
     setDistributionAccountIds([])
     distributionAccountIdsRef.current = []
     distributionSelectionDirtyRef.current = false
-    setToast({ open: true, msg: 'Cuentas desasignadas de todos los assets.', type: 'info' })
+
+    const itemsToClear = rows.filter(r => {
+      const st = String(r?.estado || '').toLowerCase()
+      return st === 'borrador' || st === 'error'
+    })
+
+    if (itemsToClear.length > 0) {
+      try {
+        const promises = itemsToClear.map(row => 
+          http.patchData('/batch-imports/items', row.id, {
+            targetAccount: null
+          })
+        )
+        await Promise.all(promises)
+        setToast({ open: true, msg: 'Cuentas desasignadas de todos los assets y guardado en la BD.', type: 'success' })
+      } catch (e) {
+        console.error('Error al guardar desasignación en BD:', e)
+        setToast({ open: true, msg: 'Cuentas desasignadas localmente, pero falló al guardar en la BD.', type: 'error' })
+      }
+    } else {
+      setToast({ open: true, msg: 'No hay cuentas que desasignar.', type: 'info' })
+    }
   }
 
 
@@ -1551,14 +1583,31 @@ export default function BatchTable() {
     }
 
     setRows(updatedRows)
-    
-    if (unassignedCount > 0) {
-       setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles (tope auto-distribución ${(AUTO_DISTRIBUTION_LIMIT_MB / 1024).toFixed(2)}GB, margen ${(DISTRIBUTION_HEADROOM_MB / 1024).toFixed(2)}GB, operativo ${LIMIT_GB.toFixed(2)}GB).`, type: 'warning' })
-    } else {
-       const scopedMsg = preferredSet.size > 0
-         ? `Distribución completada usando ${accountsStatus.length} cuenta(s) seleccionadas.`
-         : 'Distribución inteligente completada con éxito. Revisa el balance.'
-       setToast({ open: true, msg: scopedMsg, type: 'success' })
+
+    const itemsToSave = updatedRows.filter(r => {
+      const st = String(r?.estado || '').toLowerCase()
+      return st === 'borrador' || st === 'error'
+    })
+
+    try {
+      const promises = itemsToSave.map(row => 
+        http.patchData('/batch-imports/items', row.id, {
+          targetAccount: row.cuenta ? Number(row.cuenta) : null
+        })
+      )
+      await Promise.all(promises)
+      
+      if (unassignedCount > 0) {
+         setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles y se guardó la distribución en la BD.`, type: 'warning' })
+      } else {
+         const scopedMsg = preferredSet.size > 0
+           ? `Distribución completada y guardada en la BD usando ${accountsStatus.length} cuenta(s) seleccionadas.`
+           : 'Distribución inteligente completada y guardada en la BD con éxito.'
+         setToast({ open: true, msg: scopedMsg, type: 'success' })
+      }
+    } catch (e) {
+      console.error('Error al guardar auto-distribución en la BD:', e)
+      setToast({ open: true, msg: 'Distribución realizada localmente, pero falló al guardar en la BD.', type: 'error' })
     }
   }
 
