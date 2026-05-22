@@ -121,6 +121,7 @@ export default function TelegramDownloader() {
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [progressData, setProgressData] = useState(null);
+  const [downloadInfo, setDownloadInfo] = useState(null);
   const [logs, setLogs] = useState([]);
 
   const logsEndRef = useRef(null);
@@ -151,6 +152,7 @@ export default function TelegramDownloader() {
       if (d.success && d.isDownloading) {
         setIsDownloading(true);
         if (d.lastProgress) setProgressData(d.lastProgress);
+        if (d.downloadInfo) setDownloadInfo(d.downloadInfo);
         if (d.logBuffer && d.logBuffer.length > 0) {
           const recovered = d.logBuffer.map(entry => ({
             message: entry.message || `[${entry.type}] ${entry.fileName || ''}`,
@@ -567,12 +569,23 @@ export default function TelegramDownloader() {
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.active) setIsDownloading(true);
+      if (data.channelName) {
+        setDownloadInfo(prev => {
+          if (prev?.channelName === data.channelName) return prev;
+          return { channelName: data.channelName };
+        });
+      }
       if (data.type === 'progress') setProgressData(data);
-      else if (data.type === 'start') { setIsDownloading(true); setProgressData(data); addLog(`Iniciando: ${data.totalFiles} archivos, ${data.totalBytesStr}`, 'info'); }
+      else if (data.type === 'start') {
+        setIsDownloading(true);
+        setProgressData(data);
+        if (data.channelName) setDownloadInfo({ channelName: data.channelName });
+        addLog(`Iniciando: ${data.totalFiles} archivos, ${data.totalBytesStr}`, 'info');
+      }
       else if (data.type === 'file_start') addLog(`Descargando: [${data.msgId}] ${data.fileName}`, 'info');
       else if (data.type === 'file_done') addLog(`✓ ${data.fileName}`, 'success');
       else if (data.type === 'file_skip') addLog(`↷ Omitido: ${data.fileName}`, 'default');
-      else if (data.type === 'finish') { setIsDownloading(false); addLog('¡Descarga completada!', 'success'); }
+      else if (data.type === 'finish') { setIsDownloading(false); setDownloadInfo(null); addLog('¡Descarga completada!', 'success'); }
       else if (data.type === 'error') addLog(`Error: ${data.message}`, 'error');
       else if (data.type === 'info') addLog(data.message, 'info');
     };
@@ -582,13 +595,14 @@ export default function TelegramDownloader() {
     if (!selectedChannel || !startId || !endId) return;
     try {
       setIsDownloading(true); setProgressData(null); setLogs([]);
+      setDownloadInfo({ channelName: selectedChannel });
       await http.postData('/telegram/start', { channelName: selectedChannel, startId, endId });
       addLog('Descarga solicitada...', 'info');
-    } catch { setIsDownloading(false); alert('Error starting download'); }
+    } catch { setIsDownloading(false); setDownloadInfo(null); alert('Error starting download'); }
   };
 
   const handleCancel = async () => {
-    try { await http.postData('/telegram/cancel', {}); addLog('Cancelación solicitada...', 'info'); setIsDownloading(false); }
+    try { await http.postData('/telegram/cancel', {}); addLog('Cancelación solicitada...', 'info'); setIsDownloading(false); setDownloadInfo(null); }
     catch { alert('Error cancelling'); }
   };
 
@@ -876,7 +890,38 @@ export default function TelegramDownloader() {
 
         {/* PROGRESS */}
         <div className="glass-card progress-section">
-          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem', fontWeight: '600' }}>Progreso en Vivo</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600' }}>Progreso en Vivo</h2>
+            {isDownloading && downloadInfo?.channelName && (() => {
+              const chan = channels.find(c => c.name === downloadInfo.channelName);
+              const displayName = chan ? (chan.label || chan.name) : downloadInfo.channelName;
+              return (
+                <div className="downloading-badge" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(79, 172, 254, 0.12)',
+                  border: '1px solid rgba(79, 172, 254, 0.25)',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  fontWeight: '500',
+                  color: '#4facfe'
+                }}>
+                  <span className="pulse-dot" style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: '#00f2fe',
+                    display: 'inline-block',
+                    animation: 'pulse-animation 1.5s infinite ease-in-out'
+                  }} />
+                  <span style={{ color: '#a0aec0', fontSize: '0.75rem' }}>Canal:</span>
+                  <strong>{displayName}</strong>
+                </div>
+              );
+            })()}
+          </div>
 
           <div className="overall-stats">
             <span>Progreso General</span>
