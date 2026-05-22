@@ -1847,6 +1847,154 @@ export default function AssetsAdminPage() {
         await runMetaDescriptionGeneration('selected', [Number(assetId)]);
     };
 
+    const handleQuickAdultos = async (assetId) => {
+        const id = Number(assetId);
+        if (!Number.isFinite(id) || id <= 0) return;
+        setMetaBusy(true);
+        try {
+            const row = findAssetInAllSources(id);
+            const currentCategories = Array.isArray(row?.categories) ? row.categories : [];
+            const currentTags = Array.isArray(row?.tags) ? row.tags : [];
+
+            // Categorías a guardar (añadir 'adultos' si no existe)
+            const nextCategories = [...currentCategories];
+            if (!nextCategories.some(c => String(c.slug || c.name || '').toLowerCase() === 'adultos')) {
+                nextCategories.push({ slug: 'adultos', name: 'adultos' });
+            }
+            const categoriesPayload = normalizeMetaCategoryList(nextCategories)
+                .map((c) => String(c.slug || c.name || '').trim().toLowerCase())
+                .filter(Boolean);
+
+            // Tags a guardar (añadir 'adultos' si no existe)
+            const nextTags = [...currentTags];
+            if (!nextTags.some(t => String(t.slug || t.name || '').toLowerCase() === 'adultos')) {
+                nextTags.push({ slug: 'adultos', name: 'adultos' });
+            }
+            const tagsPayload = normalizeMetaTagList(nextTags)
+                .map((t) => String(t.slug || t.name || '').trim().toLowerCase())
+                .filter(Boolean);
+
+            // Guardar en base de datos
+            const res = await http.putData('/assets', id, {
+                categories: categoriesPayload,
+                tags: tagsPayload,
+            });
+
+            const updatedAsset = res.data;
+            if (updatedAsset) {
+                // Actualizar draft
+                setMetaDraftMap((prev) => {
+                    const next = { ...prev };
+                    const current = next[id] || {
+                        id,
+                        title: '',
+                        titleEn: '',
+                        description: '',
+                        descriptionEn: '',
+                        categories: [],
+                        tags: [],
+                    };
+                    next[id] = {
+                        ...current,
+                        categories: normalizeMetaCategoryList(updatedAsset.categories),
+                        tags: normalizeMetaTagList(updatedAsset.tags),
+                    };
+                    return next;
+                });
+
+                // Actualizar assets
+                setAssets((prev) =>
+                    (Array.isArray(prev) ? prev : []).map((item) =>
+                        Number(item?.id || 0) === id
+                            ? {
+                                  ...item,
+                                  categories: updatedAsset.categories,
+                                  tags: updatedAsset.tags,
+                              }
+                            : item
+                    )
+                );
+            }
+
+            await fireAlert({
+                toast: true,
+                position: 'bottom',
+                icon: 'success',
+                title: `Asset #${id} marcado como adultos`,
+                showConfirmButton: false,
+                timer: 1700,
+                timerProgressBar: true,
+                zIndex: 2000,
+            });
+        } catch (e) {
+            console.error('Error al marcar adultos:', e);
+            await errorAlert('Error', e?.response?.data?.message || 'No se pudo marcar como adultos');
+        } finally {
+            setMetaBusy(false);
+        }
+    };
+
+    const handleGenerateMetaAll = async (assetId) => {
+        const id = Number(assetId);
+        if (!Number.isFinite(id) || id <= 0) return;
+        setMetaBusy(true);
+        try {
+            const res = await http.postData('/assets/meta/generate-all', { assetId: id });
+            const { success, asset: updatedAsset } = res.data || {};
+            if (success && updatedAsset) {
+                // Actualizar draft
+                setMetaDraftMap((prev) => {
+                    const next = { ...prev };
+                    next[id] = {
+                        id,
+                        title: String(updatedAsset.title || ''),
+                        titleEn: String(updatedAsset.titleEn || ''),
+                        description: String(updatedAsset.description || ''),
+                        descriptionEn: String(updatedAsset.descriptionEn || ''),
+                        categories: normalizeMetaCategoryList(updatedAsset.categories),
+                        tags: normalizeMetaTagList(updatedAsset.tags),
+                    };
+                    return next;
+                });
+
+                // Actualizar listado de assets
+                setAssets((prev) =>
+                    (Array.isArray(prev) ? prev : []).map((item) =>
+                        Number(item?.id || 0) === id
+                            ? {
+                                  ...item,
+                                  title: updatedAsset.title,
+                                  titleEn: updatedAsset.titleEn,
+                                  description: updatedAsset.description,
+                                  descriptionEn: updatedAsset.descriptionEn,
+                                  categories: updatedAsset.categories,
+                                  tags: updatedAsset.tags,
+                              }
+                            : item
+                    )
+                );
+
+                await fireAlert({
+                    toast: true,
+                    position: 'bottom',
+                    icon: 'success',
+                    title: `Metadata autogenerada y guardada para #${id}`,
+                    showConfirmButton: false,
+                    timer: 1700,
+                    timerProgressBar: true,
+                    zIndex: 2000,
+                });
+            } else {
+                await errorAlert('Error', 'No se pudo autogenerar la metadata');
+            }
+        } catch (e) {
+            console.error('Error al autogenerar metadata:', e);
+            await errorAlert('Error', e?.response?.data?.message || 'No se pudo autogenerar la metadata');
+        } finally {
+            setMetaBusy(false);
+        }
+    };
+
     const openMetaProfiles = (assetId) => {
         const id = Number(assetId);
         if (!Number.isFinite(id) || id <= 0) return;
@@ -2189,6 +2337,8 @@ export default function AssetsAdminPage() {
                     handleGenerateSingleDescription={
                         handleGenerateSingleDescription
                     }
+                    onQuickAdultos={handleQuickAdultos}
+                    handleGenerateMetaAll={handleGenerateMetaAll}
                     handleSaveMetaRow={handleSaveMetaRow}
                     onDeleteAsset={handleDelete}
                     paddingBottom={paddingBottom}

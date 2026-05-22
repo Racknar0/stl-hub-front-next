@@ -21,6 +21,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
+import ExplicitIcon from '@mui/icons-material/Explicit';
 
 export default function MetaSeoRow({
     virtualRow,
@@ -48,6 +49,8 @@ export default function MetaSeoRow({
     onGenerateSingleDescription,
     onSaveRow,
     onDeleteAsset,
+    onQuickAdultos,
+    onGenerateMetaAll,
 }) {
     return (
         <TableRow
@@ -56,12 +59,104 @@ export default function MetaSeoRow({
             ref={metaVirtualizer.measureElement}
             data-index={virtualRow.index}
         >
-            <TableCell padding="checkbox">
-                <Checkbox
-                    checked={isSelected}
-                    onChange={() => onToggleSelect(id)}
-                    disabled={metaBusy || loading}
-                />
+            <TableCell padding="checkbox" sx={{ verticalAlign: 'top', pt: 1.5 }}>
+                <Stack direction="column" spacing={0.5} alignItems="center">
+                    <Checkbox
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(id)}
+                        disabled={metaBusy || loading}
+                        sx={{ p: 0.5 }}
+                    />
+                    
+                    <Tooltip title="Perfiles rápidos" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onOpenProfiles(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                }}
+                            >
+                                <AccountTreeIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Autogenerar todo con IA" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onGenerateMetaAll(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                }}
+                            >
+                                <AutoAwesomeIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Marcar como Adultos" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onQuickAdultos(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: '#eab308',
+                                }}
+                            >
+                                <ExplicitIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Guardar fila" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => { void onSaveRow(id); }}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: '#16a34a',
+                                }}
+                            >
+                                <SaveIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Eliminar asset" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onDeleteAsset?.({ id, title: draft.title })}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'rgba(239,68,68,0.4)',
+                                    borderRadius: 1.5,
+                                    color: '#ef4444',
+                                    '&:hover': { bgcolor: 'rgba(239,68,68,0.1)' },
+                                }}
+                            >
+                                <DeleteForeverIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+                </Stack>
             </TableCell>
             <TableCell>{id}</TableCell>
 
@@ -348,62 +443,6 @@ export default function MetaSeoRow({
                 </Stack>
             </TableCell>
 
-            {/* === ACCIONES (vertical) === */}
-            <TableCell align="center">
-                <Stack direction="column" spacing={0.5} alignItems="center">
-                    <Tooltip title="Perfiles rápidos" placement="left">
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => onOpenProfiles(id)}
-                                disabled={metaBusy || loading}
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1.5,
-                                }}
-                            >
-                                <AccountTreeIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-
-                    <Tooltip title="Generar descripción IA" placement="left">
-                        <span>
-                            <IconButton size="small" onClick={() => onGenerateSingleDescription(id)} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, }} >
-                                <AutoAwesomeIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-
-                    <Tooltip title="Guardar fila" placement="left">
-                        <span>
-                            <IconButton size="small" onClick={() => { void onSaveRow(id); }} disabled={metaBusy || loading} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, color: '#16a34a', }} >
-                                <SaveIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-
-                    <Tooltip title="Eliminar asset" placement="left">
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => onDeleteAsset?.({ id, title: draft.title })}
-                                disabled={metaBusy || loading}
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'rgba(239,68,68,0.4)',
-                                    borderRadius: 1.5,
-                                    color: '#ef4444',
-                                    '&:hover': { bgcolor: 'rgba(239,68,68,0.1)' },
-                                }}
-                            >
-                                <DeleteForeverIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                </Stack>
-            </TableCell>
         </TableRow>
     );
 }

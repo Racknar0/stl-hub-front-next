@@ -80,6 +80,8 @@ export default function MetaSeoTab({
     applyMetaProfile,
     metaImagePreview,
     setMetaImagePreview,
+    onQuickAdultos,
+    handleGenerateMetaAll,
 }) {
     return (
         <Stack spacing={2}>
@@ -269,8 +271,7 @@ export default function MetaSeoTab({
                     <TableHead>
                         <TableRow>
                             <TableCell
-                                padding="checkbox"
-                                sx={{ width: 50, minWidth: 50 }}
+                                sx={{ width: 70, minWidth: 70 }}
                             >
                                 <Checkbox
                                     checked={allVisibleMetaSelected}
@@ -280,6 +281,7 @@ export default function MetaSeoTab({
                                         loading ||
                                         !allVisibleMetaIds.length
                                     }
+                                    sx={{ p: 0.5 }}
                                 />
                             </TableCell>
                             <TableCell sx={{ width: 60, minWidth: 60 }}>
@@ -297,14 +299,13 @@ export default function MetaSeoTab({
                             <TableCell sx={{ minWidth: 400, width: 400 }}>
                                 Categorías / Tags
                             </TableCell>
-                            <TableCell align="center" sx={{ width: 60, minWidth: 60 }}>Acciones</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {paddingTop > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={8}
+                                    colSpan={6}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -370,6 +371,8 @@ export default function MetaSeoTab({
                                     }
                                     onSaveRow={handleSaveMetaRow}
                                     onDeleteAsset={onDeleteAsset}
+                                    onQuickAdultos={onQuickAdultos}
+                                    onGenerateMetaAll={handleGenerateMetaAll}
                                 />
                             );
                         })}
@@ -377,7 +380,7 @@ export default function MetaSeoTab({
                         {paddingBottom > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={10}
+                                    colSpan={6}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -389,7 +392,7 @@ export default function MetaSeoTab({
 
                         {!metaRows.length && (
                             <TableRow>
-                                <TableCell colSpan={10}>
+                                <TableCell colSpan={6}>
                                     <Typography
                                         variant="body2"
                                         color="text.secondary"
