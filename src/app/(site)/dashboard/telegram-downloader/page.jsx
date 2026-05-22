@@ -706,7 +706,7 @@ export default function TelegramDownloader() {
                 })
                 .map(c => (
                   <option key={c.name} value={c.name}>
-                    {c.label ? `${c.label} (${c.name})` : c.name}
+                    {c.label || c.name}
                   </option>
                 ))}
             </select>
