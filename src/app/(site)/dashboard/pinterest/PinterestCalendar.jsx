@@ -109,6 +109,11 @@ export default function PinterestCalendar() {
   }, [currentDate]);
   useEffect(() => { fetchPinStats(); }, [fetchPinStats]);
 
+  const today = new Date();
+  const isSelectedDayPast = selectedDay
+    ? new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay) < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    : false;
+
   // Fetch pins for selected day
   const fetchDayPins = useCallback(async () => {
     if (!selectedDay) return;
@@ -370,7 +375,7 @@ export default function PinterestCalendar() {
               const isSelected = selectedDay === day;
               return (
                 <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''}`}
-                  onClick={() => !isPast && handleDayClick(day)}>
+                  onClick={() => handleDayClick(day)}>
                   <div className="day-top">
                     <div className="day-number">{day}</div>
                     {pinsCount > 0 && <span className="total-chip">{pinsCount} {pinsCount === 1 ? 'Pin' : 'Pins'}</span>}
@@ -476,7 +481,9 @@ export default function PinterestCalendar() {
                       })}
                     </div>
                   )}
-                  <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pin</button>
+                  {!isSelectedDayPast && (
+                    <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pin</button>
+                  )}
                 </div>
               )}
 
