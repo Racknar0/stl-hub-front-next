@@ -180,7 +180,12 @@ export default function TelegramDownloader() {
       if (d.success && d.isDownloading) {
         setIsDownloading(true);
         if (d.lastProgress) setProgressData(d.lastProgress);
-        if (d.downloadInfo) setDownloadInfo(d.downloadInfo);
+        if (d.downloadInfo) {
+          setDownloadInfo(d.downloadInfo);
+          if (d.downloadInfo.channelName) {
+            setSelectedChannel(d.downloadInfo.channelName);
+          }
+        }
         if (d.logBuffer && d.logBuffer.length > 0) {
           const recovered = d.logBuffer.map(entry => ({
             message: entry.message || `[${entry.type}] ${entry.fileName || ''}`,
@@ -607,6 +612,7 @@ export default function TelegramDownloader() {
       const data = JSON.parse(event.data);
       if (data.active) setIsDownloading(true);
       if (data.channelName) {
+        setSelectedChannel(data.channelName);
         setDownloadInfo(prev => {
           if (prev?.channelName === data.channelName) return prev;
           return { channelName: data.channelName };
@@ -616,7 +622,10 @@ export default function TelegramDownloader() {
       else if (data.type === 'start') {
         setIsDownloading(true);
         setProgressData(data);
-        if (data.channelName) setDownloadInfo({ channelName: data.channelName });
+        if (data.channelName) {
+          setSelectedChannel(data.channelName);
+          setDownloadInfo({ channelName: data.channelName });
+        }
         addLog(`Iniciando: ${data.totalFiles} archivos, ${data.totalBytesStr}`, 'info');
       }
       else if (data.type === 'file_start') addLog(`Descargando: [${data.msgId}] ${data.fileName}`, 'info');
