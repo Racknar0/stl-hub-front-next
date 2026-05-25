@@ -7,8 +7,9 @@ import SubscribeBar from '../BottomBar/SubscribeBar'
 import useStore from '../../../store/useStore'
 import { usePathname } from 'next/navigation'
 import LanguageOverlay from '../../common/LanguageOverlay/LanguageOverlay'
-
 import StickyNote from '../../common/StickyNote';
+import VantaBackground from '../VantaBackground/VantaBackground'
+import SplashCursor from '../SplashCursor/SplashCursor'
 
 const Layout = ({ children }) => {
   const [hydrated, setHydrated] = useState(false)
@@ -33,11 +34,10 @@ const Layout = ({ children }) => {
     <div className="app-layout">
       {/* Ambient Background */}
       {!isDashboard && (
-        <div className="ambient-bg">
-          <div className="glow-orb orb-1"></div>
-          <div className="glow-orb orb-2"></div>
-          <div className="grid-overlay"></div>
-        </div>
+        <>
+          <VantaBackground />
+          <SplashCursor />
+        </>
       )}
 
       {/* Overlay de idioma (primera visita) */}
