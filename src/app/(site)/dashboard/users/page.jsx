@@ -35,14 +35,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import UserDetailModal from '../../../../components/dashboard/modules/UserDetailModal/UserDetailModal';
 
-const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
-const imgUrl = (rel) => {
-    if (!rel) return '';
-    const s = String(rel).trim();
-    if (/^https?:\/\//i.test(s)) return s;
-    return `${UPLOAD_BASE}/${s.replace(/\\/g, '/').replace(/^\/+/, '')}`;
-};
-
 export default function UsersPage() {
     const http = new HttpService();
 

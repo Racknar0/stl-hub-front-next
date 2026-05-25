@@ -400,26 +400,6 @@ export default function TelegramDownloader() {
     setEditedChannels(prev => ({ ...prev, [channelName]: { ...(prev[channelName] || {}), [field]: value } }));
   };
 
-  const handleSaveChannel = async (originalName) => {
-    const edits = editedChannels[originalName];
-    if (!edits) return;
-    try {
-      // Find existing channel info to preserve untouched values
-      const chan = channels.find(c => c.name === originalName);
-      const label = edits.label !== undefined ? edits.label : (chan?.label || '');
-      const newName = edits.name !== undefined ? edits.name : originalName;
-      const lastMsgId = edits.lastMsgId !== undefined ? (edits.lastMsgId === '' ? null : Number(edits.lastMsgId)) : undefined;
-
-      await http.patchData('/telegram/channels', encodeURIComponent(originalName), {
-        label,
-        newName,
-        lastMsgId,
-      });
-      setEditedChannels(prev => { const n = { ...prev }; delete n[originalName]; return n; });
-      await fetchChannels();
-    } catch { alert('Error guardando canal'); }
-  };
-
   const handleSaveAllChannels = async () => {
     setIsSavingAll(true);
     try {

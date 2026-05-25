@@ -194,13 +194,6 @@ export default function AccountsOverviewPage() {
         }
     };
 
-    // Formatear bytes a MB con 1 decimal
-    const formatMB = (bytes) => {
-        const n = Number(bytes);
-        if (!n || n <= 0) return '0 MB';
-        return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-    };
-
     // Cargar assets de la cuenta seleccionada
     const fetchAccountAssets = async (accountId) => {
         try {
@@ -301,9 +294,6 @@ export default function AccountsOverviewPage() {
             console.error('removeBackup error', e);
         }
     };
-    const refresh = async () => {
-        await fetchAccounts();
-    };
 
     const patchAccount = async (id, data) => {
         const resp = await http.patchData(`${API_BASE}`, id, data);
@@ -327,16 +317,6 @@ export default function AccountsOverviewPage() {
         setSelected((prev) => (prev && prev.id === id ? null : prev));
         setOpen((prev) => (selected && selected.id === id ? false : prev));
         await fetchAccounts();
-    };
-    const disconnect = async () => {
-        try {
-            await http.postData(`${API_BASE}/logout`, {});
-            await timerAlert('OK', 'Sesión cerrada', 900);
-            await fetchAccounts();
-        } catch (e) {
-            console.error(e);
-            await errorAlert('Error', 'No se pudo cerrar sesión');
-        }
     };
 
     // === Filtros y orden ===

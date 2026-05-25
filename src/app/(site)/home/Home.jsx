@@ -34,20 +34,6 @@ const chipsForIndex = (i) => [
   CATEGORIES[(i + 7) % CATEGORIES.length],
 ];
 
-const mockRow = (seed, n = 10) =>
-  Array.from({ length: n }).map((_, i) => ({
-    id: `${seed}-${i}`,
-    title: `Item ${i + 1}`,
-    chips: chipsForIndex(i),
-    thumb: `https://picsum.photos/seed/${seed}-${i}/600/400`,
-    images: [
-      `https://picsum.photos/seed/${seed}-${i}-a/1000/600`,
-      `https://picsum.photos/seed/${seed}-${i}-b/1000/600`,
-      `https://picsum.photos/seed/${seed}-${i}-c/1000/600`,
-    ],
-    downloadUrl: '#',
-  }));
-
 const shuffleArray = (arr) => {
   const a = Array.isArray(arr) ? [...arr] : []
   if (a.length <= 1) return a
@@ -122,13 +108,6 @@ const Home = () => {
       .replace(/\\/g, '/')
       .replace(/^\/+/, '')
     return `${UPLOAD_BASE}/${clean}`
-  }
-
-  // Helper para construir href de categoría correcto según idioma
-  const catHref = (c) => {
-    if (!c) return '#'
-    const s = typeof c === 'string' ? c : (language === 'en' ? c.slugEn || c.slug : c.slug || c.slugEn)
-    return `/search?categories=${encodeURIComponent(s || '')}`
   }
 
   // Adaptar item según idioma actual

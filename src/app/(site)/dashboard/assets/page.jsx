@@ -43,15 +43,6 @@ import AssetsListTab from './componentes/tabs/AssetsListTab';
 import VisualSimilarTab from './componentes/tabs/VisualSimilarTab';
 import MetaSeoTab from './componentes/tabs/MetaSeoTab';
 
-// Mapea estado a color de chip
-const statusColor = (s) =>
-    ({
-        DRAFT: 'default',
-        PROCESSING: 'info',
-        PUBLISHED: 'success',
-        FAILED: 'error',
-    })[s] || 'default';
-
 // Helper para normalizar a slug
 const slugify = (s) =>
     String(s || '')
@@ -254,22 +245,6 @@ export default function AssetsAdminPage() {
         return Object.values(similarIgnoredPairMap || {}).filter(Boolean)
             .length;
     }, [similarIgnoredPairMap]);
-
-    const loadIgnoredPairs = async () => {
-        try {
-            const res = await http.getData('/assets/similar/ignored-pairs');
-            const items = Array.isArray(res?.data?.items) ? res.data.items : [];
-            const map = {};
-            items.forEach((item) => {
-                const key = buildPairKey(item?.assetAId, item?.assetBId);
-                if (key) map[key] = true;
-            });
-            setSimilarIgnoredPairMap(map);
-            return map;
-        } catch (e) {
-            return { ...(similarIgnoredPairMap || {}) };
-        }
-    };
 
 
     // ==========================================

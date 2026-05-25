@@ -226,19 +226,6 @@ export default function AlignmentModal({ open, onClose, account }) {
         }
     }
 
-    function toggleSet(setter, key) {
-        setter(prev => {
-            const next = new Set(prev);
-            next.has(key) ? next.delete(key) : next.add(key);
-            return next;
-        });
-    }
-
-    function toggleAllSet(setter, items, currentSet) {
-        if (!items?.length) return;
-        setter(currentSet.size === items.length ? new Set() : new Set(items));
-    }
-
     const isLoading = ['auditing', 'syncing', 'restoring', 'cleaning'].includes(phase);
 
     const loadingMessages = {

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * ALERTA NO BORRAR ESTE ARCHIVO ES EL QUE CALIENTA LA CACHE DE NEXT.JS
  * warm-cache.mjs
  * Calienta la cache de Next.js visitando las N URLs más recientes.
  * Ejecutar después de cada deploy: node scripts/warm-cache.mjs

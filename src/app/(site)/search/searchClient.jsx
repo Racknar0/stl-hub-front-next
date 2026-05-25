@@ -574,12 +574,6 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     </article>
   );
 
-  const catHref = (c) => {
-    if (!c) return '#'
-    const s = typeof c === 'string' ? c : (language === 'en' ? c.slugEn || c.slug : c.slug || c.slugEn)
-    return `/search?categories=${encodeURIComponent(s || '')}`
-  }
-
   const handlePrev = () => {
     if (!items.length || !modalAsset) return;
     const idx = items.findIndex(a => a.id === modalAsset.id);
