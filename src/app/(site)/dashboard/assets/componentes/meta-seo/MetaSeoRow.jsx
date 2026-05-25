@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
     Autocomplete,
     Box,
@@ -22,6 +23,13 @@ import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import ExplicitIcon from '@mui/icons-material/Explicit';
+import FilterNoneIcon from '@mui/icons-material/FilterNone';
+
+const formatMBfromB = (bytes) => {
+    const n = Number(bytes);
+    if (!n || n <= 0) return '0 MB';
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export default function MetaSeoRow({
     virtualRow,
@@ -51,7 +59,30 @@ export default function MetaSeoRow({
     onDeleteAsset,
     onQuickAdultos,
     onGenerateMetaAll,
+    onCleanDuplicateImages,
+    row,
 }) {
+    const hasAdultos = useMemo(() => {
+        const isAdultos = (val) => {
+            if (!val) return false;
+            if (typeof val === 'string') {
+                return val.trim().toLowerCase() === 'adultos';
+            }
+            const fields = [val.slug, val.name, val.es, val.en, val.nameEn];
+            return fields.some(f => typeof f === 'string' && f.trim().toLowerCase() === 'adultos');
+        };
+
+        const rawCats = Array.isArray(draft?.categories) ? draft.categories : [];
+        const normCats = typeof normalizeMetaCategoryList === 'function' ? normalizeMetaCategoryList(draft?.categories) : [];
+        const catsList = [...rawCats, ...(Array.isArray(normCats) ? normCats : [])];
+
+        const rawTags = Array.isArray(draft?.tags) ? draft.tags : [];
+        const normTags = typeof normalizeMetaTagList === 'function' ? normalizeMetaTagList(draft?.tags) : [];
+        const tagsList = [...rawTags, ...(Array.isArray(normTags) ? normTags : [])];
+
+        return catsList.some(isAdultos) || tagsList.some(isAdultos);
+    }, [draft?.categories, draft?.tags, normalizeMetaCategoryList, normalizeMetaTagList]);
+
     return (
         <TableRow
             key={`meta-${id}`}
@@ -59,7 +90,14 @@ export default function MetaSeoRow({
             ref={metaVirtualizer.measureElement}
             data-index={virtualRow.index}
         >
-            <TableCell padding="checkbox" sx={{ verticalAlign: 'top', pt: 1.5 }}>
+            <TableCell
+                padding="checkbox"
+                sx={{
+                    verticalAlign: 'top',
+                    pt: 1.5,
+                    borderLeft: hasAdultos ? '4px solid #ef4444' : '4px solid transparent',
+                }}
+            >
                 <Stack direction="column" spacing={0.5} alignItems="center">
                     <Checkbox
                         checked={isSelected}
@@ -102,17 +140,17 @@ export default function MetaSeoRow({
                         </span>
                     </Tooltip>
 
-                    <Tooltip title="Marcar como Adultos" placement="right">
+                    <Tooltip title={hasAdultos ? "Ya marcado como Adultos" : "Marcar como Adultos"} placement="right">
                         <span>
                             <IconButton
                                 size="small"
                                 onClick={() => onQuickAdultos(id)}
-                                disabled={metaBusy || loading}
+                                disabled={metaBusy || loading || hasAdultos}
                                 sx={{
                                     border: '1px solid',
                                     borderColor: 'divider',
                                     borderRadius: 1.5,
-                                    color: '#eab308',
+                                    color: hasAdultos ? 'text.disabled' : '#eab308',
                                 }}
                             >
                                 <ExplicitIcon fontSize="small" />
@@ -156,6 +194,25 @@ export default function MetaSeoRow({
                             </IconButton>
                         </span>
                     </Tooltip>
+
+                    <Tooltip title="Eliminar imágenes duplicadas" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onCleanDuplicateImages?.(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: '#38bdf8',
+                                    '&:hover': { bgcolor: 'rgba(56,189,248,0.1)' },
+                                }}
+                            >
+                                <FilterNoneIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
                 </Stack>
             </TableCell>
             <TableCell>{id}</TableCell>
@@ -168,10 +225,9 @@ export default function MetaSeoRow({
                         alignItems: metaExpanded ? 'flex-start' : 'center',
                         gap: metaExpanded ? 0.75 : 0.5,
                         flexWrap: metaExpanded ? 'wrap' : 'nowrap',
-                        overflowY: metaExpanded ? 'auto' : 'visible',
-                        overflowX: 'hidden',
+                        overflow: metaExpanded ? 'auto' : 'visible',
                         maxHeight: metaExpanded ? 420 : 'none',
-                        py: metaExpanded ? 0.5 : 0,
+                        py: metaExpanded ? 1.5 : 2,
                     }}
                 >
                     {visibleImages.map((img, idx) => {
@@ -308,6 +364,9 @@ export default function MetaSeoRow({
                         onBlur={() => onSaveRow(id)}
                         disabled={metaBusy || loading}
                     />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, mt: 0.5, pl: 0.5, display: 'block' }}>
+                        Peso: {formatMBfromB(row?.fileSizeB ?? row?.archiveSizeB ?? 0)}
+                    </Typography>
                 </Stack>
             </TableCell>
 

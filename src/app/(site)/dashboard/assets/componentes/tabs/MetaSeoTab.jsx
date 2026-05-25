@@ -82,6 +82,7 @@ export default function MetaSeoTab({
     setMetaImagePreview,
     onQuickAdultos,
     handleGenerateMetaAll,
+    onCleanDuplicateImages,
 }) {
     return (
         <Stack spacing={2}>
@@ -347,6 +348,7 @@ export default function MetaSeoTab({
                                     metaExpanded={metaExpanded}
                                     visibleImages={visibleImages}
                                     draft={draft}
+                                    row={row}
                                     isSelected={!!metaSelectedMap[id]}
                                     metaBusy={metaBusy}
                                     loading={loading}
@@ -373,6 +375,7 @@ export default function MetaSeoTab({
                                     onDeleteAsset={onDeleteAsset}
                                     onQuickAdultos={onQuickAdultos}
                                     onGenerateMetaAll={handleGenerateMetaAll}
+                                    onCleanDuplicateImages={onCleanDuplicateImages}
                                 />
                             );
                         })}

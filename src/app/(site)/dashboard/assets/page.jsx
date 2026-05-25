@@ -82,6 +82,8 @@ export default function AssetsAdminPage() {
     const [tagFilter, setTagFilter] = useState(null);
     const [pageIndex, setPageIndex] = useState(0);
     const [pageSize, setPageSize] = useState(50);
+    const [metaPageIndex, setMetaPageIndex] = useState(0);
+    const [metaPageSize, setMetaPageSize] = useState(50);
     const [rowCount, setRowCount] = useState(0);
     const [refreshTick, setRefreshTick] = useState(0);
     // filtro plan
@@ -551,10 +553,12 @@ export default function AssetsAdminPage() {
         const load = async () => {
             try {
                 setLoading(true);
+                const activePageIndex = tab === 2 ? metaPageIndex : pageIndex;
+                const activePageSize = tab === 2 ? metaPageSize : pageSize;
                 const params = new URLSearchParams({
                     q: String(searchTerm || ''),
-                    pageIndex: String(pageIndex),
-                    pageSize: String(pageSize),
+                    pageIndex: String(activePageIndex),
+                    pageSize: String(activePageSize),
                 });
                 if (showFreeOnly) params.set('plan', 'free');
                 if (statusFilter) params.set('status', statusFilter);
@@ -592,7 +596,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter]);
+    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -836,6 +840,7 @@ export default function AssetsAdminPage() {
         enableStickyHeader: true,
         enablePagination: true,
         manualPagination: true,
+        enableRowVirtualization: true, // Habilitar virtualización de filas para STL-LIST
         rowCount,
         onPaginationChange: (updater) => {
             if (typeof updater === 'function') {
@@ -1291,9 +1296,9 @@ export default function AssetsAdminPage() {
             : 0;
     const metaTotalPages = useMemo(() => {
         const total = Number(rowCount) || 0;
-        const size = Math.max(1, Number(pageSize) || 1);
+        const size = Math.max(1, Number(metaPageSize) || 1);
         return Math.max(1, Math.ceil(total / size));
-    }, [rowCount, pageSize]);
+    }, [rowCount, metaPageSize]);
     const metaPageOptions = useMemo(
         () => Array.from({ length: metaTotalPages }, (_, idx) => idx),
         [metaTotalPages],
@@ -1301,8 +1306,8 @@ export default function AssetsAdminPage() {
 
     useEffect(() => {
         const lastPage = Math.max(0, metaTotalPages - 1);
-        if (pageIndex > lastPage) setPageIndex(lastPage);
-    }, [pageIndex, metaTotalPages]);
+        if (metaPageIndex > lastPage) setMetaPageIndex(lastPage);
+    }, [metaPageIndex, metaTotalPages]);
 
     const metaSelectedIds = useMemo(() => {
         return Object.entries(metaSelectedMap)
@@ -1547,6 +1552,37 @@ export default function AssetsAdminPage() {
             queueMetaImagesSave(id, nextImages);
         },
         [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave],
+    );
+
+    const handleMetaCleanDuplicateImages = useCallback(
+        (assetId) => {
+            const id = Number(assetId);
+            if (!Number.isFinite(id) || id <= 0) return;
+
+            const row = findAssetInAllSources(id);
+            const currentImages = Array.isArray(row?.images) ? row.images : [];
+            if (!currentImages.length) return;
+
+            const uniqueImages = [];
+            currentImages.forEach((img) => {
+                if (!uniqueImages.includes(img)) {
+                    uniqueImages.push(img);
+                }
+            });
+
+            if (uniqueImages.length === currentImages.length) {
+                fireAlert({ icon: 'info', title: 'No hay imágenes duplicadas' });
+                return;
+            }
+
+            applyMetaImagesInRow(id, uniqueImages);
+            queueMetaImagesSave(id, uniqueImages);
+            fireAlert({
+                icon: 'success',
+                title: `Se eliminaron ${currentImages.length - uniqueImages.length} imágenes duplicadas`,
+            });
+        },
+        [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave, fireAlert],
     );
 
     const saveMetaRow = async (assetId, patch = {}, { silent = false } = {}) => {
@@ -2337,6 +2373,7 @@ export default function AssetsAdminPage() {
                     imgUrl={imgUrl}
                     handleMetaSetFirstImage={handleMetaSetFirstImage}
                     handleMetaDeleteImage={handleMetaDeleteImage}
+                    onCleanDuplicateImages={handleMetaCleanDuplicateImages}
                     toggleMetaExpandedImages={toggleMetaExpandedImages}
                     updateMetaDraft={updateMetaDraft}
                     openMetaProfiles={openMetaProfiles}
@@ -2348,10 +2385,10 @@ export default function AssetsAdminPage() {
                     handleSaveMetaRow={handleSaveMetaRow}
                     onDeleteAsset={handleDelete}
                     paddingBottom={paddingBottom}
-                    pageIndex={pageIndex}
-                    setPageIndex={setPageIndex}
-                    pageSize={pageSize}
-                    setPageSize={setPageSize}
+                    pageIndex={metaPageIndex}
+                    setPageIndex={setMetaPageIndex}
+                    pageSize={metaPageSize}
+                    setPageSize={setMetaPageSize}
                     metaPageOptions={metaPageOptions}
                     metaTotalPages={metaTotalPages}
                     syncMultimodalVectorsOpen={syncMultimodalVectorsOpen}
