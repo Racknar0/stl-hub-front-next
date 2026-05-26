@@ -95,11 +95,11 @@ export default function MetaSeoTab({
     const [showReviewControls, setShowReviewControls] = useState(false);
     const content = (
         <Stack
-            spacing={2}
+            spacing={1.5}
             sx={
                 metaReviewMode
                     ? {
-                          p: 3,
+                          p: 1,
                           height: '100vh',
                           overflowY: 'auto',
                           bgcolor: '#090d16',
@@ -296,7 +296,7 @@ export default function MetaSeoTab({
                     border: '1px solid rgba(148, 163, 184, 0.3)',
                     boxShadow: 'none',
                     maxHeight: metaReviewMode
-                        ? (showReviewControls ? 'calc(100vh - 220px)' : 'calc(100vh - 48px)')
+                        ? (showReviewControls ? 'calc(100vh - 180px)' : 'calc(100vh - 16px)')
                         : 'calc(100vh - 260px)',
                     overflowY: 'scroll',
                     overflowAnchor: 'none',
@@ -328,13 +328,21 @@ export default function MetaSeoTab({
                                 />
                             </TableCell>
 
-                            <TableCell sx={{ minWidth: 480, width: 480 }}>
+                            <TableCell
+                                sx={{
+                                    minWidth: metaReviewMode ? 640 : 480,
+                                    width: metaReviewMode ? 640 : 480,
+                                    maxWidth: metaReviewMode ? 640 : undefined,
+                                }}
+                            >
                                 Imagenes / Categorías / Tags
                             </TableCell>
-                            <TableCell sx={{ minWidth: 240, width: 240 }}>
-                                Asset / Name (ES/EN)
-                            </TableCell>
-                            <TableCell sx={{ minWidth: 400, width: 400 }}>
+                            {!metaReviewMode && (
+                                <TableCell sx={{ minWidth: 240, width: 240 }}>
+                                    Asset / Name (ES/EN)
+                                </TableCell>
+                            )}
+                             <TableCell sx={{ minWidth: 400 }}>
                                 SEO Description (ES/EN)
                             </TableCell>
                         </TableRow>
@@ -343,7 +351,7 @@ export default function MetaSeoTab({
                         {paddingTop > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={4}
+                                    colSpan={metaReviewMode ? 3 : 4}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -362,7 +370,7 @@ export default function MetaSeoTab({
                             const metaExpanded = !!metaExpandedImagesMap[id];
                             const visibleImages = metaExpanded
                                 ? rowImages
-                                : rowImages.slice(0, 5);
+                                : rowImages.slice(0, metaReviewMode ? 6 : 5);
                             const draft = metaDraftMap[id] || {
                                 id,
                                 title: String(row?.title || ''),
@@ -419,7 +427,7 @@ export default function MetaSeoTab({
                          {paddingBottom > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={4}
+                                    colSpan={metaReviewMode ? 3 : 4}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -431,7 +439,7 @@ export default function MetaSeoTab({
 
                         {!metaRows.length && (
                             <TableRow>
-                                <TableCell colSpan={4}>
+                                <TableCell colSpan={metaReviewMode ? 3 : 4}>
                                     <Typography
                                         variant="body2"
                                         color="text.secondary"

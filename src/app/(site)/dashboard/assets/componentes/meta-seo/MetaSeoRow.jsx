@@ -81,6 +81,18 @@ export default function MetaSeoRow({
         return catsList.some(isAdultos) || tagsList.some(isAdultos);
     }, [draft?.categories, draft?.tags, normalizeMetaCategoryList, normalizeMetaTagList]);
 
+    const marginCollapsed = useMemo(() => {
+        if (metaExpanded) return 0;
+        const N = visibleImages.length;
+        if (N <= 1) return 0;
+
+        const W = metaReviewMode ? 320 : 250;
+        const C = metaReviewMode ? 600 : 440;
+
+        const ml = (C - W) / (N - 1) - W;
+        return Math.min(-8, ml);
+    }, [metaExpanded, visibleImages.length, metaReviewMode]);
+
     return (
         <TableRow
             key={`meta-${id}`}
@@ -92,8 +104,9 @@ export default function MetaSeoRow({
                 padding="checkbox"
                 sx={{
                     verticalAlign: 'middle',
-                    py: 2,
+                    py: 0.75,
                     borderLeft: hasAdultos ? '4px solid #ef4444' : '4px solid transparent',
+                    borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
                 }}
             >
                 <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center">
@@ -218,17 +231,106 @@ export default function MetaSeoRow({
             </TableCell>
 
             {/* === IMÁGENES === */}
-            <TableCell sx={{ verticalAlign: 'top', pt: 1.5, position: 'relative' }}>
-                <Stack spacing={1} sx={{ width: '100%', mt: 0.5 }}>
+            <TableCell
+                sx={{
+                    verticalAlign: 'top',
+                    py: 0.75,
+                    position: 'relative',
+                    borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
+                    width: metaReviewMode ? 640 : 480,
+                    minWidth: metaReviewMode ? 640 : 480,
+                    maxWidth: metaReviewMode ? 640 : undefined,
+                }}
+            >
+                <Stack spacing={0.5} sx={{ width: '100%', mt: 0 }}>
+                    {metaReviewMode && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                width: '100%',
+                                bgcolor: 'rgba(15, 23, 42, 0.45)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 2,
+                                p: 0.75,
+                                backdropFilter: 'blur(4px)',
+                                mb: 0.5,
+                            }}
+                        >
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={draft.title}
+                                placeholder="Nombre ES"
+                                onChange={(e) =>
+                                    onUpdateDraft(id, {
+                                        title: e.target.value,
+                                    })
+                                }
+                                onBlur={() => onSaveRow(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={draft.titleEn}
+                                placeholder="Name EN"
+                                onChange={(e) =>
+                                    onUpdateDraft(id, {
+                                        titleEn: e.target.value,
+                                    })
+                                }
+                                onBlur={() => onSaveRow(id)}
+                                disabled={metaBusy || loading}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                    fontWeight: 800,
+                                    whiteSpace: 'nowrap',
+                                    px: 1.2,
+                                    py: 0.6,
+                                    borderRadius: 1,
+                                    bgcolor: 'rgba(30, 41, 59, 0.6)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    fontSize: '11px',
+                                }}
+                            >
+                                {formatMBfromB(row?.fileSizeB ?? row?.archiveSizeB ?? 0)}
+                            </Typography>
+                        </Box>
+                    )}
                     <Box
                     sx={{
-                        display: 'flex',
-                        alignItems: metaExpanded ? 'flex-start' : 'center',
+                        display: metaExpanded ? 'grid' : 'flex',
+                        gridTemplateColumns: metaExpanded ? 'repeat(2, 290px)' : 'none',
+                        alignItems: metaExpanded ? 'start' : 'center',
                         gap: metaExpanded ? 1.5 : 0.5,
                         flexWrap: metaExpanded ? 'wrap' : 'nowrap',
                         overflow: metaExpanded ? 'auto' : 'visible',
                         maxHeight: metaExpanded ? 680 : 'none',
-                        py: metaExpanded ? 1.5 : 2,
+                        pt: 0,
+                        pb: 0,
+                        position: 'relative',
+                        width: metaExpanded ? 600 : '100%',
                     }}
                 >
                     {visibleImages.map((img, idx) => {
@@ -237,13 +339,13 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 300 : (metaReviewMode ? 320 : 250),
-                                    height: metaExpanded ? 300 : (metaReviewMode ? 320 : 250),
+                                    width: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
+                                    height: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
                                     cursor: 'pointer',
-                                    ml: metaExpanded ? 0 : idx > 0 ? (metaReviewMode ? -4 : -8) : 0,
+                                    ml: metaExpanded ? 0 : idx > 0 ? `${marginCollapsed}px` : 0,
                                     overflow: 'hidden',
                                     flexShrink: 0,
                                     zIndex: Math.max(1, 30 - idx),
@@ -305,7 +407,7 @@ export default function MetaSeoRow({
                         );
                     })}
 
-                    {rowImages.length > 5 && (
+                    {rowImages.length > (metaReviewMode ? 6 : 5) && (
                         <Stack
                             spacing={0.5}
                             alignItems="center"
@@ -313,15 +415,16 @@ export default function MetaSeoRow({
                                 metaExpanded
                                     ? {
                                           position: 'absolute',
-                                          top: 16,
-                                          right: 16,
+                                          top: 12,
+                                          left: metaReviewMode ? 12 : 'auto',
+                                          right: metaReviewMode ? 'auto' : 12,
                                           zIndex: 100,
-                                          bgcolor: 'rgba(15, 23, 42, 0.85)',
-                                          borderRadius: 2.5,
+                                          bgcolor: 'rgba(15, 23, 42, 0.9)',
+                                          borderRadius: 2,
                                           p: 0.75,
-                                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                                          backdropFilter: 'blur(4px)',
-                                          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                                          backdropFilter: 'blur(6px)',
+                                          boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
                                       }
                                     : {
                                           ml: 1,
@@ -329,7 +432,7 @@ export default function MetaSeoRow({
                                       }
                             }
                         >
-                            <Tooltip title={ metaExpanded ? 'Mostrar solo 5' : `Mostrar todas (${rowImages.length})` } >
+                            <Tooltip title={ metaExpanded ? (metaReviewMode ? 'Mostrar solo 6' : 'Mostrar solo 5') : `Mostrar todas (${rowImages.length})` } >
                                 <span>
                                     <IconButton size="small" onClick={() => onToggleExpandedImages(id) } disabled={loading} sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)', }, }} >
                                         {metaExpanded ? (
@@ -343,7 +446,7 @@ export default function MetaSeoRow({
                             <Typography variant="caption" color="text.secondary" >
                                 {metaExpanded
                                     ? `${rowImages.length}`
-                                    : `+${rowImages.length - 5}`}
+                                    : `+${rowImages.length - (metaReviewMode ? 6 : 5)}`}
                             </Typography>
                         </Stack>
                     )}
@@ -467,46 +570,49 @@ export default function MetaSeoRow({
             </TableCell>
 
             {/* === NOMBRE ES/EN === */}
-            <TableCell>
-                <Stack spacing={1} sx={{ width: '100%' }}>
-                    <TextField
-                        size="small"
-                        fullWidth
-                        value={draft.title}
-                        placeholder="Nombre ES"
-                        onChange={(e) =>
-                            onUpdateDraft(id, {
-                                title: e.target.value,
-                            })
-                        }
-                        onBlur={() => onSaveRow(id)}
-                        disabled={metaBusy || loading}
-                    />
-                    <TextField
-                        size="small"
-                        fullWidth
-                        value={draft.titleEn}
-                        placeholder="Name EN"
-                        onChange={(e) =>
-                            onUpdateDraft(id, {
-                                titleEn: e.target.value,
-                            })
-                        }
-                        onBlur={() => onSaveRow(id)}
-                        disabled={metaBusy || loading}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, mt: 0.5, pl: 0.5, display: 'block' }}>
-                        Peso: {formatMBfromB(row?.fileSizeB ?? row?.archiveSizeB ?? 0)}
-                    </Typography>
-                </Stack>
-            </TableCell>
+            {!metaReviewMode && (
+                <TableCell sx={{ py: 0.75 }}>
+                    <Stack spacing={1} sx={{ width: '100%' }}>
+                        <TextField
+                            size="small"
+                            fullWidth
+                            value={draft.title}
+                            placeholder="Nombre ES"
+                            onChange={(e) =>
+                                onUpdateDraft(id, {
+                                    title: e.target.value,
+                                })
+                            }
+                            onBlur={() => onSaveRow(id)}
+                            disabled={metaBusy || loading}
+                        />
+                        <TextField
+                            size="small"
+                            fullWidth
+                            value={draft.titleEn}
+                            placeholder="Name EN"
+                            onChange={(e) =>
+                                onUpdateDraft(id, {
+                                    titleEn: e.target.value,
+                                })
+                            }
+                            onBlur={() => onSaveRow(id)}
+                            disabled={metaBusy || loading}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, mt: 0.5, pl: 0.5, display: 'block' }}>
+                            Peso: {formatMBfromB(row?.fileSizeB ?? row?.archiveSizeB ?? 0)}
+                        </Typography>
+                    </Stack>
+                </TableCell>
+            )}
 
             {/* === DESCRIPCIÓN SEO ES/EN === */}
-            <TableCell>
+            <TableCell sx={{ py: 0.75, borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined }}>
                 <Stack
                     spacing={1}
                     sx={{
                         width: '100%',
+                        maxWidth: 480,
                         height: '100%',
                     }}
                 >
@@ -544,8 +650,6 @@ export default function MetaSeoRow({
                     />
                 </Stack>
             </TableCell>
-
-
 
         </TableRow>
     );
