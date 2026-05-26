@@ -241,6 +241,7 @@ export default function MetaSeoRow({
                     position: 'relative',
                     borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
                     minWidth: metaReviewMode ? 640 : 480,
+                    width: '100%',
                 }}
             >
                 <Stack spacing={0.5} sx={{ width: '100%', mt: 0 }}>
