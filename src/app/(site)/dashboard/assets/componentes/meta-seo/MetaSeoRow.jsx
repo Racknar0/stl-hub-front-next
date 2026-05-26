@@ -344,7 +344,7 @@ export default function MetaSeoRow({
                     <Box
                     sx={{
                         display: metaExpanded ? 'grid' : 'flex',
-                        gridTemplateColumns: metaExpanded ? 'repeat(2, 290px)' : 'none',
+                        gridTemplateColumns: metaExpanded ? 'repeat(auto-fill, minmax(290px, 1fr))' : 'none',
                         alignItems: metaExpanded ? 'start' : 'center',
                         gap: metaExpanded ? 1.5 : 0.5,
                         flexWrap: metaExpanded ? 'wrap' : 'nowrap',
@@ -353,7 +353,7 @@ export default function MetaSeoRow({
                         pt: 0,
                         pb: 0,
                         position: 'relative',
-                        width: metaExpanded ? 600 : '100%',
+                        width: '100%',
                     }}
                 >
                     {visibleImages.map((img, idx) => {
