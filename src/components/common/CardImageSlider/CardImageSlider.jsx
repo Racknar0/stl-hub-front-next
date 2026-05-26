@@ -7,32 +7,10 @@ import { useNSFW } from '../../../hooks/useNSFW';
 import './CardImageSlider.scss';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Navigation } from 'swiper/modules';
+import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
-const MIN_MS = 4000;
-const MAX_MS = 6000;
-
-const getRandInt = (min, max) => {
-  // inclusive
-  const lo = Math.ceil(min);
-  const hi = Math.floor(max);
-  if (hi <= lo) return lo;
-
-  try {
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      const buf = new Uint32Array(1);
-      crypto.getRandomValues(buf);
-      const r = buf[0] / 0xffffffff;
-      return lo + Math.floor(r * (hi - lo + 1));
-    }
-  } catch {
-    // ignore
-  }
-
-  return lo + Math.floor(Math.random() * (hi - lo + 1));
-};
 
 const normalizeImages = (images, fallback) => {
   const list = Array.isArray(images) ? images : [];
@@ -89,10 +67,6 @@ const CardImageSlider = ({
   const [index, setIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  const timerRef = useRef(null);
-  const didInitRef = useRef(false);
-  const autoplayDelayRef = useRef(getRandInt(MIN_MS, MAX_MS));
-
   // Prefetch: cuando el slider está activo y el usuario hace hover, precargar las imágenes del card
   useEffect(() => {
     if (!isEnabled || !isHovered) return;
@@ -113,43 +87,23 @@ const CardImageSlider = ({
     }
   }, [isEnabled, isHovered, list]);
 
-  // Índice inicial / reseteo (solo aleatorio cuando el slider está activo)
+  // Índice inicial / reseteo
   useEffect(() => {
-    if (!isEnabled) {
-      didInitRef.current = false;
+    if (!isEnabled || list.length <= 1) {
       setIndex(0);
       return;
     }
-
-    if (list.length <= 1) {
-      didInitRef.current = true;
-      setIndex(0);
-      return;
-    }
-
-    if (!didInitRef.current) {
-      didInitRef.current = true;
-      setIndex(getRandInt(0, list.length - 1));
-      return;
-    }
-
     setIndex((prev) => (prev >= 0 && prev < list.length ? prev : 0));
-  }, [isEnabled, list.length]);
-
-  useEffect(() => {
-    // Mantener compatibilidad: limpiar timers anteriores (ya no usamos setTimeout para avanzar)
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    return undefined;
   }, [isEnabled, list.length]);
 
   const src = list[index] || list[0];
   const safeSrc = typeof src === 'string' && src ? encodeURI(src) : '/vite.svg';
 
   const handleMouseEnter = () => setIsHovered(true);
-  const handleMouseLeave = () => setIsHovered(false);
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setIndex(0);
+  };
 
   if (!isEnabled || list.length <= 1 || !isHovered) {
     return (
@@ -193,15 +147,10 @@ const CardImageSlider = ({
     >
       <Swiper
         className="card-image-slider-swiper"
-        modules={[Navigation, Autoplay]}
+        modules={[Navigation]}
         navigation={{
           prevEl: `.${prevClass}`,
           nextEl: `.${nextClass}`,
-        }}
-        autoplay={{
-          delay: autoplayDelayRef.current,
-          disableOnInteraction: false,
-          pauseOnMouseEnter: true,
         }}
         loop
         nested
