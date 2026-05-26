@@ -537,6 +537,12 @@ export default function TelegramDownloader() {
         return sortOrder === 'asc' ? sizeA - sizeB : sizeB - sizeA;
       }
 
+      if (sortBy === 'lastDownload') {
+        const dateA = a.lastDownload?.lastDownloadedAt ? new Date(a.lastDownload.lastDownloadedAt.replace(' ', 'T')).getTime() : 0;
+        const dateB = b.lastDownload?.lastDownloadedAt ? new Date(b.lastDownload.lastDownloadedAt.replace(' ', 'T')).getTime() : 0;
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+
       return 0;
     });
   };
@@ -1154,8 +1160,8 @@ export default function TelegramDownloader() {
                     Nombre {renderSortIndicator('name')}
                   </th>
                   <th>Canal</th>
-                  <th style={{ textAlign: 'center' }}>
-                    Último Descargado
+                  <th onClick={() => toggleSort('lastDownload')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>
+                    Último Descargado {renderSortIndicator('lastDownload')}
                   </th>
                   <th onClick={() => toggleSort('size')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>
                     Último Msg {renderSortIndicator('size')}
@@ -1211,14 +1217,26 @@ export default function TelegramDownloader() {
                         />
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="number"
-                          value={currentLastMsgId}
-                          onChange={e => handleEditField(c.name, 'lastMsgId', e.target.value)}
-                          placeholder="Sin ID"
-                          className="table-input"
-                          style={{ textAlign: 'center', width: '100px', fontFamily: 'monospace', color: '#4facfe' }}
-                        />
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <input
+                            type="number"
+                            value={currentLastMsgId}
+                            onChange={e => handleEditField(c.name, 'lastMsgId', e.target.value)}
+                            placeholder="Sin ID"
+                            className="table-input"
+                            style={{ textAlign: 'center', width: '100px', fontFamily: 'monospace', color: '#4facfe' }}
+                          />
+                          {c.lastDownload?.lastDownloadedAt && (
+                            <span style={{
+                              fontSize: '0.7rem',
+                              color: '#718096',
+                              marginTop: '3px',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {timeAgo(c.lastDownload.lastDownloadedAt)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
