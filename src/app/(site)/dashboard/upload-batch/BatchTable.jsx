@@ -1882,6 +1882,7 @@ export default function BatchTable() {
       sx={{
         pb: reviewMode ? 1 : 10,
         pr: searchSidebarSide === 'right' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
+        pl: searchSidebarSide === 'left' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
         transition: 'padding 180ms ease'
       }}
     >

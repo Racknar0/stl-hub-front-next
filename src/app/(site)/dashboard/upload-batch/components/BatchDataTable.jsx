@@ -70,20 +70,18 @@ export default function BatchDataTable({
     >
       <Table size="medium" stickyHeader>
         {/* ── Headers ── */}
-        <TableHead>
-          <TableRow>
-            <TableCell align="center" sx={{ width: 100, minWidth: 100, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}># / Acciones</TableCell>
-            <TableCell sx={{ minWidth: reviewMode ? 640 : 500, width: '100%', fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset Info (Nombre, Cat, Tags)</TableCell>
-            <TableCell sx={{ minWidth: 400, width: 400, maxWidth: 400, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
-            {!reviewMode && (
-              <>
-                <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta / Perfil</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Subida (M / B)</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
-              </>
-            )}
-          </TableRow>
-        </TableHead>
+        {!reviewMode && (
+          <TableHead>
+            <TableRow>
+              <TableCell align="center" sx={{ width: 100, minWidth: 100, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}># / Acciones</TableCell>
+              <TableCell sx={{ minWidth: 500, width: '100%', fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Asset Info (Nombre, Cat, Tags)</TableCell>
+              <TableCell sx={{ minWidth: 400, width: 400, maxWidth: 400, fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Descripción (ES / EN)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Cuenta / Perfil</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Subida (M / B)</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800, color: '#f8fbff', borderBottom: '1px solid rgba(191,219,254,0.45)' }}>Estado</TableCell>
+            </TableRow>
+          </TableHead>
+        )}
 
         {/* ── Body con virtualización ── */}
         <TableBody>
