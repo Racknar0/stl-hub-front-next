@@ -84,6 +84,7 @@ export default function AssetsAdminPage() {
     const [pageSize, setPageSize] = useState(50);
     const [metaPageIndex, setMetaPageIndex] = useState(0);
     const [metaPageSize, setMetaPageSize] = useState(50);
+    const [metaReviewMode, setMetaReviewMode] = useState(false);
     const [rowCount, setRowCount] = useState(0);
     const [refreshTick, setRefreshTick] = useState(0);
     // filtro plan
@@ -1283,7 +1284,7 @@ export default function AssetsAdminPage() {
     const metaVirtualizer = useVirtualizer({
         count: metaRows.length,
         getScrollElement: () => metaScrollRef.current,
-        estimateSize: () => 140, // Altura estimada con TextField multiline
+        estimateSize: () => 490,
         overscan: 5,
     });
 
@@ -2306,6 +2307,8 @@ export default function AssetsAdminPage() {
             )}
             {tab === 2 && (
                 <MetaSeoTab
+                    metaReviewMode={metaReviewMode}
+                    setMetaReviewMode={setMetaReviewMode}
                     metaBusy={metaBusy}
                     loading={loading}
                     handleGenerateAllDescriptions={

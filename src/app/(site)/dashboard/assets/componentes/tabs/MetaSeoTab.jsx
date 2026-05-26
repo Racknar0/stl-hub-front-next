@@ -1,14 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import {
     Box,
     Checkbox,
     Chip,
+    Dialog,
+    FormControlLabel,
     IconButton,
     LinearProgress,
     MenuItem,
     Paper,
     Stack,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -30,6 +37,8 @@ import MetaSeoRow from '../meta-seo/MetaSeoRow';
 import MetaSeoDialogs from '../meta-seo/MetaSeoDialogs';
 
 export default function MetaSeoTab({
+    metaReviewMode,
+    setMetaReviewMode,
     metaBusy,
     loading,
     handleGenerateAllDescriptions,
@@ -83,9 +92,23 @@ export default function MetaSeoTab({
     onQuickAdultos,
     handleGenerateMetaAll,
 }) {
-    return (
-        <Stack spacing={2}>
-            <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', boxShadow: 'none' }}>
+    const [showReviewControls, setShowReviewControls] = useState(false);
+    const content = (
+        <Stack
+            spacing={2}
+            sx={
+                metaReviewMode
+                    ? {
+                          p: 3,
+                          height: '100vh',
+                          overflowY: 'auto',
+                          bgcolor: '#090d16',
+                      }
+                    : {}
+            }
+        >
+            {(!metaReviewMode || showReviewControls) && (
+                <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', boxShadow: 'none' }}>
                 <Stack
                     direction={{ xs: 'column', lg: 'row' }}
                     spacing={1.2}
@@ -105,8 +128,25 @@ export default function MetaSeoTab({
                     <Stack
                         direction="row"
                         spacing={0.7}
-                        sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}
+                        sx={{ justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}
                     >
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={metaReviewMode}
+                                    onChange={(e) => setMetaReviewMode(Boolean(e?.target?.checked))}
+                                    color="info"
+                                    size="small"
+                                />
+                            }
+                            label={
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                    Modo Revisión
+                                </Typography>
+                            }
+                            sx={{ mr: 1.5 }}
+                        />
+
                         <Tooltip title="Generar descripciones IA (todos)">
                             <span>
                                 <IconButton
@@ -239,10 +279,11 @@ export default function MetaSeoTab({
                         color="text.secondary"
                         sx={{ ml: { md: 'auto' } }}
                     >
-                        Usa el paginador inferior igual que en STL-LIST.
-                    </Typography>
-                </Stack>
-            </Paper>
+                            Usa el paginador inferior igual que en STL-LIST.
+                        </Typography>
+                    </Stack>
+                </Paper>
+            )}
 
             {(metaBusy || loading) && <LinearProgress />}
 
@@ -254,7 +295,9 @@ export default function MetaSeoTab({
                     bgcolor: 'rgba(0, 0, 0, 0)',
                     border: '1px solid rgba(148, 163, 184, 0.3)',
                     boxShadow: 'none',
-                    maxHeight: 'calc(100vh - 260px)',
+                    maxHeight: metaReviewMode
+                        ? (showReviewControls ? 'calc(100vh - 220px)' : 'calc(100vh - 48px)')
+                        : 'calc(100vh - 260px)',
                     overflowY: 'scroll',
                     overflowAnchor: 'none',
                     '& .MuiTableCell-head': {
@@ -267,11 +310,11 @@ export default function MetaSeoTab({
                     },
                 }}
             >
-                <Table size="small" stickyHeader>
+                <Table size="small" stickyHeader key={metaReviewMode ? 'review' : 'normal'}>
                     <TableHead>
                         <TableRow>
                             <TableCell
-                                sx={{ width: 70, minWidth: 70 }}
+                                sx={{ width: 90, minWidth: 90 }}
                             >
                                 <Checkbox
                                     checked={allVisibleMetaSelected}
@@ -284,11 +327,9 @@ export default function MetaSeoTab({
                                     sx={{ p: 0.5 }}
                                 />
                             </TableCell>
-                            <TableCell sx={{ width: 60, minWidth: 60 }}>
-                                ID
-                            </TableCell>
-                            <TableCell sx={{ minWidth: 270, width: 270 }}>
-                                Imagenes
+
+                            <TableCell sx={{ minWidth: 480, width: 480 }}>
+                                Imagenes / Categorías / Tags
                             </TableCell>
                             <TableCell sx={{ minWidth: 240, width: 240 }}>
                                 Asset / Name (ES/EN)
@@ -296,16 +337,13 @@ export default function MetaSeoTab({
                             <TableCell sx={{ minWidth: 400, width: 400 }}>
                                 SEO Description (ES/EN)
                             </TableCell>
-                            <TableCell sx={{ minWidth: 400, width: 400 }}>
-                                Categorías / Tags
-                            </TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {paddingTop > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={6}
+                                    colSpan={4}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -340,6 +378,7 @@ export default function MetaSeoTab({
                             return (
                                 <MetaSeoRow
                                     key={`meta-row-${id}`}
+                                    metaReviewMode={metaReviewMode}
                                     virtualRow={virtualRow}
                                     metaVirtualizer={metaVirtualizer}
                                     id={id}
@@ -377,11 +416,10 @@ export default function MetaSeoTab({
                                 />
                             );
                         })}
-
-                        {paddingBottom > 0 && (
+                         {paddingBottom > 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={6}
+                                    colSpan={4}
                                     sx={{
                                         p: 0,
                                         borderBottom: 'none',
@@ -393,7 +431,7 @@ export default function MetaSeoTab({
 
                         {!metaRows.length && (
                             <TableRow>
-                                <TableCell colSpan={6}>
+                                <TableCell colSpan={4}>
                                     <Typography
                                         variant="body2"
                                         color="text.secondary"
@@ -407,7 +445,8 @@ export default function MetaSeoTab({
                 </Table>
             </TableContainer>
 
-            <Paper sx={{ borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', p: 1, mt: 1, boxShadow: 'none' }}>
+            {(!metaReviewMode || showReviewControls) && (
+                <Paper sx={{ borderRadius: 2, bgcolor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(148, 163, 184, 0.3)', p: 1, mt: 1, boxShadow: 'none' }}>
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={1}
@@ -457,9 +496,10 @@ export default function MetaSeoTab({
                                 {`Pagina ${pageOption + 1} de ${metaTotalPages}`}
                             </MenuItem>
                         ))}
-                    </TextField>
-                </Stack>
-            </Paper>
+                        </TextField>
+                    </Stack>
+                </Paper>
+            )}
 
             <MetaSeoDialogs
                 syncMultimodalVectorsOpen={syncMultimodalVectorsOpen}
@@ -474,4 +514,63 @@ export default function MetaSeoTab({
             />
         </Stack>
     );
+
+    if (metaReviewMode) {
+        return (
+            <Dialog
+                open={metaReviewMode}
+                onClose={() => setMetaReviewMode(false)}
+                fullScreen
+                disableScrollLock={true}
+                PaperProps={{
+                    sx: {
+                        bgcolor: '#090d16',
+                        backgroundImage: 'none',
+                    },
+                }}
+            >
+                {/* Floating controls */}
+                <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                        position: 'fixed',
+                        top: 16,
+                        right: 16,
+                        zIndex: 1400,
+                    }}
+                >
+                    <Tooltip title={showReviewControls ? "Ocultar Controles" : "Mostrar Controles"}>
+                        <IconButton
+                            onClick={() => setShowReviewControls(!showReviewControls)}
+                            sx={{
+                                bgcolor: 'rgba(15, 23, 42, 0.85)',
+                                color: '#fff',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                '&:hover': { bgcolor: 'rgba(30, 41, 59, 0.95)' },
+                            }}
+                        >
+                            {showReviewControls ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Salir de Modo Revisión">
+                        <IconButton
+                            onClick={() => setMetaReviewMode(false)}
+                            sx={{
+                                bgcolor: 'rgba(239, 68, 68, 0.85)',
+                                color: '#fff',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.95)' },
+                            }}
+                        >
+                            <FullscreenExitIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+                {content}
+            </Dialog>
+        );
+    }
+
+    return content;
 }
