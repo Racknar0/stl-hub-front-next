@@ -83,7 +83,7 @@ export default function MetaSeoRow({
 
     const marginCollapsed = useMemo(() => {
         if (metaExpanded) return 0;
-        return metaReviewMode ? -40 : -30;
+        return metaReviewMode ? 0 : -30;
     }, [metaExpanded, metaReviewMode]);
 
     return (
@@ -98,6 +98,7 @@ export default function MetaSeoRow({
                 sx={{
                     verticalAlign: 'middle',
                     py: 0.75,
+                    position: 'relative',
                     borderLeft: hasAdultos ? '4px solid #ef4444' : '4px solid transparent',
                     borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
                     width: 90,
@@ -105,7 +106,28 @@ export default function MetaSeoRow({
                     maxWidth: 90,
                 }}
             >
-                <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center">
+                <Typography 
+                    variant="caption" 
+                    sx={{ 
+                        position: 'absolute',
+                        top: 6,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        fontWeight: 700, 
+                        color: '#000000', 
+                        bgcolor: '#ffffff', 
+                        px: 1.4, 
+                        py: 0.4, 
+                        borderRadius: 1, 
+                        border: '1px solid #ffffff', 
+                        fontSize: 12.5,
+                        zIndex: 10,
+                    }}
+                >
+                    #{id}
+                </Typography>
+
+                <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center" sx={{ height: '100%', pt: 3 }}>
                     {rowImages.length > 6 && (
                         <Stack alignItems="center" spacing={0.2} sx={{ mb: 0.5 }}>
                             <Tooltip title={metaExpanded ? 'Mostrar solo 6' : `Mostrar todas (${rowImages.length})`}>
@@ -137,25 +159,6 @@ export default function MetaSeoRow({
                         disabled={metaBusy || loading}
                         sx={{ p: 0.5 }}
                     />
-                    
-                    <Typography 
-                        variant="caption" 
-                        sx={{ 
-                            fontWeight: 800, 
-                            color: '#e2e8f0', 
-                            bgcolor: 'rgba(148, 163, 184, 0.22)', 
-                            px: 0.8, 
-                            py: 0.2, 
-                            borderRadius: 1, 
-                            border: '1px solid rgba(148, 163, 184, 0.35)', 
-                            display: 'inline-block', 
-                            mb: 1.2, 
-                            fontSize: 11,
-                            fontFamily: 'monospace'
-                        }}
-                    >
-                        #{id}
-                    </Typography>
 
                     <Tooltip title="Guardar fila" placement="right">
                         <span>
