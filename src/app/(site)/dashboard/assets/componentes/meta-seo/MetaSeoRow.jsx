@@ -344,7 +344,7 @@ export default function MetaSeoRow({
                     <Box
                     sx={{
                         display: metaExpanded ? 'grid' : 'flex',
-                        gridTemplateColumns: metaExpanded ? 'repeat(auto-fill, minmax(290px, 1fr))' : 'none',
+                        gridTemplateColumns: metaExpanded ? 'repeat(auto-fill, minmax(340px, 1fr))' : 'none',
                         alignItems: metaExpanded ? 'start' : 'center',
                         gap: metaExpanded ? 1.5 : 0.5,
                         flexWrap: metaExpanded ? 'wrap' : 'nowrap',
@@ -362,8 +362,8 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
-                                    height: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
+                                    width: metaExpanded ? 340 : (metaReviewMode ? 320 : 250),
+                                    height: metaExpanded ? 340 : (metaReviewMode ? 320 : 250),
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
