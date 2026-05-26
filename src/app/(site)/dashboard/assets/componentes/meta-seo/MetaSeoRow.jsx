@@ -23,8 +23,6 @@ import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import ExplicitIcon from '@mui/icons-material/Explicit';
-import FilterNoneIcon from '@mui/icons-material/FilterNone';
-
 const formatMBfromB = (bytes) => {
     const n = Number(bytes);
     if (!n || n <= 0) return '0 MB';
@@ -59,7 +57,6 @@ export default function MetaSeoRow({
     onDeleteAsset,
     onQuickAdultos,
     onGenerateMetaAll,
-    onCleanDuplicateImages,
     row,
 }) {
     const hasAdultos = useMemo(() => {
@@ -195,24 +192,6 @@ export default function MetaSeoRow({
                         </span>
                     </Tooltip>
 
-                    <Tooltip title="Eliminar imágenes duplicadas" placement="right">
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => onCleanDuplicateImages?.(id)}
-                                disabled={metaBusy || loading}
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1.5,
-                                    color: '#38bdf8',
-                                    '&:hover': { bgcolor: 'rgba(56,189,248,0.1)' },
-                                }}
-                            >
-                                <FilterNoneIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
                 </Stack>
             </TableCell>
             <TableCell>{id}</TableCell>
