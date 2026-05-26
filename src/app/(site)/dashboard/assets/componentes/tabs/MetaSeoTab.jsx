@@ -369,7 +369,7 @@ export default function MetaSeoTab({
                             const metaExpanded = !!metaExpandedImagesMap[id];
                             const visibleImages = metaExpanded
                                 ? rowImages
-                                : rowImages.slice(0, metaReviewMode ? 6 : 5);
+                                : rowImages.slice(0, 6);
                             const draft = metaDraftMap[id] || {
                                 id,
                                 title: String(row?.title || ''),

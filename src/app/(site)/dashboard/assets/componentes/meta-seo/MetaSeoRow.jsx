@@ -106,6 +106,31 @@ export default function MetaSeoRow({
                 }}
             >
                 <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center">
+                    {rowImages.length > 6 && (
+                        <Stack alignItems="center" spacing={0.2} sx={{ mb: 0.5 }}>
+                            <Tooltip title={metaExpanded ? 'Mostrar solo 6' : `Mostrar todas (${rowImages.length})`}>
+                                <span>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onToggleExpandedImages(id)}
+                                        disabled={loading}
+                                        sx={{
+                                            bgcolor: 'rgba(15,23,42,0.72)',
+                                            color: '#fff',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: 1.5,
+                                            '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' },
+                                        }}
+                                    >
+                                        {metaExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', fontWeight: 700 }}>
+                                {metaExpanded ? `${rowImages.length}` : `+${rowImages.length - 6}`}
+                            </Typography>
+                        </Stack>
+                    )}
                     <Checkbox
                         checked={isSelected}
                         onChange={() => onToggleSelect(id)}
@@ -402,49 +427,7 @@ export default function MetaSeoRow({
                         );
                     })}
 
-                    {rowImages.length > 6 && (
-                        <Stack
-                            spacing={0.5}
-                            alignItems="center"
-                            sx={
-                                metaExpanded
-                                    ? {
-                                          position: 'absolute',
-                                          top: 12,
-                                          left: metaReviewMode ? 12 : 'auto',
-                                          right: metaReviewMode ? 'auto' : 12,
-                                          zIndex: 100,
-                                          bgcolor: 'rgba(15, 23, 42, 0.9)',
-                                          borderRadius: 2,
-                                          p: 0.75,
-                                          border: '1px solid rgba(255, 255, 255, 0.25)',
-                                          backdropFilter: 'blur(6px)',
-                                          boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-                                      }
-                                    : {
-                                          ml: 1,
-                                          flexShrink: 0,
-                                      }
-                            }
-                        >
-                            <Tooltip title={ metaExpanded ? 'Mostrar solo 6' : `Mostrar todas (${rowImages.length})` } >
-                                <span>
-                                    <IconButton size="small" onClick={() => onToggleExpandedImages(id) } disabled={loading} sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)', }, }} >
-                                        {metaExpanded ? (
-                                            <UnfoldLessIcon fontSize="small" />
-                                        ) : (
-                                            <UnfoldMoreIcon fontSize="small" />
-                                        )}
-                                    </IconButton>
-                                </span>
-                            </Tooltip>
-                            <Typography variant="caption" color="text.secondary" >
-                                {metaExpanded
-                                    ? `${rowImages.length}`
-                                    : `+${rowImages.length - 6}`}
-                            </Typography>
-                        </Stack>
-                    )}
+
 
                      {!rowImages.length && (
                         <Box sx={{ width: metaReviewMode ? 320 : 250, height: metaReviewMode ? 320 : 250, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)', }} >
