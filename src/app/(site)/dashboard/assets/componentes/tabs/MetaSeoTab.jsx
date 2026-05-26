@@ -331,18 +331,17 @@ export default function MetaSeoTab({
                             <TableCell
                                 sx={{
                                     minWidth: metaReviewMode ? 640 : 480,
-                                    width: metaReviewMode ? 640 : 480,
-                                    maxWidth: metaReviewMode ? 640 : undefined,
+                                    width: '100%',
                                 }}
                             >
                                 Imagenes / Categorías / Tags
                             </TableCell>
                             {!metaReviewMode && (
-                                <TableCell sx={{ minWidth: 240, width: 240 }}>
+                                <TableCell sx={{ minWidth: 240, width: 240, maxWidth: 240 }}>
                                     Asset / Name (ES/EN)
                                 </TableCell>
                             )}
-                             <TableCell sx={{ minWidth: 400 }}>
+                             <TableCell sx={{ minWidth: 400, width: 400, maxWidth: 400 }}>
                                 SEO Description (ES/EN)
                             </TableCell>
                         </TableRow>

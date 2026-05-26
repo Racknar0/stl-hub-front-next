@@ -107,6 +107,9 @@ export default function MetaSeoRow({
                     py: 0.75,
                     borderLeft: hasAdultos ? '4px solid #ef4444' : '4px solid transparent',
                     borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
+                    width: 90,
+                    minWidth: 90,
+                    maxWidth: 90,
                 }}
             >
                 <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center">
@@ -237,9 +240,7 @@ export default function MetaSeoRow({
                     py: 0.75,
                     position: 'relative',
                     borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
-                    width: metaReviewMode ? 640 : 480,
                     minWidth: metaReviewMode ? 640 : 480,
-                    maxWidth: metaReviewMode ? 640 : undefined,
                 }}
             >
                 <Stack spacing={0.5} sx={{ width: '100%', mt: 0 }}>
@@ -571,7 +572,14 @@ export default function MetaSeoRow({
 
             {/* === NOMBRE ES/EN === */}
             {!metaReviewMode && (
-                <TableCell sx={{ py: 0.75 }}>
+                <TableCell
+                    sx={{
+                        py: 0.75,
+                        width: 240,
+                        minWidth: 240,
+                        maxWidth: 240,
+                    }}
+                >
                     <Stack spacing={1} sx={{ width: '100%' }}>
                         <TextField
                             size="small"
@@ -607,7 +615,15 @@ export default function MetaSeoRow({
             )}
 
             {/* === DESCRIPCIÓN SEO ES/EN === */}
-            <TableCell sx={{ py: 0.75, borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined }}>
+            <TableCell
+                sx={{
+                    py: 0.75,
+                    borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
+                    width: 400,
+                    minWidth: 400,
+                    maxWidth: 400,
+                }}
+            >
                 <Stack
                     spacing={1}
                     sx={{
