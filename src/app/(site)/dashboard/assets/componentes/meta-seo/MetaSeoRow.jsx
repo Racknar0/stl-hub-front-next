@@ -110,7 +110,7 @@ export default function MetaSeoRow({
                     variant="caption" 
                     sx={{ 
                         position: 'absolute',
-                        top: 6,
+                        top: 16,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         fontWeight: 700, 
@@ -127,7 +127,7 @@ export default function MetaSeoRow({
                     #{id}
                 </Typography>
 
-                <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center" sx={{ height: '100%', pt: 3 }}>
+                <Stack direction="column" spacing={0.6} alignItems="center" justifyContent="center" sx={{ height: '100%', pt: 4.5 }}>
                     {rowImages.length > 6 && (
                         <Stack alignItems="center" spacing={0.2} sx={{ mb: 0.5 }}>
                             <Tooltip title={metaExpanded ? 'Mostrar solo 6' : `Mostrar todas (${rowImages.length})`}>
