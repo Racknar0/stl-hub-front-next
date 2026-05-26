@@ -612,7 +612,7 @@ export default function MetaSeoRow({
                     spacing={1}
                     sx={{
                         width: '100%',
-                        maxWidth: 480,
+                        maxWidth: 400,
                         height: '100%',
                     }}
                 >
