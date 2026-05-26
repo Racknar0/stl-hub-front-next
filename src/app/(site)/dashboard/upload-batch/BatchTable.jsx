@@ -5,7 +5,8 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Box, Dialog, Snackbar, Alert } from '@mui/material'
+import { Box, Dialog, Snackbar, Alert, Typography, Button, IconButton, Tooltip } from '@mui/material'
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import HttpService from '@/services/HttpService'
 import { successAlert } from '@/helpers/alerts'
 
@@ -199,7 +200,7 @@ export default function BatchTable() {
 
   const virtualItems = virtualizer.getVirtualItems()
 
-  const visibleColumnCount = reviewMode ? 2 : 8
+  const visibleColumnCount = reviewMode ? 3 : 6
 
   const normalizeAHashHex = useCallback((value) => {
     const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
@@ -1876,14 +1877,35 @@ export default function BatchTable() {
 
 
 
-  return (
+  const content = (
     <Box
       sx={{
-        pb: 10,
+        pb: reviewMode ? 1 : 10,
         pr: searchSidebarSide === 'right' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
         transition: 'padding 180ms ease'
       }}
     >
+      {/* Floating Exit Button for reviewMode */}
+      {reviewMode && (
+        <Tooltip title="Salir de Modo Revisión">
+          <IconButton
+            onClick={() => setReviewMode(false)}
+            sx={{
+              position: 'fixed',
+              top: 16,
+              right: 16,
+              zIndex: 1400,
+              bgcolor: 'rgba(239, 68, 68, 0.85)',
+              color: '#fff',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.95)' },
+            }}
+          >
+            <FullscreenExitIcon />
+          </IconButton>
+        </Tooltip>
+      )}
+
       {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}
       {!reviewMode && (
         <BatchControlPanel
@@ -1946,13 +1968,15 @@ export default function BatchTable() {
       {!reviewMode && <BatchStorageBars rows={rows} cuentas={cuentas} />}
 
       {/* ═══════════ RESUMEN DE TABLA ═══════════ */}
-      <BatchSummaryBar
-        tableSummary={tableSummary}
-        summaryFilter={summaryFilter}
-        onSummaryFilterChange={handleSummaryFilterChange}
-        reviewMode={reviewMode}
-        setReviewMode={setReviewMode}
-      />
+      {!reviewMode && (
+        <BatchSummaryBar
+          tableSummary={tableSummary}
+          summaryFilter={summaryFilter}
+          onSummaryFilterChange={handleSummaryFilterChange}
+          reviewMode={reviewMode}
+          setReviewMode={setReviewMode}
+        />
+      )}
 
       {/* ═══════════ TABLA DE DATOS VIRTUALIZADA ═══════════ */}
       <BatchDataTable
@@ -2059,4 +2083,26 @@ export default function BatchTable() {
       </Snackbar>
     </Box>
   );
+
+  if (reviewMode) {
+    return (
+      <Dialog
+        open={reviewMode}
+        onClose={() => setReviewMode(false)}
+        fullScreen
+        disableScrollLock={true}
+        PaperProps={{
+          sx: {
+            bgcolor: '#090d16',
+            backgroundImage: 'none',
+            p: 1,
+          },
+        }}
+      >
+        {content}
+      </Dialog>
+    );
+  }
+
+  return content;
 }

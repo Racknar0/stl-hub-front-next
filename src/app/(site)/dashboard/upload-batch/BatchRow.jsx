@@ -84,11 +84,26 @@ export default function BatchRow({
     const secondaryText = 'rgba(220,232,255,0.82)';
     const cellBorder = '1px solid rgba(148,163,184,0.24)';
     const reviewThumbSize = 250;
+    const hasNoCategories = !Array.isArray(row.categorias) || row.categorias.length === 0;
+    const hasNoTags = !Array.isArray(row.tags) || row.tags.length === 0;
+    const hasNoDescriptionEs = !row.description || !String(row.description).trim();
+    const hasNoDescriptionEn = !row.descriptionEn || !String(row.descriptionEn).trim();
+    const hasNoDescription = hasNoDescriptionEs || hasNoDescriptionEn;
+    const isMissingMetadata = hasNoCategories || hasNoTags || hasNoDescription;
+
+    const descLengthEs = String(row.description || '').trim().length;
+    const descLengthEn = String(row.descriptionEn || '').trim().length;
+    const isShortDescription = descLengthEs < 130 || descLengthEn < 130;
+
     const baseRowBg = isError
         ? 'rgba(239, 68, 68, 0.35)'
         : isOk
           ? 'rgba(22, 163, 74, 0.30)'
-          : 'rgba(15, 23, 42, 0.38)';
+          : isMissingMetadata
+            ? 'rgba(239, 68, 68, 0.22)'
+            : isShortDescription
+              ? 'rgba(234, 179, 8, 0.22)'
+              : 'rgba(15, 23, 42, 0.38)';
     const focusedBg = 'rgba(8, 145, 178, 0.26)';
 
     if (reviewMode) {
@@ -134,6 +149,30 @@ export default function BatchRow({
                                 border: '1px solid rgba(56,189,248,0.65)',
                             }}
                         />
+                        {Array.isArray(row.imagenes) && row.imagenes.length > 6 && (
+                            <Stack alignItems="center" spacing={0.2} sx={{ my: 0.25 }}>
+                                <Tooltip title={reviewExpanded ? 'Mostrar solo 6' : `Mostrar todas (${row.imagenes.length})`}>
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setReviewExpanded(!reviewExpanded)}
+                                            sx={{
+                                                bgcolor: 'rgba(15,23,42,0.72)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                borderRadius: 1.5,
+                                                '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' },
+                                            }}
+                                        >
+                                            {reviewExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Typography variant="caption" sx={{ fontSize: '10px', color: '#7dd3fc', fontWeight: 700 }}>
+                                    {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 6}`}
+                                </Typography>
+                            </Stack>
+                        )}
                         <Button
                             size="small"
                             variant="contained"
@@ -176,37 +215,108 @@ export default function BatchRow({
 
                 <TableCell
                     sx={{
-                        minWidth: 280,
+                        minWidth: 640,
+                        width: '100%',
                         borderBottom: cellBorder,
                         color: primaryText,
+                        verticalAlign: 'top',
+                        py: 0.75,
                     }}
                 >
-                    <Stack direction={reviewExpanded ? 'column' : 'row'} spacing={1} alignItems={reviewExpanded ? 'stretch' : 'center'}>
+                    <Stack spacing={0.5} sx={{ width: '100%', mt: 0 }}>
+                        {/* Name fields */}
                         <Box
                             sx={{
                                 display: 'flex',
-                                alignItems: reviewExpanded ? 'flex-start' : 'center',
-                                gap: reviewExpanded ? 0.75 : 0.5,
+                                alignItems: 'center',
+                                gap: 1.5,
+                                width: '100%',
+                                bgcolor: 'rgba(15, 23, 42, 0.45)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                borderRadius: 2,
+                                p: 0.75,
+                                backdropFilter: 'blur(4px)',
+                                mb: 0.5,
+                            }}
+                        >
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={row.nombre}
+                                placeholder="Nombre ES"
+                                onChange={(e) => onNombreChange(idx, e.target.value)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={row.nombreEn || ''}
+                                placeholder="Name EN"
+                                onChange={(e) => onNombreEnChange(idx, e.target.value)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                    fontWeight: 800,
+                                    whiteSpace: 'nowrap',
+                                    px: 1.2,
+                                    py: 0.6,
+                                    borderRadius: 1,
+                                    bgcolor: 'rgba(30, 41, 59, 0.6)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    fontSize: '11px',
+                                }}
+                            >
+                                Peso: {(row.pesoMB / 1024).toFixed(2)} GB
+                            </Typography>
+                        </Box>
+
+                        {/* Images */}
+                        <Box
+                            sx={{
+                                display: reviewExpanded ? 'grid' : 'flex',
+                                gridTemplateColumns: reviewExpanded ? 'repeat(auto-fill, minmax(340px, 1fr))' : 'none',
+                                alignItems: reviewExpanded ? 'start' : 'center',
+                                gap: reviewExpanded ? 1.5 : 0.5,
                                 flexWrap: reviewExpanded ? 'wrap' : 'nowrap',
-                                overflowY: reviewExpanded ? 'auto' : 'visible',
-                                overflowX: 'hidden',
-                                maxHeight: reviewExpanded ? 420 : 'none',
-                                py: reviewExpanded ? 0.5 : 0,
-                                mr: reviewExpanded ? 0 : 1,
-                                flexShrink: reviewExpanded ? 1 : 0,
+                                overflowX: reviewExpanded ? 'hidden' : 'auto',
+                                overflowY: reviewExpanded ? 'auto' : 'hidden',
+                                maxHeight: reviewExpanded ? 680 : 'none',
+                                pt: 0,
+                                pb: 0,
+                                position: 'relative',
+                                width: '100%',
                             }}
                         >
                             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? (
                                 <>
-                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 5)).map((img, i) => {
+                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 6)).map((img, i) => {
                                         const srcUrl = img.startsWith('http')
                                             ? img
                                             : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
                                         const isPrimary = i === 0;
                                         return (
                                             <Box key={i} sx={{
-                                                width: reviewExpanded ? 160 : reviewThumbSize,
-                                                height: reviewExpanded ? 160 : reviewThumbSize,
+                                                width: reviewExpanded ? 340 : 320,
+                                                height: reviewExpanded ? 340 : 320,
                                                 position: 'relative',
                                                 borderRadius: 1.5,
                                                 border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
@@ -217,7 +327,7 @@ export default function BatchRow({
                                                 flexShrink: 0,
                                                 zIndex: Math.max(1, 30 - i),
                                                 transition: 'transform 0.2s, z-index 0.2s',
-                                                '&:hover': { transform: 'scale(1.12)', zIndex: 80 },
+                                                '&:hover': { transform: 'scale(1.05)', zIndex: 80 },
                                                 '&:hover .batch-image-actions': { opacity: 1 },
                                             }}>
                                                 <Box component="img" src={srcUrl} alt={`asset-${idx}-${i + 1}`}
@@ -263,278 +373,317 @@ export default function BatchRow({
                                             </Box>
                                         );
                                     })}
-                                    {row.imagenes.length > 5 && (
-                                        <Stack spacing={0.5} alignItems="center" sx={{ ml: 1, flexShrink: 0 }}>
-                                            <Tooltip title={reviewExpanded ? 'Mostrar solo 5' : `Mostrar todas (${row.imagenes.length})`}>
-                                                <span>
-                                                    <IconButton size="small" onClick={() => setReviewExpanded(!reviewExpanded)}
-                                                        sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' } }}
-                                                    >
-                                                        {reviewExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                            <Typography variant="caption" sx={{ color: '#7dd3fc', fontWeight: 700 }}>
-                                                {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 5}`}
-                                            </Typography>
-                                        </Stack>
-                                    )}
+
                                 </>
                             ) : (
-                                <Box sx={{ width: reviewThumbSize, height: reviewThumbSize, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)' }}>
+                                <Box sx={{ width: 320, height: 320, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)' }}>
                                     <Typography variant="caption" color="text.secondary">N/A</Typography>
                                 </Box>
                             )}
                         </Box>
-                        <Box flex={1}>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    color: primaryText,
-                                    fontWeight: 700,
-                                    lineHeight: 1.25,
-                                }}
-                            >
-                                {row.nombre || '(sin nombre ES)'}
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    color: secondaryText,
-                                    display: 'block',
-                                    mt: 0.35,
-                                }}
-                            >
-                                {row.nombreEn || '(sin nombre EN)'}
-                            </Typography>
-                        </Box>
+
+                        {/* Categories & Tags stack */}
+                        <Stack direction="row" spacing={1} sx={{ width: '100%', mt: 0.75 }}>
+                            {/* Categories */}
+                            <Box sx={{ flex: 1, minWidth: 0, bgcolor: 'rgba(234, 179, 8, 0.04)', border: '1px solid rgba(234, 179, 8, 0.15)', borderRadius: 3, p: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Autocomplete
+                                        multiple
+                                        options={categoriesCatalog}
+                                        getOptionLabel={(o) => o.name || o.slug || ''}
+                                        value={
+                                            Array.isArray(row.categorias)
+                                                ? row.categorias
+                                                : []
+                                        }
+                                        disabled={isOk || isProcesso}
+                                        onChange={(_, v) => onCategoriasChange(idx, v)}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({
+                                                    index,
+                                                });
+                                                return (
+                                                    <Chip
+                                                        key={key}
+                                                        label={option.name || option.slug}
+                                                        size="small"
+                                                        {...tagProps}
+                                                        sx={{
+                                                            color: '#111827',
+                                                            backgroundColor: '#d8bb00',
+                                                            border: '1px solid rgba(148,163,184,0.52)',
+                                                            fontWeight: 400,
+                                                            m: '2px',
+                                                            '& .MuiChip-label': {
+                                                                px: 0.75,
+                                                            },
+                                                            '& .MuiChip-deleteIcon': {
+                                                                color: '#111827',
+                                                            },
+                                                            '&.Mui-disabled': {
+                                                                opacity: 1,
+                                                                color: '#111827',
+                                                            },
+                                                        }}
+                                                    />
+                                                );
+                                            })
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                size="small"
+                                                placeholder={
+                                                    (Array.isArray(row.categorias)
+                                                        ? row.categorias.length
+                                                        : 0) === 0
+                                                        ? 'Categorías...'
+                                                        : ''
+                                                }
+                                                variant="standard"
+                                                InputProps={{ ...params.InputProps, disableUnderline: true }}
+                                                sx={{
+                                                    '& input': { color: primaryText },
+                                                    '& input::placeholder': {
+                                                        color: secondaryText,
+                                                        opacity: 1,
+                                                    },
+                                                }}
+                                            />
+                                        )}
+                                        sx={{
+                                            flex: 1,
+                                            '& .MuiInputBase-root': {
+                                                maxHeight: 90,
+                                                minHeight: 36,
+                                                overflowY: 'auto',
+                                                overflowX: 'hidden',
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                alignItems: 'flex-start',
+                                                alignContent: 'flex-start',
+                                                p: '4px 34px 4px 4px !important',
+                                            },
+                                            '& .MuiSvgIcon-root': { color: primaryText },
+                                            '& .MuiChip-root': { opacity: 1 },
+                                            '&.Mui-disabled': { opacity: 1 },
+                                            '& .MuiInputBase-input.Mui-disabled': {
+                                                color: '#e6f4ff',
+                                                WebkitTextFillColor: '#e6f4ff',
+                                                opacity: 1,
+                                            },
+                                        }}
+                                    />
+                                    {!isOk && !isProcesso && (
+                                        <IconButton
+                                            size="small"
+                                            sx={{ ml: 0.5, color: '#4fc3f7' }}
+                                            onClick={() => onOpenCreateModal('cat', idx)}
+                                        >
+                                            <AddIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Box>
+                            </Box>
+
+                            {/* Tags */}
+                            <Box sx={{ flex: 1, minWidth: 0, bgcolor: 'rgba(20, 184, 166, 0.04)', border: '1px solid rgba(20, 184, 166, 0.15)', borderRadius: 3, p: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Autocomplete
+                                        multiple
+                                        freeSolo
+                                        options={tagsCatalog}
+                                        getOptionLabel={(o) =>
+                                            o.name ||
+                                            o.es ||
+                                            o.nameEn ||
+                                            o.en ||
+                                            o.slug ||
+                                            ''
+                                        }
+                                        value={Array.isArray(row.tags) ? row.tags : []}
+                                        disabled={isOk || isProcesso}
+                                        onChange={(_, v) => onTagsChange(idx, v)}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({
+                                                    index,
+                                                });
+                                                return (
+                                                    <Chip
+                                                        key={key}
+                                                        size="small"
+                                                        label={
+                                                            option.name ||
+                                                            option.es ||
+                                                            option.nameEn ||
+                                                            option.en ||
+                                                            option.slug ||
+                                                            option
+                                                        }
+                                                        {...tagProps}
+                                                        sx={{
+                                                            color: '#111827',
+                                                            backgroundColor:
+                                                                option.iaSuggested
+                                                                    ? 'rgba(187,247,208,0.95)'
+                                                                    : 'rgba(220,252,231,0.95)',
+                                                            border: '1px solid rgba(134,239,172,0.9)',
+                                                            fontWeight: 400,
+                                                            m: '2px',
+                                                            '& .MuiChip-label': {
+                                                                px: 0.75,
+                                                            },
+                                                            '& .MuiChip-deleteIcon': {
+                                                                color: '#111827',
+                                                            },
+                                                            '&.Mui-disabled': {
+                                                                opacity: 1,
+                                                                color: '#111827',
+                                                            },
+                                                        }}
+                                                    />
+                                                );
+                                            })
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                size="small"
+                                                placeholder={
+                                                    (Array.isArray(row.tags)
+                                                        ? row.tags.length
+                                                        : 0) === 0
+                                                        ? '+ IA Tags...'
+                                                        : ''
+                                                }
+                                                variant="standard"
+                                                InputProps={{ ...params.InputProps, disableUnderline: true }}
+                                                sx={{
+                                                    '& input': { color: primaryText },
+                                                    '& input::placeholder': {
+                                                        color: secondaryText,
+                                                        opacity: 1,
+                                                    },
+                                                }}
+                                            />
+                                        )}
+                                        sx={{
+                                            flex: 1,
+                                            '& .MuiInputBase-root': {
+                                                maxHeight: 90,
+                                                minHeight: 36,
+                                                overflowY: 'auto',
+                                                overflowX: 'hidden',
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                alignItems: 'flex-start',
+                                                alignContent: 'flex-start',
+                                                p: '4px 34px 4px 4px !important',
+                                            },
+                                            '& .MuiSvgIcon-root': { color: primaryText },
+                                            '& .MuiChip-root': { opacity: 1 },
+                                            '&.Mui-disabled': { opacity: 1 },
+                                            '& .MuiInputBase-input.Mui-disabled': {
+                                                color: '#f8e8ff',
+                                                WebkitTextFillColor: '#f8e8ff',
+                                                opacity: 1,
+                                            },
+                                        }}
+                                    />
+                                    {!isOk && !isProcesso && (
+                                        <IconButton
+                                            size="small"
+                                            sx={{ ml: 0.5, color: '#4fc3f7' }}
+                                            onClick={() => onOpenCreateModal('tag', idx)}
+                                        >
+                                            <AddIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Box>
+                            </Box>
+                        </Stack>
                     </Stack>
                 </TableCell>
 
                 <TableCell
                     sx={{
-                        minWidth: 220,
+                        minWidth: 400,
+                        width: 400,
+                        maxWidth: 400,
                         borderBottom: cellBorder,
                         color: primaryText,
+                        verticalAlign: 'top',
+                        py: 0.75,
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Autocomplete
-                            multiple
-                            options={categoriesCatalog}
-                            getOptionLabel={(o) => o.name || o.slug || ''}
-                            value={
-                                Array.isArray(row.categorias)
-                                    ? row.categorias
-                                    : []
-                            }
-                            disabled={isOk || isProcesso}
-                            onChange={(_, v) => onCategoriasChange(idx, v)}
-                            renderTags={(value, getTagProps) =>
-                                value.map((option, index) => {
-                                    const { key, ...tagProps } = getTagProps({
-                                        index,
-                                    });
-                                    return (
-                                        <Chip
-                                            key={key}
-                                            label={option.name || option.slug}
-                                            size="small"
-                                            {...tagProps}
-                                            sx={{
-                                                color: '#111827',
-                                                backgroundColor: '#d8bb00',
-                                                border: '1px solid rgba(148,163,184,0.52)',
-                                                fontWeight: 400,
-                                                '& .MuiChip-label': {
-                                                    px: 0.75,
-                                                },
-                                                '& .MuiChip-deleteIcon': {
-                                                    color: '#111827',
-                                                },
-                                                '&.Mui-disabled': {
-                                                    opacity: 1,
-                                                    color: '#111827',
-                                                },
-                                            }}
-                                        />
-                                    );
-                                })
-                            }
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    size="small"
-                                    placeholder={
-                                        (Array.isArray(row.categorias)
-                                            ? row.categorias.length
-                                            : 0) === 0
-                                            ? 'Categorías...'
-                                            : ''
-                                    }
-                                    variant="standard"
-                                    sx={{
-                                        '& input': { color: primaryText },
-                                        '& input::placeholder': {
-                                            color: secondaryText,
-                                            opacity: 1,
-                                        },
-                                    }}
-                                />
-                            )}
-                            sx={{
-                                flex: 1,
-                                '& .MuiInputBase-root': {
-                                    maxHeight: 60,
-                                    minHeight: 60,
-                                    overflowY: 'auto',
-                                    overflowX: 'hidden',
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    alignItems: 'flex-start',
-                                    alignContent: 'flex-start',
-                                    p: '4px 34px 4px 4px !important',
-                                },
-                                '& .MuiSvgIcon-root': { color: primaryText },
-                                '& .MuiChip-root': { opacity: 1 },
-                                '&.Mui-disabled': { opacity: 1 },
-                                '& .MuiInputBase-input.Mui-disabled': {
-                                    color: '#e6f4ff',
-                                    WebkitTextFillColor: '#e6f4ff',
-                                    opacity: 1,
-                                },
-                            }}
-                        />
-                        {!isOk && !isProcesso && (
-                            <IconButton
-                                size="small"
-                                sx={{ ml: 0.5, color: '#4fc3f7' }}
-                                onClick={() => onOpenCreateModal('cat', idx)}
-                            >
-                                <AddIcon fontSize="small" />
-                            </IconButton>
-                        )}
-                    </Box>
-                </TableCell>
+                    <Typography
+                        variant="caption"
+                        sx={{ display: 'block', color: secondaryText, mb: 0.25 }}
+                    >
+                        Descripción ES
+                    </Typography>
+                    <TextField
+                        value={row.description || ''}
+                        size="small"
+                        fullWidth
+                        multiline
+                        rows={6}
+                        onChange={(e) => onDescriptionChange(idx, e.target.value)}
+                        variant="outlined"
+                        disabled={isOk || isProcesso}
+                        sx={{
+                            '& .MuiInputBase-root': {
+                                fontSize: '12px',
+                                color: '#f8fafc',
+                                bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                borderRadius: 1.2,
+                                alignItems: 'stretch',
+                            },
+                            '& .MuiInputBase-inputMultiline': {
+                                overflow: 'auto !important',
+                                resize: 'vertical',
+                                minHeight: '25px',
+                            },
+                        }}
+                    />
 
-                <TableCell
-                    sx={{
-                        minWidth: 280,
-                        borderBottom: cellBorder,
-                        color: primaryText,
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Autocomplete
-                            multiple
-                            freeSolo
-                            options={tagsCatalog}
-                            getOptionLabel={(o) =>
-                                o.name ||
-                                o.es ||
-                                o.nameEn ||
-                                o.en ||
-                                o.slug ||
-                                ''
-                            }
-                            value={Array.isArray(row.tags) ? row.tags : []}
-                            disabled={isOk || isProcesso}
-                            onChange={(_, v) => onTagsChange(idx, v)}
-                            renderTags={(value, getTagProps) =>
-                                value.map((option, index) => {
-                                    const { key, ...tagProps } = getTagProps({
-                                        index,
-                                    });
-                                    return (
-                                        <Chip
-                                            key={key}
-                                            size="small"
-                                            label={
-                                                option.name ||
-                                                option.es ||
-                                                option.nameEn ||
-                                                option.en ||
-                                                option.slug ||
-                                                option
-                                            }
-                                            {...tagProps}
-                                            sx={{
-                                                color: '#111827',
-                                                backgroundColor:
-                                                    option.iaSuggested
-                                                        ? 'rgba(187,247,208,0.95)'
-                                                        : 'rgba(220,252,231,0.95)',
-                                                border: '1px solid rgba(134,239,172,0.9)',
-                                                fontWeight: 400,
-                                                '& .MuiChip-label': {
-                                                    px: 0.75,
-                                                },
-                                                '& .MuiChip-deleteIcon': {
-                                                    color: '#111827',
-                                                },
-                                                '&.Mui-disabled': {
-                                                    opacity: 1,
-                                                    color: '#111827',
-                                                },
-                                            }}
-                                        />
-                                    );
-                                })
-                            }
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    size="small"
-                                    placeholder={
-                                        (Array.isArray(row.tags)
-                                            ? row.tags.length
-                                            : 0) === 0
-                                            ? '+ Inteligencia Artificial (Tags)'
-                                            : ''
-                                    }
-                                    variant="standard"
-                                    sx={{
-                                        '& input': { color: primaryText },
-                                        '& input::placeholder': {
-                                            color: secondaryText,
-                                            opacity: 1,
-                                        },
-                                    }}
-                                />
-                            )}
-                            sx={{
-                                flex: 1,
-                                '& .MuiInputBase-root': {
-                                    maxHeight: 60,
-                                    minHeight: 60,
-                                    overflowY: 'auto',
-                                    overflowX: 'hidden',
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    alignItems: 'flex-start',
-                                    alignContent: 'flex-start',
-                                    p: '4px 34px 4px 4px !important',
-                                },
-                                '& .MuiSvgIcon-root': { color: primaryText },
-                                '& .MuiChip-root': { opacity: 1 },
-                                '&.Mui-disabled': { opacity: 1 },
-                                '& .MuiInputBase-input.Mui-disabled': {
-                                    color: '#f8e8ff',
-                                    WebkitTextFillColor: '#f8e8ff',
-                                    opacity: 1,
-                                },
-                            }}
-                        />
-                        {!isOk && !isProcesso && (
-                            <IconButton
-                                size="small"
-                                sx={{ ml: 0.5, color: '#4fc3f7' }}
-                                onClick={() => onOpenCreateModal('tag', idx)}
-                            >
-                                <AddIcon fontSize="small" />
-                            </IconButton>
-                        )}
-                    </Box>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            display: 'block',
+                            color: secondaryText,
+                            mt: 0.9,
+                            mb: 0.25,
+                        }}
+                    >
+                        Description EN
+                    </Typography>
+                    <TextField
+                        value={row.descriptionEn || ''}
+                        size="small"
+                        fullWidth
+                        multiline
+                        rows={6}
+                        onChange={(e) => onDescriptionEnChange(idx, e.target.value)}
+                        variant="outlined"
+                        disabled={isOk || isProcesso}
+                        sx={{
+                            '& .MuiInputBase-root': {
+                                fontSize: '12px',
+                                color: '#f8fafc',
+                                bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                borderRadius: 1.2,
+                                alignItems: 'stretch',
+                            },
+                            '& .MuiInputBase-inputMultiline': {
+                                overflow: 'auto !important',
+                                resize: 'vertical',
+                                minHeight: '25px',
+                            },
+                        }}
+                    />
                 </TableCell>
             </TableRow>
         );
