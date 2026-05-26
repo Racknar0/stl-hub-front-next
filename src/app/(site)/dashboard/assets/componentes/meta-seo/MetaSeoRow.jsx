@@ -334,8 +334,8 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 290 : (metaReviewMode ? 220 : 160),
-                                    height: metaExpanded ? 290 : (metaReviewMode ? 220 : 160),
+                                    width: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
+                                    height: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
@@ -402,7 +402,7 @@ export default function MetaSeoRow({
                         );
                     })}
 
-                    {rowImages.length > (metaReviewMode ? 6 : 5) && (
+                    {rowImages.length > 6 && (
                         <Stack
                             spacing={0.5}
                             alignItems="center"
@@ -427,7 +427,7 @@ export default function MetaSeoRow({
                                       }
                             }
                         >
-                            <Tooltip title={ metaExpanded ? (metaReviewMode ? 'Mostrar solo 6' : 'Mostrar solo 5') : `Mostrar todas (${rowImages.length})` } >
+                            <Tooltip title={ metaExpanded ? 'Mostrar solo 6' : `Mostrar todas (${rowImages.length})` } >
                                 <span>
                                     <IconButton size="small" onClick={() => onToggleExpandedImages(id) } disabled={loading} sx={{ bgcolor: 'rgba(15,23,42,0.72)', color: '#fff', '&:hover': { bgcolor: 'rgba(30,41,59,0.95)', }, }} >
                                         {metaExpanded ? (
@@ -441,7 +441,7 @@ export default function MetaSeoRow({
                             <Typography variant="caption" color="text.secondary" >
                                 {metaExpanded
                                     ? `${rowImages.length}`
-                                    : `+${rowImages.length - (metaReviewMode ? 6 : 5)}`}
+                                    : `+${rowImages.length - 6}`}
                             </Typography>
                         </Stack>
                     )}
