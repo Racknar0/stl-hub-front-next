@@ -83,15 +83,8 @@ export default function MetaSeoRow({
 
     const marginCollapsed = useMemo(() => {
         if (metaExpanded) return 0;
-        const N = visibleImages.length;
-        if (N <= 1) return 0;
-
-        const W = metaReviewMode ? 320 : 250;
-        const C = metaReviewMode ? 600 : 440;
-
-        const ml = (C - W) / (N - 1) - W;
-        return Math.min(-8, ml);
-    }, [metaExpanded, visibleImages.length, metaReviewMode]);
+        return metaReviewMode ? -40 : -30;
+    }, [metaExpanded, metaReviewMode]);
 
     return (
         <TableRow
@@ -341,8 +334,8 @@ export default function MetaSeoRow({
                             <Box
                                 key={`meta-img-${id}-${originalIndex}`}
                                 sx={{
-                                    width: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
-                                    height: metaExpanded ? 290 : (metaReviewMode ? 320 : 250),
+                                    width: metaExpanded ? 290 : (metaReviewMode ? 220 : 160),
+                                    height: metaExpanded ? 290 : (metaReviewMode ? 220 : 160),
                                     position: 'relative',
                                     borderRadius: 1.5,
                                     border: '2px solid #1e293b',
