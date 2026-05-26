@@ -1554,36 +1554,6 @@ export default function AssetsAdminPage() {
         [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave],
     );
 
-    const handleMetaCleanDuplicateImages = useCallback(
-        (assetId) => {
-            const id = Number(assetId);
-            if (!Number.isFinite(id) || id <= 0) return;
-
-            const row = findAssetInAllSources(id);
-            const currentImages = Array.isArray(row?.images) ? row.images : [];
-            if (!currentImages.length) return;
-
-            const uniqueImages = [];
-            currentImages.forEach((img) => {
-                if (!uniqueImages.includes(img)) {
-                    uniqueImages.push(img);
-                }
-            });
-
-            if (uniqueImages.length === currentImages.length) {
-                fireAlert({ icon: 'info', title: 'No hay imágenes duplicadas' });
-                return;
-            }
-
-            applyMetaImagesInRow(id, uniqueImages);
-            queueMetaImagesSave(id, uniqueImages);
-            fireAlert({
-                icon: 'success',
-                title: `Se eliminaron ${currentImages.length - uniqueImages.length} imágenes duplicadas`,
-            });
-        },
-        [applyMetaImagesInRow, findAssetInAllSources, queueMetaImagesSave, fireAlert],
-    );
 
     const saveMetaRow = async (assetId, patch = {}, { silent = false } = {}) => {
         const id = Number(assetId);
@@ -2373,7 +2343,6 @@ export default function AssetsAdminPage() {
                     imgUrl={imgUrl}
                     handleMetaSetFirstImage={handleMetaSetFirstImage}
                     handleMetaDeleteImage={handleMetaDeleteImage}
-                    onCleanDuplicateImages={handleMetaCleanDuplicateImages}
                     toggleMetaExpandedImages={toggleMetaExpandedImages}
                     updateMetaDraft={updateMetaDraft}
                     openMetaProfiles={openMetaProfiles}
