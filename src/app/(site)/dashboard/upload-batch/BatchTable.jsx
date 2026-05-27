@@ -135,6 +135,11 @@ export default function BatchTable() {
     if (currentFilter === 'ready') return retryable && isRowReadyForQueue(row)
     if (currentFilter === 'pending') return retryable && !isRowReadyForQueue(row)
     if (currentFilter === 'processing') return st === 'procesando'
+    if (currentFilter === 'active') {
+      const main = String(row?.mainStatus || '').toUpperCase()
+      const backup = String(row?.backupStatus || '').toUpperCase()
+      return main === 'EXTRACTING' || main === 'COMPRESSING' || main === 'UPLOADING' || backup === 'UPLOADING'
+    }
     if (currentFilter === 'completed') return st === 'completado'
     if (currentFilter === 'error') return st === 'error'
     return true
@@ -1819,6 +1824,11 @@ export default function BatchTable() {
     const ready = readyRows.length
     const missing = Math.max(0, retryable - ready)
     const processing = rows.filter((r) => r.estado === 'procesando').length
+    const active = rows.filter((r) => {
+      const main = String(r?.mainStatus || '').toUpperCase()
+      const backup = String(r?.backupStatus || '').toUpperCase()
+      return main === 'EXTRACTING' || main === 'COMPRESSING' || main === 'UPLOADING' || backup === 'UPLOADING'
+    }).length
     const completed = rows.filter((r) => r.estado === 'completado').length
     const error = rows.filter((r) => r.estado === 'error').length
     const readyPct = retryable > 0 ? Math.round((ready / retryable) * 100) : 0
@@ -1830,6 +1840,7 @@ export default function BatchTable() {
       ready,
       missing,
       processing,
+      active,
       completed,
       error,
       readyPct,

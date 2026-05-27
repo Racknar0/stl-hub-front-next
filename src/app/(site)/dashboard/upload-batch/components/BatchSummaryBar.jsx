@@ -109,6 +109,14 @@ export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', o
         <Chip
           size="small"
           clickable
+          label={`Activo: ${tableSummary.active}`}
+          onClick={() => triggerFilter('active')}
+          aria-pressed={summaryFilter === 'active'}
+          sx={{ bgcolor: 'rgba(168,85,247,0.25)', color: '#e9d5ff', fontWeight: 'bold' }}
+        />
+        <Chip
+          size="small"
+          clickable
           label={`En proceso: ${tableSummary.processing}`}
           onClick={() => triggerFilter('processing')}
           aria-pressed={summaryFilter === 'processing'}
