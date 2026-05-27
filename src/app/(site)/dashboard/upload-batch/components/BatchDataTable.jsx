@@ -35,6 +35,9 @@ export default function BatchDataTable({
   handleCategoriasChange,
   handleTagsChange,
   handleCuentaChange,
+  handleSaveRow,
+  handleQuickAdultos,
+  handleGenerateSingleDescription,
   openCreateModal,
   handleOpenPerfilModal,
   setPreviewImage,
@@ -126,6 +129,9 @@ export default function BatchDataTable({
                 onCategoriasChange={handleCategoriasChange}
                 onTagsChange={handleTagsChange}
                 onCuentaChange={handleCuentaChange}
+                onSaveRow={handleSaveRow}
+                onQuickAdultos={handleQuickAdultos}
+                onGenerateSingleDescription={handleGenerateSingleDescription}
                 onOpenCreateModal={openCreateModal}
                 onOpenProfiles={handleOpenPerfilModal}
                 onOpenImagePreview={setPreviewImage}

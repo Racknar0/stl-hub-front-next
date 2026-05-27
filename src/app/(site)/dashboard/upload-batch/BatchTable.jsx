@@ -1204,16 +1204,111 @@ export default function BatchTable() {
     setRows(updated)
   }
 
-  const handleCategoriasChange = (idx, value) => {
+  const handleSaveRow = useCallback(async (idx, showToast = false) => {
+    const row = rows[idx]
+    if (!row || !row.id) return
+    try {
+      await http.patchData('/batch-imports/items', row.id, {
+        title: row.nombre,
+        titleEn: row.nombreEn,
+        description: row.description,
+        descriptionEn: row.descriptionEn,
+        categories: row.categorias,
+        tags: row.tags
+      })
+      if (showToast) {
+        setToast({ open: true, msg: `Fila "${row.nombre}" guardada correctamente.`, type: 'success' })
+      }
+    } catch (e) {
+      console.error('Error saving row:', e)
+      setToast({ open: true, msg: 'Error al guardar los cambios de la fila.', type: 'error' })
+    }
+  }, [rows, http])
+
+  const handleQuickAdultos = useCallback(async (idx) => {
+    const updated = [...rows]
+    const row = updated[idx]
+    if (!row || !row.id) return
+
+    const currentTags = Array.isArray(row.tags) ? [...row.tags] : []
+    const hasAdultos = currentTags.some(t => {
+      if (typeof t === 'string') return t.trim().toLowerCase() === 'adultos'
+      return [t.slug, t.name, t.es, t.en, t.nameEn].some(f => typeof f === 'string' && f.trim().toLowerCase() === 'adultos')
+    })
+
+    if (!hasAdultos) {
+      const adultTag = { id: 0, name: 'Adultos', nameEn: 'Adults', slug: 'adultos', slugEn: 'adults' }
+      const nextTags = [...currentTags, adultTag]
+      updated[idx].tags = nextTags
+      setRows(updated)
+
+      try {
+        await http.patchData('/batch-imports/items', row.id, {
+          tags: nextTags
+        })
+        setToast({ open: true, msg: 'Marcado como Adultos exitosamente.', type: 'success' })
+      } catch (e) {
+        console.error('Error marking as adult:', e)
+        setToast({ open: true, msg: 'Error al marcar como Adultos en la BD.', type: 'error' })
+      }
+    }
+  }, [rows, http])
+
+  const handleGenerateSingleDescription = useCallback(async (idx) => {
+    const row = rows[idx]
+    if (!row || !row.id) return
+
+    setIsApplyingAiMetadata(true)
+    setToast({ open: true, msg: `Generando metadatos IA para "${row.nombre}"...`, type: 'info' })
+
+    try {
+      const res = await http.postData('/batch-imports/ai-metadata', { itemIds: [Number(row.id)] }, { timeout: 0 })
+      if (res.data?.success) {
+        setToast({ open: true, msg: `Metadatos IA generados para "${row.nombre}" con éxito.`, type: 'success' })
+        await fetchQueue({ forceBackendDraft: true })
+      } else {
+        setToast({ open: true, msg: res.data?.message || 'No se pudo generar metadatos IA.', type: 'error' })
+      }
+    } catch (e) {
+      console.error(e)
+      setToast({ open: true, msg: `Error generando metadatos IA: ${e.response?.data?.message || e.message}`, type: 'error' })
+    } finally {
+      setIsApplyingAiMetadata(false)
+    }
+  }, [rows, http, fetchQueue])
+
+  const handleCategoriasChange = async (idx, value) => {
     const updated = [...rows]
     updated[idx].categorias = value
     setRows(updated)
+
+    const row = updated[idx]
+    if (row && row.id) {
+      try {
+        await http.patchData('/batch-imports/items', row.id, {
+          categories: value
+        })
+      } catch (e) {
+        console.error('Error saving categories:', e)
+      }
+    }
   }
 
-  const handleTagsChange = (idx, value) => {
+  const handleTagsChange = async (idx, value) => {
     const updated = [...rows]
     updated[idx].tags = value
     setRows(updated)
+
+    const row = updated[idx]
+    if (row && row.id) {
+      try {
+        await http.patchData('/batch-imports/items', row.id, {
+          tags: value
+        })
+      } catch (e) {
+        console.error('Error saving tags:', e)
+      }
+    }
   }
 
   const handleSetPrimaryImage = useCallback((rowIdx, imageIdx) => {
@@ -2010,6 +2105,9 @@ export default function BatchTable() {
         handleCategoriasChange={handleCategoriasChange}
         handleTagsChange={handleTagsChange}
         handleCuentaChange={handleCuentaChange}
+        handleSaveRow={handleSaveRow}
+        handleQuickAdultos={handleQuickAdultos}
+        handleGenerateSingleDescription={handleGenerateSingleDescription}
         openCreateModal={openCreateModal}
         handleOpenPerfilModal={handleOpenPerfilModal}
         setPreviewImage={setPreviewImage}

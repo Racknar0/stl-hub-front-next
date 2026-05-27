@@ -27,6 +27,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
+import SaveIcon from '@mui/icons-material/Save';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ExplicitIcon from '@mui/icons-material/Explicit';
 
 export default function BatchRow({
     row,
@@ -45,6 +48,9 @@ export default function BatchRow({
     onCategoriasChange = () => {},
     onTagsChange = () => {},
     onCuentaChange = () => {},
+    onSaveRow = () => {},
+    onQuickAdultos = () => {},
+    onGenerateSingleDescription = () => {},
     onOpenCreateModal = () => {},
     onOpenProfiles = () => {},
     onOpenImagePreview = () => {},
@@ -56,6 +62,23 @@ export default function BatchRow({
     virtualIndex = undefined,
 }) {
     const [reviewExpanded, setReviewExpanded] = useState(false);
+
+    const hasAdultos = React.useMemo(() => {
+        const isAdultos = (val) => {
+            if (!val) return false;
+            if (typeof val === 'string') {
+                return val.trim().toLowerCase() === 'adultos';
+            }
+            const fields = [val.slug, val.name, val.es, val.en, val.nameEn];
+            return fields.some(f => typeof f === 'string' && f.trim().toLowerCase() === 'adultos');
+        };
+
+        const catsList = Array.isArray(row.categorias) ? row.categorias : [];
+        const tagsList = Array.isArray(row.tags) ? row.tags : [];
+
+        return catsList.some(isAdultos) || tagsList.some(isAdultos);
+    }, [row.categorias, row.tags]);
+
     const isProcesso = row.estado === 'procesando';
     const isOk = row.estado === 'completado';
     const isError = row.estado === 'error';
@@ -134,6 +157,7 @@ export default function BatchRow({
                         minWidth: 100,
                         borderBottom: cellBorder,
                         color: primaryText,
+                        borderLeft: hasAdultos ? '6px solid #ff0000' : '6px solid transparent',
                     }}
                 >
                     <Stack direction="column" spacing={1} alignItems="center">
@@ -200,6 +224,64 @@ export default function BatchRow({
                         >
                             Similares
                         </Button>
+
+                        <Tooltip title="Guardar fila" placement="right">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onSaveRow(idx, true)}
+                                    disabled={isOk || isProcesso}
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                        color: '#16a34a',
+                                        my: 0.1,
+                                    }}
+                                >
+                                    <SaveIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title="Autogenerar todo con IA" placement="right">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onGenerateSingleDescription(idx)}
+                                    disabled={isOk || isProcesso}
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                        color: '#00b4d8',
+                                        my: 0.1,
+                                    }}
+                                >
+                                    <AutoAwesomeIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title={hasAdultos ? "Ya marcado como Adultos" : "Marcar como Adultos"} placement="right">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onQuickAdultos(idx)}
+                                    disabled={isOk || isProcesso || hasAdultos}
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                        color: hasAdultos ? 'text.disabled' : '#eab308',
+                                        my: 0.1,
+                                    }}
+                                >
+                                    <ExplicitIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
                         <Tooltip title="Eliminar borrador">
                             <IconButton
                                 color="error"
@@ -245,6 +327,7 @@ export default function BatchRow({
                                 value={row.nombre}
                                 placeholder="Nombre ES"
                                 onChange={(e) => onNombreChange(idx, e.target.value)}
+                                onBlur={() => onSaveRow(idx)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     bgcolor: 'rgba(30, 41, 59, 0.3)',
@@ -261,6 +344,7 @@ export default function BatchRow({
                                 value={row.nombreEn || ''}
                                 placeholder="Name EN"
                                 onChange={(e) => onNombreEnChange(idx, e.target.value)}
+                                onBlur={() => onSaveRow(idx)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     bgcolor: 'rgba(30, 41, 59, 0.3)',
@@ -631,6 +715,7 @@ export default function BatchRow({
                         multiline
                         rows={6}
                         onChange={(e) => onDescriptionChange(idx, e.target.value)}
+                        onBlur={() => onSaveRow(idx)}
                         variant="outlined"
                         disabled={isOk || isProcesso}
                         sx={{
@@ -667,6 +752,7 @@ export default function BatchRow({
                         multiline
                         rows={6}
                         onChange={(e) => onDescriptionEnChange(idx, e.target.value)}
+                        onBlur={() => onSaveRow(idx)}
                         variant="outlined"
                         disabled={isOk || isProcesso}
                         sx={{
@@ -714,6 +800,7 @@ export default function BatchRow({
                     minWidth: 100,
                     borderBottom: cellBorder,
                     color: primaryText,
+                    borderLeft: hasAdultos ? '6px solid #ff0000' : '6px solid transparent',
                 }}
             >
                 <Stack direction="column" spacing={1} alignItems="center">
@@ -770,6 +857,64 @@ export default function BatchRow({
                             }}
                         />
                     )}
+
+                    <Tooltip title="Guardar fila" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onSaveRow(idx, true)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: '#16a34a',
+                                    my: 0.1,
+                                }}
+                            >
+                                <SaveIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Autogenerar todo con IA" placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onGenerateSingleDescription(idx)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: '#00b4d8',
+                                    my: 0.1,
+                                }}
+                            >
+                                <AutoAwesomeIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title={hasAdultos ? "Ya marcado como Adultos" : "Marcar como Adultos"} placement="right">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onQuickAdultos(idx)}
+                                disabled={isOk || isProcesso || hasAdultos}
+                                sx={{
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1.5,
+                                    color: hasAdultos ? 'text.disabled' : '#eab308',
+                                    my: 0.1,
+                                }}
+                            >
+                                <ExplicitIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
                     <Tooltip title="Eliminar borrador">
                         <IconButton
                             color="error"
@@ -856,6 +1001,7 @@ export default function BatchRow({
                             onChange={(e) =>
                                 onNombreChange(idx, e.target.value)
                             }
+                            onBlur={() => onSaveRow(idx)}
                             variant="standard"
                             fullWidth
                             InputProps={{
@@ -896,6 +1042,7 @@ export default function BatchRow({
                             onChange={(e) =>
                                 onNombreEnChange(idx, e.target.value)
                             }
+                            onBlur={() => onSaveRow(idx)}
                             variant="standard"
                             fullWidth
                             InputProps={{
@@ -1183,6 +1330,7 @@ export default function BatchRow({
                     minRows={2}
                     maxRows={4}
                     onChange={(e) => onDescriptionChange(idx, e.target.value)}
+                    onBlur={() => onSaveRow(idx)}
                     variant="standard"
                     InputProps={{
                         disableUnderline: isOk || isProcesso,
@@ -1227,6 +1375,7 @@ export default function BatchRow({
                     minRows={2}
                     maxRows={4}
                     onChange={(e) => onDescriptionEnChange(idx, e.target.value)}
+                    onBlur={() => onSaveRow(idx)}
                     variant="standard"
                     InputProps={{
                         disableUnderline: isOk || isProcesso,
