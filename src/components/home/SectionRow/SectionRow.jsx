@@ -4,6 +4,7 @@ import React from 'react';
 import './SectionRow.scss';
 import Button from '../../layout/Buttons/Button';
 import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
+import CardSkeleton from '../../common/CardSkeleton/CardSkeleton';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -14,7 +15,7 @@ import '../../common/GlobalLoader/GlobalLoader.scss';
 import useStore from '../../../store/useStore';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
-const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '' }) => {
+const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '', priority = false }) => {
   const { t } = useI18n();
   const language = useStore((s) => s.language);
   const isEn = String(language || 'es').toLowerCase() === 'en';
@@ -51,8 +52,10 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
           ) : null}
         </div>
         {showLoader ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-            <Spinner size={36} />
+          <div className="cards-skeleton-row" style={{ display: 'flex', gap: 12, overflow: 'hidden', width: '100%' }}>
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <CardSkeleton key={idx} />
+            ))}
           </div>
         ) : (
           <Swiper
@@ -86,6 +89,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                         sizes="(max-width: 992px) 88vw, 240px"
                         className="thumb-img"
                         isAdult={isAssetNSFW(it)}
+                        priority={index < 4 && priority}
                       />
                     </div>
                     <div className="info">

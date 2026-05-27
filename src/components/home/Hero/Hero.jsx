@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -25,12 +26,17 @@ const Hero = () => {
                 navigation
                 loop
             >
-                {slides.map((s) => (
+                {slides.map((s, index) => (
                     <SwiperSlide key={s.id}>
-                        <article
-                            className="slide"
-                            style={{ backgroundImage: `url(${s.image})` }}
-                        >
+                        <article className="slide">
+                            <Image
+                                src={s.image}
+                                alt={s.title || 'Hero slide'}
+                                fill
+                                sizes="100vw"
+                                priority={index === 0}
+                                style={{ objectFit: 'cover' }}
+                            />
                             <div className="overlay" />
                             <div className="content container-narrow">
                                 <h1 className="hero-title">{s.title}</h1>

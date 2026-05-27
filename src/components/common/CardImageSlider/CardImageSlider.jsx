@@ -55,6 +55,7 @@ const CardImageSlider = ({
   sizes,
   className = 'card-image-slider-img',
   isAdult = false,
+  priority = false,
 }) => {
   const instanceId = useId().replace(/:/g, '');
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -119,7 +120,7 @@ const CardImageSlider = ({
           fill
           sizes={sizes}
           className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
-          priority={false}
+          priority={priority}
         />
         {applyBlur && (
           <div className="nsfw-badge">
@@ -169,7 +170,7 @@ const CardImageSlider = ({
                   fill
                   sizes={sizes}
                   className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
-                  priority={false}
+                  priority={priority}
                 />
               </div>
             </SwiperSlide>

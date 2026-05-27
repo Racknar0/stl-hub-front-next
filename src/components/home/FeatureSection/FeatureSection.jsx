@@ -6,6 +6,7 @@ import './FeatureSection.scss';
 // Reutilizamos el spinner del loader global (estilos)
 import '../../common/GlobalLoader/GlobalLoader.scss';
 import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
+import CardSkeleton from '../../common/CardSkeleton/CardSkeleton';
 // Slider
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -70,8 +71,10 @@ const FeatureSection = ({
 
                                                 {/* Slider de cards o loader mientras carga */}
                                                 {showLoader ? (
-                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 220, margin: "0 auto" }}>
-                                                        <Spinner size={36} />
+                                                    <div className="cards-skeleton-row" style={{ display: 'flex', gap: 12, overflow: 'hidden', width: '100%' }}>
+                                                        {Array.from({ length: 4 }).map((_, idx) => (
+                                                            <CardSkeleton key={idx} />
+                                                        ))}
                                                     </div>
                                                 ) : (
                           <Swiper
@@ -103,14 +106,15 @@ const FeatureSection = ({
                                       <SwiperSlide key={`${it.id}-${index}`}>
                                           <article className="fcard" onClick={() => onItemClick?.(it)}>
                                               <div className="thumb">
-                                                  <CardImageSlider
-                                                      images={it.images}
-                                                      fallback={safeThumb}
-                                                      alt={it.title || 'asset'}
-                                                      sizes="(max-width: 992px) 88vw, 240px"
-                                                      className="thumb-img"
-                                                      isAdult={isAssetNSFW(it)}
-                                                  />
+                                                   <CardImageSlider
+                                                       images={it.images}
+                                                       fallback={safeThumb}
+                                                       alt={it.title || 'asset'}
+                                                       sizes="(max-width: 992px) 88vw, 240px"
+                                                       className="thumb-img"
+                                                       isAdult={isAssetNSFW(it)}
+                                                       priority={index < 4}
+                                                   />
                                               </div>
                                               <div className="finfo">
                                                   {/* it.title ya está en el idioma activo */}

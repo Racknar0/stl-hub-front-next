@@ -316,6 +316,7 @@ const Home = () => {
         onItemClick={handleOpen}
         linkHref="/search?plan=free"
         linkLabel={t('home.free.more')}
+        priority={true}
       />
 
       <SectionRow
