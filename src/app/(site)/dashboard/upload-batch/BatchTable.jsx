@@ -24,7 +24,7 @@ import SimilaritySidebar from './components/SimilaritySidebar'
 
 // ─── Constantes ───
 import {
-  MAX_SIMILARITY_HASH_IMAGES, UI_ACCOUNT_LIMIT_MB, BACKEND_SAFETY_LIMIT_MB,
+  UI_ACCOUNT_LIMIT_MB, BACKEND_SAFETY_LIMIT_MB,
   DISTRIBUTION_HEADROOM_MB, AUTO_DISTRIBUTION_LIMIT_MB, MIN_SELECTOR_FREE_MB,
   SELECTOR_GREEN_PCT, REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
 } from './constants'
@@ -308,13 +308,6 @@ export default function BatchTable() {
 
   const visibleColumnCount = reviewMode ? 3 : 6
 
-  const normalizeAHashHex = useCallback((value) => {
-    const h = String(value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '')
-    if (h.length === 16) return h
-    if (h.length > 16) return h.slice(0, 16)
-    return h.padStart(16, '0')
-  }, [])
-
   const makeUploadsUrl = useCallback((relativeOrUrl) => {
     const value = String(relativeOrUrl || '').trim()
     if (!value) return ''
@@ -323,78 +316,19 @@ export default function BatchTable() {
     return `${uploadsBase}/uploads/${rel}`
   }, [uploadsBase])
 
-  const computeImageAHashFromUrl = useCallback(async (src) => {
-    let objectUrl = ''
-    try {
-      const response = await fetch(src)
-      if (!response.ok) return ''
-      const blob = await response.blob()
-      objectUrl = URL.createObjectURL(blob)
-
-      const image = await new Promise((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = () => reject(new Error('No se pudo leer imagen'))
-        img.src = objectUrl
-      })
-
-      const canvas = document.createElement('canvas')
-      canvas.width = 8
-      canvas.height = 8
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })
-      if (!ctx) return ''
-
-      ctx.clearRect(0, 0, 8, 8)
-      ctx.drawImage(image, 0, 0, 8, 8)
-      const { data } = ctx.getImageData(0, 0, 8, 8)
-      if (!data || data.length < 64 * 4) return ''
-
-      const grays = []
-      for (let i = 0; i < data.length; i += 4) {
-        const r = Number(data[i] || 0)
-        const g = Number(data[i + 1] || 0)
-        const b = Number(data[i + 2] || 0)
-        const y = Math.round(r * 0.299 + g * 0.587 + b * 0.114)
-        grays.push(y)
-      }
-
-      const avg = grays.reduce((sum, v) => sum + v, 0) / Math.max(1, grays.length)
-      const bits = grays.map((v) => (v >= avg ? '1' : '0')).join('').slice(0, 64).padEnd(64, '0')
-      const hex = BigInt(`0b${bits}`).toString(16).padStart(16, '0')
-      return normalizeAHashHex(hex)
-    } catch {
-      return ''
-    } finally {
-      try { if (objectUrl) URL.revokeObjectURL(objectUrl) } catch {}
-    }
-  }, [normalizeAHashHex])
-
-  const buildRowImageHashes = useCallback(async (row) => {
-    const imgs = Array.isArray(row?.imagenes) ? row.imagenes : []
-    const out = []
-    for (const rel of imgs.slice(0, MAX_SIMILARITY_HASH_IMAGES)) {
-      const src = makeUploadsUrl(rel)
-      if (!src) continue
-      const hx = await computeImageAHashFromUrl(src)
-      if (hx) out.push(hx)
-    }
-    return Array.from(new Set(out)).slice(0, MAX_SIMILARITY_HASH_IMAGES)
-  }, [computeImageAHashFromUrl, makeUploadsUrl])
-
   const startSimilarityCheck = useCallback(async (row) => {
     const id = Number(row?.id || 0)
     if (!id) return
 
     const titleValue = String(row?.nombre || '').trim()
     const archiveName = `${titleValue || `batch-${id}`}.rar`
-    const sizeB = Math.max(0, Math.floor(Number(row?.pesoMB || 0) * 1024 * 1024))
 
     setSimilarityMap((m) => ({
       ...(m || {}),
       [id]: {
         ...(m?.[id] || {}),
         status: 'loading',
-        phase: 'Analizando imágenes del item…',
+        phase: 'Buscando similares…',
         items: [],
         error: '',
         imageHashCount: 0,
@@ -402,31 +336,7 @@ export default function BatchTable() {
     }))
 
     try {
-      const imageHashes = await buildRowImageHashes(row)
-
-      const categoryIds = Array.isArray(row?.categorias)
-        ? row.categorias.map((c) => Number(c?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
-        : []
-      const categorySlugs = Array.isArray(row?.categorias)
-        ? row.categorias
-            .flatMap((c) => [String(c?.slug || '').trim(), String(c?.slugEn || '').trim()])
-            .filter(Boolean)
-        : []
-      const tags = Array.isArray(row?.tags)
-        ? row.tags.map((t) => String(t?.slug || t?.name || t?.es || t?.nameEn || t?.en || t || '').trim()).filter(Boolean)
-        : []
-
-      setSimilarityMap((m) => ({
-        ...(m || {}),
-        [id]: {
-          ...(m?.[id] || {}),
-          status: 'loading',
-          imageHashCount: imageHashes.length,
-          phase: 'Buscando coincidencias por nombre + imagen…',
-        },
-      }))
-
-      const imagePath = Array.isArray(row?.imagenes) && row.imagenes.length > 0 ? row.imagenes[0] : null;
+      const imagePath = Array.isArray(row?.imagenes) && row.imagenes.length > 0 ? row.imagenes[0] : null
 
       const payload = {
         imagePath: imagePath,
@@ -446,7 +356,7 @@ export default function BatchTable() {
           error: '',
           phase: 'Completado',
           query: String(data?.query || archiveName),
-          imageHashCount: Number(data?.imageHashCount || imageHashes.length || 0),
+          imageHashCount: 0,
         },
       }))
     } catch (e) {
@@ -462,7 +372,7 @@ export default function BatchTable() {
         },
       }))
     }
-  }, [buildRowImageHashes, http])
+  }, [http])
 
   const handleOpenSimilar = useCallback((row) => {
     if (!row?.id) return

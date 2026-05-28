@@ -95,7 +95,7 @@ export default function SimilaritySidebar({
 
           {sidebarSimilarity?.status === 'done' && (
             <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
-              {(sidebarSimilarity?.items || []).length} encontrados · hashes usados: {Number(sidebarSimilarity?.imageHashCount || 0)}
+              {(sidebarSimilarity?.items || []).length} encontrados • Búsqueda Multimodal
             </Typography>
           )}
 
