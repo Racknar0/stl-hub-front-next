@@ -3,7 +3,7 @@
 // ║ Estado central, hooks, callbacks y composición de sub-componentes  ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 'use client'
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Box, Dialog, Snackbar, Alert, Typography, Button, IconButton, Tooltip } from '@mui/material'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
@@ -86,6 +86,12 @@ export default function BatchTable() {
   const [similarityMap, setSimilarityMap] = useState({})
   const http = useMemo(() => new HttpService(), [])
 
+  // ── DELETE FROM SIDEBAR: queue + alerts ──
+  const [deletingAssetIds, setDeletingAssetIds] = useState(new Set())
+  const [deleteAlerts, setDeleteAlerts] = useState([])
+  const deleteQueueRef = useRef([])
+  const deleteProcessingRef = useRef(false)
+
   const uploadsBase = useMemo(() => {
     return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
   }, [])
@@ -93,6 +99,101 @@ export default function BatchTable() {
   const sidebarQueueItem = rows.find(r => r.id === similaritySelectedId)
   const sidebarSimilarity = similarityMap[similaritySelectedId]
   const toggleSearchSidebarSide = () => setSearchSidebarSide(p => p==='right' ? 'left' : 'right')
+
+  // ── DELETE FROM SIDEBAR: handler + queue processor ──
+  const processDeleteQueue = useCallback(async () => {
+    if (deleteProcessingRef.current) return
+    deleteProcessingRef.current = true
+
+    while (deleteQueueRef.current.length > 0) {
+      const { assetId, label } = deleteQueueRef.current[0]
+      const alertId = `del-${assetId}-${Date.now()}`
+
+      // Show "Eliminando..." alert
+      setDeleteAlerts(prev => [
+        ...prev,
+        { id: alertId, assetId, label, status: 'deleting' }
+      ])
+
+      let result = { dbDeleted: false, megaDeleted: false, error: false }
+      try {
+        const res = await http.deleteData('/assets', assetId)
+        result.dbDeleted = !!res?.data?.dbDeleted
+        result.megaDeleted = !!res?.data?.megaDeleted
+      } catch (e) {
+        console.error('[DELETE_SIDEBAR] Error deleting asset', assetId, e)
+        result.error = true
+      }
+
+      // Remove from deleting set
+      setDeletingAssetIds(prev => {
+        const next = new Set(prev)
+        next.delete(assetId)
+        return next
+      })
+
+      // Remove from similarity results
+      if (result.dbDeleted) {
+        setSimilarityMap(prev => {
+          const next = { ...prev }
+          for (const key of Object.keys(next)) {
+            if (next[key]?.items) {
+              next[key] = {
+                ...next[key],
+                items: next[key].items.filter(item => item.id !== assetId)
+              }
+            }
+          }
+          return next
+        })
+      }
+
+      // Update alert to final status
+      const finalStatus = result.error
+        ? 'error'
+        : (result.dbDeleted && result.megaDeleted)
+          ? 'success'
+          : 'partial'
+
+      setDeleteAlerts(prev =>
+        prev.map(a => a.id === alertId ? { ...a, status: finalStatus } : a)
+      )
+
+      // Auto-dismiss final alerts after 4s
+      setTimeout(() => {
+        setDeleteAlerts(prev => prev.filter(a => a.id !== alertId))
+      }, 4000)
+
+      // Remove processed item from queue
+      deleteQueueRef.current.shift()
+    }
+
+    deleteProcessingRef.current = false
+  }, [http])
+
+  const handleDeleteFromSimilar = useCallback((assetId, label) => {
+    // Add to deleting set (disables button)
+    setDeletingAssetIds(prev => new Set(prev).add(assetId))
+
+    // Enqueue
+    deleteQueueRef.current.push({ assetId, label })
+
+    // Update queue count in active alert
+    setDeleteAlerts(prev => {
+      const active = prev.find(a => a.status === 'deleting')
+      if (active) {
+        return prev.map(a =>
+          a.status === 'deleting'
+            ? { ...a, queueCount: deleteQueueRef.current.length }
+            : a
+        )
+      }
+      return prev
+    })
+
+    // Kick processor
+    void processDeleteQueue()
+  }, [processDeleteQueue])
   const compactActionBtnSx = {
     borderRadius: 2,
     textTransform: 'none',
@@ -2177,7 +2278,94 @@ export default function BatchTable() {
         startSimilarityCheck={startSimilarityCheck}
         makeUploadsUrl={makeUploadsUrl}
         setPreviewImage={setPreviewImage}
+        onDeleteAsset={handleDeleteFromSimilar}
+        deletingAssetIds={deletingAssetIds}
       />
+
+      {/* ═══════════ DELETE SIDEBAR ALERTS ═══════════ */}
+      {deleteAlerts.length > 0 && (
+        <Box sx={{
+          position: 'fixed',
+          top: 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.75,
+          maxWidth: 480,
+          width: '90vw',
+        }}>
+          {deleteAlerts.map((alert) => {
+            const isDeleting = alert.status === 'deleting'
+            const isSuccess = alert.status === 'success'
+            const isPartial = alert.status === 'partial'
+            const isError = alert.status === 'error'
+
+            const bgColor = isDeleting
+              ? 'rgba(59, 130, 246, 0.95)'
+              : isSuccess
+                ? 'rgba(34, 197, 94, 0.95)'
+                : isPartial
+                  ? 'rgba(245, 158, 11, 0.95)'
+                  : 'rgba(239, 68, 68, 0.95)'
+
+            const queueText = isDeleting && deleteQueueRef.current.length > 1
+              ? ` (${deleteQueueRef.current.length} en cola)`
+              : ''
+
+            const message = isDeleting
+              ? `Eliminando "${alert.label}"...${queueText}`
+              : isSuccess
+                ? `Eliminado "${alert.label}" ✓`
+                : isPartial
+                  ? `Eliminado "${alert.label}" (solo BD)`
+                  : `Error eliminando "${alert.label}"`
+
+            return (
+              <Box
+                key={alert.id}
+                sx={{
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  background: bgColor,
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                  backdropFilter: 'blur(8px)',
+                  animation: isDeleting ? 'none' : 'fadeIn 0.3s ease',
+                }}
+              >
+                {isDeleting && (
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                      flexShrink: 0,
+                      '@keyframes spin': {
+                        from: { transform: 'rotate(0deg)' },
+                        to: { transform: 'rotate(360deg)' },
+                      },
+                    }}
+                  />
+                )}
+                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {message}
+                </Box>
+              </Box>
+            )
+          })}
+        </Box>
+      )}
 
       {/* ═══════════ TOAST NOTIFICATIONS ═══════════ */}
       <Snackbar

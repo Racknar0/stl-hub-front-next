@@ -4,6 +4,7 @@
 // ║  - Muestra el ítem borrador actual + sus imágenes           ║
 // ║  - Resultados de assets similares encontrados               ║
 // ║  - Botones: cambiar lado, cerrar, revalidar                 ║
+// ║  - Botón eliminar asset similar (🗑️)                        ║
 // ╚════════════════════════════════════════════════════════════╝
 'use client'
 
@@ -11,6 +12,7 @@ import React from 'react'
 import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, Tooltip } from '@mui/material'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CloseIcon from '@mui/icons-material/Close'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import RightSidebar from '../../assets/componentes/RightSidebar'
 import { RIGHT_SIDEBAR_WIDTH } from '../constants'
 
@@ -26,6 +28,8 @@ export default function SimilaritySidebar({
   startSimilarityCheck,
   makeUploadsUrl,
   setPreviewImage,
+  onDeleteAsset,
+  deletingAssetIds,
 }) {
   return (
     <RightSidebar
@@ -107,22 +111,45 @@ export default function SimilaritySidebar({
               {(sidebarSimilarity?.items || []).map((a) => {
                 const scoreValue = Number(a?._score || a?._similarity?.score || 0);
                 const percent = Math.round(scoreValue * 100);
+                const isDeleting = deletingAssetIds?.has?.(a.id) || false;
                 return (
-                  <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.45)', background: 'rgba(255,255,255,0.03)' }}>
+                  <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.45)', background: 'rgba(255,255,255,0.03)', opacity: isDeleting ? 0.45 : 1, transition: 'opacity 0.3s ease' }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                       <Box sx={{ flex: 1, pr: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{a.title}</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.2, wordBreak: 'break-word', fontSize: '0.65rem' }}>{a.archiveName}</Typography>
                       </Box>
-                      <Box sx={{
-                        px: 0.8, py: 0.3, borderRadius: 1.5,
-                        background: percent > 85 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                        border: `1px solid ${percent > 85 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
-                        color: percent > 85 ? '#86efac' : '#fde047',
-                        fontWeight: 800, fontSize: '0.75rem', flexShrink: 0
-                      }}>
-                        {percent}%
-                      </Box>
+                      <Stack direction="row" alignItems="center" spacing={0.4} sx={{ flexShrink: 0 }}>
+                        <Box sx={{
+                          px: 0.8, py: 0.3, borderRadius: 1.5,
+                          background: percent > 85 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                          border: `1px solid ${percent > 85 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
+                          color: percent > 85 ? '#86efac' : '#fde047',
+                          fontWeight: 800, fontSize: '0.75rem',
+                        }}>
+                          {percent}%
+                        </Box>
+                        <Tooltip title={isDeleting ? 'Eliminando…' : 'Eliminar asset'}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              disabled={isDeleting}
+                              onClick={() => onDeleteAsset?.(a.id, a.title || a.archiveName || `ID ${a.id}`)}
+                              sx={{
+                                color: '#ef4444',
+                                p: 0.4,
+                                '&:hover': { background: 'rgba(239, 68, 68, 0.15)' },
+                                '&.Mui-disabled': { color: 'rgba(239, 68, 68, 0.3)' },
+                              }}
+                            >
+                              {isDeleting
+                                ? <CircularProgress size={16} sx={{ color: '#ef4444' }} />
+                                : <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                              }
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
                     </Stack>
                     
                     {(a.images || []).length > 0 && (
