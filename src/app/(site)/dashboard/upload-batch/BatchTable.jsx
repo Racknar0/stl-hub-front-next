@@ -84,6 +84,10 @@ export default function BatchTable() {
   const [searchSidebarSide, setSearchSidebarSide] = useState('right')
   const [similaritySelectedId, setSimilaritySelectedId] = useState(null)
   const [similarityMap, setSimilarityMap] = useState({})
+  const similarityMapRef = React.useRef({})
+  React.useEffect(() => {
+    similarityMapRef.current = similarityMap
+  }, [similarityMap])
   const http = useMemo(() => new HttpService(), [])
 
   // ── DELETE FROM SIDEBAR: queue + alerts ──
@@ -301,7 +305,8 @@ export default function BatchTable() {
     count: visibleEntries.length,
     getScrollElement: () => reviewScrollRef.current,
     estimateSize: () => reviewMode ? REVIEW_ROW_HEIGHT : 110,
-    overscan: 5,
+    getItemKey: (index) => visibleEntries[index]?.row?.id ?? index,
+    overscan: 1,
   })
 
   const virtualItems = virtualizer.getVirtualItems()
@@ -319,6 +324,12 @@ export default function BatchTable() {
   const startSimilarityCheck = useCallback(async (row) => {
     const id = Number(row?.id || 0)
     if (!id) return
+
+    // Cache check: Avoid refetching if already done or loading
+    const cached = similarityMapRef.current?.[id]
+    if (cached?.status === 'done' || cached?.status === 'loading') {
+      return
+    }
 
     const titleValue = String(row?.nombre || '').trim()
     const archiveName = `${titleValue || `batch-${id}`}.rar`
@@ -420,6 +431,15 @@ export default function BatchTable() {
     setSimilaritySelectedId(target.id)
     void startSimilarityCheck(target)
     scrollReviewToVisible(safeIndex)
+
+    // Prefetching: background fetch similarity check for the next 5 elements to speed up keyboard review navigation
+    for (let i = 1; i <= 5; i++) {
+      const nextIdx = safeIndex + i
+      if (nextIdx < total) {
+        const nextTarget = visibleEntries[nextIdx]?.row
+        if (nextTarget) void startSimilarityCheck(nextTarget)
+      }
+    }
   }, [visibleEntries, startSimilarityCheck, scrollReviewToVisible])
 
   const moveReviewFocus = useCallback((delta) => {
@@ -1374,28 +1394,38 @@ export default function BatchTable() {
     const row = rows[idx]
     if (!row || !row.id) return
 
+    // Optimistic Update: remove row and shift similarity selected ID immediately
+    const backupRows = [...rows]
+    const backupSimilarityId = similaritySelectedId
+
+    const updated = [...rows]
+    updated.splice(idx, 1)
+    setRows(updated)
+
+    if (Number(similaritySelectedId || 0) === Number(row.id || 0)) {
+      if (nextFocusId > 0) {
+        setSimilaritySelectedId(nextFocusId)
+        const nextRow = updated.find((r) => Number(r?.id || 0) === nextFocusId)
+        if (nextRow) void startSimilarityCheck(nextRow)
+      } else {
+        setSimilaritySelectedId(null)
+      }
+    }
+
     try {
       const res = await http.deleteData('/batch-imports/items', row.id)
       if (res.data?.success) {
         setToast({ open: true, msg: 'Asset eliminado correctamente', type: 'success' })
-        const updated = [...rows]
-        updated.splice(idx, 1)
-        setRows(updated)
-        if (Number(similaritySelectedId || 0) === Number(row.id || 0)) {
-          if (nextFocusId > 0) {
-            setSimilaritySelectedId(nextFocusId)
-            const nextRow = updated.find((r) => Number(r?.id || 0) === nextFocusId)
-            if (nextRow) void startSimilarityCheck(nextRow)
-          } else {
-            setSimilaritySelectedId(null)
-          }
-        }
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
+        setRows(backupRows)
+        setSimilaritySelectedId(backupSimilarityId)
       }
     } catch (e) {
       console.error(e)
       setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
+      setRows(backupRows)
+      setSimilaritySelectedId(backupSimilarityId)
     }
   }
 
