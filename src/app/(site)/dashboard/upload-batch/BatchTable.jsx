@@ -334,7 +334,7 @@ export default function BatchTable() {
     getScrollElement: () => reviewScrollRef.current,
     estimateSize: () => reviewMode ? REVIEW_ROW_HEIGHT : 110,
     getItemKey: (index) => visibleEntries[index]?.row?.id ?? index,
-    overscan: 10,
+    overscan: 7,
   })
 
   const virtualItems = virtualizer.getVirtualItems()
@@ -474,7 +474,7 @@ export default function BatchTable() {
     scrollReviewToVisible(safeIndex)
   }, [visibleEntries, startSimilarityCheck, scrollReviewToVisible])
 
-  // ── Centralized Prefetching: background fetch similarity check for the next 12 elements from the active focused element ──
+  // ── Centralized Prefetching: background fetch similarity check for the next 7 elements from the active focused element ──
   useEffect(() => {
     if (!reviewMode) return
     if (!similaritySelectedId) return
@@ -485,8 +485,8 @@ export default function BatchTable() {
     const safeIndex = visibleEntries.findIndex((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId))
     if (safeIndex < 0) return
 
-    // Warm up the cache for the next 12 elements to ensure instant keyboard navigation
-    for (let i = 1; i <= 12; i++) {
+    // Warm up the cache for the next 7 elements to ensure instant keyboard navigation
+    for (let i = 1; i <= 7; i++) {
       const nextIdx = safeIndex + i
       if (nextIdx < total) {
         const nextTarget = visibleEntries[nextIdx]?.row
