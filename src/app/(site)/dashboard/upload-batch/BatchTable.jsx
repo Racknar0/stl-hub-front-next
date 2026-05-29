@@ -359,6 +359,19 @@ export default function BatchTable() {
       const data = r?.data || {}
       const items = Array.isArray(data?.items) ? data.items : []
 
+      // Warm up the browser cache by prefetching the similarity images
+      for (const item of items) {
+        if (Array.isArray(item?.images)) {
+          for (const imgPath of item.images) {
+            const fullUrl = makeUploadsUrl(imgPath)
+            if (fullUrl) {
+              const prefetchImg = new window.Image()
+              prefetchImg.src = fullUrl
+            }
+          }
+        }
+      }
+
       setSimilarityMap((m) => ({
         ...(m || {}),
         [id]: {
@@ -383,7 +396,7 @@ export default function BatchTable() {
         },
       }))
     }
-  }, [http])
+  }, [http, makeUploadsUrl])
 
   const handleOpenSimilar = useCallback((row) => {
     if (!row?.id) return

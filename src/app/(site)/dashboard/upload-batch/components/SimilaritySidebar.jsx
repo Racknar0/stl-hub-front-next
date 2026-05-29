@@ -161,6 +161,8 @@ export default function SimilaritySidebar({
                             <img
                               key={i}
                               src={safeSrc}
+                              loading="eager"
+                              fetchpriority="high"
                               style={{
                                 width: 75,
                                 height: 75,
