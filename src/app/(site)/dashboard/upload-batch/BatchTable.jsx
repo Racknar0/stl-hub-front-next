@@ -1416,10 +1416,25 @@ export default function BatchTable() {
     // Optimistic Update: remove row and shift similarity selected ID immediately
     const backupRows = [...rows]
     const backupSimilarityId = similaritySelectedId
+    const backupSimilarityMap = similarityMapRef.current
 
     const updated = [...rows]
     updated.splice(idx, 1)
     setRows(updated)
+
+    // Optimistic Similarity Filter: immediately remove the deleted row from all similarity lists in the cache
+    setSimilarityMap(prev => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (next[key]?.items) {
+          next[key] = {
+            ...next[key],
+            items: next[key].items.filter(item => Number(item.id) !== Number(row.id))
+          }
+        }
+      }
+      return next
+    })
 
     if (Number(similaritySelectedId || 0) === Number(row.id || 0)) {
       if (nextFocusId > 0) {
@@ -1439,12 +1454,14 @@ export default function BatchTable() {
         setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
         setRows(backupRows)
         setSimilaritySelectedId(backupSimilarityId)
+        setSimilarityMap(backupSimilarityMap)
       }
     } catch (e) {
       console.error(e)
       setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
       setRows(backupRows)
       setSimilaritySelectedId(backupSimilarityId)
+      setSimilarityMap(backupSimilarityMap)
     }
   }
 
