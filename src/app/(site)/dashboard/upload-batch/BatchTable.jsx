@@ -90,6 +90,9 @@ export default function BatchTable() {
   }, [similarityMap])
   const http = useMemo(() => new HttpService(), [])
 
+  // ── Optimistic delete tracking: prevents fetchQueue polling from reinserting deleted rows ──
+  const optimisticDeletedIdsRef = useRef(new Set())
+
   // ── DELETE FROM SIDEBAR: queue + alerts ──
   const [deletingAssetIds, setDeletingAssetIds] = useState(new Set())
   const [deleteAlerts, setDeleteAlerts] = useState([])
@@ -758,8 +761,14 @@ export default function BatchTable() {
      try {
        const res = await http.getData('/batch-imports')
        if (res.data?.success && res.data?.items) {
+          // Filter out any items that were optimistically deleted and haven't been confirmed yet
+          const pendingDeletes = optimisticDeletedIdsRef.current
+          const filteredItems = pendingDeletes.size > 0
+            ? res.data.items.filter(item => !pendingDeletes.has(Number(item.id)))
+            : res.data.items
+
           setRows(prevRows => {
-             return res.data.items.map(item => {
+             return filteredItems.map(item => {
                const existing = prevRows.find(r => r.id === item.id)
                const estadoDB = mapEstado(item.status)
                const backendRow = mapBackendItemToRow(item)
