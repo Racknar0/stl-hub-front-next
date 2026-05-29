@@ -1108,42 +1108,65 @@ export default function AssetsAdminPage() {
         }
     };
 
-    // Eliminar asset
+    // Eliminar asset (Optimista y en Segundo Plano para evitar bloqueo en borrado masivo)
     const handleDelete = async (asset) => {
         const ok = await confirmAlert(
             'Eliminar STL',
-            `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y se intentará borrar de MEGA.`,
+            `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y de MEGA en segundo plano.`,
             'Sí, eliminar',
             'Cancelar',
             'warning',
         );
         if (!ok) return;
-        try {
-            setLoading(true);
-            const res = await http.deleteData('/assets', asset.id);
-            const { dbDeleted, megaDeleted } = res.data || {};
-            if (dbDeleted && megaDeleted) {
-                await successAlert(
-                    'Eliminado',
-                    'Archivos borrados exitosamente de MEGA y de la base de datos',
+
+        // Guardamos copia de seguridad para revertir si ocurre un error
+        const backupAssets = [...assets];
+        const backupRowCount = rowCount;
+
+        // Optimistic UI: Remover inmediatamente de la vista y actualizar conteo sin bloquear la tabla
+        setAssets((prev) => prev.filter((a) => a.id !== asset.id));
+        setRowCount((prev) => Math.max(0, prev - 1));
+
+        // Notificación flotante (Toast) no intrusiva en la esquina superior derecha
+        void fireAlert({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: `Eliminando "${asset.title}"...`,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+            zIndex: 3000,
+        });
+
+        // Petición al servidor ejecutada en segundo plano
+        http.deleteData('/assets', asset.id)
+            .then((res) => {
+                const { dbDeleted, megaDeleted } = res.data || {};
+                if (dbDeleted) {
+                    void fireAlert({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: megaDeleted 
+                            ? `"${asset.title}" eliminado de MEGA y BD` 
+                            : `"${asset.title}" eliminado de BD (MEGA falló)`,
+                        showConfirmButton: false,
+                        timer: 2000,
+                    });
+                } else {
+                    throw new Error('No se pudo confirmar la eliminación');
+                }
+            })
+            .catch((e) => {
+                // Revertir estado si el borrado real en el servidor falla
+                setAssets(backupAssets);
+                setRowCount(backupRowCount);
+                void errorAlert(
+                    'Error al eliminar',
+                    e?.response?.data?.message || 'Fallo de conexión o servidor al intentar eliminar'
                 );
-            } else if (dbDeleted && !megaDeleted) {
-                await successAlert(
-                    'Parcial',
-                    'Archivos borrados solamente de la base de datos',
-                );
-            } else {
-                await errorAlert('Error', 'No se pudo eliminar el STL');
-            }
-            setRefreshTick((n) => n + 1);
-        } catch (e) {
-            await errorAlert(
-                'Error',
-                e?.response?.data?.message || 'Fallo al eliminar',
-            );
-        } finally {
-            setLoading(false);
-        }
+            });
     };
 
     // Recuperar link MEGA desde BACKUP
