@@ -387,10 +387,11 @@ export default function BatchTable() {
       const data = r?.data || {}
       const items = Array.isArray(data?.items) ? data.items : []
 
-      // Warm up the browser cache by prefetching the similarity images
+      // Warm up the browser cache by prefetching the similarity images (limit to max 4)
       for (const item of items) {
         if (Array.isArray(item?.images)) {
-          for (const imgPath of item.images) {
+          const imagesToPrefetch = item.images.slice(0, 4)
+          for (const imgPath of imagesToPrefetch) {
             const fullUrl = makeUploadsUrl(imgPath)
             if (fullUrl) {
               const prefetchImg = new window.Image()

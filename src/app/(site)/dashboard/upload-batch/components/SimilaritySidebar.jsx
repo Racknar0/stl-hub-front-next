@@ -180,7 +180,7 @@ export default function SimilaritySidebar({
 
                           {(a.images || []).length > 0 && (
                             <Box sx={{ display: 'flex', gap: 0.5, mt: 1, overflowX: 'auto', pb: 0.5 }}>
-                              {(a.images || []).map((src, i) => {
+                              {(a.images || []).slice(0, 4).map((src, i) => {
                                 const safeSrc = makeUploadsUrl(src)
                                 if (!safeSrc) return null
                                 return (
