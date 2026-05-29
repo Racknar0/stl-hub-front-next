@@ -99,7 +99,7 @@ export default function MetaSeoRow({
                     verticalAlign: 'middle',
                     py: 0.75,
                     position: 'relative',
-                    borderLeft: hasAdultos ? '4px solid #ef4444' : '4px solid transparent',
+                    borderLeft: hasAdultos ? '6px solid #ff0000' : '6px solid transparent',
                     borderBottom: metaReviewMode ? '3px solid #1e293b' : undefined,
                     width: 90,
                     minWidth: 90,
