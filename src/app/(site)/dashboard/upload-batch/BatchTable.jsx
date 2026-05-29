@@ -1427,6 +1427,9 @@ export default function BatchTable() {
     const backupSimilarityId = similaritySelectedId
     const backupSimilarityMap = similarityMapRef.current
 
+    // Register this ID so fetchQueue polling won't reinsert it while the DELETE is in flight
+    optimisticDeletedIdsRef.current.add(Number(row.id))
+
     const updated = [...rows]
     updated.splice(idx, 1)
     setRows(updated)
@@ -1457,6 +1460,8 @@ export default function BatchTable() {
 
     try {
       const res = await http.deleteData('/batch-imports/items', row.id)
+      // Unregister from optimistic delete set — backend has confirmed
+      optimisticDeletedIdsRef.current.delete(Number(row.id))
       if (res.data?.success) {
         setToast({ open: true, msg: 'Asset eliminado correctamente', type: 'success' })
       } else {
@@ -1467,6 +1472,8 @@ export default function BatchTable() {
       }
     } catch (e) {
       console.error(e)
+      // Unregister from optimistic delete set — failed, restore everything
+      optimisticDeletedIdsRef.current.delete(Number(row.id))
       setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
       setRows(backupRows)
       setSimilaritySelectedId(backupSimilarityId)
