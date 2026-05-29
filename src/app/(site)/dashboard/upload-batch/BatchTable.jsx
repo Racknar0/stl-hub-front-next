@@ -119,6 +119,9 @@ export default function BatchTable() {
         { id: alertId, assetId, label, status: 'deleting' }
       ])
 
+      // Keep a backup of the similarity map to restore on failure
+      const backupSimilarityMap = similarityMapRef.current
+
       let result = { dbDeleted: false, megaDeleted: false, error: false }
       try {
         const res = await http.deleteData('/assets', assetId)
@@ -136,20 +139,9 @@ export default function BatchTable() {
         return next
       })
 
-      // Remove from similarity results
-      if (result.dbDeleted) {
-        setSimilarityMap(prev => {
-          const next = { ...prev }
-          for (const key of Object.keys(next)) {
-            if (next[key]?.items) {
-              next[key] = {
-                ...next[key],
-                items: next[key].items.filter(item => item.id !== assetId)
-              }
-            }
-          }
-          return next
-        })
+      // If deletion failed, restore the asset to the UI
+      if (result.error || !result.dbDeleted) {
+        setSimilarityMap(backupSimilarityMap)
       }
 
       // Update alert to final status
@@ -178,6 +170,20 @@ export default function BatchTable() {
   const handleDeleteFromSimilar = useCallback((assetId, label) => {
     // Add to deleting set (disables button)
     setDeletingAssetIds(prev => new Set(prev).add(assetId))
+
+    // Optimistic Update: immediately filter out the deleted asset from all lists in similarityMap (0ms)
+    setSimilarityMap(prev => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (next[key]?.items) {
+          next[key] = {
+            ...next[key],
+            items: next[key].items.filter(item => item.id !== assetId)
+          }
+        }
+      }
+      return next
+    })
 
     // Enqueue
     deleteQueueRef.current.push({ assetId, label })
@@ -2226,8 +2232,8 @@ export default function BatchTable() {
         toggleSearchSidebarSide={toggleSearchSidebarSide}
         similaritySelectedId={similaritySelectedId}
         setSimilaritySelectedId={setSimilaritySelectedId}
-        sidebarQueueItem={sidebarQueueItem}
-        sidebarSimilarity={sidebarSimilarity}
+        similarityMap={similarityMap}
+        rows={rows}
         startSimilarityCheck={startSimilarityCheck}
         makeUploadsUrl={makeUploadsUrl}
         setPreviewImage={setPreviewImage}

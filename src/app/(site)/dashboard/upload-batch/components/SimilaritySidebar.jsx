@@ -23,14 +23,16 @@ export default function SimilaritySidebar({
   toggleSearchSidebarSide,
   similaritySelectedId,
   setSimilaritySelectedId,
-  sidebarQueueItem,
-  sidebarSimilarity,
+  similarityMap,
+  rows,
   startSimilarityCheck,
   makeUploadsUrl,
   setPreviewImage,
   onDeleteAsset,
   deletingAssetIds,
 }) {
+  const mapKeys = Object.keys(similarityMap || {})
+
   return (
     <RightSidebar
       side={searchSidebarSide}
@@ -56,138 +58,165 @@ export default function SimilaritySidebar({
         </Stack>
       }
     >
-      {!sidebarQueueItem ? (
+      {!similaritySelectedId ? (
         <Typography variant="body2" sx={{ opacity: 0.8, px: 1 }}>Selecciona un ítem para ver similares.</Typography>
       ) : (
-        <Box sx={{ px: 1 }}>
-          {/* ── Ítem borrador actual ── */}
-          <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem Borrador</Typography>
-          <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
-            {sidebarQueueItem?.nombre || '(sin nombre)'}
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
-            Ítem en foco para búsqueda
-          </Typography>
-
-          <Divider sx={{ my: 1.25, opacity: 0.2 }} />
-
-          {/* ── Resultados de similares ── */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Assets similares</Typography>
-            {sidebarSimilarity?.status === 'loading' && <CircularProgress size={14} />}
-            <Box sx={{ flex: 1 }} />
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => { if (sidebarQueueItem) void startSimilarityCheck(sidebarQueueItem) }}
-              disabled={!sidebarQueueItem || sidebarSimilarity?.status === 'loading'}
-              sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
-            >
-              Revalidar
-            </Button>
-          </Box>
-
-          {sidebarSimilarity?.status === 'loading' && (
-            <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
-              {sidebarSimilarity?.phase || 'Buscando similares…'}
-            </Typography>
-          )}
-
-          {sidebarSimilarity?.status === 'done' && (
-            <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
-              {(sidebarSimilarity?.items || []).length} encontrados • Búsqueda Multimodal
-            </Typography>
-          )}
-
-          {sidebarSimilarity?.status === 'error' && (
-            <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.5 }}>
-              {sidebarSimilarity?.error || 'No se pudo buscar similares'}
-            </Typography>
-          )}
-
-          {/* ── Lista de resultados ── */}
-          {sidebarSimilarity?.status === 'done' && (
-            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(sidebarSimilarity?.items || []).map((a) => {
-                const scoreValue = Number(a?._score || a?._similarity?.score || 0);
-                const percent = Math.round(scoreValue * 100);
-                const isDeleting = deletingAssetIds?.has?.(a.id) || false;
-                return (
-                  <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.45)', background: 'rgba(255,255,255,0.03)', opacity: isDeleting ? 0.45 : 1, transition: 'opacity 0.3s ease' }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                      <Box sx={{ flex: 1, pr: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{a.title}</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.2, wordBreak: 'break-word', fontSize: '0.65rem' }}>{a.archiveName}</Typography>
-                      </Box>
-                      <Stack direction="row" alignItems="center" spacing={0.4} sx={{ flexShrink: 0 }}>
-                        <Box sx={{
-                          px: 0.8, py: 0.3, borderRadius: 1.5,
-                          background: percent > 85 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                          border: `1px solid ${percent > 85 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
-                          color: percent > 85 ? '#86efac' : '#fde047',
-                          fontWeight: 800, fontSize: '0.75rem',
-                        }}>
-                          {percent}%
-                        </Box>
-                        <Tooltip title={isDeleting ? 'Eliminando…' : 'Eliminar asset'}>
-                          <span>
-                            <IconButton
-                              size="small"
-                              disabled={isDeleting}
-                              onClick={() => onDeleteAsset?.(a.id, a.title || a.archiveName || `ID ${a.id}`)}
-                              sx={{
-                                color: '#ef4444',
-                                p: 0.4,
-                                '&:hover': { background: 'rgba(239, 68, 68, 0.15)' },
-                                '&.Mui-disabled': { color: 'rgba(239, 68, 68, 0.3)' },
-                              }}
-                            >
-                              {isDeleting
-                                ? <CircularProgress size={16} sx={{ color: '#ef4444' }} />
-                                : <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                              }
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Stack>
-                    </Stack>
-                    
-                    {(a.images || []).length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 0.5, mt: 1, overflowX: 'auto', pb: 0.5 }}>
-                        {(a.images || []).map((src, i) => {
-                          const safeSrc = makeUploadsUrl(src)
-                          if (!safeSrc) return null
-                          return (
-                            <img
-                              key={i}
-                              src={safeSrc}
-                              loading="eager"
-                              fetchpriority="high"
-                              style={{
-                                width: 75,
-                                height: 75,
-                                objectFit: 'cover',
-                                borderRadius: 6,
-                                border: '1px solid rgba(148,163,184,0.3)',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => setPreviewImage(safeSrc)}
-                            />
-                          )
-                        })}
-                      </Box>
-                    )}
-                  </Box>
-                )
-              })}
+        <Box sx={{ px: 1, position: 'relative' }}>
+          {/* Skeleton indicator if selection exists but is not mapped yet */}
+          {similaritySelectedId && !similarityMap?.[similaritySelectedId] && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+              <CircularProgress size={24} sx={{ mb: 2 }} />
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Buscando similares…</Typography>
             </Box>
           )}
 
-          {sidebarSimilarity?.status === 'done' && (sidebarSimilarity?.items || []).length === 0 && (
-            <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
-              No se encontraron coincidencias.
-            </Typography>
-          )}
+          {/* Keep-Alive Pool of rendered similarity panels */}
+          {mapKeys.map((keyStr) => {
+            const id = Number(keyStr)
+            const isActive = id === Number(similaritySelectedId)
+            const itemSimilarity = similarityMap[id]
+            const queueItem = rows.find(r => r.id === id)
+
+            if (!queueItem || !itemSimilarity) return null
+
+            return (
+              <Box
+                key={id}
+                sx={{
+                  display: isActive ? 'block' : 'none',
+                }}
+              >
+                {/* ── Ítem borrador actual ── */}
+                <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem Borrador</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
+                  {queueItem?.nombre || '(sin nombre)'}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
+                  Ítem en foco para búsqueda
+                </Typography>
+
+                <Divider sx={{ my: 1.25, opacity: 0.2 }} />
+
+                {/* ── Resultados de similares ── */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Assets similares</Typography>
+                  {itemSimilarity?.status === 'loading' && <CircularProgress size={14} />}
+                  <Box sx={{ flex: 1 }} />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => { if (queueItem) void startSimilarityCheck(queueItem) }}
+                    disabled={itemSimilarity?.status === 'loading'}
+                    sx={{ minWidth: 'auto', px: 1, py: 0.25, fontSize: 12, lineHeight: 1.1 }}
+                  >
+                    Revalidar
+                  </Button>
+                </Box>
+
+                {itemSimilarity?.status === 'loading' && (
+                  <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
+                    {itemSimilarity?.phase || 'Buscando similares…'}
+                  </Typography>
+                )}
+
+                {itemSimilarity?.status === 'done' && (
+                  <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
+                    {(itemSimilarity?.items || []).length} encontrados • Búsqueda Multimodal
+                  </Typography>
+                )}
+
+                {itemSimilarity?.status === 'error' && (
+                  <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.5 }}>
+                    {itemSimilarity?.error || 'No se pudo buscar similares'}
+                  </Typography>
+                )}
+
+                {/* ── Lista de resultados ── */}
+                {itemSimilarity?.status === 'done' && (
+                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {(itemSimilarity?.items || []).map((a) => {
+                      const scoreValue = Number(a?._score || a?._similarity?.score || 0);
+                      const percent = Math.round(scoreValue * 100);
+                      const isDeleting = deletingAssetIds?.has?.(a.id) || false;
+                      return (
+                        <Box key={a.id} sx={{ p: 1, borderRadius: 2, border: '1px solid rgba(88, 214, 141, 0.45)', background: 'rgba(255,255,255,0.03)', opacity: isDeleting ? 0.45 : 1, transition: 'opacity 0.3s ease' }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                            <Box sx={{ flex: 1, pr: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{a.title}</Typography>
+                              <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.2, wordBreak: 'break-word', fontSize: '0.65rem' }}>{a.archiveName}</Typography>
+                            </Box>
+                            <Stack direction="row" alignItems="center" spacing={0.4} sx={{ flexShrink: 0 }}>
+                              <Box sx={{
+                                px: 0.8, py: 0.3, borderRadius: 1.5,
+                                background: percent > 85 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                                border: `1px solid ${percent > 85 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
+                                color: percent > 85 ? '#86efac' : '#fde047',
+                                fontWeight: 800, fontSize: '0.75rem',
+                              }}>
+                                {percent}%
+                              </Box>
+                              <Tooltip title={isDeleting ? 'Eliminando…' : 'Eliminar asset'}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    disabled={isDeleting}
+                                    onClick={() => onDeleteAsset?.(a.id, a.title || a.archiveName || `ID ${a.id}`)}
+                                    sx={{
+                                      color: '#ef4444',
+                                      p: 0.4,
+                                      '&:hover': { background: 'rgba(239, 68, 68, 0.15)' },
+                                      '&.Mui-disabled': { color: 'rgba(239, 68, 68, 0.3)' },
+                                    }}
+                                  >
+                                    {isDeleting
+                                      ? <CircularProgress size={16} sx={{ color: '#ef4444' }} />
+                                      : <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                                    }
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </Stack>
+                          </Stack>
+
+                          {(a.images || []).length > 0 && (
+                            <Box sx={{ display: 'flex', gap: 0.5, mt: 1, overflowX: 'auto', pb: 0.5 }}>
+                              {(a.images || []).map((src, i) => {
+                                const safeSrc = makeUploadsUrl(src)
+                                if (!safeSrc) return null
+                                return (
+                                  <img
+                                    key={i}
+                                    src={safeSrc}
+                                    loading="eager"
+                                    fetchpriority="high"
+                                    style={{
+                                      width: 75,
+                                      height: 75,
+                                      objectFit: 'cover',
+                                      borderRadius: 6,
+                                      border: '1px solid rgba(148,163,184,0.3)',
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={() => setPreviewImage(safeSrc)}
+                                  />
+                                )
+                              })}
+                            </Box>
+                          )}
+                        </Box>
+                      )
+                    })}
+                  </Box>
+                )}
+
+                {itemSimilarity?.status === 'done' && (itemSimilarity?.items || []).length === 0 && (
+                  <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
+                    No se encontraron coincidencias.
+                  </Typography>
+                )}
+              </Box>
+            )
+          })}
         </Box>
       )}
     </RightSidebar>
