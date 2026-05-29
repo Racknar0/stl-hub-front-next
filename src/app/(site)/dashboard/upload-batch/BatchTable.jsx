@@ -444,20 +444,14 @@ export default function BatchTable() {
     const ensureVisible = () => {
       const rowEl = el.querySelector(rowSelector)
       if (rowEl?.scrollIntoView) {
-        rowEl.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        rowEl.scrollIntoView({ block: 'center', inline: 'nearest' })
         return
       }
 
       const rowTop = Math.max(0, safeIndex * REVIEW_ROW_HEIGHT)
-      const rowBottom = rowTop + REVIEW_ROW_HEIGHT
-      const viewTop = Number(el.scrollTop || 0)
-      const viewBottom = viewTop + Number(el.clientHeight || REVIEW_VIEWPORT_HEIGHT)
-
-      if (rowTop < viewTop) {
-        el.scrollTop = Math.max(0, rowTop)
-      } else if (rowBottom > viewBottom) {
-        el.scrollTop = Math.max(0, rowBottom - Number(el.clientHeight || REVIEW_VIEWPORT_HEIGHT))
-      }
+      const clientHeight = Number(el.clientHeight || REVIEW_VIEWPORT_HEIGHT)
+      const targetScroll = Math.max(0, rowTop - (clientHeight / 2) + (REVIEW_ROW_HEIGHT / 2))
+      el.scrollTop = targetScroll
     }
 
     ensureVisible()
