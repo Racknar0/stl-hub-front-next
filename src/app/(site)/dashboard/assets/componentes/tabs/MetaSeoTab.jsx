@@ -91,6 +91,7 @@ export default function MetaSeoTab({
     setMetaImagePreview,
     onQuickAdultos,
     handleGenerateMetaAll,
+    markingAdultIds = new Set(),
 }) {
     const [showReviewControls, setShowReviewControls] = useState(false);
     const content = (
@@ -419,6 +420,7 @@ export default function MetaSeoTab({
                                     onSaveRow={handleSaveMetaRow}
                                     onDeleteAsset={onDeleteAsset}
                                     onQuickAdultos={onQuickAdultos}
+                                    markingAdultIds={markingAdultIds}
                                     onGenerateMetaAll={handleGenerateMetaAll}
                                 />
                             );

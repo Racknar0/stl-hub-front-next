@@ -124,6 +124,7 @@ export default function AssetsAdminPage() {
     const [metaDraftMap, setMetaDraftMap] = useState({});
     const [metaSelectedMap, setMetaSelectedMap] = useState({});
     const [metaBusy, setMetaBusy] = useState(false);
+    const [markingAdultIds, setMarkingAdultIds] = useState(new Set());
     const [metaImagePreview, setMetaImagePreview] = useState(null);
     const [metaExpandedImagesMap, setMetaExpandedImagesMap] = useState({});
     const [metaProfilesOpen, setMetaProfilesOpen] = useState(false);
@@ -1861,7 +1862,10 @@ export default function AssetsAdminPage() {
     const handleQuickAdultos = async (assetId) => {
         const id = Number(assetId);
         if (!Number.isFinite(id) || id <= 0) return;
-        setMetaBusy(true);
+        
+        // Agregar a la lista local de procesamiento
+        setMarkingAdultIds(prev => new Set([...prev, id]));
+        
         try {
             const row = findAssetInAllSources(id);
             const currentCategories = Array.isArray(row?.categories) ? row.categories : [];
@@ -1927,7 +1931,8 @@ export default function AssetsAdminPage() {
                 );
             }
 
-            await fireAlert({
+            // Disparar toast de éxito sin bloquear el hilo principal (no await)
+            void fireAlert({
                 toast: true,
                 position: 'top',
                 icon: 'success',
@@ -1942,7 +1947,12 @@ export default function AssetsAdminPage() {
             console.error('Error al marcar adultos:', e);
             await errorAlert('Error', e?.response?.data?.message || 'No se pudo marcar como adultos');
         } finally {
-            setMetaBusy(false);
+            // Quitar de la lista local de procesamiento
+            setMarkingAdultIds(prev => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
         }
     };
 
@@ -2353,6 +2363,7 @@ export default function AssetsAdminPage() {
                         handleGenerateSingleDescription
                     }
                     onQuickAdultos={handleQuickAdultos}
+                    markingAdultIds={markingAdultIds}
                     handleGenerateMetaAll={handleGenerateMetaAll}
                     handleSaveMetaRow={handleSaveMetaRow}
                     onDeleteAsset={handleDelete}

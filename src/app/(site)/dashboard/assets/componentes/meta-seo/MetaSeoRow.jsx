@@ -6,6 +6,7 @@ import {
     Box,
     Checkbox,
     Chip,
+    CircularProgress,
     IconButton,
     Stack,
     TableCell,
@@ -57,6 +58,7 @@ export default function MetaSeoRow({
     onSaveRow,
     onDeleteAsset,
     onQuickAdultos,
+    markingAdultIds = new Set(),
     onGenerateMetaAll,
     row,
 }) {
@@ -217,7 +219,7 @@ export default function MetaSeoRow({
                             <IconButton
                                 size="small"
                                 onClick={() => onQuickAdultos(id)}
-                                disabled={metaBusy || loading || hasAdultos}
+                                disabled={(markingAdultIds instanceof Set && markingAdultIds.has(id)) || loading || hasAdultos}
                                 sx={{
                                     border: '1px solid',
                                     borderColor: 'divider',
@@ -225,7 +227,11 @@ export default function MetaSeoRow({
                                     color: hasAdultos ? 'text.disabled' : '#eab308',
                                 }}
                             >
-                                <ExplicitIcon fontSize="small" />
+                                {(markingAdultIds instanceof Set && markingAdultIds.has(id)) ? (
+                                    <CircularProgress size={18} sx={{ color: '#eab308' }} />
+                                ) : (
+                                    <ExplicitIcon fontSize="small" />
+                                )}
                             </IconButton>
                         </span>
                     </Tooltip>
