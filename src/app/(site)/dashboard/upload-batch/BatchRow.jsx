@@ -229,7 +229,7 @@ export default function BatchRow({
                             <span>
                                 <IconButton
                                     size="small"
-                                    onClick={() => onSaveRow(idx, true)}
+                                    onClick={() => onSaveRow(row.id, true)}
                                     disabled={isOk || isProcesso}
                                     sx={{
                                         border: '1px solid',
@@ -248,7 +248,7 @@ export default function BatchRow({
                             <span>
                                 <IconButton
                                     size="small"
-                                    onClick={() => onGenerateSingleDescription(idx)}
+                                    onClick={() => onGenerateSingleDescription(row.id)}
                                     disabled={isOk || isProcesso}
                                     sx={{
                                         border: '1px solid',
@@ -267,7 +267,7 @@ export default function BatchRow({
                             <span>
                                 <IconButton
                                     size="small"
-                                    onClick={() => onQuickAdultos(idx)}
+                                    onClick={() => onQuickAdultos(row.id)}
                                     disabled={isOk || isProcesso || hasAdultos}
                                     sx={{
                                         border: '1px solid',
@@ -285,7 +285,7 @@ export default function BatchRow({
                         <Tooltip title="Eliminar borrador">
                             <IconButton
                                 color="error"
-                                onClick={() => onRemoverFila(idx)}
+                                onClick={() => onRemoverFila(row.id)}
                                 size="small"
                                 sx={{ p: 0.4 }}
                             >
@@ -326,8 +326,8 @@ export default function BatchRow({
                                 fullWidth
                                 value={row.nombre}
                                 placeholder="Nombre ES"
-                                onChange={(e) => onNombreChange(idx, e.target.value)}
-                                onBlur={() => onSaveRow(idx)}
+                                onChange={(e) => onNombreChange(row.id, e.target.value)}
+                                onBlur={() => onSaveRow(row.id)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     bgcolor: 'rgba(30, 41, 59, 0.3)',
@@ -343,8 +343,8 @@ export default function BatchRow({
                                 fullWidth
                                 value={row.nombreEn || ''}
                                 placeholder="Name EN"
-                                onChange={(e) => onNombreEnChange(idx, e.target.value)}
-                                onBlur={() => onSaveRow(idx)}
+                                onChange={(e) => onNombreEnChange(row.id, e.target.value)}
+                                onBlur={() => onSaveRow(row.id)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     bgcolor: 'rgba(30, 41, 59, 0.3)',
@@ -431,7 +431,7 @@ export default function BatchRow({
                                                         <Tooltip title="Poner de primera">
                                                             <span>
                                                                 <IconButton size="small"
-                                                                    onClick={(e) => { e.stopPropagation(); onSetPrimaryImage?.(idx, i); }}
+                                                                    onClick={(e) => { e.stopPropagation(); onSetPrimaryImage?.(row.id, i); }}
                                                                     disabled={isOk || isProcesso || isPrimary}
                                                                     sx={{ bgcolor: 'rgba(2,6,23,0.68)', color: '#fff', '&:hover': { bgcolor: 'rgba(15,23,42,0.9)' } }}
                                                                 >
@@ -444,7 +444,7 @@ export default function BatchRow({
                                                         <Tooltip title="Eliminar imagen">
                                                             <span>
                                                                 <IconButton size="small"
-                                                                    onClick={(e) => { e.stopPropagation(); onDeleteImage?.(idx, i); }}
+                                                                    onClick={(e) => { e.stopPropagation(); onDeleteImage?.(row.id, i); }}
                                                                     disabled={isOk || isProcesso}
                                                                     sx={{ bgcolor: 'rgba(127,29,29,0.78)', color: '#fff', '&:hover': { bgcolor: 'rgba(153,27,27,0.95)' } }}
                                                                 >
@@ -481,7 +481,7 @@ export default function BatchRow({
                                                 : []
                                         }
                                         disabled={isOk || isProcesso}
-                                        onChange={(_, v) => onCategoriasChange(idx, v)}
+                                        onChange={(_, v) => onCategoriasChange(row.id, v)}
                                         renderTags={(value, getTagProps) =>
                                             value.map((option, index) => {
                                                 const { key, ...tagProps } = getTagProps({
@@ -563,7 +563,7 @@ export default function BatchRow({
                                         <IconButton
                                             size="small"
                                             sx={{ ml: 0.5, color: '#4fc3f7' }}
-                                            onClick={() => onOpenCreateModal('cat', idx)}
+                                            onClick={() => onOpenCreateModal('cat', row.id)}
                                         >
                                             <AddIcon fontSize="small" />
                                         </IconButton>
@@ -588,7 +588,7 @@ export default function BatchRow({
                                         }
                                         value={Array.isArray(row.tags) ? row.tags : []}
                                         disabled={isOk || isProcesso}
-                                        onChange={(_, v) => onTagsChange(idx, v)}
+                                        onChange={(_, v) => onTagsChange(row.id, v)}
                                         renderTags={(value, getTagProps) =>
                                             value.map((option, index) => {
                                                 const { key, ...tagProps } = getTagProps({
@@ -680,7 +680,7 @@ export default function BatchRow({
                                         <IconButton
                                             size="small"
                                             sx={{ ml: 0.5, color: '#4fc3f7' }}
-                                            onClick={() => onOpenCreateModal('tag', idx)}
+                                            onClick={() => onOpenCreateModal('tag', row.id)}
                                         >
                                             <AddIcon fontSize="small" />
                                         </IconButton>
@@ -714,8 +714,8 @@ export default function BatchRow({
                         fullWidth
                         multiline
                         rows={6}
-                        onChange={(e) => onDescriptionChange(idx, e.target.value)}
-                        onBlur={() => onSaveRow(idx)}
+                        onChange={(e) => onDescriptionChange(row.id, e.target.value)}
+                        onBlur={() => onSaveRow(row.id)}
                         variant="outlined"
                         disabled={isOk || isProcesso}
                         sx={{
@@ -751,8 +751,8 @@ export default function BatchRow({
                         fullWidth
                         multiline
                         rows={6}
-                        onChange={(e) => onDescriptionEnChange(idx, e.target.value)}
-                        onBlur={() => onSaveRow(idx)}
+                        onChange={(e) => onDescriptionEnChange(row.id, e.target.value)}
+                        onBlur={() => onSaveRow(row.id)}
                         variant="outlined"
                         disabled={isOk || isProcesso}
                         sx={{
@@ -862,7 +862,7 @@ export default function BatchRow({
                         <span>
                             <IconButton
                                 size="small"
-                                onClick={() => onSaveRow(idx, true)}
+                                onClick={() => onSaveRow(row.id, true)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     border: '1px solid',
@@ -881,7 +881,7 @@ export default function BatchRow({
                         <span>
                             <IconButton
                                 size="small"
-                                onClick={() => onGenerateSingleDescription(idx)}
+                                onClick={() => onGenerateSingleDescription(row.id)}
                                 disabled={isOk || isProcesso}
                                 sx={{
                                     border: '1px solid',
@@ -900,7 +900,7 @@ export default function BatchRow({
                         <span>
                             <IconButton
                                 size="small"
-                                onClick={() => onQuickAdultos(idx)}
+                                onClick={() => onQuickAdultos(row.id)}
                                 disabled={isOk || isProcesso || hasAdultos}
                                 sx={{
                                     border: '1px solid',
@@ -918,7 +918,7 @@ export default function BatchRow({
                     <Tooltip title="Eliminar borrador">
                         <IconButton
                             color="error"
-                            onClick={() => onRemoverFila(idx)}
+                            onClick={() => onRemoverFila(row.id)}
                             size="small"
                             sx={{ p: 0.4 }}
                         >
@@ -999,9 +999,9 @@ export default function BatchRow({
                             value={row.nombre}
                             size="small"
                             onChange={(e) =>
-                                onNombreChange(idx, e.target.value)
+                                onNombreChange(row.id, e.target.value)
                             }
-                            onBlur={() => onSaveRow(idx)}
+                            onBlur={() => onSaveRow(row.id)}
                             variant="standard"
                             fullWidth
                             InputProps={{
@@ -1040,9 +1040,9 @@ export default function BatchRow({
                             value={row.nombreEn || ''}
                             size="small"
                             onChange={(e) =>
-                                onNombreEnChange(idx, e.target.value)
+                                onNombreEnChange(row.id, e.target.value)
                             }
-                            onBlur={() => onSaveRow(idx)}
+                            onBlur={() => onSaveRow(row.id)}
                             variant="standard"
                             fullWidth
                             InputProps={{
@@ -1084,7 +1084,7 @@ export default function BatchRow({
                                 getOptionLabel={(o) => o.name || o.slug || ''}
                                 value={row.categorias}
                                 disabled={isOk || isProcesso}
-                                onChange={(_, v) => onCategoriasChange(idx, v)}
+                                onChange={(_, v) => onCategoriasChange(row.id, v)}
                                 renderTags={(value, getTagProps) =>
                                     value.map((option, index) => {
                                         const { key, ...tagProps } =
@@ -1098,19 +1098,20 @@ export default function BatchRow({
                                                 size="small"
                                                 {...tagProps}
                                                 sx={{
-                                                    color: '#111827',
-                                                    backgroundColor: '#d8bb00',
-                                                    border: '1px solid rgba(148,163,184,0.52)',
-                                                    fontWeight: 400,
+                                                    height: 22,
+                                                    bgcolor: 'rgba(234, 179, 8, 0.16)',
+                                                    border: '1px solid rgba(234, 179, 8, 0.35)',
+                                                    color: '#fef08a',
                                                     '& .MuiChip-label': {
-                                                        px: 0.75,
+                                                        fontSize: 11,
+                                                        px: 0.8,
                                                     },
                                                     '& .MuiChip-deleteIcon': {
-                                                        color: '#111827',
-                                                    },
-                                                    '&.Mui-disabled': {
-                                                        opacity: 1,
-                                                        color: '#111827',
+                                                        color: '#facc15',
+                                                        fontSize: 14,
+                                                        '&:hover': {
+                                                            color: '#f43f5e',
+                                                        },
                                                     },
                                                 }}
                                             />
@@ -1120,16 +1121,18 @@ export default function BatchRow({
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
+                                        placeholder="Categorías (Escribe para buscar)"
                                         size="small"
-                                        placeholder={
-                                            row.categorias.length === 0
-                                                ? 'Categorías...'
-                                                : ''
-                                        }
                                         variant="standard"
                                         sx={{
-                                            '& input': { color: primaryText },
-                                            '& input::placeholder': {
+                                            '& .MuiInput-underline:before': {
+                                                display: 'none',
+                                            },
+                                            '& .MuiInput-underline:after': {
+                                                display: 'none',
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                fontSize: '11px',
                                                 color: secondaryText,
                                                 opacity: 1,
                                             },
@@ -1139,8 +1142,8 @@ export default function BatchRow({
                                 sx={{
                                     flex: 1,
                                     '& .MuiInputBase-root': {
-                                        maxHeight: 60,
-                                        minHeight: 60,
+                                        maxHeight: 90,
+                                        minHeight: 36,
                                         overflowY: 'auto',
                                         overflowX: 'hidden',
                                         display: 'flex',
@@ -1166,7 +1169,7 @@ export default function BatchRow({
                                     size="small"
                                     sx={{ ml: 0.5, color: '#4fc3f7' }}
                                     onClick={() =>
-                                        onOpenCreateModal('cat', idx)
+                                        onOpenCreateModal('cat', row.id)
                                     }
                                 >
                                     <AddIcon fontSize="small" />
@@ -1199,7 +1202,7 @@ export default function BatchRow({
                                 }
                                 value={row.tags}
                                 disabled={isOk || isProcesso}
-                                onChange={(_, v) => onTagsChange(idx, v)}
+                                onChange={(_, v) => onTagsChange(row.id, v)}
                                 renderTags={(value, getTagProps) =>
                                     value.map((option, index) => {
                                         const { key, ...tagProps } =
@@ -1289,7 +1292,7 @@ export default function BatchRow({
                                     size="small"
                                     sx={{ ml: 0.5, color: '#4fc3f7' }}
                                     onClick={() =>
-                                        onOpenCreateModal('tag', idx)
+                                        onOpenCreateModal('tag', row.id)
                                     }
                                 >
                                     <AddIcon fontSize="small" />
@@ -1329,8 +1332,8 @@ export default function BatchRow({
                     multiline
                     minRows={2}
                     maxRows={4}
-                    onChange={(e) => onDescriptionChange(idx, e.target.value)}
-                    onBlur={() => onSaveRow(idx)}
+                    onChange={(e) => onDescriptionChange(row.id, e.target.value)}
+                    onBlur={() => onSaveRow(row.id)}
                     variant="standard"
                     InputProps={{
                         disableUnderline: isOk || isProcesso,
@@ -1374,8 +1377,8 @@ export default function BatchRow({
                     multiline
                     minRows={2}
                     maxRows={4}
-                    onChange={(e) => onDescriptionEnChange(idx, e.target.value)}
-                    onBlur={() => onSaveRow(idx)}
+                    onChange={(e) => onDescriptionEnChange(row.id, e.target.value)}
+                    onBlur={() => onSaveRow(row.id)}
                     variant="standard"
                     InputProps={{
                         disableUnderline: isOk || isProcesso,
@@ -1413,7 +1416,7 @@ export default function BatchRow({
                             const selectedAcc = cuentas.find(c => String(c.id) === String(value));
                             return selectedAcc ? selectedAcc.alias : 'Cuenta...';
                         }}
-                        onChange={(e) => onCuentaChange(idx, e.target.value)}
+                        onChange={(e) => onCuentaChange(row.id, e.target.value)}
                         size="small"
                         variant="outlined"
                         fullWidth
@@ -1456,7 +1459,7 @@ export default function BatchRow({
                         variant="outlined"
                         size="small"
                         color="secondary"
-                        onClick={() => onOpenProfiles(idx)}
+                        onClick={() => onOpenProfiles(row.id)}
                         disabled={isOk || isProcesso}
                         fullWidth
                         sx={{

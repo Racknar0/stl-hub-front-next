@@ -68,7 +68,7 @@ export default function BatchTable() {
   const scanTrackingSinceRef = React.useRef(0)
 
   const [profilesModalOpen, setProfilesModalOpen] = useState(false)
-  const [selectedRowIdxPerfil, setSelectedRowIdxPerfil] = useState(null)
+  const [selectedRowIdPerfil, setSelectedRowIdPerfil] = useState(null)
 
   const [previewImage, setPreviewImage] = useState(null)
   const [watchBatchRun, setWatchBatchRun] = useState({ active: false, trackedIds: [], sawInFlight: false })
@@ -89,6 +89,17 @@ export default function BatchTable() {
     similarityMapRef.current = similarityMap
   }, [similarityMap])
   const http = useMemo(() => new HttpService(), [])
+
+  // ── Always-fresh ref to rows for use in async/callback functions ──
+  const rowsRef = useRef(rows)
+  React.useEffect(() => { rowsRef.current = rows }, [rows])
+
+  // ── Always-fresh refs for similarity selection and visible entries to prevent race conditions ──
+  const similaritySelectedIdRef = useRef(similaritySelectedId)
+  React.useEffect(() => { similaritySelectedIdRef.current = similaritySelectedId }, [similaritySelectedId])
+
+  const visibleEntriesRef = useRef([])
+  // We will update visibleEntriesRef in useEffect after it is defined, or sync it whenever visibleEntries changes.
 
   // ── Optimistic delete tracking: prevents fetchQueue polling from reinserting deleted rows ──
   const optimisticDeletedIdsRef = useRef(new Set())
@@ -185,6 +196,7 @@ export default function BatchTable() {
           }
         }
       }
+      similarityMapRef.current = next // Synchronously update ref
       return next
     })
 
@@ -309,6 +321,10 @@ export default function BatchTable() {
       .map((row, visibleIndex) => ({ row, visibleIndex, rowIndex: Number(rowIndexById.get(Number(row?.id || 0))) }))
       .filter((entry) => Number.isFinite(entry.rowIndex) && entry.rowIndex >= 0)
   }, [visibleRows, rowIndexById])
+
+  React.useEffect(() => {
+    visibleEntriesRef.current = visibleEntries
+  }, [visibleEntries])
 
   const virtualizer = useVirtualizer({
     count: visibleEntries.length,
@@ -484,6 +500,8 @@ export default function BatchTable() {
   useEffect(() => {
     if (!reviewMode) return
     if (!similaritySelectedId) return
+    if (optimisticDeletedIdsRef.current.has(Number(similaritySelectedId))) return
+
     const exists = visibleEntries.some((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId || 0))
     if (!exists) setSimilaritySelectedId(null)
   }, [reviewMode, similaritySelectedId, visibleEntries])
@@ -503,7 +521,7 @@ export default function BatchTable() {
 
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createModalType, setCreateModalType] = useState('')
-  const [createModalRowIdx, setCreateModalRowIdx] = useState(null)
+  const [createModalRowId, setCreateModalRowId] = useState(null)
 
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
 
@@ -1157,9 +1175,9 @@ export default function BatchTable() {
     }
   }
 
-  const openCreateModal = (type, rowIdx) => {
+  const openCreateModal = (type, rowId) => {
     setCreateModalType(type)
-    setCreateModalRowIdx(rowIdx)
+    setCreateModalRowId(rowId)
     setCreateModalOpen(true)
   }
 
@@ -1167,43 +1185,43 @@ export default function BatchTable() {
     if (!item) return
     if (createModalType === 'cat') {
       setCategoriesCatalog(prev => [...prev, item])
-      if (createModalRowIdx !== null && Number.isFinite(createModalRowIdx)) {
-        const updated = [...rows]
-        updated[createModalRowIdx].categorias = [...(updated[createModalRowIdx].categorias || []), item]
-        setRows(updated)
+      if (createModalRowId !== null) {
+        setRows(prev => prev.map(r => Number(r.id) === Number(createModalRowId)
+          ? { ...r, categorias: [...(r.categorias || []), item] }
+          : r
+        ))
       }
     } else {
       setTagsCatalog(prev => [...prev, item])
-      if (createModalRowIdx !== null && Number.isFinite(createModalRowIdx)) {
-        const updated = [...rows]
-        updated[createModalRowIdx].tags = [...(updated[createModalRowIdx].tags || []), item]
-        setRows(updated)
+      if (createModalRowId !== null) {
+        setRows(prev => prev.map(r => Number(r.id) === Number(createModalRowId)
+          ? { ...r, tags: [...(r.tags || []), item] }
+          : r
+        ))
       }
     }
     setCreateModalOpen(false)
-    setCreateModalRowIdx(null)
+    setCreateModalRowId(null)
     setCreateModalType('')
   }
 
-  const handleCuentaChange = async (idx, value) => {
-    const updated = [...rows]
-    updated[idx].cuenta = value
-    setRows(updated)
+  const handleCuentaChange = useCallback(async (rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, cuenta: value } : r))
 
-    const row = updated[idx]
-    if (row && row.id) {
+    if (rowId) {
       try {
-        await http.patchData('/batch-imports/items', row.id, {
+        await http.patchData('/batch-imports/items', rowId, {
           targetAccount: value ? Number(value) : null
         })
       } catch (e) {
         console.error('Error saving account to DB:', e)
       }
     }
-  }
+  }, [http])
 
   const handleClearAccounts = async () => {
-    const updated = rows.map((r) => {
+    const currentRows = rowsRef.current
+    const updated = currentRows.map((r) => {
       const st = String(r?.estado || '').toLowerCase()
       if (st === 'borrador' || st === 'error') {
         return { ...r, cuenta: '' }
@@ -1215,7 +1233,7 @@ export default function BatchTable() {
     distributionAccountIdsRef.current = []
     distributionSelectionDirtyRef.current = false
 
-    const itemsToClear = rows.filter(r => {
+    const itemsToClear = currentRows.filter(r => {
       const st = String(r?.estado || '').toLowerCase()
       return st === 'borrador' || st === 'error'
     })
@@ -1238,33 +1256,24 @@ export default function BatchTable() {
     }
   }
 
+  const handleNombreChange = useCallback((rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, nombre: value } : r))
+  }, [])
 
-  const handleNombreChange = (idx, value) => {
-    const updated = [...rows]
-    updated[idx].nombre = value
-    setRows(updated)
-  }
+  const handleNombreEnChange = useCallback((rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, nombreEn: value } : r))
+  }, [])
 
-  const handleNombreEnChange = (idx, value) => {
-    const updated = [...rows]
-    updated[idx].nombreEn = value
-    setRows(updated)
-  }
+  const handleDescriptionChange = useCallback((rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, description: value } : r))
+  }, [])
 
-  const handleDescriptionChange = (idx, value) => {
-    const updated = [...rows]
-    updated[idx].description = value
-    setRows(updated)
-  }
+  const handleDescriptionEnChange = useCallback((rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, descriptionEn: value } : r))
+  }, [])
 
-  const handleDescriptionEnChange = (idx, value) => {
-    const updated = [...rows]
-    updated[idx].descriptionEn = value
-    setRows(updated)
-  }
-
-  const handleSaveRow = useCallback(async (idx, showToast = false) => {
-    const row = rows[idx]
+  const handleSaveRow = useCallback(async (rowId, showToast = false) => {
+    const row = rowsRef.current.find(r => Number(r?.id || 0) === Number(rowId))
     if (!row || !row.id) return
     try {
       await http.patchData('/batch-imports/items', row.id, {
@@ -1282,14 +1291,13 @@ export default function BatchTable() {
       console.error('Error saving row:', e)
       setToast({ open: true, msg: 'Error al guardar los cambios de la fila.', type: 'error' })
     }
-  }, [rows, http])
+  }, [http])
 
-  const handleQuickAdultos = useCallback(async (idx) => {
-    const updated = [...rows]
-    const row = updated[idx]
-    if (!row || !row.id) return
+  const handleQuickAdultos = useCallback(async (rowId) => {
+    const currentRow = rowsRef.current.find(r => Number(r?.id || 0) === Number(rowId))
+    if (!currentRow || !currentRow.id) return
 
-    const currentTags = Array.isArray(row.tags) ? [...row.tags] : []
+    const currentTags = Array.isArray(currentRow.tags) ? [...currentRow.tags] : []
     const hasAdultos = currentTags.some(t => {
       if (typeof t === 'string') return t.trim().toLowerCase() === 'adultos'
       return [t.slug, t.name, t.es, t.en, t.nameEn].some(f => typeof f === 'string' && f.trim().toLowerCase() === 'adultos')
@@ -1298,11 +1306,11 @@ export default function BatchTable() {
     if (!hasAdultos) {
       const adultTag = { id: 0, name: 'Adultos', nameEn: 'Adults', slug: 'adultos', slugEn: 'adults' }
       const nextTags = [...currentTags, adultTag]
-      updated[idx].tags = nextTags
-      setRows(updated)
+
+      setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, tags: nextTags } : r))
 
       try {
-        await http.patchData('/batch-imports/items', row.id, {
+        await http.patchData('/batch-imports/items', currentRow.id, {
           tags: nextTags
         })
         setToast({ open: true, msg: 'Marcado como Adultos exitosamente.', type: 'success' })
@@ -1311,10 +1319,10 @@ export default function BatchTable() {
         setToast({ open: true, msg: 'Error al marcar como Adultos en la BD.', type: 'error' })
       }
     }
-  }, [rows, http])
+  }, [http])
 
-  const handleGenerateSingleDescription = useCallback(async (idx) => {
-    const row = rows[idx]
+  const handleGenerateSingleDescription = useCallback(async (rowId) => {
+    const row = rowsRef.current.find(r => Number(r?.id || 0) === Number(rowId))
     if (!row || !row.id) return
 
     setIsApplyingAiMetadata(true)
@@ -1334,124 +1342,116 @@ export default function BatchTable() {
     } finally {
       setIsApplyingAiMetadata(false)
     }
-  }, [rows, http, fetchQueue])
+  }, [http, fetchQueue])
 
-  const handleCategoriasChange = async (idx, value) => {
-    const updated = [...rows]
-    updated[idx].categorias = value
-    setRows(updated)
+  const handleCategoriasChange = useCallback(async (rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, categorias: value } : r))
 
-    const row = updated[idx]
-    if (row && row.id) {
+    if (rowId) {
       try {
-        await http.patchData('/batch-imports/items', row.id, {
+        await http.patchData('/batch-imports/items', rowId, {
           categories: value
         })
       } catch (e) {
         console.error('Error saving categories:', e)
       }
     }
-  }
+  }, [http])
 
-  const handleTagsChange = async (idx, value) => {
-    const updated = [...rows]
-    updated[idx].tags = value
-    setRows(updated)
+  const handleTagsChange = useCallback(async (rowId, value) => {
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, tags: value } : r))
 
-    const row = updated[idx]
-    if (row && row.id) {
+    if (rowId) {
       try {
-        await http.patchData('/batch-imports/items', row.id, {
+        await http.patchData('/batch-imports/items', rowId, {
           tags: value
         })
       } catch (e) {
         console.error('Error saving tags:', e)
       }
     }
-  }
+  }, [http])
 
-  const handleSetPrimaryImage = useCallback((rowIdx, imageIdx) => {
-    const targetRowIdx = Number(rowIdx)
+  const handleSetPrimaryImage = useCallback((rowId, imageIdx) => {
     const targetImageIdx = Number(imageIdx)
-    if (!Number.isInteger(targetRowIdx) || !Number.isInteger(targetImageIdx)) return
+    if (!Number.isInteger(targetImageIdx)) return
 
     setRows((prev) => {
-      if (!Array.isArray(prev) || targetRowIdx < 0 || targetRowIdx >= prev.length) return prev
-      const row = prev[targetRowIdx]
-      const images = Array.isArray(row?.imagenes) ? row.imagenes : []
-      if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length || targetImageIdx === 0) return prev
+      if (!Array.isArray(prev)) return prev
+      return prev.map(row => {
+        if (Number(row?.id || 0) !== Number(rowId)) return row
+        const images = Array.isArray(row?.imagenes) ? row.imagenes : []
+        if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length || targetImageIdx === 0) return row
 
-      const nextImages = [...images]
-      const [selected] = nextImages.splice(targetImageIdx, 1)
-      nextImages.unshift(selected)
+        const nextImages = [...images]
+        const [selected] = nextImages.splice(targetImageIdx, 1)
+        nextImages.unshift(selected)
 
-      const nextRows = [...prev]
-      nextRows[targetRowIdx] = {
-        ...row,
-        imagenes: nextImages,
-      }
-      return nextRows
+        return {
+          ...row,
+          imagenes: nextImages,
+        }
+      })
     })
   }, [])
 
-  const handleDeleteImage = useCallback((rowIdx, imageIdx) => {
-    const targetRowIdx = Number(rowIdx)
+  const handleDeleteImage = useCallback((rowId, imageIdx) => {
     const targetImageIdx = Number(imageIdx)
-    if (!Number.isInteger(targetRowIdx) || !Number.isInteger(targetImageIdx)) return
+    if (!Number.isInteger(targetImageIdx)) return
 
     setRows((prev) => {
-      if (!Array.isArray(prev) || targetRowIdx < 0 || targetRowIdx >= prev.length) return prev
-      const row = prev[targetRowIdx]
-      const images = Array.isArray(row?.imagenes) ? row.imagenes : []
-      if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length) return prev
+      if (!Array.isArray(prev)) return prev
+      return prev.map(row => {
+        if (Number(row?.id || 0) !== Number(rowId)) return row
+        const images = Array.isArray(row?.imagenes) ? row.imagenes : []
+        if (!images.length || targetImageIdx < 0 || targetImageIdx >= images.length) return row
 
-      const nextImages = [...images]
-      nextImages.splice(targetImageIdx, 1)
+        const nextImages = [...images]
+        nextImages.splice(targetImageIdx, 1)
 
-      const nextRows = [...prev]
-      nextRows[targetRowIdx] = {
-        ...row,
-        imagenes: nextImages,
-      }
-      return nextRows
+        return {
+          ...row,
+          imagenes: nextImages,
+        }
+      })
     })
   }, [])
 
-  const handleRemoverFila = async (idx, options = {}) => {
+  const handleRemoverFila = useCallback(async (rowId, options = {}) => {
     const nextFocusId = Number(options?.nextFocusId || 0)
-    const row = rows[idx]
+    const currentRows = rowsRef.current
+    const row = currentRows.find(r => Number(r?.id || 0) === Number(rowId))
     if (!row || !row.id) return
-
-    // Optimistic Update: remove row and shift similarity selected ID immediately
-    const backupRows = [...rows]
-    const backupSimilarityId = similaritySelectedId
-    const backupSimilarityMap = similarityMapRef.current
+    const rowIdNum = Number(row.id)
 
     // Register this ID so fetchQueue polling won't reinsert it while the DELETE is in flight
-    optimisticDeletedIdsRef.current.add(Number(row.id))
+    optimisticDeletedIdsRef.current.add(rowIdNum)
 
-    const updated = [...rows]
-    updated.splice(idx, 1)
-    setRows(updated)
+    // Optimistic Update: remove row using functional setState to always operate on the latest state
+    setRows(prev => prev.filter(r => Number(r?.id || 0) !== rowIdNum))
 
     // Optimistic Similarity Filter: immediately remove the deleted row from all similarity lists in the cache
+    const backupSimilarityMap = similarityMapRef.current
     setSimilarityMap(prev => {
       const next = { ...prev }
       for (const key of Object.keys(next)) {
         if (next[key]?.items) {
           next[key] = {
             ...next[key],
-            items: next[key].items.filter(item => Number(item.id) !== Number(row.id))
+            items: next[key].items.filter(item => Number(item.id) !== rowIdNum)
           }
         }
       }
+      similarityMapRef.current = next // Synchronously update ref
       return next
     })
 
-    if (Number(similaritySelectedId || 0) === Number(row.id || 0)) {
+    const currentSelectedId = similaritySelectedIdRef.current
+    if (Number(currentSelectedId || 0) === rowIdNum) {
       if (nextFocusId > 0) {
         setSimilaritySelectedId(nextFocusId)
-        const nextRow = updated.find((r) => Number(r?.id || 0) === nextFocusId)
+        // Find the next row from the CURRENT rows (before optimistic removal) to start similarity check
+        const nextRow = currentRows.find((r) => Number(r?.id || 0) === nextFocusId)
         if (nextRow) void startSimilarityCheck(nextRow)
       } else {
         setSimilaritySelectedId(null)
@@ -1461,38 +1461,40 @@ export default function BatchTable() {
     try {
       const res = await http.deleteData('/batch-imports/items', row.id)
       // Unregister from optimistic delete set — backend has confirmed
-      optimisticDeletedIdsRef.current.delete(Number(row.id))
+      optimisticDeletedIdsRef.current.delete(rowIdNum)
       if (res.data?.success) {
         setToast({ open: true, msg: 'Asset eliminado correctamente', type: 'success' })
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
-        setRows(backupRows)
-        setSimilaritySelectedId(backupSimilarityId)
+        // Restore: re-fetch from backend for clean state instead of using stale backup
+        fetchQueue()
         setSimilarityMap(backupSimilarityMap)
       }
     } catch (e) {
       console.error(e)
       // Unregister from optimistic delete set — failed, restore everything
-      optimisticDeletedIdsRef.current.delete(Number(row.id))
+      optimisticDeletedIdsRef.current.delete(rowIdNum)
       setToast({ open: true, msg: 'Error de red al eliminar el asset', type: 'error' })
-      setRows(backupRows)
-      setSimilaritySelectedId(backupSimilarityId)
+      // Restore: re-fetch from backend for clean state
+      fetchQueue()
       setSimilarityMap(backupSimilarityMap)
     }
-  }
+  }, [startSimilarityCheck, http, setToast, fetchQueue])
 
   const deleteFocusedReviewItem = useCallback(async () => {
     if (!reviewMode) return
-    const ids = visibleEntries.map((entry) => Number(entry?.row?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
+    const currentEntries = visibleEntriesRef.current
+    const currentSelectedId = similaritySelectedIdRef.current
+    const ids = currentEntries.map((entry) => Number(entry?.row?.id || 0)).filter((n) => Number.isFinite(n) && n > 0)
     if (!ids.length) return
-    const currentIdx = ids.findIndex((id) => id === Number(similaritySelectedId || 0))
+    const currentIdx = ids.findIndex((id) => id === Number(currentSelectedId || 0))
     if (currentIdx < 0) return
-    const targetEntry = visibleEntries[currentIdx]
-    if (!targetEntry || targetEntry.rowIndex < 0) return
+    const targetId = ids[currentIdx]
+    if (!targetId) return
 
     const nextFocusId = ids[currentIdx + 1] || ids[currentIdx - 1] || null
-    await handleRemoverFila(targetEntry.rowIndex, { nextFocusId })
-  }, [reviewMode, visibleEntries, similaritySelectedId])
+    await handleRemoverFila(targetId, { nextFocusId })
+  }, [reviewMode, handleRemoverFila])
 
   useEffect(() => {
     if (!reviewMode) return
@@ -1696,7 +1698,8 @@ export default function BatchTable() {
         .filter((n) => Number.isFinite(n) && n > 0)
     )
 
-    const pendingRows = rows.filter((r) => {
+    const currentRows = rowsRef.current
+    const pendingRows = currentRows.filter((r) => {
       const st = String(r?.estado || '').toLowerCase()
       return st !== 'completado' && st !== 'procesando'
     })
@@ -1744,7 +1747,7 @@ export default function BatchTable() {
 
     accountsStatus = accountsStatus.sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
 
-    const updatedRows = [...rows]
+    const updatedRows = currentRows.map(r => ({ ...r }))
     const candidatesBySize = updatedRows
       .map((row, index) => ({ row, index, pesoMb: Math.max(0, Number(row?.pesoMB || 0)) }))
       .filter(({ row }) => {
@@ -1850,24 +1853,28 @@ export default function BatchTable() {
     void refreshBatchAccounts({ silent: true })
   }
 
-  const handleOpenPerfilModal = (rowIdx) => {
-    setSelectedRowIdxPerfil(rowIdx)
+  const handleOpenPerfilModal = (rowId) => {
+    setSelectedRowIdPerfil(rowId)
     setProfilesModalOpen(true)
   }
 
   const handleApplyProfileToRow = (profile) => {
-    if (selectedRowIdxPerfil === null) return
-    const updated = [...rows]
-    updated[selectedRowIdxPerfil].categorias = (profile.categories || []).map(slug => {
-      return categoriesCatalog.find(c => c.slug === slug) || { slug, name: slug }
-    })
-    updated[selectedRowIdxPerfil].tags = (profile.tags || []).map(slug => {
-      return tagsCatalog.find(t => t.slug === slug) || { slug, name: slug }
-    })
-    updated[selectedRowIdxPerfil].perfiles = profile.name
-    setRows(updated)
+    if (selectedRowIdPerfil === null) return
+    setRows(prev => prev.map(r => {
+      if (Number(r.id) !== Number(selectedRowIdPerfil)) return r
+      return {
+        ...r,
+        categorias: (profile.categories || []).map(slug => {
+          return categoriesCatalog.find(c => c.slug === slug) || { slug, name: slug }
+        }),
+        tags: (profile.tags || []).map(slug => {
+          return tagsCatalog.find(t => t.slug === slug) || { slug, name: slug }
+        }),
+        perfiles: profile.name
+      }
+    }))
     setProfilesModalOpen(false)
-    setSelectedRowIdxPerfil(null)
+    setSelectedRowIdPerfil(null)
   }
 
   const handleProcessBatch = async () => {
@@ -2230,8 +2237,8 @@ export default function BatchTable() {
 
       <ProfilesModal
         open={profilesModalOpen}
-        onClose={() => { setProfilesModalOpen(false); setSelectedRowIdxPerfil(null); }}
-        selectedRow={selectedRowIdxPerfil !== null ? rows[selectedRowIdxPerfil] : null}
+        onClose={() => { setProfilesModalOpen(false); setSelectedRowIdPerfil(null); }}
+        selectedRow={selectedRowIdPerfil !== null ? rows.find(r => Number(r.id) === Number(selectedRowIdPerfil)) : null}
         onApply={handleApplyProfileToRow}
       />
 
