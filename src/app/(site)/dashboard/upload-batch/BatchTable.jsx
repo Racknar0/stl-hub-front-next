@@ -104,6 +104,9 @@ export default function BatchTable() {
   // ── Optimistic delete tracking: prevents fetchQueue polling from reinserting deleted rows ──
   const optimisticDeletedIdsRef = useRef(new Set())
 
+  // ── Confirmed delete tracking: prevents replica lag/cache from reinserting successfully deleted rows ──
+  const confirmedDeletedIdsRef = useRef(new Set())
+
   // ── DELETE FROM SIDEBAR: queue + alerts ──
   const [deletingAssetIds, setDeletingAssetIds] = useState(new Set())
   const [deleteAlerts, setDeleteAlerts] = useState([])
@@ -779,11 +782,13 @@ export default function BatchTable() {
      try {
        const res = await http.getData('/batch-imports')
        if (res.data?.success && res.data?.items) {
-          // Filter out any items that were optimistically deleted and haven't been confirmed yet
+          // Filter out any items that were optimistically deleted or successfully confirmed deleted to prevent lag/cache reinsertions
           const pendingDeletes = optimisticDeletedIdsRef.current
-          const filteredItems = pendingDeletes.size > 0
-            ? res.data.items.filter(item => !pendingDeletes.has(Number(item.id)))
-            : res.data.items
+          const confirmedDeletes = confirmedDeletedIdsRef.current
+          const filteredItems = res.data.items.filter(item => 
+            !pendingDeletes.has(Number(item.id)) && 
+            !confirmedDeletes.has(Number(item.id))
+          )
 
           setRows(prevRows => {
              return filteredItems.map(item => {
@@ -1463,6 +1468,7 @@ export default function BatchTable() {
       // Unregister from optimistic delete set — backend has confirmed
       optimisticDeletedIdsRef.current.delete(rowIdNum)
       if (res.data?.success) {
+        confirmedDeletedIdsRef.current.add(rowIdNum)
         setToast({ open: true, msg: 'Asset eliminado correctamente', type: 'success' })
       } else {
         setToast({ open: true, msg: `Error: ${res.data?.message || 'No se pudo eliminar'}`, type: 'error' })
