@@ -10,7 +10,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import './TelegramOrganizer.scss';
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 400;
 const MAX_UNDO = 5;
 
 export default function TelegramOrganizer() {
