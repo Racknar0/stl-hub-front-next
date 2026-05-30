@@ -474,9 +474,11 @@ export default function TelegramOrganizer() {
         )}
       </div>
 
-      <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="lg">
+      <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="lg" PaperProps={{ sx: { background: 'transparent', boxShadow: 'none' } }}>
         {previewImage && (
-          <img src={previewImage} alt="Preview" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          <Box onClick={() => setPreviewImage(null)} sx={{ cursor: 'zoom-out', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
+          </Box>
         )}
       </Dialog>
 
