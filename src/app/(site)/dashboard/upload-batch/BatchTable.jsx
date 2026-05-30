@@ -380,7 +380,7 @@ export default function BatchTable() {
       const payload = {
         imagePath: imagePath,
         textContext: titleValue,
-        limit: 8,
+        limit: 4,
       }
 
       const r = await http.postData('/ai/search-by-local-image', payload)
@@ -480,8 +480,8 @@ export default function BatchTable() {
     const safeIndex = visibleEntries.findIndex((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId))
     if (safeIndex < 0) return
 
-    // Warm up the cache for the next 7 elements to ensure instant keyboard navigation
-    for (let i = 1; i <= 7; i++) {
+    // Warm up the cache for the next 4 elements to ensure instant keyboard navigation
+    for (let i = 1; i <= 4; i++) {
       const nextIdx = safeIndex + i
       if (nextIdx < total) {
         const nextTarget = visibleEntries[nextIdx]?.row
