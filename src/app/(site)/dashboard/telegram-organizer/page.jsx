@@ -38,8 +38,8 @@ export default function TelegramOrganizer() {
 
     const msgLower = msg.toLowerCase();
     
-    // Omitir alertas molestas de conteo de archivos cargados al recargar
-    if (msgLower.includes('cargados')) {
+    // Omitir alertas de cargados o estados de carga transitorios (empaquetando, borrando, purgando)
+    if (msgLower.includes('cargados') || msgLower.includes('empaquetando') || msgLower.includes('borrando') || msgLower.includes('purgando')) {
       return;
     }
 
@@ -48,15 +48,15 @@ export default function TelegramOrganizer() {
       type = 'success';
     } else if (msgLower.includes('error') || msg.includes('⚠️')) {
       type = 'error';
-    } else if (msgLower.includes('empaquetando') || msgLower.includes('borrando') || msgLower.includes('purgando')) {
-      type = 'loading';
     }
 
     const alertId = `org-${Date.now()}-${Math.random()}`;
-    setOrganizerAlerts(prev => [
-      ...prev,
+    
+    // Mostrar ÚNICAMENTE la última alerta de acción real (evita apilamientos e invasión de la UI)
+    setOrganizerAlerts([
       { id: alertId, msg, type }
     ]);
+    
     setTimeout(() => {
       setOrganizerAlerts(prev => prev.filter(a => a.id !== alertId));
     }, 4000);
@@ -497,53 +497,36 @@ export default function TelegramOrganizer() {
           {organizerAlerts.map((alert) => {
             const isSuccess = alert.type === 'success';
             const isError = alert.type === 'error';
-            const isLoading = alert.type === 'loading';
 
-            const bgColor = isSuccess
-              ? 'rgba(34, 197, 94, 0.95)'
+            // Tono oscuro premium con bordes de color sutiles
+            const borderClr = isSuccess
+              ? 'rgba(34, 197, 94, 0.45)'
               : isError
-              ? 'rgba(239, 68, 68, 0.95)'
-              : isLoading
-              ? 'rgba(59, 130, 246, 0.95)'
-              : 'rgba(245, 158, 11, 0.95)';
+              ? 'rgba(239, 68, 68, 0.45)'
+              : 'rgba(255, 255, 255, 0.2)';
 
             return (
               <Box
                 key={alert.id}
                 sx={{
-                  px: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  background: bgColor,
+                  px: 1.8,
+                  py: 0.75,
+                  borderRadius: 1.5,
+                  background: 'rgba(15, 23, 42, 0.98)', // Slate-900 oscuro
+                  border: '1px solid',
+                  borderColor: borderClr,
                   color: '#fff',
                   fontWeight: 700,
-                  fontSize: '0.85rem',
+                  fontSize: '0.75rem', // Más pequeña
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
                   backdropFilter: 'blur(8px)',
-                  animation: 'fadeIn 0.3s ease',
+                  animation: 'fadeIn 0.2s ease',
                 }}
               >
-                {isLoading && (
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#fff',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                      flexShrink: 0,
-                      '@keyframes spin': {
-                        from: { transform: 'rotate(0deg)' },
-                        to: { transform: 'rotate(360deg)' },
-                      },
-                    }}
-                  />
-                )}
-                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Box sx={{ flex: 1, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>
                   {alert.msg}
                 </Box>
               </Box>
