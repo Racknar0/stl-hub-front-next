@@ -93,6 +93,13 @@ export default function AssetsAdminPage() {
     const [statusFilter, setStatusFilter] = useState('');
     // filtro SEO (noDescription, noDescriptionEn, noTags, noCategories, noImages)
     const [seoFilter, setSeoFilter] = useState('');
+    // Ordenamiento léxico en memoria
+    const [lexicalSort, setLexicalSort] = useState(false);
+
+    // DELETE QUEUE: cola de eliminación y alertas flotantes
+    const [deleteAlerts, setDeleteAlerts] = useState([]);
+    const deleteQueueRef = useRef([]);
+    const deleteProcessingRef = useRef(false);
 
     // Estado: modal unificado
     const [assetModalOpen, setAssetModalOpen] = useState(false);
@@ -566,6 +573,8 @@ export default function AssetsAdminPage() {
                 if (statusFilter) params.set('status', statusFilter);
                 // Filtro SEO
                 if (seoFilter) params.set(seoFilter, 'true');
+                // Ordenamiento léxico
+                if (lexicalSort) params.set('sortBy', 'lexical_similarity');
                 // Añadir filtros por cuenta
                 const accTrim = String(accountQ || '').trim();
                 if (accTrim) {
@@ -598,7 +607,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter]);
+    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter, lexicalSort]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -1108,17 +1117,62 @@ export default function AssetsAdminPage() {
         }
     };
 
-    // Eliminar asset (Optimista y en Segundo Plano para evitar bloqueo en borrado masivo)
-    const handleDelete = async (asset) => {
-        const ok = await confirmAlert(
-            'Eliminar STL',
-            `¿Deseas eliminar "${asset.title}"? Se borrará de la base de datos y de MEGA en segundo plano.`,
-            'Sí, eliminar',
-            'Cancelar',
-            'warning',
-        );
-        if (!ok) return;
+    // Procesador de la cola de eliminación de assets en segundo plano
+    const processDeleteQueue = useCallback(async () => {
+        if (deleteProcessingRef.current) return;
+        deleteProcessingRef.current = true;
 
+        while (deleteQueueRef.current.length > 0) {
+            const { assetId, label, backupAssets, backupRowCount } = deleteQueueRef.current[0];
+            const alertId = `del-${assetId}-${Date.now()}`;
+
+            // Mostrar alerta de "Eliminando..."
+            setDeleteAlerts((prev) => [
+                ...prev,
+                { id: alertId, assetId, label, status: 'deleting' },
+            ]);
+
+            let result = { dbDeleted: false, megaDeleted: false, error: false };
+            try {
+                const res = await http.deleteData('/assets', assetId);
+                result.dbDeleted = !!res?.data?.dbDeleted;
+                result.megaDeleted = !!res?.data?.megaDeleted;
+            } catch (e) {
+                console.error('[DELETE_QUEUE] Error deleting asset', assetId, e);
+                result.error = true;
+            }
+
+            // Si falló el borrado, revertir UI optimista
+            if (result.error || !result.dbDeleted) {
+                setAssets(backupAssets);
+                setRowCount(backupRowCount);
+            }
+
+            // Actualizar alerta al estado final
+            const finalStatus = result.error
+                ? 'error'
+                : (result.dbDeleted && result.megaDeleted)
+                ? 'success'
+                : 'partial';
+
+            setDeleteAlerts((prev) =>
+                prev.map((a) => (a.id === alertId ? { ...a, status: finalStatus } : a)),
+            );
+
+            // Auto-desvanecer la alerta final después de 4s
+            setTimeout(() => {
+                setDeleteAlerts((prev) => prev.filter((a) => a.id !== alertId));
+            }, 4000);
+
+            // Remover el elemento ya procesado de la cola
+            deleteQueueRef.current.shift();
+        }
+
+        deleteProcessingRef.current = false;
+    }, [http]);
+
+    // Eliminar asset (Optimista, en segundo plano y sin confirmación para agilizar flujo del usuario)
+    const handleDelete = async (asset) => {
         // Guardamos copia de seguridad para revertir si ocurre un error
         const backupAssets = [...assets];
         const backupRowCount = rowCount;
@@ -1127,46 +1181,29 @@ export default function AssetsAdminPage() {
         setAssets((prev) => prev.filter((a) => a.id !== asset.id));
         setRowCount((prev) => Math.max(0, prev - 1));
 
-        // Notificación flotante (Toast) no intrusiva en la esquina superior derecha
-        void fireAlert({
-            toast: true,
-            position: 'top-end',
-            icon: 'info',
-            title: `Eliminando "${asset.title}"...`,
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true,
-            zIndex: 3000,
+        // Encolar eliminación
+        deleteQueueRef.current.push({
+            assetId: asset.id,
+            label: asset.title,
+            backupAssets,
+            backupRowCount,
         });
 
-        // Petición al servidor ejecutada en segundo plano
-        http.deleteData('/assets', asset.id)
-            .then((res) => {
-                const { dbDeleted, megaDeleted } = res.data || {};
-                if (dbDeleted) {
-                    void fireAlert({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: megaDeleted 
-                            ? `"${asset.title}" eliminado de MEGA y BD` 
-                            : `"${asset.title}" eliminado de BD (MEGA falló)`,
-                        showConfirmButton: false,
-                        timer: 2000,
-                    });
-                } else {
-                    throw new Error('No se pudo confirmar la eliminación');
-                }
-            })
-            .catch((e) => {
-                // Revertir estado si el borrado real en el servidor falla
-                setAssets(backupAssets);
-                setRowCount(backupRowCount);
-                void errorAlert(
-                    'Error al eliminar',
-                    e?.response?.data?.message || 'Fallo de conexión o servidor al intentar eliminar'
+        // Actualizar contador de cola en la alerta activa si ya existe
+        setDeleteAlerts((prev) => {
+            const active = prev.find((a) => a.status === 'deleting');
+            if (active) {
+                return prev.map((a) =>
+                    a.status === 'deleting'
+                        ? { ...a, queueCount: deleteQueueRef.current.length }
+                        : a,
                 );
-            });
+            }
+            return prev;
+        });
+
+        // Disparar procesamiento de la cola
+        void processDeleteQueue();
     };
 
     // Recuperar link MEGA desde BACKUP
@@ -2201,47 +2238,76 @@ export default function AssetsAdminPage() {
                     />
                 </Box>
 
-                <Tabs
-                value={tab}
-                onChange={(_, v) => setTab(v)}
-                sx={{
-                    mb: 2,
-                    bgcolor: (theme) =>
-                        theme.palette.mode === 'dark'
-                            ? 'rgba(30,30,30,0.95)'
-                            : 'background.paper',
-                    borderRadius: 2,
-                    boxShadow: (theme) =>
-                        theme.palette.mode === 'dark'
-                            ? '0 2px 8px #0008'
-                            : '0 2px 8px #8882',
-                }}
-                TabIndicatorProps={{
-                    style: { background: '#7c4dff' },
-                }}
-            >
-                <Tab
-                    label={`STL-LIST (${rowCount})`}
-                    sx={{
-                        color: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fff' : undefined,
-                    }}
-                />
-                <Tab
-                    label="SIMILAR-VISUAL"
-                    sx={{
-                        color: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fff' : undefined,
-                    }}
-                />
-                <Tab
-                    label={`META-SEO (${rowCount})`}
-                    sx={{
-                        color: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fff' : undefined,
-                    }}
-                />
-            </Tabs>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                    <Tabs
+                        value={tab}
+                        onChange={(_, v) => setTab(v)}
+                        sx={{
+                            bgcolor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(30,30,30,0.95)'
+                                    : 'background.paper',
+                            borderRadius: 2,
+                            boxShadow: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? '0 2px 8px #0008'
+                                    : '0 2px 8px #8882',
+                            flexGrow: 1
+                        }}
+                        TabIndicatorProps={{
+                            style: { background: '#7c4dff' },
+                        }}
+                    >
+                        <Tab
+                            label={`STL-LIST (${rowCount})`}
+                            sx={{
+                                color: (theme) =>
+                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
+                            }}
+                        />
+                        <Tab
+                            label="SIMILAR-VISUAL"
+                            sx={{
+                                color: (theme) =>
+                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
+                            }}
+                        />
+                        <Tab
+                            label={`META-SEO (${rowCount})`}
+                            sx={{
+                                color: (theme) =>
+                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
+                            }}
+                        />
+                    </Tabs>
+                    
+                    {/* Switch de Agrupamiento Léxico en Memoria */}
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        bgcolor: 'rgba(30,30,30,0.95)', 
+                        px: 2, 
+                        py: 1, 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px #0008',
+                        border: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                        <Switch
+                            checked={lexicalSort}
+                            onChange={(e) => {
+                                setLexicalSort(e.target.checked);
+                                setPageIndex(0);
+                                setMetaPageIndex(0);
+                            }}
+                            color="secondary"
+                            size="small"
+                        />
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                            Agrupar Similares (Texto)
+                        </Typography>
+                    </Box>
+                </Box>
             {tab === 0 && (
                 <AssetsListTab
                     loading={loading}
@@ -2446,6 +2512,91 @@ export default function AssetsAdminPage() {
                     </Box>
                 )}
             </Dialog>
+            
+            {/* ═══════════ DELETE SIDEBAR ALERTS ═══════════ */}
+            {deleteAlerts.length > 0 && (
+                <Box sx={{
+                    position: 'fixed',
+                    top: 12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.75,
+                    maxWidth: 480,
+                    width: '90vw',
+                }}>
+                    {deleteAlerts.map((alert) => {
+                        const isDeleting = alert.status === 'deleting';
+                        const isSuccess = alert.status === 'success';
+                        const isPartial = alert.status === 'partial';
+                        const isError = alert.status === 'error';
+
+                        const bgColor = isDeleting
+                            ? 'rgba(59, 130, 246, 0.95)'
+                            : isSuccess
+                            ? 'rgba(34, 197, 94, 0.95)'
+                            : isPartial
+                            ? 'rgba(245, 158, 11, 0.95)'
+                            : 'rgba(239, 68, 68, 0.95)';
+
+                        const queueText = isDeleting && deleteQueueRef.current.length > 1
+                            ? ` (${deleteQueueRef.current.length} en cola)`
+                            : '';
+
+                        const message = isDeleting
+                            ? `Eliminando "${alert.label}"...${queueText}`
+                            : isSuccess
+                            ? `Eliminado "${alert.label}" ✓`
+                            : isPartial
+                            ? `Eliminado "${alert.label}" (solo BD)`
+                            : `Error eliminando "${alert.label}"`;
+
+                        return (
+                            <Box
+                                key={alert.id}
+                                sx={{
+                                    px: 2,
+                                    py: 1,
+                                    borderRadius: 2,
+                                    background: bgColor,
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                                    backdropFilter: 'blur(8px)',
+                                    animation: isDeleting ? 'none' : 'fadeIn 0.3s ease',
+                                }}
+                            >
+                                {isDeleting && (
+                                    <Box
+                                        sx={{
+                                            width: 16,
+                                            height: 16,
+                                            border: '2px solid rgba(255,255,255,0.3)',
+                                            borderTopColor: '#fff',
+                                            borderRadius: '50%',
+                                            animation: 'spin 0.8s linear infinite',
+                                            flexShrink: 0,
+                                            '@keyframes spin': {
+                                                from: { transform: 'rotate(0deg)' },
+                                                to: { transform: 'rotate(360deg)' },
+                                            },
+                                        }}
+                                    />
+                                )}
+                                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {message}
+                                </Box>
+                            </Box>
+                        );
+                    })}
+                </Box>
+            )}
             </div>
         </ThemeProvider>
     );
