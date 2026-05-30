@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HttpService from '@/services/HttpService';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
-import { Button, Dialog } from '@mui/material';
+import { Button, Dialog, Box } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
@@ -27,7 +27,41 @@ export default function TelegramOrganizer() {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [filesToDelete, setFilesToDelete] = useState(new Set());
   const [undoStack, setUndoStack] = useState([]);
-  const [status, setStatus] = useState('');
+  
+  // Interceptador premium de status para alertas flotantes
+  const [status, setStatusState] = useState('');
+  const [organizerAlerts, setOrganizerAlerts] = useState([]);
+
+  const setStatus = useCallback((msg) => {
+    setStatusState(msg || '');
+    if (!msg) return;
+
+    const msgLower = msg.toLowerCase();
+    
+    // Omitir alertas molestas de conteo de archivos cargados al recargar
+    if (msgLower.includes('cargados')) {
+      return;
+    }
+
+    let type = 'info';
+    if (msg.includes('✅') || msg.includes('⚡') || msgLower.includes('correctamente') || msgLower.includes('borrados') || msgLower.includes('deshecha')) {
+      type = 'success';
+    } else if (msgLower.includes('error') || msg.includes('⚠️')) {
+      type = 'error';
+    } else if (msgLower.includes('empaquetando') || msgLower.includes('borrando') || msgLower.includes('purgando')) {
+      type = 'loading';
+    }
+
+    const alertId = `org-${Date.now()}-${Math.random()}`;
+    setOrganizerAlerts(prev => [
+      ...prev,
+      { id: alertId, msg, type }
+    ]);
+    setTimeout(() => {
+      setOrganizerAlerts(prev => prev.filter(a => a.id !== alertId));
+    }, 4000);
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
@@ -299,16 +333,16 @@ export default function TelegramOrganizer() {
           
           <div className="actions-bar">
             <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
-              ▶ Empaquetar (Espacio)
+              ▶ Empaquetar
             </button>
             {files.length > 0 && (
               <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
+                {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
               </button>
             )}
             {filesToDelete.size > 0 && (
               <button className="btn btn-delete" onClick={deleteSelected}>
-                🗑️ Eliminar ({filesToDelete.size})
+                🗑️ Borrar ({filesToDelete.size})
               </button>
             )}
             {undoStack.length > 0 && (
@@ -318,18 +352,31 @@ export default function TelegramOrganizer() {
             )}
             {files.length > 0 && (
               <button className="btn btn-delete" style={{ marginLeft: 'auto', backgroundColor: '#dc2626' }} onClick={purgeFolder}>
-                ☠️ Purgar Carpeta
+                ☠️ Purgar
               </button>
             )}
-            <span className={`status-text ${getStatusClass()}`} title={status}>{status}</span>
           </div>
 
           <Button
             size="small"
             variant="contained"
-            color="inherit"
             onClick={() => setIsReviewMode(false)}
             startIcon={<FullscreenExitIcon />}
+            sx={{
+              position: 'fixed',
+              top: 12,
+              right: 16,
+              zIndex: 9999,
+              bgcolor: 'rgba(239, 68, 68, 0.85)',
+              color: '#fff',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
+              textTransform: 'none',
+              '&:hover': {
+                bgcolor: 'rgba(220, 38, 38, 0.95)',
+              },
+            }}
           >
             Salir
           </Button>
@@ -345,18 +392,18 @@ export default function TelegramOrganizer() {
 
           <div className="actions-bar">
             <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
-              ▶ Empaquetar (Espacio)
+              ▶ Empaquetar
             </button>
             
             {files.length > 0 && (
               <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                {filesToDelete.size > 0 ? '🚫 Desmarcar Todo' : '✅ Seleccionar Todo'}
+                {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
               </button>
             )}
 
             {filesToDelete.size > 0 && (
               <button className="btn btn-delete" onClick={deleteSelected}>
-                🗑️ Eliminar ({filesToDelete.size})
+                🗑️ Borrar ({filesToDelete.size})
               </button>
             )}
 
@@ -365,12 +412,9 @@ export default function TelegramOrganizer() {
                 ↩️ Deshacer ({undoStack.length})
               </button>
             )}
-            <span className={`status-text ${getStatusClass()}`} title={status}>{status}</span>
           </div>
         </>
       )}
-
-
 
       <div className="scroll-area">
         <div className="grid">
@@ -436,7 +480,77 @@ export default function TelegramOrganizer() {
         )}
       </Dialog>
 
+      {/* ═══════════ ORGANIZER FLOATING ALERTS ═══════════ */}
+      {organizerAlerts.length > 0 && (
+        <Box sx={{
+          position: 'fixed',
+          top: 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.75,
+          maxWidth: 480,
+          width: '90vw',
+        }}>
+          {organizerAlerts.map((alert) => {
+            const isSuccess = alert.type === 'success';
+            const isError = alert.type === 'error';
+            const isLoading = alert.type === 'loading';
 
+            const bgColor = isSuccess
+              ? 'rgba(34, 197, 94, 0.95)'
+              : isError
+              ? 'rgba(239, 68, 68, 0.95)'
+              : isLoading
+              ? 'rgba(59, 130, 246, 0.95)'
+              : 'rgba(245, 158, 11, 0.95)';
+
+            return (
+              <Box
+                key={alert.id}
+                sx={{
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  background: bgColor,
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                  backdropFilter: 'blur(8px)',
+                  animation: 'fadeIn 0.3s ease',
+                }}
+              >
+                {isLoading && (
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                      flexShrink: 0,
+                      '@keyframes spin': {
+                        from: { transform: 'rotate(0deg)' },
+                        to: { transform: 'rotate(360deg)' },
+                      },
+                    }}
+                  />
+                )}
+                <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {alert.msg}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
     </div>
   );
 }
