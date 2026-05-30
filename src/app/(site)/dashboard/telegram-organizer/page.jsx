@@ -227,6 +227,21 @@ export default function TelegramOrganizer() {
 
   const remaining = serverTotal - offset;
 
+  const getStatusClass = () => {
+    if (!status) return '';
+    const stLower = status.toLowerCase();
+    if (status.includes('✅') || status.includes('⚡') || stLower.includes('correctamente') || stLower.includes('borrados')) {
+      return 'status-success';
+    }
+    if (stLower.includes('error') || status.includes('⚠️')) {
+      return 'status-error';
+    }
+    if (stLower.includes('empaquetando') || stLower.includes('borrando') || stLower.includes('purgando')) {
+      return 'status-loading';
+    }
+    return 'status-info';
+  };
+
   return (
     <div className={`telegram-organizer ${isReviewMode ? 'review-mode' : ''}`}>
       {!isReviewMode && (
@@ -306,7 +321,7 @@ export default function TelegramOrganizer() {
                 ☠️ Purgar Carpeta
               </button>
             )}
-            <span className="status-text">{status}</span>
+            <span className={`status-text ${getStatusClass()}`} title={status}>{status}</span>
           </div>
 
           <Button
@@ -350,7 +365,7 @@ export default function TelegramOrganizer() {
                 ↩️ Deshacer ({undoStack.length})
               </button>
             )}
-            <span className="status-text">{status}</span>
+            <span className={`status-text ${getStatusClass()}`} title={status}>{status}</span>
           </div>
         </>
       )}
