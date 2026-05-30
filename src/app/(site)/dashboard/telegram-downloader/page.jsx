@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import HttpService from '@/services/HttpService';
-import { Dialog } from '@mui/material';
+import { Dialog, Box } from '@mui/material';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
+import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import './TelegramDownloader.scss';
 
 function ChannelAvatar({ channel, size = '70px' }) {
@@ -104,6 +105,14 @@ export default function TelegramDownloader() {
   const [importUrlLabel, setImportUrlLabel] = useState('');
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [newlyAddedChannel, setNewlyAddedChannel] = useState(null);
+  const [downloaderAlerts, setDownloaderAlerts] = useState([]);
+
+  const showFloatingAlert = (msg, type = 'success', onAccept = null) => {
+    const alertId = `dl-${Date.now()}-${Math.random()}`;
+    setDownloaderAlerts([
+      { id: alertId, msg, type, onAccept }
+    ]);
+  };
 
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [startId, setStartId] = useState('');
@@ -299,11 +308,25 @@ export default function TelegramDownloader() {
     if (!importUrl) return;
     const parsed = parseTelegramUrl(importUrl);
     if (!parsed) {
-      alert('Enlace de Telegram no reconocido. Por favor usa un enlace válido, por ejemplo: https://t.me/lixeirastl/2751 o https://t.me/c/1738938518/223');
+      await errorAlert('Enlace de Telegram no reconocido', 'Por favor usa un enlace válido, por ejemplo: https://t.me/lixeirastl/2751 o https://t.me/c/1738938518/223');
       return;
     }
     
     const { channelName, lastMsgId } = parsed;
+
+    // Estrategia 1: Evitar sobreescrituras accidentales de canales existentes
+    const existing = channels.find(c => c.name === channelName);
+    if (existing) {
+      const ok = await confirmAlert(
+        'Canal Duplicado',
+        `El canal "${existing.label || existing.name}" ya está registrado en tu lista. ¿Deseas sobreescribir su punto de inicio de descarga al mensaje #${lastMsgId || 'inicio'}? Esto alterará tu progreso actual y podría descargar duplicados.`,
+        'Sí, sobreescribir',
+        'Cancelar',
+        'warning'
+      );
+      if (!ok) return;
+    }
+
     setIsAddingChannel(true);
     try {
       const res = await http.postData('/telegram/channels', {
@@ -322,25 +345,29 @@ export default function TelegramDownloader() {
         setImportUrl('');
         setImportUrlLabel('');
 
-        // Resaltar y hacer scroll hacia el nuevo canal
+        // Resaltar y hacer scroll hacia el nuevo canal inmediatamente (antes de la alerta para ahorrar tiempo)
         setNewlyAddedChannel(channelName);
         setTimeout(() => {
           const el = document.getElementById(`channel-row-${channelName}`);
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        }, 150);
-        setTimeout(() => {
-          setNewlyAddedChannel(null);
-        }, 4000);
+        }, 50);
 
-        alert('Canal importado y escaneado con éxito');
+        // Alerta flotante premium con botón Aceptar
+        showFloatingAlert(
+          '¡Éxito! Canal importado y escaneado con éxito',
+          'success',
+          () => {
+            setNewlyAddedChannel(null);
+          }
+        );
       } else {
-        alert('Error importando el canal: ' + (d.message || 'Error desconocido'));
+        await errorAlert('Error al importar', d.message || 'Error desconocido');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de red o del servidor al importar el canal.');
+      await errorAlert('Error de conexión', 'Error de red o del servidor al importar el canal.');
     } finally {
       setIsAddingChannel(false);
     }
@@ -352,6 +379,20 @@ export default function TelegramDownloader() {
     if (isPrivateChannel && !formattedName.startsWith('-100')) {
       formattedName = `-100${formattedName}`;
     }
+
+    // Estrategia 1: Evitar sobreescrituras accidentales de canales existentes
+    const existing = channels.find(c => c.name === formattedName);
+    if (existing) {
+      const ok = await confirmAlert(
+        'Canal Duplicado',
+        `El canal "${existing.label || existing.name}" ya está registrado en tu lista. ¿Deseas sobreescribir su punto de inicio de descarga al mensaje #${initialLastMsgId || 'inicio'}? Esto alterará tu progreso actual y podría descargar duplicados.`,
+        'Sí, sobreescribir',
+        'Cancelar',
+        'warning'
+      );
+      if (!ok) return;
+    }
+
     setIsAddingChannel(true);
     try {
       const res = await http.postData('/telegram/channels', {
@@ -372,24 +413,29 @@ export default function TelegramDownloader() {
         setIsPrivateChannel(false);
         setInitialLastMsgId('');
 
-        // Resaltar y hacer scroll hacia el nuevo canal
+        // Resaltar y hacer scroll hacia el nuevo canal inmediatamente
         setNewlyAddedChannel(formattedName);
         setTimeout(() => {
           const el = document.getElementById(`channel-row-${formattedName}`);
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        }, 150);
-        setTimeout(() => {
-          setNewlyAddedChannel(null);
-        }, 4000);
+        }, 50);
 
-        alert('Canal agregado y escaneado con éxito');
+        // Alerta flotante premium con botón Aceptar
+        showFloatingAlert(
+          '¡Éxito! Canal agregado y escaneado con éxito',
+          'success',
+          () => {
+            setNewlyAddedChannel(null);
+          }
+        );
       } else {
-        alert('Error agregando el canal: ' + (d.message || 'Error desconocido'));
+        await errorAlert('Error al agregar', d.message || 'Error desconocido');
       }
-    } catch { 
-      alert('Error agregando el canal'); 
+    } catch (e) {
+      console.error(e);
+      await errorAlert('Error de conexión', 'Error de red o del servidor al agregar el canal.');
     } finally {
       setIsAddingChannel(false);
     }
@@ -1324,6 +1370,86 @@ export default function TelegramDownloader() {
           </div>
         )}
       </div>
+
+      {/* ═══════════ DOWNLOADER FLOATING ALERTS ═══════════ */}
+      {downloaderAlerts.length > 0 && (
+        <Box sx={{
+          position: 'fixed',
+          top: 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.75,
+          maxWidth: 480,
+          width: '90vw',
+        }}>
+          {downloaderAlerts.map((alert) => {
+            const isSuccess = alert.type === 'success';
+            const isError = alert.type === 'error';
+            const borderClr = isSuccess
+              ? 'rgba(34, 197, 94, 0.45)'
+              : isError
+              ? 'rgba(239, 68, 68, 0.45)'
+              : 'rgba(255, 255, 255, 0.2)';
+
+            return (
+              <Box
+                key={alert.id}
+                sx={{
+                  px: 1.8,
+                  py: 1,
+                  borderRadius: 1.5,
+                  background: 'rgba(15, 23, 42, 0.98)', // Slate-900 oscuro
+                  border: '1px solid',
+                  borderColor: borderClr,
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1.5,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                  backdropFilter: 'blur(8px)',
+                  animation: 'fadeIn 0.2s ease',
+                }}
+              >
+                <Box sx={{ flex: 1, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>
+                  {alert.msg}
+                </Box>
+                <button
+                  onClick={() => {
+                    if (alert.onAccept) alert.onAccept();
+                    setDownloaderAlerts([]);
+                  }}
+                  style={{
+                    background: isSuccess ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid',
+                    borderColor: isSuccess ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = isSuccess ? 'rgba(34, 197, 94, 0.35)' : 'rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = isSuccess ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  Aceptar
+                </button>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
     </div>
   );
 }

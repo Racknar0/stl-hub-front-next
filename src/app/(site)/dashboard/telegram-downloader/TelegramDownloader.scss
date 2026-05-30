@@ -361,18 +361,9 @@
     transition: all 0.3s ease;
   }
 
-  @keyframes row-flash {
-    0% {
-      background-color: rgba(72, 187, 120, 0.35);
-      box-shadow: inset 0 0 8px rgba(72, 187, 120, 0.4);
-    }
-    100% {
-      background-color: transparent;
-    }
-  }
-
   .newly-added-row {
-    animation: row-flash 3.5s ease-out forwards;
+    background-color: rgba(72, 187, 120, 0.25) !important;
+    box-shadow: inset 0 0 8px rgba(72, 187, 120, 0.3);
   }
 
   @keyframes pulse-animation {
