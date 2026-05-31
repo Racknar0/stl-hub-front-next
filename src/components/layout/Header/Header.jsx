@@ -171,7 +171,7 @@ const Header = () => {
     }
     loadMegaMenu()
     return () => { mounted = false }
-  }, [])
+  }, [token])
 
   // Limpiar estados de búsqueda al cambiar de ruta (la nueva página ya cargó)
   useEffect(() => {

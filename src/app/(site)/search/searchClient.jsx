@@ -2,6 +2,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import CardImageSlider from '../../../components/common/CardImageSlider/CardImageSlider';
+import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from '../../../services/AxiosInterceptor';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
@@ -515,12 +517,13 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       }}
     >
       <div className="thumb">
-        <Image
-          src={it.thumb}
-          alt={it.title}
-          fill
+        <CardImageSlider
+          images={it.images}
+          fallback={it.thumb}
+          alt={it.title || 'asset'}
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 240px"
           className="thumb-img"
+          isAdult={isAssetNSFW(it)}
           priority={false}
         />
       </div>
