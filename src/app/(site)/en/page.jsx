@@ -13,9 +13,8 @@ export const metadata = {
     'resin printable','fdm printable','3d printing files','free 3d models',
     'download stl mega',
   ],
-  // Canonical apunta a ES (idioma primario): así Google no crea duplicado
   alternates: {
-    canonical: `${SITE_URL}/`,
+    canonical: `${SITE_URL}/en`,
     languages: {
       'es-ES': `${SITE_URL}/`,
       'en-US': `${SITE_URL}/en`,
@@ -131,6 +130,7 @@ export default async function EnglishHomePage() {
 
   return (
     <Home
+      lang="en"
       initialLatest={latest}
       initialTop={top}
       initialFree={free}

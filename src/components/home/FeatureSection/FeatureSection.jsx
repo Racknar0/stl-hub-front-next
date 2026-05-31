@@ -24,10 +24,11 @@ const FeatureSection = ({
     items = [],
     onItemClick,
     variantClass = '',
+    isEn: isEnProp,
 }) => {
     const { t } = useI18n();
     const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const isEn = isEnProp !== undefined ? isEnProp : (String(language || 'es').toLowerCase() === 'en');
     const finalTitle = title || t('sliders.feature.title');
     const finalSubtitle = subtitle || t('sliders.feature.subtitle');
     const finalCta = ctaLabel || t('sliders.feature.cta');
@@ -136,7 +137,7 @@ const FeatureSection = ({
                                                           <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                                                               {it.slug ? (
                                                                   <Link
-                                                                      href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
+                                                                      href={it.detailUrl || (isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`)}
                                                                       onClick={(e)=>{ e.stopPropagation(); }}
                                                                       aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
                                                                       style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}

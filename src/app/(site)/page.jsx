@@ -84,6 +84,7 @@ export default async function Page() {
 
   return (
     <Home
+      lang="es"
       initialLatest={latest}
       initialTop={top}
       initialFree={free}

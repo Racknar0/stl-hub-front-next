@@ -73,6 +73,8 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
   const language = useStore((s)=>s.language);
   const globalLoading = useStore((s)=>s.globalLoading);
+  const currentLang = lang || language || 'es';
+  const isEn = String(currentLang).toLowerCase() === 'en';
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
   const [modalList, setModalList] = useState([]); // lista de assets de donde vino el asset actual
@@ -124,6 +126,8 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
     return {
       id: a.id,
       slug: a.slug, // necesario para enlace "ver detalle"
+      isEn,
+      detailUrl: isEn ? `/en/asset/${a.slug}` : `/asset/${a.slug}`,
       title,
       description: a.description,
       descriptionEn: a.descriptionEn,
@@ -258,24 +262,24 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
 
   // Derivar listas según idioma
   // Limitar sliders a 20 elementos por seguridad adicional
-  const latest = useMemo(() => latestRaw.slice(0,20).map(a => toCardItem(a, language)), [latestRaw, language]);
+  const latest = useMemo(() => latestRaw.slice(0,20).map(a => toCardItem(a, currentLang)), [latestRaw, currentLang]);
   const top = useMemo(() => {
     const rotated = rotateListBy(topRaw, topRotationStep);
-    return rotated.slice(0,20).map(a => toCardItem(a, language));
-  }, [topRaw, topRotationStep, language]);
-  const free = useMemo(() => freeRaw.slice(0,20).map(a => toCardItem(a, language)), [freeRaw, language]);
+    return rotated.slice(0,20).map(a => toCardItem(a, currentLang));
+  }, [topRaw, topRotationStep, currentLang]);
+  const free = useMemo(() => freeRaw.slice(0,20).map(a => toCardItem(a, currentLang)), [freeRaw, currentLang]);
 
   const catSliders = useMemo(() => (
     catOrder.map(slug => {
       const cat = cats.find(c => c.slug === slug);
-      const items = (catMap[slug] || []).slice(0, CAT_SLIDER_LIMIT).map(a => toCardItem(a, language));
+      const items = (catMap[slug] || []).slice(0, CAT_SLIDER_LIMIT).map(a => toCardItem(a, currentLang));
       return {
         slug,
-        title: language === 'en' ? (cat?.nameEn || cat?.name || slug) : (cat?.name || cat?.nameEn || slug),
+        title: currentLang === 'en' ? (cat?.nameEn || cat?.name || slug) : (cat?.name || cat?.nameEn || slug),
         items,
       };
     })
-  ), [catOrder, catMap, cats, language, CAT_SLIDER_LIMIT]);
+  ), [catOrder, catMap, cats, currentLang, CAT_SLIDER_LIMIT]);
 
   // Build a flat list of all visible assets for modal navigation
   const allVisibleAssets = useMemo(() => {
@@ -317,7 +321,14 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
         subtitle={t('home.latest.subtitle')}
         ctaLabel={t('home.latest.cta')}
         items={latest}
+      <FeatureSection
+        variantClass="feature-section--latest-glow"
+        title={t('home.latest.title')}
+        subtitle={t('home.latest.subtitle')}
+        ctaLabel={t('home.latest.cta')}
+        items={latest}
         onItemClick={handleOpen}
+        isEn={isEn}
       />
 
       {/* Nuevo slider: Gratis (se actualiza diario) */}
@@ -326,17 +337,19 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
         title={t('home.free.title')}
         items={free}
         onItemClick={handleOpen}
-        linkHref="/search?plan=free"
+        linkHref={isEn ? "/en/search?plan=free" : "/search?plan=free"}
         linkLabel={t('home.free.more')}
         priority={true}
+        isEn={isEn}
       />
 
       <SectionRow
         title={t('home.top.title')}
         items={top}
         onItemClick={handleOpen}
-        linkHref="/search?order=downloads"
+        linkHref={isEn ? "/en/search?order=downloads" : "/search?order=downloads"}
         linkLabel={t('home.top.more')}
+        isEn={isEn}
       />
 
       {/* Sliders por categoría (6 por lote) */}
@@ -346,8 +359,9 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
           title={cs.title}
           items={cs.items}
           onItemClick={handleOpen}
-          linkHref={`/search?categories=${encodeURIComponent(cs.slug)}`}
+          linkHref={isEn ? `/en/search?categories=${encodeURIComponent(cs.slug)}` : `/search?categories=${encodeURIComponent(cs.slug)}`}
           linkLabel={t('sliders.row.more')}
+          isEn={isEn}
         />
       ))}
 
