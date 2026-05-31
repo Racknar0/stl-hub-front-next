@@ -5,6 +5,7 @@ import "./globals.css";
 import LangSetter from "./LangSetter";
 import { GoogleTagManager } from '@next/third-parties/google';
 import { DM_Sans, Syne, Outfit, Montserrat, Poppins } from 'next/font/google';
+import { headers } from 'next/headers';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -95,9 +96,15 @@ export async function generateMetadata() {
   };
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  let htmlLang = 'es';
+  try {
+    const h = await headers();
+    htmlLang = h.get('x-lang') === 'en' ? 'en' : 'es';
+  } catch {}
+
   return (
-    <html lang="es" className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${montserrat.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <html lang={htmlLang} className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${montserrat.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         <LangSetter />
         {/* Meta keywords fallback for some crawlers */}

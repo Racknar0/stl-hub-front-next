@@ -105,9 +105,10 @@ export async function generateMetadata({ searchParams }) {
   if (params.tags) canonicalParams.set('tags', params.tags);
   if (params.pageIndex && params.pageIndex !== '0') canonicalParams.set('pageIndex', params.pageIndex);
   const canonicalQuery = canonicalParams.toString();
+  const baseSearchPath = isEn ? `${SITE}/en/search` : `${SITE}/search`;
   const canonicalUrl = canonicalQuery
-    ? `${SITE}/search?${canonicalQuery}`
-    : `${SITE}/search`;
+    ? `${baseSearchPath}?${canonicalQuery}`
+    : baseSearchPath;
 
   // Indexamos si es la raíz limpia del catálogo (/search) o si es un filtro con resultados
   const isCatalogRoot = !params.q && !params.categories && !params.tags;
