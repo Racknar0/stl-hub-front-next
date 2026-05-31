@@ -602,7 +602,7 @@ const Header = () => {
       <div className="container-narrow">
         <nav className="navbar d-flex align-items-center justify-content-between">
           <Link
-            href="/"
+            href={isEn ? '/en' : '/'}
             className="brand d-flex align-items-center"
             aria-label={t('header.homeAria')}
           >
@@ -613,7 +613,7 @@ const Header = () => {
               onClick={(e) => {
                 // Defensa extra: si por algún motivo el Link no navega (overlay/captura), forzamos home.
                 // No hacemos preventDefault para no romper el comportamiento normal del Link.
-                try { router.push('/') } catch {}
+                try { router.push(isEn ? '/en' : '/') } catch {}
               }}
             />
           </Link>
