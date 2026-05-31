@@ -1,5 +1,6 @@
 import React from 'react';
 import Home from './home/Home';
+import { headers } from 'next/headers';
 
 const PAGE_SIZE = 20;
 
@@ -33,6 +34,12 @@ const shuffleArray = (arr) => {
 };
 
 export default async function Page() {
+  let lang = 'es';
+  try {
+    const h = await headers();
+    lang = h.get('x-lang') === 'en' ? 'en' : 'es';
+  } catch {}
+
   // 1. Peticiones en paralelo directas en servidor
   const [resLatest, resTopRandomPool, resFree, resCats] = await Promise.all([
     fetchHomeSSR('/api/assets/latest?limit=20'),
@@ -84,7 +91,7 @@ export default async function Page() {
 
   return (
     <Home
-      lang="es"
+      lang={lang}
       initialLatest={latest}
       initialTop={top}
       initialFree={free}

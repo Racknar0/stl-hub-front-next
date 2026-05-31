@@ -1,10 +1,20 @@
 import { Suspense } from 'react';
 import SearchClient from './searchClient';
+import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic'; // Siempre SSR, nunca cache estático
 
 const SITE = 'https://stl-hub.com';
 const PAGE_SIZE = 72;
+
+async function getRequestLanguage() {
+  try {
+    const h = await headers();
+    return h.get('x-lang') === 'en' ? 'en' : 'es';
+  } catch {
+    return 'es';
+  }
+}
 
 function getApiBase() {
   return (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');
@@ -87,13 +97,8 @@ export async function generateMetadata({ searchParams }) {
     pageIndex: String(pageIndexNumber),
   };
 
-  // Detectar idioma
-  let isEn = false;
-  try {
-    const { headers } = await import('next/headers');
-    const h = await headers();
-    isEn = h.get('x-lang') === 'en';
-  } catch {}
+  const requestLanguage = await getRequestLanguage();
+  const isEn = requestLanguage === 'en';
 
   // Fetch para obtener el total de resultados (para la meta description)
   const data = await fetchSearchSSR(params);
@@ -173,6 +178,8 @@ export async function generateMetadata({ searchParams }) {
 }
 
 export default async function Page({ searchParams }) {
+  const requestLanguage = await getRequestLanguage();
+
   const sp = await searchParams;
   const params = {
     q: sp?.q || '',
@@ -198,9 +205,10 @@ export default async function Page({ searchParams }) {
   const initialSuggestions = ssrData?.suggestions || [];
 
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={<div>{requestLanguage === 'en' ? 'Loading...' : 'Cargando...'}</div>}>
       <SearchClient
         key={JSON.stringify(params)}
+        initialLang={requestLanguage}
         initialParams={params}
         initialItems={initialItems}
         initialTotal={initialTotal}

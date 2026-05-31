@@ -7,13 +7,14 @@ import './SubscribeBar.scss'
 import useStore from '@/store/useStore'
 import axiosInstance from '@/services/AxiosInterceptor'
 import { usePromo } from '@/hooks/usePromo'
+import useResolvedLanguage from '@/hooks/useResolvedLanguage'
 
 
 const SubscribeBar = () => {
 
-    const language = useStore((s) => s.language);
+  const resolvedLanguage = useResolvedLanguage();
     const token = useStore((s) => s.token);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+  const isEn = resolvedLanguage === 'en';
     const promo = usePromo();
 
     const [daysRemaining, setDaysRemaining] = React.useState(null);

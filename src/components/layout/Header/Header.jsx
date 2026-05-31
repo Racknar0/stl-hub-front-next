@@ -12,6 +12,7 @@ import { confirmAlert } from '../../../helpers/alerts'
 import HttpService from '../../../services/HttpService'
 // import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
 import { useI18n } from '../../../i18n'
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage'
 import { sendGTMEvent } from '@next/third-parties/google'
 
 /**
@@ -34,12 +35,13 @@ const Header = () => {
   const token = useStore((s) => s.token)
   const roleId = useStore((s) => s.roleId)
   const logout = useStore((s) => s.logout)
-  const language = useStore((s) => s.language)
+  const resolvedLanguage = useResolvedLanguage()
+  const language = resolvedLanguage
   const setImageSearchResults = useStore((s) => s.setImageSearchResults)
   const [profile, setProfile] = React.useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
   const profileMenuRef = useRef(null);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const isEn = resolvedLanguage === 'en';
 
 
   // Cargar perfil solo si hay token

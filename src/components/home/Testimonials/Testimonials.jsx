@@ -5,8 +5,8 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import './Testimonials.scss';
-import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const defaultItems = [
 	{
@@ -78,8 +78,8 @@ const getInitials = (name = '') => {
 
 const Testimonials = ({ items = defaultItems }) => {
 	const list = Array.isArray(items) && items.length ? items : defaultItems;
-	const language = useStore((s) => s.language);
-	const isEn = String(language || 'es').toLowerCase() === 'en';
+	const resolvedLanguage = useResolvedLanguage();
+	const isEn = resolvedLanguage === 'en';
 	const { t } = useI18n?.() || { t: () => undefined };
 	
 	const title = (typeof t === 'function' && t('testimonials.title')) || 

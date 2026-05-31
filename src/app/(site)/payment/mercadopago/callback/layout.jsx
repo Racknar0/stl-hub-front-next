@@ -1,4 +1,4 @@
-import { buildNoindexMetadata } from '../../../../noindexRouteMetadata';
+import { buildNoindexMetadata } from '../../../noindexRouteMetadata';
 
 export const metadata = buildNoindexMetadata(
   '/payment/mercadopago/callback',

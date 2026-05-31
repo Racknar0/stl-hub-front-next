@@ -10,6 +10,7 @@ import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import Button from '../../../components/layout/Buttons/Button';
 import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 const token_selector = (s) => s.token;
 // Importamos el estilo del loader global para reutilizar el mismo spinner inline
 import '../../../components/common/GlobalLoader/GlobalLoader.scss';
@@ -148,24 +149,25 @@ function toDisplayItem(a, lang) {
   };
 }
 
-export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback, initialSuggestions }) {
-  const { t } = useI18n();
-  const language = useStore((s)=>s.language);
+export default function SearchClient({ initialParams, initialItems, initialTotal, initialHasMore, initialAiFallback, initialSuggestions, initialLang = 'es' }) {
+  const resolvedLanguage = useResolvedLanguage(initialLang);
+  const { t } = useI18n(resolvedLanguage);
   const token = useStore(token_selector);
   const imageSearchResults = useStore((s) => s.imageSearchResults);
   const clearImageSearchResults = useStore((s) => s.clearImageSearchResults);
+  const normalizedInitialLang = String(initialLang || 'es').toLowerCase() === 'en' ? 'en' : 'es';
 
   // Pre-process SSR items into display format
   const ssrItemsRef = useRef(null);
   if (ssrItemsRef.current === null && Array.isArray(initialItems) && initialItems.length > 0) {
-    ssrItemsRef.current = initialItems.map(a => toDisplayItem(a, 'es'));
+    ssrItemsRef.current = initialItems.map(a => toDisplayItem(a, normalizedInitialLang));
   }
   const hasSSRData = ssrItemsRef.current !== null && ssrItemsRef.current.length > 0;
   const ssrConsumedRef = useRef(false);
 
   const [items, setItems] = useState(hasSSRData ? ssrItemsRef.current : []);
   const [loading, setLoading] = useState(!hasSSRData);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const isEn = resolvedLanguage === 'en';
   const [q, setQ] = useState(initialParams?.q || '');
   const [categories, setCategories] = useState(initialParams?.categories || '');
   const [tags, setTags] = useState(initialParams?.tags || '');
@@ -185,7 +187,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const searchEventIdRef = useRef(null);
   const ssrSugRef = useRef(null);
   if (ssrSugRef.current === null && Array.isArray(initialSuggestions) && initialSuggestions.length > 0) {
-    ssrSugRef.current = initialSuggestions.map(a => toDisplayItem(a, 'es'));
+    ssrSugRef.current = initialSuggestions.map(a => toDisplayItem(a, normalizedInitialLang));
   }
   const [suggestions, setSuggestions] = useState(ssrSugRef.current || []);
   
@@ -358,7 +360,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
 
       if (isImageSearch) {
         if (nextPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
-          const list = imageSearchResults.items.map(a => toDisplayItem(a, language));
+          const list = imageSearchResults.items.map(a => toDisplayItem(a, resolvedLanguage));
           setItems(list);
           setHasMore(false);
           hasMoreRef.current = false;
@@ -380,11 +382,11 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       const res = await axios.get('/assets/search', {
         params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
       });
-      const list = (res.data?.items || []).map(a => toDisplayItem(a, language));
+      const list = (res.data?.items || []).map(a => toDisplayItem(a, resolvedLanguage));
       setItems(prev => isFirstPageLoad ? list : [...prev, ...list]);
       if (isFirstPageLoad) {
         setAiFallback(!!res.data?.aiFallback);
-        const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, language));
+        const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, resolvedLanguage));
         setSuggestions(sugList);
       }
       const total = Number(res.data?.total ?? 0);
@@ -410,13 +412,13 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       if (isFirstPageLoad) setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [params, language, trackSearchIfNeeded, imageSearchResults, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal]);
+  }, [params, resolvedLanguage, trackSearchIfNeeded, imageSearchResults, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal]);
 
   // Carga inicial
   useEffect(() => {
     const initPage = Number(initialParams?.pageIndex || 0);
     loadPageReal(initPage);
-  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language, imageSearchResults, initialParams?.pageIndex]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, resolvedLanguage, imageSearchResults, initialParams?.pageIndex]);
 
   // Cargar más
   const loadMoreReal = useCallback(() => {
@@ -600,7 +602,9 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       <div className="container-narrow" style={{ maxWidth: '100%' }}>
         {/* Breadcrumb + filtros activos */}
         <div className="search-breadcrumb" style={{ maxWidth: '1200px', margin: '0 auto 24px' }}>
-          <Button href="/" variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>Inicio</Button>
+          <Button href={isEn ? '/en' : '/'} variant="purple" styles={{ width: 'auto', padding: '0 .9rem' }}>
+            {isEn ? 'Home' : 'Inicio'}
+          </Button>
           <span className="sep">/</span>
           <h1 className="title">{t('search.title')}</h1>
           <div className="filters">
@@ -612,7 +616,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           </div>
           <div style={{flex:1}} />
           <div className="order-actions">
-            <Button href="/search?order=downloads" variant="cyan" styles={{ width: 'auto', padding: '0 .7rem', color:'#fff' }}>
+            <Button href={isEn ? '/en/search?order=downloads' : '/search?order=downloads'} variant="cyan" styles={{ width: 'auto', padding: '0 .7rem', color:'#fff' }}>
               {t('search.mostDownloaded')}
             </Button>
           </div>
@@ -623,7 +627,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           <div className="nsfw-search-notice" style={{ maxWidth: '1200px', margin: '0 auto 16px', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 8, background: 'rgba(255, 75, 75, 0.08)', border: '1px solid rgba(255, 75, 75, 0.22)', fontSize: '0.8rem', fontWeight: 600, color: '#ff7b7b', lineHeight: 1.4 }}>
             <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>🛡️</span>
             <span>{isEn ? 'For user protection, some content requires authentication. ' : 'Por políticas de protección al usuario, parte del contenido requiere autenticación. '}
-              <a href="/login" style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
+              <a href={isEn ? '/en/login' : '/login'} style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
             </span>
           </div>
         )}
@@ -640,7 +644,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       {!token && (
         <p style={{ fontSize: '0.85rem', color: '#ff7b7b', marginTop: 8 }}>
           🔒 {isEn ? 'Some content requires login to be displayed.' : 'Algunos contenidos requieren inicio de sesión para mostrarse.'}{' '}
-          <a href="/login" style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
+          <a href={isEn ? '/en/login' : '/login'} style={{ color: '#b59cff', textDecoration: 'underline' }}>{isEn ? 'Log in' : 'Inicia sesión'}</a>
         </p>
       )}
     </div>
@@ -696,7 +700,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
             {hasMore ? (
               <div ref={sentinelRef} style={{ color: '#9aa4c7', fontSize: '.9rem', display:'flex', alignItems:'center', gap:'10px' }}>
-                {isLoadingMore ? <Spinner /> : 'Cargar más…'}
+                {isLoadingMore ? <Spinner /> : (isEn ? 'Load more…' : 'Cargar más…')}
               </div>
             ) : (
               <div style={{ color: '#9aa4c7', fontSize: '.9rem' }}>

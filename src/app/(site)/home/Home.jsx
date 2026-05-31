@@ -11,6 +11,7 @@ import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
 import Button from '../../../components/layout/Buttons/Button';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 // Categorías fijas
 const CATEGORIES = [
@@ -71,9 +72,9 @@ const rotateListBy = (arr, steps = 0) => {
 const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories, initialCatMap, initialCatOrder }) => {
   const http = new HttpService();
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
-  const language = useStore((s)=>s.language);
+  const resolvedLanguage = useResolvedLanguage(lang);
   const globalLoading = useStore((s)=>s.globalLoading);
-  const currentLang = lang || language || 'es';
+  const currentLang = resolvedLanguage;
   const isEn = String(currentLang).toLowerCase() === 'en';
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
@@ -95,7 +96,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
   const [catOrder, setCatOrder] = useState(initialCatOrder || []); // slugs con resultados en orden de carga
   const [loadingMoreCats, setLoadingMoreCats] = useState(false);
   const [catsLoadedAll, setCatsLoadedAll] = useState(initialCategories && initialCategories.length > 0 && (initialCatOrder || []).length >= initialCategories.length);
-  const { t } = useI18n();
+  const { t } = useI18n(currentLang);
 
   // Activar loader antes del primer pintado para evitar flash del fondo
   useLayoutEffect(() => {

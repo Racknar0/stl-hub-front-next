@@ -39,8 +39,12 @@ const useStore = create(
         hydrateLanguage: () => {
           if (typeof window === 'undefined') return
           try {
-            const val = window.localStorage.getItem('lang')
-            const lang = (String(val || 'es').toLowerCase() === 'en') ? 'en' : 'es'
+            const cookieMatch = window.document?.cookie?.match(/(?:^|;\s*)lang=(en|es)/i)
+            const cookieLang = cookieMatch ? String(cookieMatch[1]).toLowerCase() : ''
+            const storedLang = window.localStorage.getItem('lang')
+            const sourceLang = cookieLang || storedLang || 'es'
+            const lang = (String(sourceLang).toLowerCase() === 'en') ? 'en' : 'es'
+            if (cookieLang) window.localStorage.setItem('lang', lang)
             set({ language: lang })
           } catch {}
         },

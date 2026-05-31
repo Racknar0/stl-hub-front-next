@@ -1,11 +1,11 @@
 import es from './es'
 import en from './en'
-import useStore from '../store/useStore'
+import useResolvedLanguage from '../hooks/useResolvedLanguage'
 
 const dicts = { es, en }
 
-export function useI18n() {
-  const lang = useStore((s) => s.language) || 'es'
+export function useI18n(preferredLanguage) {
+  const lang = useResolvedLanguage(preferredLanguage)
   const dict = dicts[lang] || dicts.es
   const t = (path, fallback) => {
     const parts = String(path).split('.')

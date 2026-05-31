@@ -8,6 +8,7 @@ import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
 import Button from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
+import useResolvedLanguage from '@/hooks/useResolvedLanguage';
 import {
     getTrackingFromMiddlewareCookie,
     getVisitIdentityFromMiddlewareCookie,
@@ -38,9 +39,9 @@ const PricingSection = ({
     containerClass = 'container-narrow',
 }) => {
     const { t } = useI18n?.() || { t: () => undefined };
-    const language = useStore((s) => s.language);
+    const resolvedLanguage = useResolvedLanguage();
     const promo = usePromo();
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const isEn = resolvedLanguage === 'en';
     const locale = isEn ? 'en-US' : 'es-CO';
 
     const [showModal, setShowModal] = React.useState(false);

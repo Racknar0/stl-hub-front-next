@@ -91,7 +91,9 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
 
   // /es → cookie es y (opcional) redirige a la ruta base sin /es
   if (pathname === '/es' || pathname.startsWith('/es/')) {
-    const res = NextResponse.redirect(new URL(pathname.replace(/^\/es/, '') || '/', req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/es/, '') || '/';
+    const res = NextResponse.redirect(url, 308);
     res.cookies.set('lang', 'es', { path: '/' });
     queueCampaignTracking(req, event, res);
     return res;

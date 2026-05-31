@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import './Footer.scss';
 import { useI18n } from '../../../i18n';
-import useStore from '../../../store/useStore';
 import LegalModal from '../../common/LegalModal/LegalModal';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const Footer = () => {
   const [showLegalModal, setShowLegalModal] = useState(false);
   const { t } = useI18n?.() || { t: () => undefined };
-  const language = useStore((s) => s.language);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = resolvedLanguage === 'en';
   
   const officialEmail = process.env.NEXT_PUBLIC_OFFICIAL_EMAIL || 'stlhubmega@gmail.com';
   const currentYear = new Date().getFullYear();
