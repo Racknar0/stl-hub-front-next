@@ -68,7 +68,7 @@ const rotateListBy = (arr, steps = 0) => {
   return list.slice(offset).concat(list.slice(0, offset))
 }
 
-const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initialCatMap, initialCatOrder }) => {
+const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories, initialCatMap, initialCatOrder }) => {
   const http = new HttpService();
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
   const language = useStore((s)=>s.language);
@@ -315,12 +315,6 @@ const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initi
       {/* <GlobalLoader /> */}
       <Hero />
 
-      <FeatureSection
-        variantClass="feature-section--latest-glow"
-        title={t('home.latest.title')}
-        subtitle={t('home.latest.subtitle')}
-        ctaLabel={t('home.latest.cta')}
-        items={latest}
       <FeatureSection
         variantClass="feature-section--latest-glow"
         title={t('home.latest.title')}
