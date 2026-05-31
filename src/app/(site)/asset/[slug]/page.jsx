@@ -454,7 +454,11 @@ export default async function AssetPage({ params }) {
                             <div className={styles.tagWrap}>
                                 {mergedTags.length === 0 ? <span className={styles.badgeMuted}>Sin tags</span> : null}
                                 {mergedTags.map((t, i) => (
-                                    <Link key={`${t.slug}-${i}`} href={`/tags/${encodeURIComponent(t.slug)}`} className={styles.tagLink}>
+                                    <Link
+                                        key={`${t.slug}-${i}`}
+                                        href={pageIsEn ? `/en/search?tags=${encodeURIComponent(t.slug)}` : `/search?tags=${encodeURIComponent(t.slug)}`}
+                                        className={styles.tagLink}
+                                    >
                                         #{t.label}
                                     </Link>
                                 ))}

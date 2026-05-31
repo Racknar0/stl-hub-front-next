@@ -36,6 +36,44 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
 
   if (IGNORE.test(pathname)) return NextResponse.next();
 
+  // SEO: redirección permanente de rutas legacy /tags/* hacia /search?tags=*
+  // (evita páginas blandas 200 con NEXT_REDIRECT en HTML y consolida señales)
+  const rootTagsMatch = pathname.match(/^\/tags\/?$/i);
+  if (rootTagsMatch) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/search';
+    url.search = '';
+    return NextResponse.redirect(url, 308);
+  }
+
+  const rootTagValueMatch = pathname.match(/^\/tags\/([^/]+)\/?$/i);
+  if (rootTagValueMatch) {
+    const tag = decodeURIComponent(rootTagValueMatch[1] || '').trim();
+    const url = req.nextUrl.clone();
+    url.pathname = '/search';
+    url.search = '';
+    if (tag) url.searchParams.set('tags', tag);
+    return NextResponse.redirect(url, 308);
+  }
+
+  const enTagsMatch = pathname.match(/^\/en\/tags\/?$/i);
+  if (enTagsMatch) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/en/search';
+    url.search = '';
+    return NextResponse.redirect(url, 308);
+  }
+
+  const enTagValueMatch = pathname.match(/^\/en\/tags\/([^/]+)\/?$/i);
+  if (enTagValueMatch) {
+    const tag = decodeURIComponent(enTagValueMatch[1] || '').trim();
+    const url = req.nextUrl.clone();
+    url.pathname = '/en/search';
+    url.search = '';
+    if (tag) url.searchParams.set('tags', tag);
+    return NextResponse.redirect(url, 308);
+  }
+
   // /en → cookie en y seguimos (la rewrite la hace next.config.js)
   if (pathname === '/en' || pathname.startsWith('/en/')) {
     const requestHeaders = new Headers(req.headers);

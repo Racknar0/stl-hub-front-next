@@ -45,7 +45,11 @@ export default function TagClient({ tag }) {
               <div className="info">
                 <div className="title">{it.title}</div>
                 <div className="chips">
-                  {it.chips.map((c,i)=> (<Link key={i} className="chip chip--link" href={`/tags/${encodeURIComponent(c)}`}>#{c}</Link>))}
+                  {it.chips.map((c,i)=> (
+                    <Link key={i} className="chip chip--link" href={`/search?tags=${encodeURIComponent(c)}`}>
+                      #{c}
+                    </Link>
+                  ))}
                 </div>
               </div>
             </article>
