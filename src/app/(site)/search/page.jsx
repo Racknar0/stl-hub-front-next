@@ -75,13 +75,16 @@ function buildDescription(params, total, isEn) {
 
 export async function generateMetadata({ searchParams }) {
   const sp = await searchParams;
+  const pageIndexNumber = Math.max(0, parseInt(String(sp?.pageIndex ?? '0'), 10) || 0);
   const params = {
     q: sp?.q || '',
     categories: sp?.categories || '',
     tags: sp?.tags || '',
     order: sp?.order || '',
     plan: sp?.plan || '',
-    pageIndex: sp?.pageIndex || '0',
+    is_ai_search: sp?.is_ai_search || '',
+    image_search: sp?.image_search || '',
+    pageIndex: String(pageIndexNumber),
   };
 
   // Detectar idioma
@@ -94,25 +97,54 @@ export async function generateMetadata({ searchParams }) {
 
   // Fetch para obtener el total de resultados (para la meta description)
   const data = await fetchSearchSSR(params);
-  const total = data?.total || 0;
+  const total = Number(data?.total || 0);
+  const pageItemsCount = Array.isArray(data?.items) ? data.items.length : 0;
+  const isAiFallback = data?.aiFallback === true;
+  const isAiSearch = params.is_ai_search === 'true';
+  const isImageSearch = params.image_search === 'true';
+  const isFirstPage = pageIndexNumber === 0;
 
   const title = buildTitle(params, isEn);
   const description = buildDescription(params, total, isEn);
 
-  const canonicalParams = new URLSearchParams();
-  if (params.q) canonicalParams.set('q', params.q);
-  if (params.categories) canonicalParams.set('categories', params.categories);
-  if (params.tags) canonicalParams.set('tags', params.tags);
-  if (params.pageIndex && params.pageIndex !== '0') canonicalParams.set('pageIndex', params.pageIndex);
-  const canonicalQuery = canonicalParams.toString();
   const baseSearchPath = isEn ? `${SITE}/en/search` : `${SITE}/search`;
+
+  // Indexamos solo la raíz limpia del catálogo y la primera página de filtros con resultados reales.
+  // Esto evita crawl traps (pageIndex profundo, búsquedas por imagen/IA y fallback de sugerencias).
+  const isCatalogRoot = !params.q && !params.categories && !params.tags;
+  const canIndexFilteredFirstPage =
+    !isCatalogRoot &&
+    isFirstPage &&
+    pageItemsCount > 0 &&
+    !isAiFallback;
+
+  const shouldIndex =
+    !isAiSearch &&
+    !isImageSearch &&
+    ((isCatalogRoot && isFirstPage) || canIndexFilteredFirstPage);
+
+  const useBaseCanonicalOnly =
+    isAiSearch ||
+    isImageSearch ||
+    isAiFallback ||
+    (!isCatalogRoot && pageItemsCount === 0);
+
+  const canonicalParams = new URLSearchParams();
+  if (!useBaseCanonicalOnly) {
+    if (params.q) canonicalParams.set('q', params.q);
+    if (params.categories) canonicalParams.set('categories', params.categories);
+    if (params.tags) canonicalParams.set('tags', params.tags);
+
+    // No canonicalizamos páginas profundas no indexables.
+    if (shouldIndex && pageIndexNumber > 0) {
+      canonicalParams.set('pageIndex', String(pageIndexNumber));
+    }
+  }
+
+  const canonicalQuery = canonicalParams.toString();
   const canonicalUrl = canonicalQuery
     ? `${baseSearchPath}?${canonicalQuery}`
     : baseSearchPath;
-
-  // Indexamos si es la raíz limpia del catálogo (/search) o si es un filtro con resultados
-  const isCatalogRoot = !params.q && !params.categories && !params.tags;
-  const shouldIndex = isCatalogRoot || (total > 0);
 
   return {
     title,
