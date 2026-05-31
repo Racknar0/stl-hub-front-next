@@ -14,6 +14,15 @@ function normalizeHost(host: string) {
 export function middleware(req: NextRequest, event: NextFetchEvent) {
   const host = normalizeHost(req.headers.get('host') || req.nextUrl.host);
 
+  // SEO: Forzar redirección 301 de www a non-www (evita contenido duplicado)
+  if (host.startsWith('www.')) {
+    const url = req.nextUrl.clone();
+    url.protocol = 'https:';
+    url.host = CANONICAL_HOST;
+    url.port = '';
+    return NextResponse.redirect(url, 301);
+  }
+
   // SEO: evita indexación por IP directa y fuerza dominio canónico HTTPS.
   if (BLOCKED_IP_HOSTS.has(host)) {
     const url = req.nextUrl.clone();
