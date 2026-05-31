@@ -380,7 +380,7 @@ export default function BatchTable() {
       const payload = {
         imagePath: imagePath,
         textContext: titleValue,
-        limit: 4,
+        limit: 6,
       }
 
       const r = await http.postData('/ai/search-by-local-image', payload)
