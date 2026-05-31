@@ -92,7 +92,8 @@ async function fetchAsset(slug) {
 }
 
 export async function generateMetadata({ params }) {
-    const asset = await fetchAsset(params.slug);
+    const { slug } = await params;
+    const asset = await fetchAsset(slug);
     if (!asset || (asset.__error && asset.status === 404)) {
         return { title: 'Modelo no encontrado', robots: { index: false, follow: false } };
     }
@@ -103,7 +104,7 @@ export async function generateMetadata({ params }) {
             title: 'Contenido restringido | STLHUB',
             description: 'Este contenido requiere inicio de sesión.',
             robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
-            alternates: { canonical: `${site}/asset/${params.slug}` },
+            alternates: { canonical: `${site}/asset/${slug}` },
             other: { rating: 'adult', 'nsfw-content': 'true' },
         };
     }
@@ -119,7 +120,7 @@ export async function generateMetadata({ params }) {
         return {
             title: 'STL HUB',
             description: 'Catálogo de modelos STL para impresión 3D.',
-            alternates: { canonical: `${site}/asset/${params.slug}` },
+            alternates: { canonical: `${site}/asset/${slug}` },
         };
     }
 
@@ -218,7 +219,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function AssetPage({ params }) {
-    const asset = await fetchAsset(params.slug);
+    const { slug } = await params;
+    const asset = await fetchAsset(slug);
     if (!asset || asset.__error) {
       if (asset?.status === 404) notFound();
       // Para otros errores mostrar fallback simple (sin notFound para diferenciar 500)
@@ -235,7 +237,7 @@ export default async function AssetPage({ params }) {
             restrictedIsEn = h.get('x-lang') === 'en';
         } catch {}
         const NsfwAssetGate = (await import('./NsfwAssetGate')).default;
-        return <NsfwAssetGate slug={params.slug} isEn={restrictedIsEn} />;
+        return <NsfwAssetGate slug={slug} isEn={restrictedIsEn} />;
     }
         if (asset?.unpublished) {
             notFound();
