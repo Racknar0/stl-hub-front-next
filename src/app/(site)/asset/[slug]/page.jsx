@@ -9,7 +9,7 @@ import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
 import RelatedAssets from './RelatedAssets';
 
-export const revalidate = false; // Cache permanente hasta el próximo build
+export const revalidate = 86400; // Revalidación cada 24 horas (ISR)
 export const dynamicParams = true; // Acepta y cachea slugs no pre-generados on-demand
 
 // Pre-genera los 500 modelos más recientes en cada build.

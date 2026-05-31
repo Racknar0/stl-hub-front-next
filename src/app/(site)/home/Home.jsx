@@ -68,7 +68,7 @@ const rotateListBy = (arr, steps = 0) => {
   return list.slice(offset).concat(list.slice(0, offset))
 }
 
-const Home = () => {
+const Home = ({ initialLatest, initialTop, initialFree, initialCategories, initialCatMap, initialCatOrder }) => {
   const http = new HttpService();
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
   const language = useStore((s)=>s.language);
@@ -77,28 +77,30 @@ const Home = () => {
   const [modalAsset, setModalAsset] = useState(null);
   const [modalList, setModalList] = useState([]); // lista de assets de donde vino el asset actual
   // Guardar respuesta cruda
-  const [latestRaw, setLatestRaw] = useState([]);
-  const [topRaw, setTopRaw] = useState([]);
+  const [latestRaw, setLatestRaw] = useState(initialLatest || []);
+  const [topRaw, setTopRaw] = useState(initialTop || []);
   // Nuevo: lista Free
-  const [freeRaw, setFreeRaw] = useState([]);
+  const [freeRaw, setFreeRaw] = useState(initialFree || []);
 
   const [topRotationStep, setTopRotationStep] = useState(0);
   // Categorías y sliders
-  const [cats, setCats] = useState([]); // [{ id, name, nameEn, slug, slugEn }]
-  const [catsLoadOrder, setCatsLoadOrder] = useState([]); // mismo shape, pero barajado para carga
-  const [catPage, setCatPage] = useState(0);
+  const [cats, setCats] = useState(initialCategories || []); // [{ id, name, nameEn, slug, slugEn }]
+  const [catsLoadOrder, setCatsLoadOrder] = useState(() => initialCategories || []); // mismo shape, pero barajado para carga
+  const [catPage, setCatPage] = useState(initialCatOrder && initialCatOrder.length > 0 ? 1 : 0);
   const BATCH_SIZE = 4;
   const CAT_SLIDER_LIMIT = 20;
-  const [catMap, setCatMap] = useState({}); // slug -> raw items
-  const [catOrder, setCatOrder] = useState([]); // slugs con resultados en orden de carga
+  const [catMap, setCatMap] = useState(initialCatMap || {}); // slug -> raw items
+  const [catOrder, setCatOrder] = useState(initialCatOrder || []); // slugs con resultados en orden de carga
   const [loadingMoreCats, setLoadingMoreCats] = useState(false);
-  const [catsLoadedAll, setCatsLoadedAll] = useState(false);
+  const [catsLoadedAll, setCatsLoadedAll] = useState(initialCategories && initialCategories.length > 0 && (initialCatOrder || []).length >= initialCategories.length);
   const { t } = useI18n();
 
   // Activar loader antes del primer pintado para evitar flash del fondo
   useLayoutEffect(() => {
-    setGlobalLoading(true);
-  }, [setGlobalLoading]);
+    if (!initialLatest || initialLatest.length === 0) {
+      setGlobalLoading(true);
+    }
+  }, [setGlobalLoading, initialLatest]);
 
   const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
   const imgUrl = (rel) => {
@@ -147,6 +149,16 @@ const Home = () => {
   }
 
   useEffect(() => {
+    if (initialLatest && initialLatest.length > 0) {
+      setGlobalLoading(false);
+      // Mantener las 4 primeras estables (para evitar layout shift con SSR), 
+      // y barajar el resto para mantener la aleatoriedad en "Cargar más"
+      const preloadedCats = (initialCategories || []).slice(0, 4);
+      const remainingCats = (initialCategories || []).slice(4);
+      setCatsLoadOrder([...preloadedCats, ...shuffleArray(remainingCats)]);
+      return;
+    }
+
     const load = async () => {
       try {
         const [res, resTopRandomPool, resFree, resCats] = await Promise.all([
@@ -195,7 +207,7 @@ const Home = () => {
       }
     };
     load();
-  }, []);
+  }, [initialLatest, initialCategories, initialTop, initialFree, initialCatMap, initialCatOrder]);
 
   // El auto-rotate de "Lo más descargado" ha sido removido para evitar que el slider
   // se reinicie mientras el usuario interactúa con él o navega hacia la derecha.
