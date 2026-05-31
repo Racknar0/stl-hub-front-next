@@ -1,11 +1,13 @@
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import Suscripcion from "./Suscripcion";
 
 
 export async function generateMetadata() {
-  const cookieStore = await cookies();
-  const lang = (cookieStore.get("lang")?.value || "es").toLowerCase();
-  const isEn = lang === "en";
+  let isEn = false;
+  try {
+    const h = await headers();
+    isEn = h.get("x-lang") === "en";
+  } catch {}
 
   const title = isEn
     ? "Plans & pricing for premium STL | MEGA downloads – STL HUB"
