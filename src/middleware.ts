@@ -38,9 +38,15 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
 
   // /en → cookie en y seguimos (la rewrite la hace next.config.js)
   if (pathname === '/en' || pathname.startsWith('/en/')) {
-    const res = NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-lang', 'en');
+
+    const res = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
     res.cookies.set('lang', 'en', { path: '/' });
-    res.headers.set('x-lang', 'en');
     queueCampaignTracking(req, event, res);
     return res;
   }
@@ -54,9 +60,15 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
   }
 
   // Resto de rutas (base) → por defecto ES
-  const res = NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-lang', 'es');
+
+  const res = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
   res.cookies.set('lang', 'es', { path: '/' });
-  res.headers.set('x-lang', 'es');
   queueCampaignTracking(req, event, res);
   return res;
 }
