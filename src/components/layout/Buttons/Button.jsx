@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import useStore from '../../../store/useStore';
 import './Button.scss';
 
 /*
@@ -19,8 +20,11 @@ const Button = ({
     as: Tag = 'button',
     styles,
     href,
+    onClick,
     ...props
 }) => {
+    const setGlobalLoading = useStore((s) => s.setGlobalLoading);
+
     const classes = ['app-btn', variant ? `app-btn--${variant}` : '', className]
         .filter(Boolean)
         .join(' ');
@@ -30,12 +34,31 @@ const Button = ({
         ...styles,
     };
 
+    const handleInternalLinkClick = (e) => {
+        if (typeof onClick === 'function') onClick(e);
+        if (e?.defaultPrevented) return;
+        if (e?.button !== undefined && e.button !== 0) return;
+        if (e?.metaKey || e?.ctrlKey || e?.shiftKey || e?.altKey) return;
+        if (!href || href.startsWith('#')) return;
+
+        try {
+            const target = new URL(href, window.location.origin);
+            const current = `${window.location.pathname}${window.location.search}`;
+            const next = `${target.pathname}${target.search}`;
+            if (current === next) return;
+        } catch {
+            return;
+        }
+
+        setGlobalLoading(true);
+    };
+
     // Navegación interna con Next Link para evitar full reload
     if (href) {
         const isInternal = /^\/(?!\/)/.test(href) || href.startsWith('#');
         if (isInternal) {
             return (
-                <Link href={href} className={classes} style={styles_} {...props}>
+                <Link href={href} className={classes} style={styles_} onClick={handleInternalLinkClick} {...props}>
                     {icon && (
                         <span className="app-btn__icon" aria-hidden>
                             {icon}
@@ -60,7 +83,7 @@ const Button = ({
 
     // Sin href: renderiza el Tag proporcionado (button por defecto)
     return (
-        <Tag className={classes} {...props} style={styles_}>
+        <Tag className={classes} {...props} onClick={onClick} style={styles_}>
             {icon && (
                 <span className="app-btn__icon" aria-hidden>
                     {icon}

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import SearchClient from './searchClient';
 import { headers } from 'next/headers';
+import styles from './searchLoading.module.scss';
 
 export const dynamic = 'force-dynamic'; // Siempre SSR, nunca cache estático
 
@@ -81,6 +82,38 @@ function buildDescription(params, total, isEn) {
   return isEn
     ? `Browse thousands of free STL files for 3D printing on STLHUB. Download models for FDM and resin printers.`
     : `Explora miles de archivos STL gratis para impresión 3D en STLHUB. Descarga modelos para impresoras FDM y resina.`;
+}
+
+function SearchSuspenseFallback({ isEn }) {
+  return (
+    <section className={styles.loadingWrap} aria-busy="true" aria-live="polite" aria-label={isEn ? 'Loading search results' : 'Cargando resultados de busqueda'}>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingTopBar} />
+
+        <div className={styles.loadingHeader}>
+          <div className={styles.loadingChip} />
+          <div className={styles.loadingTitle} />
+        </div>
+
+        <div className={styles.loadingGrid}>
+          {Array.from({ length: 8 }).map((_, index) => (
+            <article className={styles.loadingCard} key={index} aria-hidden="true">
+              <div className={styles.loadingThumb} />
+              <div className={styles.loadingMeta}>
+                <div className={`${styles.loadingLine} ${styles.loadingLineWide}`} />
+                <div className={`${styles.loadingLine} ${styles.loadingLineShort}`} />
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.loadingStatus}>
+          <span className={styles.loadingSpinner} aria-hidden="true" />
+          <span>{isEn ? 'Preparing results...' : 'Preparando resultados...'}</span>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export async function generateMetadata({ searchParams }) {
@@ -205,7 +238,7 @@ export default async function Page({ searchParams }) {
   const initialSuggestions = ssrData?.suggestions || [];
 
   return (
-    <Suspense fallback={<div>{requestLanguage === 'en' ? 'Loading...' : 'Cargando...'}</div>}>
+    <Suspense fallback={<SearchSuspenseFallback isEn={requestLanguage === 'en'} />}>
       <SearchClient
         key={JSON.stringify(params)}
         initialLang={requestLanguage}
