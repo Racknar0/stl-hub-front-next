@@ -11,6 +11,7 @@ import Button from '../../layout/Buttons/Button';
 import HttpService from '../../../services/HttpService';
 import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import Link from 'next/link';
 import SimplyModal from '../SimplyModal/SimplyModal';
 import ReportBrokenModal from '../ReportBrokenModal/ReportBrokenModal';
@@ -24,10 +25,10 @@ import { usePromo } from '../../../hooks/usePromo';
 export default function AssetModal({ open, onClose, asset, descriptionLimit = null, onPrev, onNext }) {
     const http = useMemo(() => new HttpService(), []);
     const token = useStore((s) => s.token);
-    const language = useStore((s) => s.language);
-    const { t } = useI18n();
+    const resolvedLanguage = useResolvedLanguage();
+    const { t } = useI18n(resolvedLanguage);
 
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const isEn = resolvedLanguage === 'en';
     const promo = usePromo();
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
@@ -244,7 +245,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
         const q = encodeURIComponent(
             s || (typeof c !== 'string' ? c.label : c) || ''
         );
-        return `/search?categories=${q}`;
+        return isEn ? `/en/search?categories=${q}` : `/search?categories=${q}`;
     };
 
     // --- TAGS / CHIPS NORMALIZATION ---
@@ -410,14 +411,14 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
             style={{ gap: 8, marginTop: 8, justifyContent: 'center' }}
         >
             {accessModal.kind === 'not-auth' && (
-                <Button as="link" href="/login" variant="purple" width="160px">
+                <Button as="link" href={isEn ? '/en/login' : '/login'} variant="purple" width="160px">
                     {isEn ? 'Log in' : 'Iniciar sesión'}
                 </Button>
             )}
             {accessModal.kind === 'no-sub' && (
                 <Button
                     as="link"
-                    href="/suscripcion"
+                    href={isEn ? '/en/suscripcion' : '/suscripcion'}
                     variant="purple"
                     width="160px"
                 >
@@ -427,7 +428,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
             {accessModal.kind === 'expired' && (
                 <Button
                     as="link"
-                    href="/suscripcion"
+                    href={isEn ? '/en/suscripcion' : '/suscripcion'}
                     variant="purple"
                     width="160px"
                 >
@@ -591,7 +592,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                     <div className="meta-content" style={{ position: 'relative' }}>
                                         <div className="meta-header">
                                             <Link
-                                                href="/"
+                                                href={isEn ? '/en' : '/'}
                                                 aria-label="Ir al inicio"
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="brand-link"
@@ -732,7 +733,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                                                             <Link
                                                                 key={i}
                                                                 className="chip chip--link"
-                                                                href={`/search?tags=${encodeURIComponent(tagSlugs[i] ?? c)}`}
+                                                                href={isEn ? `/en/search?tags=${encodeURIComponent(tagSlugs[i] ?? c)}` : `/search?tags=${encodeURIComponent(tagSlugs[i] ?? c)}`}
                                                             >
                                                                 #{c}
                                                             </Link>

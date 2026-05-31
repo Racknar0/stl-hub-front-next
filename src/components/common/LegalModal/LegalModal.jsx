@@ -3,12 +3,12 @@
 import React from 'react';
 import './LegalModal.scss';
 import { useI18n } from '../../../i18n';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const LegalModal = ({ isOpen, onClose }) => {
-  const { t } = useI18n?.() || { t: () => undefined };
-  const language = useStore((s) => s.language);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = resolvedLanguage === 'en';
+  const { t } = useI18n?.(resolvedLanguage) || { t: () => undefined };
   
   const officialEmail = process.env.NEXT_PUBLIC_OFFICIAL_EMAIL || 'correo@correo.com';
   // Fecha fija — actualizar manualmente cada vez que se modifiquen las políticas

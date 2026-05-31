@@ -12,13 +12,13 @@ import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import '../../common/GlobalLoader/GlobalLoader.scss';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
 const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '', priority = false, isEn: isEnProp }) => {
-  const { t } = useI18n();
-  const language = useStore((s) => s.language);
-  const isEn = isEnProp !== undefined ? isEnProp : (String(language || 'es').toLowerCase() === 'en');
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = isEnProp !== undefined ? isEnProp : resolvedLanguage === 'en';
+  const { t } = useI18n(isEn ? 'en' : 'es');
   const finalLinkLabel = linkLabel || t('sliders.row.more');
   const Spinner = ({ size = 36 }) => (
     <div className="sk-circle" style={{ width: size, height: size }}>
@@ -101,7 +101,7 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                             <Link
                               className="chip chip--link"
                               key={idx}
-                              href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                              href={isEn ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}` : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               #{c}

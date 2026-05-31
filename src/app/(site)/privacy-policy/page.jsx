@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import useStore from '@/store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 export default function PrivacyPolicyPage() {
-  const language = useStore((s) => s.language);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = resolvedLanguage === 'en';
 
   const t = {
     title: isEn ? 'Comprehensive Privacy Policy' : 'Política de Privacidad Integral',

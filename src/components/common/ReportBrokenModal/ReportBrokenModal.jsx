@@ -4,12 +4,12 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import SimplyModal from '../SimplyModal/SimplyModal';
 import Button from '../../layout/Buttons/Button';
 import HttpService from '../../../services/HttpService';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, onSubmitted }) {
   const http = new HttpService();
-  const language = useStore((s)=>s.language);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = resolvedLanguage === 'en';
 
   const [note, setNote] = React.useState('');
   const [captchaToken, setCaptchaToken] = React.useState('');
@@ -107,7 +107,7 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
             {isEn ? 'Could not send the report. Try later.' : 'No se pudo enviar el reporte. Intenta más tarde.'}
           </div>
           <div className="actions center" style={{ justifyContent: 'center' }}>
-            <Button onClick={handleSubmit} disabled={!captchaOk || submitting || !assetId} variant="purple" className="btn-big">
+            <Button onClick={handleSubmit} disabled={!captchaToken || submitting || !assetId} variant="purple" className="btn-big">
               {submitting && <span className="btn-spinner" aria-hidden />}
               {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Retry' : 'Reintentar')}
             </Button>

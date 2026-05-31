@@ -1,14 +1,14 @@
 'use client';
 import React, { useEffect } from 'react';
-import useStore from '../../../store/useStore';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { sendGTMEvent } from '@next/third-parties/google';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 export default function PaymentSuccessPage() {
-    const language = useStore((s) => s.language);
+    const resolvedLanguage = useResolvedLanguage();
     const searchParams = useSearchParams();
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const isEn = resolvedLanguage === 'en';
 
     useEffect(() => {
         const val = Number(searchParams.get('value')) || 0;
@@ -70,7 +70,7 @@ export default function PaymentSuccessPage() {
                     : 'Tu cuenta premium ya está activa. ¡Gracias por tu compra! Puedes empezar a explorar y descargar todos los modelos 3D inmediatamente.'}
             </p>
             
-            <Link href="/" style={{ textDecoration: 'none' }}>
+            <Link href={isEn ? '/en' : '/'} style={{ textDecoration: 'none' }}>
                 <button style={{
                     backgroundColor: '#a78bfa',
                     color: '#0f1225',

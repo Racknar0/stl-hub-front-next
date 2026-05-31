@@ -14,7 +14,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
 const FeatureSection = ({
@@ -26,9 +26,9 @@ const FeatureSection = ({
     variantClass = '',
     isEn: isEnProp,
 }) => {
-    const { t } = useI18n();
-    const language = useStore((s) => s.language);
-    const isEn = isEnProp !== undefined ? isEnProp : (String(language || 'es').toLowerCase() === 'en');
+    const resolvedLanguage = useResolvedLanguage();
+    const isEn = isEnProp !== undefined ? isEnProp : resolvedLanguage === 'en';
+    const { t } = useI18n(isEn ? 'en' : 'es');
     const finalTitle = title || t('sliders.feature.title');
     const finalSubtitle = subtitle || t('sliders.feature.subtitle');
     const finalCta = ctaLabel || t('sliders.feature.cta');
@@ -64,7 +64,7 @@ const FeatureSection = ({
                                 width: '200px',
                                 height: '50px'
                             }}
-                            href="/search"
+                            href={isEn ? '/en/search' : '/search'}
                             >
                                 {finalCta}
                             </Button>
@@ -126,7 +126,7 @@ const FeatureSection = ({
                                                               <Link
                                                                 className="chip chip--link"
                                                                 key={idx}
-                                                                href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                                                                                                                                href={isEn ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}` : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
                                                                 onClick={(e) => e.stopPropagation()}
                                                               >
                                                                 #{c}

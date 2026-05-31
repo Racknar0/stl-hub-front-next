@@ -8,6 +8,7 @@ import Link from 'next/link';
 import SimplyModal from '@/components/common/SimplyModal/SimplyModal';
 import Button from '@/components/layout/Buttons/Button';
 import { useGoogleLogin } from '@react-oauth/google';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const Login = () => {
 
@@ -16,8 +17,13 @@ const Login = () => {
     const httpService = useMemo(() => new HttpService(), []);
     const router = useRouter();
     const token = useStore((state) => state.token);
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const resolvedLanguage = useResolvedLanguage();
+    const isEn = resolvedLanguage === 'en';
+    const homeHref = isEn ? '/en' : '/';
+    const loginHref = isEn ? '/en/login' : '/login';
+    const registerHref = isEn ? '/en/register' : '/register';
+    const subscribeHref = isEn ? '/en/suscripcion' : '/suscripcion';
+    const forgotPasswordHref = isEn ? '/en/forgot-password' : '/forgot-password';
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -60,11 +66,7 @@ const Login = () => {
                 }
 
                 timerAlert('success', response.data.message);
-                if (isEn) {
-                    router.push('/en');
-                } else {
-                    router.push('/');
-                }
+                router.push(homeHref);
             } else {
                 setPassword('');
                 await timerAlert(
@@ -103,11 +105,7 @@ const Login = () => {
                     } catch (e) {}
 
                     timerAlert('success', response.data.message);
-                    if (isEn) {
-                        router.push('/en');
-                    } else {
-                        router.push('/');
-                    }
+                    router.push(homeHref);
                 }
             } catch (error) {
                 console.error('Google login error', error);
@@ -124,9 +122,9 @@ const Login = () => {
 
     useEffect(() => {
         if (token) {
-            router.push('/');
+            router.push(homeHref);
         }
-    }, [token, router]);
+    }, [token, router, homeHref]);
 
     // guard para evitar dobles llamadas (StrictMode y re-renders)
     const resetTokenRef = useRef(null); // guarda el último token procesado
@@ -371,7 +369,7 @@ const Login = () => {
                                     ? "Don't have an account?"
                                     : '¿No tienes cuenta?'}{' '}
                                 <Link
-                                    href="/register"
+                                    href={registerHref}
                                     className="login-help__link"
                                 >
                                     {isEn ? 'Sign Up' : 'Regístrate'}
@@ -382,7 +380,7 @@ const Login = () => {
                                     ? 'Want to download without limits?'
                                     : '¿Quieres descargar sin limites?'}{' '}
                                 <Link
-                                    href="/suscripcion"
+                                    href={subscribeHref}
                                     className="login-help__link"
                                 >
                                     {isEn ? 'Subscribe' : 'Suscríbete'}
@@ -390,7 +388,7 @@ const Login = () => {
                             </p>
                             <div className="login-footer mx-0 mt-3 d-block text-center">
                                 <Link
-                                    href="/forgot-password"
+                                    href={forgotPasswordHref}
                                     className="login-help__link"
                                     style={{ fontSize: '0.9rem' }}
                                 >
@@ -511,7 +509,7 @@ const Login = () => {
                             </span>
                             <Button
                                 as="link"
-                                href="/login"
+                                href={loginHref}
                                 variant="purple"
                                 className="btn-big"
                                 width={'160px'}

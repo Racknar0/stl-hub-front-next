@@ -7,11 +7,12 @@ import HttpService from '../../../services/HttpService';
 import AssetModal from '../../../components/common/AssetModal/AssetModal';
 import { useRouter } from 'next/navigation';
 import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const Account = () => {
   const token = useStore(s=>s.token);
-  const language = useStore((s) => s.language);
-  const isEn = String(language || 'es').toLowerCase() === 'en';
+  const resolvedLanguage = useResolvedLanguage();
+  const isEn = resolvedLanguage === 'en';
   const router = useRouter();
   const homeHref = isEn ? '/en' : '/';
   const accountPath = isEn ? '/en/account' : '/account';

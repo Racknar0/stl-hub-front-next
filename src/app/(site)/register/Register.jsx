@@ -11,13 +11,16 @@ import Button from '@/components/layout/Buttons/Button';
 import { getTrackingFromMiddlewareCookie, getVisitIdentityFromMiddlewareCookie } from '../../../helpers/attributionCookie';
 import { sendGTMEvent } from '@next/third-parties/google';
 import { useGoogleLogin } from '@react-oauth/google';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const Register = () => {
     // ⚠️ mantener instancia estable de HttpService
     const httpService = useMemo(() => new HttpService(), []);
     const router = useRouter();
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const resolvedLanguage = useResolvedLanguage();
+    const isEn = resolvedLanguage === 'en';
+    const homeHref = isEn ? '/en' : '/';
+    const loginHref = isEn ? '/en/login' : '/login';
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -209,7 +212,7 @@ const Register = () => {
                         : 'Revisa tu correo para activar tu cuenta.',
                     7000
                 );
-                router.push('/login');
+                router.push(loginHref);
             } else {
                 setError(
                     response.data?.message ||
@@ -259,11 +262,7 @@ const Register = () => {
                     }
 
                     timerAlert('success', response.data.message);
-                    if (isEn) {
-                        router.push('/en');
-                    } else {
-                        router.push('/');
-                    }
+                    router.push(homeHref);
                 }
             } catch (error) {
                 console.error('Google register error', error);
@@ -550,7 +549,7 @@ const Register = () => {
                                     ? 'Already have an account?'
                                     : '¿Ya tienes cuenta?'}{' '}
                                 <Link
-                                    href="/login"
+                                    href={loginHref}
                                     className="login-help__link"
                                 >
                                     {isEn ? 'Log in' : 'Inicia sesión'}
@@ -597,7 +596,7 @@ const Register = () => {
                     {/* boton de cerrar */}
                     <Button
                         as="link"
-                        href="/login"
+                        href={loginHref}
                         variant="purple"
                         className="btn-big"
                         width={'140px'}

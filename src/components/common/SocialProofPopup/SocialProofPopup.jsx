@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import './SocialProofPopup.scss';
 
 // Diverse, global fake names (100+)
@@ -223,8 +223,8 @@ const SocialProofPopup = () => {
     const [visible, setVisible] = useState(false);
     const [data, setData] = useState(null);
 
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const resolvedLanguage = useResolvedLanguage();
+    const isEn = resolvedLanguage === 'en';
 
     const generateData = () => {
         const name = getRandomItem(FAKE_NAMES);

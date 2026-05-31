@@ -4,13 +4,14 @@ import HttpService from '../../../services/HttpService';
 import { timerAlert } from '../../../helpers/alerts';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import useStore from '../../../store/useStore';
+import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const ForgotPassword = () => {
     const httpService = new HttpService();
     const router = useRouter();
-    const language = useStore((s) => s.language);
-    const isEn = String(language || 'es').toLowerCase() === 'en';
+    const resolvedLanguage = useResolvedLanguage();
+    const isEn = resolvedLanguage === 'en';
+    const loginHref = isEn ? '/en/login' : '/login';
 
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
@@ -35,7 +36,7 @@ const ForgotPassword = () => {
                     isEn ? 'We sent you a link to reset your password.' : 'Te enviamos un enlace para restablecer tu contraseña.',
                     5000
                 );
-                router.push('/login');
+                router.push(loginHref);
             } else {
                 setError(response.data?.message || (isEn ? 'Error sending email.' : 'Error enviando el correo.'));
             }
@@ -75,7 +76,7 @@ const ForgotPassword = () => {
                             </button>
                         </form>
                         <p className="login-help">
-                            <Link href="/login" className="login-help__link">{isEn ? 'Back to login' : 'Volver a iniciar sesión'}</Link>
+                            <Link href={loginHref} className="login-help__link">{isEn ? 'Back to login' : 'Volver a iniciar sesión'}</Link>
                         </p>
                     </div>
                 </div>
