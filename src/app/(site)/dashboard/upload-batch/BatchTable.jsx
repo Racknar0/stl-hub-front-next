@@ -88,6 +88,7 @@ export default function BatchTable() {
   React.useEffect(() => {
     similarityMapRef.current = similarityMap
   }, [similarityMap])
+  const similarityLruRef = React.useRef([])
   const http = useMemo(() => new HttpService(), [])
 
   // ── Always-fresh ref to rows for use in async/callback functions ──
@@ -362,17 +363,32 @@ export default function BatchTable() {
     const titleValue = String(row?.nombre || '').trim()
     const archiveName = `${titleValue || `batch-${id}`}.rar`
 
-    setSimilarityMap((m) => ({
-      ...(m || {}),
-      [id]: {
-        ...(m?.[id] || {}),
-        status: 'loading',
-        phase: 'Buscando similares…',
-        items: [],
-        error: '',
-        imageHashCount: 0,
-      },
-    }))
+    setSimilarityMap((m) => {
+      const next = {
+        ...(m || {}),
+        [id]: {
+          ...(m?.[id] || {}),
+          status: 'loading',
+          phase: 'Buscando similares…',
+          items: [],
+          error: '',
+          imageHashCount: 0,
+        },
+      }
+
+      // LRU Eviction: track visited IDs in a ref, keeping max 20 entries
+      let lru = similarityLruRef.current.filter((x) => x !== id)
+      lru.push(id)
+      while (lru.length > 20) {
+        const evictedId = lru.shift()
+        if (evictedId !== id && evictedId !== similaritySelectedIdRef.current) {
+          delete next[evictedId]
+        }
+      }
+      similarityLruRef.current = lru
+
+      return next
+    })
 
     try {
       const imagePath = Array.isArray(row?.imagenes) && row.imagenes.length > 0 ? row.imagenes[0] : null
@@ -387,49 +403,47 @@ export default function BatchTable() {
       const data = r?.data || {}
       const items = Array.isArray(data?.items) ? data.items : []
 
-      // Warm up the browser cache by prefetching the similarity images (limit to max 4)
-      for (const item of items) {
-        if (Array.isArray(item?.images)) {
-          const imagesToPrefetch = item.images.slice(0, 4)
-          for (const imgPath of imagesToPrefetch) {
-            const fullUrl = makeUploadsUrl(imgPath)
-            if (fullUrl) {
-              const prefetchImg = new window.Image()
-              prefetchImg.src = fullUrl
-            }
-          }
-        }
-      }
 
-      setSimilarityMap((m) => ({
-        ...(m || {}),
-        [id]: {
-          status: 'done',
-          items,
-          error: '',
-          phase: 'Completado',
-          query: String(data?.query || archiveName),
-          imageHashCount: 0,
-        },
-      }))
+      setSimilarityMap((m) => {
+        const next = {
+          ...(m || {}),
+          [id]: {
+            status: 'done',
+            items,
+            error: '',
+            phase: 'Completado',
+            query: String(data?.query || archiveName),
+            imageHashCount: 0,
+          },
+        }
+        return next
+      })
     } catch (e) {
       console.error('batch similarity check error', e)
-      setSimilarityMap((m) => ({
-        ...(m || {}),
-        [id]: {
-          status: 'error',
-          items: [],
-          error: 'No se pudo buscar similares',
-          phase: 'Error',
-          imageHashCount: 0,
-        },
-      }))
+      setSimilarityMap((m) => {
+        const next = {
+          ...(m || {}),
+          [id]: {
+            status: 'error',
+            items: [],
+            error: 'No se pudo buscar similares',
+            phase: 'Error',
+            imageHashCount: 0,
+          },
+        }
+        return next
+      })
     }
   }, [http, makeUploadsUrl])
 
   const handleOpenSimilar = useCallback((row) => {
     if (!row?.id) return
-    setSimilaritySelectedId(row.id)
+    const id = Number(row.id)
+    setSimilaritySelectedId(id)
+    similarityLruRef.current = [
+      ...similarityLruRef.current.filter((x) => x !== id),
+      id
+    ]
     void startSimilarityCheck(row)
   }, [startSimilarityCheck])
 
@@ -469,7 +483,7 @@ export default function BatchTable() {
     scrollReviewToVisible(safeIndex)
   }, [visibleEntries, startSimilarityCheck, scrollReviewToVisible])
 
-  // ── Centralized Prefetching: background fetch similarity check for the next 7 elements from the active focused element ──
+  // ── Centralized Prefetching: background fetch similarity check for the next 2 elements with 300ms debounce ──
   useEffect(() => {
     if (!reviewMode) return
     if (!similaritySelectedId) return
@@ -480,14 +494,18 @@ export default function BatchTable() {
     const safeIndex = visibleEntries.findIndex((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId))
     if (safeIndex < 0) return
 
-    // Warm up the cache for the next 4 elements to ensure instant keyboard navigation
-    for (let i = 1; i <= 4; i++) {
-      const nextIdx = safeIndex + i
-      if (nextIdx < total) {
-        const nextTarget = visibleEntries[nextIdx]?.row
-        if (nextTarget) void startSimilarityCheck(nextTarget)
+    // Debounce to prevent flooding the server during rapid navigation
+    const timer = setTimeout(() => {
+      for (let i = 1; i <= 2; i++) {
+        const nextIdx = safeIndex + i
+        if (nextIdx < total) {
+          const nextTarget = visibleEntries[nextIdx]?.row
+          if (nextTarget) void startSimilarityCheck(nextTarget)
+        }
       }
-    }
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [reviewMode, similaritySelectedId, visibleEntries, startSimilarityCheck])
 
   const moveReviewFocus = useCallback((delta) => {
@@ -798,8 +816,9 @@ export default function BatchTable() {
           )
 
           setRows(prevRows => {
+             const existingMap = new Map(prevRows.map(r => [r.id, r]))
              return filteredItems.map(item => {
-               const existing = prevRows.find(r => r.id === item.id)
+               const existing = existingMap.get(item.id)
                const estadoDB = mapEstado(item.status)
                const backendRow = mapBackendItemToRow(item)
                

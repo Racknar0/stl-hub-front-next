@@ -31,7 +31,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExplicitIcon from '@mui/icons-material/Explicit';
 
-export default function BatchRow({
+const BatchRow = React.memo(function BatchRow({
     row,
     idx,
     sequenceLabel = '',
@@ -1677,4 +1677,7 @@ export default function BatchRow({
             </TableCell>
         </TableRow>
     );
-}
+});
+
+export default BatchRow;
+

@@ -31,7 +31,6 @@ export default function SimilaritySidebar({
   onDeleteAsset,
   deletingAssetIds,
 }) {
-  const mapKeys = Object.keys(similarityMap || {})
 
   return (
     <RightSidebar
@@ -58,7 +57,7 @@ export default function SimilaritySidebar({
         </Stack>
       }
     >
-      {!similaritySelectedId ? (
+       {!similaritySelectedId ? (
         <Typography variant="body2" sx={{ opacity: 0.8, px: 1 }}>Selecciona un ítem para ver similares.</Typography>
       ) : (
         <Box sx={{ px: 1, position: 'relative' }}>
@@ -70,22 +69,17 @@ export default function SimilaritySidebar({
             </Box>
           )}
 
-          {/* Keep-Alive Pool of rendered similarity panels */}
-          {mapKeys.map((keyStr) => {
-            const id = Number(keyStr)
-            const isActive = id === Number(similaritySelectedId)
+          {/* Render keep-alive pool of active/recent similarity panels (bounded by similarityMap LRU limit of 20 to prevent DOM bloat) */}
+          {Object.keys(similarityMap || {}).map((mapKey) => {
+            const id = Number(mapKey)
             const itemSimilarity = similarityMap[id]
             const queueItem = rows.find(r => r.id === id)
+            const isCurrentlySelected = id === Number(similaritySelectedId)
 
             if (!queueItem || !itemSimilarity) return null
 
             return (
-              <Box
-                key={id}
-                sx={{
-                  display: isActive ? 'block' : 'none',
-                }}
-              >
+              <Box key={id} sx={{ display: isCurrentlySelected ? 'block' : 'none' }}>
                 {/* ── Ítem borrador actual ── */}
                 <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem Borrador</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
