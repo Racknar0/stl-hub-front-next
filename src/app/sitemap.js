@@ -80,7 +80,14 @@ export default async function sitemap() {
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.5,
-      alternates: { languages: { 'es-ES': `${base}/suscripcion`, 'x-default': `${base}/suscripcion` } },
+      alternates: { languages: { 'es-ES': `${base}/suscripcion`, 'en-US': `${base}/en/suscripcion`, 'x-default': `${base}/suscripcion` } },
+    },
+    {
+      url: `${base}/en/suscripcion`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.4,
+      alternates: { languages: { 'es-ES': `${base}/suscripcion`, 'en-US': `${base}/en/suscripcion`, 'x-default': `${base}/suscripcion` } },
     },
   ];
 

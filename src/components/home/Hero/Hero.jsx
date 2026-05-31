@@ -39,7 +39,11 @@ const Hero = () => {
                             />
                             <div className="overlay" />
                             <div className="content container-narrow">
-                                <h1 className="hero-title">{s.title}</h1>
+                                {index === 0 ? (
+                                    <h1 className="hero-title">{s.title}</h1>
+                                ) : (
+                                    <h2 className="hero-title">{s.title}</h2>
+                                )}
                                 <p className="hero-subtitle">{s.subtitle}</p>
                                 {s.cta ? (
                                     <button className="btn-pill fill hero-cta">

@@ -610,11 +610,6 @@ const Header = () => {
               src="/nuevo_horizontal.png"
               alt="STL HUB"
               className="brand-logo"
-              onClick={(e) => {
-                // Defensa extra: si por algún motivo el Link no navega (overlay/captura), forzamos home.
-                // No hacemos preventDefault para no romper el comportamiento normal del Link.
-                try { router.push(isEn ? '/en' : '/') } catch {}
-              }}
             />
           </Link>
 
