@@ -20,7 +20,7 @@ async function fetchSearchSSR(params) {
   if (params.order) url.searchParams.set('order', params.order);
   if (params.plan) url.searchParams.set('plan', params.plan);
   if (params.is_ai_search) url.searchParams.set('is_ai_search', params.is_ai_search);
-  url.searchParams.set('pageIndex', '0');
+  url.searchParams.set('pageIndex', String(params.pageIndex || '0'));
   url.searchParams.set('pageSize', String(PAGE_SIZE));
 
   try {
@@ -81,6 +81,7 @@ export async function generateMetadata({ searchParams }) {
     tags: sp?.tags || '',
     order: sp?.order || '',
     plan: sp?.plan || '',
+    pageIndex: sp?.pageIndex || '0',
   };
 
   // Detectar idioma
@@ -98,19 +99,19 @@ export async function generateMetadata({ searchParams }) {
   const title = buildTitle(params, isEn);
   const description = buildDescription(params, total, isEn);
 
-  const queryStr = params.q || params.tags || params.categories || '';
   const canonicalParams = new URLSearchParams();
   if (params.q) canonicalParams.set('q', params.q);
   if (params.categories) canonicalParams.set('categories', params.categories);
   if (params.tags) canonicalParams.set('tags', params.tags);
+  if (params.pageIndex && params.pageIndex !== '0') canonicalParams.set('pageIndex', params.pageIndex);
   const canonicalQuery = canonicalParams.toString();
   const canonicalUrl = canonicalQuery
     ? `${SITE}/search?${canonicalQuery}`
     : `${SITE}/search`;
 
-  // No indexar búsquedas vacías o con parámetros raros
-  const hasContent = !!(params.q || params.categories || params.tags);
-  const shouldIndex = hasContent && total > 0;
+  // Indexamos si es la raíz limpia del catálogo (/search) o si es un filtro con resultados
+  const isCatalogRoot = !params.q && !params.categories && !params.tags;
+  const shouldIndex = isCatalogRoot || (total > 0);
 
   return {
     title,
@@ -148,6 +149,7 @@ export default async function Page({ searchParams }) {
     plan: sp?.plan || '',
     is_ai_search: sp?.is_ai_search || '',
     image_search: sp?.image_search || '',
+    pageIndex: sp?.pageIndex || '0',
   };
 
   // Skip SSR fetch for image searches (those rely on Zustand client state)
@@ -165,6 +167,7 @@ export default async function Page({ searchParams }) {
   return (
     <Suspense fallback={<div>Cargando...</div>}>
       <SearchClient
+        key={JSON.stringify(params)}
         initialParams={params}
         initialItems={initialItems}
         initialTotal={initialTotal}

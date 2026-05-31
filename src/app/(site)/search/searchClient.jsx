@@ -172,7 +172,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [plan, setPlan] = useState(initialParams?.plan || '');
   const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
   const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
-  const [page, setPage] = useState(hasSSRData ? 1 : 0); // zero-based
+  const initPageIndex = Number(initialParams?.pageIndex || 0);
+  const [page, setPage] = useState(hasSSRData ? initPageIndex + 1 : initPageIndex); // zero-based pageIndex tracker
   const [hasMore, setHasMore] = useState(hasSSRData ? !!initialHasMore : true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef(null);
@@ -187,7 +188,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [suggestions, setSuggestions] = useState(ssrSugRef.current || []);
   
   // Refs para evitar condiciones de carrera y loops
-  const pageRef = useRef(hasSSRData ? 1 : 0);
+  const pageRef = useRef(hasSSRData ? initPageIndex + 1 : initPageIndex);
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(hasSSRData ? !!initialHasMore : true);
 
@@ -326,23 +327,26 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const loadPageReal = useCallback(async (nextPage) => {
     if (isLoadingRef.current) return;
 
+    const initPageIndex = Number(initialParams?.pageIndex || 0);
+
     // Si tenemos datos SSR y es la primera carga, no hacer fetch
-    if (nextPage === 0 && hasSSRData && !ssrConsumedRef.current) {
+    if (nextPage === initPageIndex && hasSSRData && !ssrConsumedRef.current) {
       ssrConsumedRef.current = true;
       setItems(ssrItemsRef.current);
       setLoading(false);
       setAiFallback(!!initialAiFallback);
       setHasMore(!!initialHasMore);
       hasMoreRef.current = !!initialHasMore;
-      pageRef.current = 1;
-      setPage(1);
+      pageRef.current = initPageIndex + 1;
+      setPage(initPageIndex + 1);
       // Track search event for SSR data
       if (initialTotal > 0) void trackSearchIfNeeded(initialTotal);
       return;
     }
 
     isLoadingRef.current = true;
-    if (nextPage > 0) setIsLoadingMore(true);
+    const isFirstPageLoad = nextPage === initPageIndex;
+    if (!isFirstPageLoad) setIsLoadingMore(true);
     try {
       await sleep(0);
 
@@ -375,8 +379,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
         params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
       });
       const list = (res.data?.items || []).map(a => toDisplayItem(a, language));
-      setItems(prev => nextPage === 0 ? list : [...prev, ...list]);
-      if (nextPage === 0) {
+      setItems(prev => isFirstPageLoad ? list : [...prev, ...list]);
+      if (isFirstPageLoad) {
         setAiFallback(!!res.data?.aiFallback);
         const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, language));
         setSuggestions(sugList);
@@ -391,25 +395,26 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setPage(pageRef.current);
       hasMoreRef.current = computedHasMore;
 
-      if (nextPage === 0) {
+      if (isFirstPageLoad) {
         void trackSearchIfNeeded(total);
       }
     } catch (e) {
       console.error(e);
-      if (nextPage === 0) setItems([]);
+      if (isFirstPageLoad) setItems([]);
       setHasMore(false);
       hasMoreRef.current = false;
     } finally {
-      if (nextPage > 0) setIsLoadingMore(false);
-      if (nextPage === 0) setLoading(false);
+      if (!isFirstPageLoad) setIsLoadingMore(false);
+      if (isFirstPageLoad) setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [params, language, trackSearchIfNeeded, imageSearchResults]);
+  }, [params, language, trackSearchIfNeeded, imageSearchResults, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal]);
 
   // Carga inicial
   useEffect(() => {
-    loadPageReal(0);
-  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language, imageSearchResults]);
+    const initPage = Number(initialParams?.pageIndex || 0);
+    loadPageReal(initPage);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, language, imageSearchResults, initialParams?.pageIndex]);
 
   // Cargar más
   const loadMoreReal = useCallback(() => {
@@ -716,6 +721,31 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
             </div>
           </div>
         )}
+
+        {/* Paginación Híbrida SEO: Googlebot lee estos enlaces para rastrear todo tu catálogo sin scroll */}
+        {(() => {
+          const totalPages = Math.ceil((initialTotal || 0) / PAGE_SIZE);
+          if (totalPages <= 1) return null;
+          return (
+            <nav className="seo-only-pagination" aria-label="SEO Pagination" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', margin: '40px 0 20px', opacity: 0.08, height: '1px', overflow: 'hidden' }}>
+              {Array.from({ length: Math.min(100, totalPages) }).map((_, i) => {
+                const p = i;
+                const qParams = new URLSearchParams();
+                if (q) qParams.set('q', q);
+                if (categories) qParams.set('categories', categories);
+                if (tags) qParams.set('tags', tags);
+                if (order) qParams.set('order', order);
+                if (plan) qParams.set('plan', plan);
+                qParams.set('pageIndex', String(p));
+                return (
+                  <Link key={p} href={isEn ? `/en/search?${qParams.toString()}` : `/search?${qParams.toString()}`} prefetch={false} style={{ color: '#b59cff', textDecoration: 'underline', padding: '0 4px' }}>
+                    {p + 1}
+                  </Link>
+                );
+              })}
+            </nav>
+          );
+        })()}
       </div>
 
       <AssetModal open={modalOpen} onClose={() => setModalOpen(false)} asset={modalAsset} onPrev={items.length > 1 ? handlePrev : undefined} onNext={items.length > 1 ? handleNext : undefined} />
