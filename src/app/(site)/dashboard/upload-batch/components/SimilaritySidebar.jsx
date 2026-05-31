@@ -5,6 +5,8 @@
 // ║  - Resultados de assets similares encontrados               ║
 // ║  - Botones: cambiar lado, cerrar, revalidar                 ║
 // ║  - Botón eliminar asset similar (🗑️)                        ║
+// ║  - Visualización de tags y categorías con chips premium     ║
+// ║  - Eliminación de imágenes individuales de assets similares ║
 // ╚════════════════════════════════════════════════════════════╝
 'use client'
 
@@ -30,6 +32,7 @@ export default function SimilaritySidebar({
   setPreviewImage,
   onDeleteAsset,
   deletingAssetIds,
+  onDeleteImageFromSimilar,
 }) {
 
   return (
@@ -85,7 +88,45 @@ export default function SimilaritySidebar({
                 <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
                   {queueItem?.nombre || '(sin nombre)'}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.5 }}>
+                
+                {/* Categorías y tags del borrador */}
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.75, mb: 0.5, gap: 0.5 }}>
+                  {Array.isArray(queueItem?.categorias) && queueItem.categorias.map((cat, i) => (
+                    <Box
+                      key={`cat-${cat.id || i}`}
+                      sx={{
+                        px: 0.7, py: 0.25, borderRadius: 1,
+                        fontSize: 10, fontWeight: 700,
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                        color: '#93c5fd',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {cat.name || cat.slug || 'Categoría'}
+                    </Box>
+                  ))}
+                  {Array.isArray(queueItem?.tags) && queueItem.tags.map((tag, i) => {
+                    const tagName = typeof tag === 'string' ? tag : (tag.name || tag.slug || '')
+                    if (!tagName) return null
+                    return (
+                      <Box
+                        key={`tag-${i}`}
+                        sx={{
+                          px: 0.7, py: 0.25, borderRadius: 1,
+                          fontSize: 10, fontWeight: 600,
+                          background: 'rgba(148, 163, 184, 0.12)',
+                          border: '1px solid rgba(148, 163, 184, 0.35)',
+                          color: '#cbd5e1',
+                        }}
+                      >
+                        #{tagName}
+                      </Box>
+                    )
+                  })}
+                </Stack>
+
+                <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 0.75 }}>
                   Ítem en foco para búsqueda
                 </Typography>
 
@@ -138,7 +179,45 @@ export default function SimilaritySidebar({
                             <Box sx={{ flex: 1, pr: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{a.title}</Typography>
                               <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.2, wordBreak: 'break-word', fontSize: '0.65rem' }}>{a.archiveName}</Typography>
+                              
+                              {/* Categorías y tags del similar */}
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5, gap: 0.4 }}>
+                                {Array.isArray(a.categories) && a.categories.map((cat, i) => (
+                                  <Box
+                                    key={`sim-cat-${cat.id || i}`}
+                                    sx={{
+                                      px: 0.5, py: 0.15, borderRadius: 0.75,
+                                      fontSize: 9, fontWeight: 700,
+                                      background: 'rgba(34, 197, 94, 0.15)',
+                                      border: '1px solid rgba(34, 197, 94, 0.35)',
+                                      color: '#86efac',
+                                      textTransform: 'uppercase',
+                                    }}
+                                  >
+                                    {cat.name || cat.slug || 'Categoría'}
+                                  </Box>
+                                ))}
+                                {Array.isArray(a.tags) && a.tags.map((tag, i) => {
+                                  const tagName = typeof tag === 'string' ? tag : (tag.name || tag.slug || '')
+                                  if (!tagName) return null
+                                  return (
+                                    <Box
+                                      key={`sim-tag-${i}`}
+                                      sx={{
+                                        px: 0.5, py: 0.15, borderRadius: 0.75,
+                                        fontSize: 9, fontWeight: 600,
+                                        background: 'rgba(148, 163, 184, 0.12)',
+                                        border: '1px solid rgba(148, 163, 184, 0.3)',
+                                        color: '#cbd5e1',
+                                      }}
+                                    >
+                                      #{tagName}
+                                    </Box>
+                                  )
+                                })}
+                              </Stack>
                             </Box>
+                            
                             <Stack direction="row" alignItems="center" spacing={0.4} sx={{ flexShrink: 0 }}>
                               <Box sx={{
                                 px: 0.8, py: 0.3, borderRadius: 1.5,
@@ -173,26 +252,63 @@ export default function SimilaritySidebar({
                           </Stack>
 
                           {(a.images || []).length > 0 && (
-                            <Box sx={{ display: 'flex', gap: 0.5, mt: 1, overflowX: 'auto', pb: 0.5 }}>
+                            <Box sx={{ display: 'flex', gap: 0.75, mt: 1.25, overflowX: 'auto', pb: 0.5 }}>
                               {(a.images || []).slice(0, 4).map((src, i) => {
                                 const safeSrc = makeUploadsUrl(src)
                                 if (!safeSrc) return null
                                 return (
-                                  <img
-                                    key={i}
-                                    src={safeSrc}
-                                    loading="eager"
-                                    fetchpriority="high"
-                                    style={{
-                                      width: 75,
-                                      height: 75,
-                                      objectFit: 'cover',
-                                      borderRadius: 6,
-                                      border: '1px solid rgba(148,163,184,0.3)',
-                                      cursor: 'pointer'
+                                  <Box 
+                                    key={i} 
+                                    sx={{ 
+                                      position: 'relative',
+                                      flexShrink: 0,
+                                      '&:hover .del-img-btn': { opacity: 1 } 
                                     }}
-                                    onClick={() => setPreviewImage(safeSrc)}
-                                  />
+                                  >
+                                    <img
+                                      src={safeSrc}
+                                      loading="eager"
+                                      fetchpriority="high"
+                                      style={{
+                                        width: 70,
+                                        height: 70,
+                                        objectFit: 'cover',
+                                        borderRadius: 6,
+                                        border: '1px solid rgba(148,163,184,0.3)',
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={() => setPreviewImage(safeSrc)}
+                                    />
+                                    <Tooltip title="Eliminar imagen de este asset">
+                                      <IconButton
+                                        className="del-img-btn"
+                                        size="small"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm('¿Eliminar esta imagen del asset similar?')) {
+                                            onDeleteImageFromSimilar?.(a.id, src)
+                                          }
+                                        }}
+                                        sx={{
+                                          position: 'absolute',
+                                          top: 2,
+                                          right: 2,
+                                          bgcolor: 'rgba(15,23,42,0.85)',
+                                          border: '1px solid rgba(239,68,68,0.5)',
+                                          color: '#f87171',
+                                          opacity: 0,
+                                          transition: 'opacity 0.2s ease',
+                                          p: 0.25,
+                                          '&:hover': {
+                                            bgcolor: '#ef4444',
+                                            color: '#fff'
+                                          }
+                                        }}
+                                      >
+                                        <CloseIcon sx={{ fontSize: 10 }} />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </Box>
                                 )
                               })}
                             </Box>

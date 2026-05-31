@@ -223,6 +223,59 @@ export default function BatchTable() {
     // Kick processor
     void processDeleteQueue()
   }, [processDeleteQueue])
+
+  const handleDeleteImageFromSimilar = useCallback(async (assetId, imageSrc) => {
+    const currentMap = similarityMapRef.current
+    let nextMap = { ...currentMap }
+    
+    let targetAsset = null
+    for (const key of Object.keys(nextMap)) {
+      const items = nextMap[key]?.items || []
+      const found = items.find(item => Number(item.id) === Number(assetId))
+      if (found) {
+        targetAsset = found
+        break
+      }
+    }
+    
+    if (!targetAsset) return
+    
+    const currentImages = Array.isArray(targetAsset.images) ? targetAsset.images : []
+    const nextImages = currentImages.filter(img => img !== imageSrc)
+    
+    setSimilarityMap(prev => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (next[key]?.items) {
+          next[key] = {
+            ...next[key],
+            items: next[key].items.map(item => {
+              if (Number(item.id) === Number(assetId)) {
+                return {
+                  ...item,
+                  images: nextImages
+                }
+              }
+              return item
+            })
+          }
+        }
+      }
+      similarityMapRef.current = next
+      return next
+    })
+    
+    try {
+      await http.putData(`/assets/${assetId}`, { images: nextImages })
+      setToast({ open: true, msg: 'Imagen eliminada del asset con éxito', type: 'success' })
+    } catch (e) {
+      console.error('[SIDEBAR_DELETE_IMG] Failed to delete image from asset', e)
+      setToast({ open: true, msg: 'Fallo al eliminar imagen del asset', type: 'error' })
+      setSimilarityMap(currentMap)
+      similarityMapRef.current = currentMap
+    }
+  }, [http, setToast])
+
   const compactActionBtnSx = {
     borderRadius: 2,
     textTransform: 'none',
@@ -2311,6 +2364,7 @@ export default function BatchTable() {
         setPreviewImage={setPreviewImage}
         onDeleteAsset={handleDeleteFromSimilar}
         deletingAssetIds={deletingAssetIds}
+        onDeleteImageFromSimilar={handleDeleteImageFromSimilar}
       />
 
       {/* ═══════════ DELETE SIDEBAR ALERTS ═══════════ */}
