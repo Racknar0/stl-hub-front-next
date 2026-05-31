@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import useStore from '../../../../store/useStore';
 import NsfwPageWrapper from './NsfwPageWrapper';
+import AssetDownloadCtaClient from './AssetDownloadCtaClient';
 
 /**
  * Client component that handles NSFW-restricted assets.
@@ -205,24 +206,13 @@ function NsfwAssetContent({ slug, isEn, token }) {
                 </div>
             )}
 
-            {/* Download CTA — link to the full SSR page slug for download flow */}
-            <div style={{ textAlign: 'center', marginTop: 32 }}>
-                <p style={{ color: 'rgba(233,239,255,0.5)', fontSize: '0.85rem', marginBottom: 12 }}>
-                    {isEn ? 'To download this model, visit the full page:' : 'Para descargar este modelo, visita la página completa:'}
-                </p>
-                <a
-                    href={isEn ? `/en/asset/${slug}` : `/asset/${slug}`}
-                    onClick={(e) => { e.preventDefault(); window.location.reload(); }}
-                    style={{
-                        display: 'inline-block', padding: '12px 32px', borderRadius: 999,
-                        background: 'linear-gradient(135deg, #7c6bff, #6a5cff)',
-                        color: '#fff', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none',
-                        boxShadow: '0 8px 24px rgba(124,107,255,0.35)',
-                        transition: 'transform 200ms ease, box-shadow 200ms ease'
-                    }}
-                >
-                    {isEn ? 'Reload Full Page' : 'Recargar Página Completa'}
-                </a>
+            {/* Download CTA — Client download component directly inside NSFW view */}
+            <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <AssetDownloadCtaClient
+                    assetId={asset.id}
+                    isPremium={!!asset.isPremium}
+                    isEn={isEn}
+                />
             </div>
         </main>
     );
