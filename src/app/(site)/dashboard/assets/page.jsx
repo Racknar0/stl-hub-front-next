@@ -77,9 +77,11 @@ export default function AssetsAdminPage() {
     // Nuevos filtros: por cuenta y por ID
     const [accountQ, setAccountQ] = useState('');
     const [assetIdQ, setAssetIdQ] = useState('');
-    // Filtros por categoría y tag
+    // Filtros por categoría y tag (Inclusión y Exclusión)
     const [categoryFilter, setCategoryFilter] = useState(null);
+    const [categoryExcludeFilter, setCategoryExcludeFilter] = useState(null);
     const [tagFilter, setTagFilter] = useState(null);
+    const [tagExcludeFilter, setTagExcludeFilter] = useState(null);
     const [pageIndex, setPageIndex] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [metaPageIndex, setMetaPageIndex] = useState(0);
@@ -585,7 +587,9 @@ export default function AssetsAdminPage() {
                 }
                 // Filtros por categoría y tag
                 if (categoryFilter?.slug) params.set('categorySlug', categoryFilter.slug);
+                if (categoryExcludeFilter?.slug) params.set('categoryExcludeSlug', categoryExcludeFilter.slug);
                 if (tagFilter?.slug) params.set('tagSlug', tagFilter.slug);
+                if (tagExcludeFilter?.slug) params.set('tagExcludeSlug', tagExcludeFilter.slug);
                 const res = await http.getData(`/assets?${params.toString()}`);
                 const payload = res.data;
                 if (payload && Array.isArray(payload.items)) {
@@ -607,7 +611,7 @@ export default function AssetsAdminPage() {
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, tagFilter, statusFilter, seoFilter, lexicalSort]);
+    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, categoryExcludeFilter, tagFilter, tagExcludeFilter, statusFilter, seoFilter, lexicalSort]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -2166,7 +2170,9 @@ export default function AssetsAdminPage() {
         setAccountQ('');
         setAssetIdQ('');
         setCategoryFilter(null);
+        setCategoryExcludeFilter(null);
         setTagFilter(null);
+        setTagExcludeFilter(null);
         setStatusFilter('');
         setSeoFilter('');
         setShowFreeOnly(false);
@@ -2228,8 +2234,12 @@ export default function AssetsAdminPage() {
                         allTags={allTags}
                         categoryFilter={categoryFilter}
                         setCategoryFilter={(v) => { setCategoryFilter(v); setPageIndex(0); }}
+                        categoryExcludeFilter={categoryExcludeFilter}
+                        setCategoryExcludeFilter={(v) => { setCategoryExcludeFilter(v); setPageIndex(0); }}
                         tagFilter={tagFilter}
                         setTagFilter={(v) => { setTagFilter(v); setPageIndex(0); }}
+                        tagExcludeFilter={tagExcludeFilter}
+                        setTagExcludeFilter={(v) => { setTagExcludeFilter(v); setPageIndex(0); }}
                         statusFilter={statusFilter}
                         setStatusFilter={(v) => { setStatusFilter(v); setPageIndex(0); }}
                         seoFilter={seoFilter}

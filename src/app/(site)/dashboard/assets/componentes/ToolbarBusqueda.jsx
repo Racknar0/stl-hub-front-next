@@ -38,7 +38,9 @@ export default function ToolbarBusqueda({
   showFreeOnly, onToggleFreeOnly,
   categories, allTags,
   categoryFilter, setCategoryFilter,
+  categoryExcludeFilter, setCategoryExcludeFilter,
   tagFilter, setTagFilter,
+  tagExcludeFilter, setTagExcludeFilter,
   statusFilter, setStatusFilter,
   seoFilter, setSeoFilter,
   onClearAll,
@@ -57,6 +59,38 @@ export default function ToolbarBusqueda({
     },
   }
 
+  const acExcludeCategorySx = {
+    minWidth: 160,
+    maxWidth: 200,
+    '& .MuiOutlinedInput-root': {
+      bgcolor: 'rgba(15,23,42,0.6)',
+      borderRadius: '8px',
+      fontSize: '.8rem',
+      color: '#e2e8f0',
+      '& fieldset': { 
+        borderColor: categoryExcludeFilter ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)' 
+      },
+      '&:hover fieldset': { borderColor: 'rgba(239,68,68,0.7)' },
+      '&.Mui-focused fieldset': { borderColor: '#ef4444' },
+    },
+  }
+
+  const acExcludeTagSx = {
+    minWidth: 160,
+    maxWidth: 200,
+    '& .MuiOutlinedInput-root': {
+      bgcolor: 'rgba(15,23,42,0.6)',
+      borderRadius: '8px',
+      fontSize: '.8rem',
+      color: '#e2e8f0',
+      '& fieldset': { 
+        borderColor: tagExcludeFilter ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)' 
+      },
+      '&:hover fieldset': { borderColor: 'rgba(239,68,68,0.7)' },
+      '&.Mui-focused fieldset': { borderColor: '#ef4444' },
+    },
+  }
+
   const selectSx = {
     bgcolor: 'rgba(15,23,42,0.6)',
     borderRadius: '8px',
@@ -72,7 +106,23 @@ export default function ToolbarBusqueda({
   if (q) activeFilters.push({ key: 'q', label: `Buscar: "${q}"`, onDelete: () => { setQ(''); onBuscar?.('') } })
   if (accountQ) activeFilters.push({ key: 'account', label: `Cuenta: ${accountQ}`, onDelete: () => setAccountQ('') })
   if (categoryFilter) activeFilters.push({ key: 'category', label: `Cat: ${categoryFilter.name || categoryFilter.slug}`, onDelete: () => setCategoryFilter(null) })
+  if (categoryExcludeFilter) {
+    activeFilters.push({
+      key: 'categoryExclude',
+      label: `Excluir Cat: ${categoryExcludeFilter.name || categoryExcludeFilter.slug}`,
+      onDelete: () => setCategoryExcludeFilter(null),
+      isExclude: true,
+    })
+  }
   if (tagFilter) activeFilters.push({ key: 'tag', label: `Tag: ${tagFilter.name || tagFilter.slug}`, onDelete: () => setTagFilter(null) })
+  if (tagExcludeFilter) {
+    activeFilters.push({
+      key: 'tagExclude',
+      label: `Excluir Tag: ${tagExcludeFilter.name || tagExcludeFilter.slug}`,
+      onDelete: () => setTagExcludeFilter(null),
+      isExclude: true,
+    })
+  }
   if (statusFilter) {
     const statusLabel = STATUS_OPTIONS.find(o => o.value === statusFilter)?.label || statusFilter
     activeFilters.push({ key: 'status', label: `Estado: ${statusLabel}`, onDelete: () => setStatusFilter('') })
@@ -119,6 +169,20 @@ export default function ToolbarBusqueda({
           sx={acSx}
         />
 
+        {/* Filtro excluir categoría */}
+        <Autocomplete
+          size="small"
+          options={Array.isArray(categories) ? categories : []}
+          getOptionLabel={(o) => o?.name || o?.slug || ''}
+          value={categoryExcludeFilter}
+          onChange={(_, v) => setCategoryExcludeFilter?.(v)}
+          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
+          renderInput={(params) => (
+            <TextField {...params} placeholder="Excluir Cat. 🚫" />
+          )}
+          sx={acExcludeCategorySx}
+        />
+
         {/* Filtro tag */}
         <Autocomplete
           size="small"
@@ -131,6 +195,20 @@ export default function ToolbarBusqueda({
             <TextField {...params} placeholder="Tag…" />
           )}
           sx={acSx}
+        />
+
+        {/* Filtro excluir tag */}
+        <Autocomplete
+          size="small"
+          options={Array.isArray(allTags) ? allTags : []}
+          getOptionLabel={(o) => o?.name || o?.slug || ''}
+          value={tagExcludeFilter}
+          onChange={(_, v) => setTagExcludeFilter?.(v)}
+          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
+          renderInput={(params) => (
+            <TextField {...params} placeholder="Excluir Tag 🚫" />
+          )}
+          sx={acExcludeTagSx}
         />
 
         {/* Filtro estado */}
@@ -189,7 +267,12 @@ export default function ToolbarBusqueda({
               onDelete={f.onDelete}
               size="small"
               variant="outlined"
-              sx={{
+              sx={f.isExclude ? {
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                color: '#fca5a5',
+                bgcolor: 'rgba(239, 68, 68, 0.05)',
+                '& .MuiChip-deleteIcon': { color: 'rgba(239, 68, 68, 0.7)', '&:hover': { color: '#ef4444' } },
+              } : {
                 borderColor: 'rgba(168, 85, 247, 0.5)',
                 color: '#e2e8f0',
                 '& .MuiChip-deleteIcon': { color: 'rgba(168, 85, 247, 0.7)', '&:hover': { color: '#e879f9' } },

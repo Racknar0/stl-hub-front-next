@@ -12,8 +12,16 @@ const generateId = () => Math.random().toString(36).substring(2, 15) + Math.rand
 export default function SiteLayout({ children }) {
   const pathname = usePathname();
   const roleId = useStore((s) => s.roleId);
+  const hydrated = useStore((s) => s.hydrated);
+  const hydrateToken = useStore((s) => s.hydrateToken);
 
   useEffect(() => {
+    hydrateToken();
+  }, [hydrateToken]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
     // Excluir administradores y páginas del dashboard
     if (roleId === 2 || String(pathname).startsWith('/dashboard')) {
       return;
@@ -44,7 +52,7 @@ export default function SiteLayout({ children }) {
       }
     };
     recordVisit();
-  }, [pathname, roleId]);
+  }, [pathname, roleId, hydrated]);
 
   const isDashboard = pathname?.startsWith('/dashboard');
 
