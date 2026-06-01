@@ -32,6 +32,7 @@ import {
 
 export default function BatchTable() {
   const [rows, setRows] = useState([])
+  const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
   const [cuentas, setCuentas] = useState([]) // Fetch MEGA accounts logic needed
   const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
@@ -603,8 +604,6 @@ export default function BatchTable() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createModalType, setCreateModalType] = useState('')
   const [createModalRowId, setCreateModalRowId] = useState(null)
-
-  const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
 
   useEffect(() => {
     cuentasRef.current = Array.isArray(cuentas) ? cuentas : []
