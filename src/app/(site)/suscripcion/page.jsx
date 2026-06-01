@@ -17,22 +17,23 @@ export async function generateMetadata() {
     ? "Choose a plan to download premium STL via MEGA. Secure checkout, support, and files optimized for FDM and resin. Upgrade or cancel anytime."
     : "Elige tu plan para descargar STL premium por MEGA. Pago seguro, soporte y archivos optimizados para FDM y resina. Cambia o cancela cuando quieras.";
 
-  // Nota: mantengo el mismo slug /suscripcion también en EN
+  const canonicalPath = isEn ? "/en/suscripcion" : "/suscripcion";
+
   return {
     title,
     description,
     alternates: {
-      canonical: "/suscripcion",
+      canonical: canonicalPath,
       languages: {
         "es-ES": "/suscripcion",
         "en-US": "/en/suscripcion",
-        "x-default": "/suscripcion",    // 👈 añade esto
+        "x-default": "/suscripcion",
       },
     },
     openGraph: {
       title,
       description,
-      url: isEn ? "/en/suscripcion" : "/suscripcion",
+      url: canonicalPath,
       type: "website",
       images: ["/logo_horizontal.png"],
     },
