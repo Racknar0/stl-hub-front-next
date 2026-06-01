@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import useStore from '../../../../store/useStore';
 import NsfwPageWrapper from './NsfwPageWrapper';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
+import ImageLightbox from './ImageLightbox';
+import styles from './AssetSeoBackground.module.css';
 
 /**
  * Client component that handles NSFW-restricted assets.
@@ -171,17 +173,18 @@ function NsfwAssetContent({ slug, isEn, token }) {
 
             {/* Gallery */}
             {imgList.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))`, gap: 12, marginBottom: 24 }}>
-                    {imgList.map((src, i) => (
-                        <div key={i} style={{ position: 'relative', paddingTop: '100%', borderRadius: 12, overflow: 'hidden', background: '#1a1e30' }}>
-                            <img
-                                src={src}
-                                alt={`${title} - ${i + 1}`}
-                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                                loading="lazy"
-                            />
-                        </div>
-                    ))}
+                <div className={styles.galleryCard} style={{ marginBottom: 24, padding: '20px 24px', background: 'rgba(255,255,255,0.04)', borderRadius: 12, border: '1px solid rgba(148,163,184,0.14)' }}>
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#00e7ff' }}>
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                            <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {isEn ? 'Image Gallery' : 'Galería de imágenes'}
+                    </h2>
+                    <div className={styles.gallery}>
+                        <ImageLightbox images={imgList} alt={asset.title || 'STL Model'} />
+                    </div>
                 </div>
             )}
 
