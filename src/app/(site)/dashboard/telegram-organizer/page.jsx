@@ -26,6 +26,7 @@ export default function TelegramOrganizer() {
   const [selectedAnchor, setSelectedAnchor] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [filesToDelete, setFilesToDelete] = useState(new Set());
+  const [lastCheckedName, setLastCheckedName] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   
   // Interceptador premium de status para alertas flotantes
@@ -246,17 +247,63 @@ export default function TelegramOrganizer() {
   };
 
   const toggleDelete = (fileName, checked, e) => {
-    e.stopPropagation();
+    // Si se presiona Shift y existe un elemento previamente seleccionado/deseleccionado
+    if (e && e.nativeEvent && e.nativeEvent.shiftKey && lastCheckedName) {
+      const startIdx = files.findIndex(f => f.name === lastCheckedName);
+      const endIdx = files.findIndex(f => f.name === fileName);
+      
+      if (startIdx !== -1 && endIdx !== -1) {
+        const [minIdx, maxIdx] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+        
+        setFilesToDelete(prev => {
+          const next = new Set(prev);
+          for (let i = minIdx; i <= maxIdx; i++) {
+            const fName = files[i].name;
+            if (checked) {
+              next.add(fName);
+            } else {
+              next.delete(fName);
+            }
+          }
+          return next;
+        });
+        setLastCheckedName(fileName);
+        return;
+      }
+    }
+
+    // Comportamiento normal (un solo clic)
     setFilesToDelete(prev => {
       const next = new Set(prev);
       checked ? next.add(fileName) : next.delete(fileName);
       return next;
     });
+    setLastCheckedName(fileName);
   };
 
   const toggleSelectAll = () => {
     if (filesToDelete.size > 0) setFilesToDelete(new Set());
     else setFilesToDelete(new Set(files.map(f => f.name)));
+  };
+
+  const selectOnlyImages = () => {
+    const images = files.filter(f => f.type === 'image');
+    if (images.length === 0) {
+      setStatus('⚠️ No hay imágenes en la lista actual');
+      return;
+    }
+    setFilesToDelete(new Set(images.map(f => f.name)));
+    setStatus(`✅ Seleccionadas ${images.length} imágenes para borrar.`);
+  };
+
+  const selectOnlyNonAnchors = () => {
+    const nonAnchors = files.filter(f => f.type !== 'anchor');
+    if (nonAnchors.length === 0) {
+      setStatus('⚠️ No hay archivos sueltos en la lista actual');
+      return;
+    }
+    setFilesToDelete(new Set(nonAnchors.map(f => f.name)));
+    setStatus(`✅ Seleccionados ${nonAnchors.length} archivos sueltos para borrar.`);
   };
 
   const remaining = serverTotal - offset;
@@ -336,9 +383,17 @@ export default function TelegramOrganizer() {
               ▶ Empaquetar
             </button>
             {files.length > 0 && (
-              <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
-              </button>
+              <>
+                <button className="btn btn-secondary" onClick={toggleSelectAll}>
+                  {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
+                </button>
+                <button className="btn btn-secondary" onClick={selectOnlyImages} title="Seleccionar solo imágenes para borrar">
+                  🖼️ Sel. Imágenes
+                </button>
+                <button className="btn btn-secondary" onClick={selectOnlyNonAnchors} title="Seleccionar todo excepto archivos base (ASSETS)">
+                  🍃 Sel. Sueltos
+                </button>
+              </>
             )}
             {filesToDelete.size > 0 && (
               <button className="btn btn-delete" onClick={deleteSelected}>
@@ -396,9 +451,17 @@ export default function TelegramOrganizer() {
             </button>
             
             {files.length > 0 && (
-              <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
-              </button>
+              <>
+                <button className="btn btn-secondary" onClick={toggleSelectAll}>
+                  {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
+                </button>
+                <button className="btn btn-secondary" onClick={selectOnlyImages} title="Seleccionar solo imágenes para borrar">
+                  🖼️ Sel. Imágenes
+                </button>
+                <button className="btn btn-secondary" onClick={selectOnlyNonAnchors} title="Seleccionar todo excepto archivos base (ASSETS)">
+                  🍃 Sel. Sueltos
+                </button>
+              </>
             )}
 
             {filesToDelete.size > 0 && (
@@ -428,8 +491,11 @@ export default function TelegramOrganizer() {
                 type="checkbox"
                 className="del-check"
                 checked={filesToDelete.has(file.name)}
-                onChange={(e) => toggleDelete(file.name, e.target.checked, e)}
-                onClick={e => e.stopPropagation()}
+                onChange={() => {}}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDelete(file.name, !filesToDelete.has(file.name), e);
+                }}
               />
               <button className="delete-btn-quick" title="Eliminar" onClick={(e) => quickDelete(file.name, e)}>🗑️</button>
               {file.type === 'image' && (

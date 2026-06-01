@@ -40,9 +40,8 @@
     display: flex;
     gap: 0.4rem;
     margin-bottom: 1.5rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    overflow: hidden;
 
     .btn {
       padding: 0.35rem 0.65rem;
@@ -260,7 +259,7 @@
 
       .stats-bar, .actions-bar {
         margin-bottom: 0;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
       }
     }
 
