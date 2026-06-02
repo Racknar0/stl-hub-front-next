@@ -6,7 +6,7 @@ import styles from './searchLoading.module.scss';
 export const dynamic = 'force-dynamic'; // Siempre SSR, nunca cache estático
 
 const SITE = 'https://stl-hub.com';
-const PAGE_SIZE = 72;
+const PAGE_SIZE = 48;
 
 async function getRequestLanguage() {
   try {

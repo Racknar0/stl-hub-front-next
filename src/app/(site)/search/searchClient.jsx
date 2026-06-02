@@ -17,7 +17,8 @@ import '../../../components/common/GlobalLoader/GlobalLoader.scss';
 import './search.scss';
 
 const SEARCH_EVENT_DEDUPE_MS = 8000;
-const PAGE_SIZE = 72;
+const PAGE_SIZE = 48;
+
 const GRID_GAP_PX = 10;
 const GRID_MIN_CARD_WIDTH_PX = 240;
 const GRID_CARD_HEIGHT_DESKTOP = 370;
@@ -163,9 +164,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     ssrItemsRef.current = initialItems.map(a => toDisplayItem(a, normalizedInitialLang));
   }
   const hasSSRData = ssrItemsRef.current !== null && ssrItemsRef.current.length > 0;
-  const ssrConsumedRef = useRef(false);
-
-  const [items, setItems] = useState(hasSSRData ? ssrItemsRef.current : []);
+  const ssrConsumedRef = useRef(false);  const [items, setItems] = useState(hasSSRData ? ssrItemsRef.current : []);
   const [loading, setLoading] = useState(!hasSSRData);
   const isEn = resolvedLanguage === 'en';
   const [q, setQ] = useState(initialParams?.q || '');
@@ -177,10 +176,10 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
   const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
   const initPageIndex = Number(initialParams?.pageIndex || 0);
-  const [page, setPage] = useState(hasSSRData ? initPageIndex + 1 : initPageIndex); // zero-based pageIndex tracker
+  const [page, setPage] = useState(initPageIndex); // zero-based pageIndex tracker
+  const [total, setTotal] = useState(initialTotal || 0);
   const [hasMore, setHasMore] = useState(hasSSRData ? !!initialHasMore : true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const sentinelRef = useRef(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const virtualRootRef = useRef(null);
   const [scrollElement, setScrollElement] = useState(null);
   const [virtualMetrics, setVirtualMetrics] = useState({ width: 0, top: 0, windowW: 0 });
@@ -192,7 +191,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [suggestions, setSuggestions] = useState(ssrSugRef.current || []);
   
   // Refs para evitar condiciones de carrera y loops
-  const pageRef = useRef(hasSSRData ? initPageIndex + 1 : initPageIndex);
+  const pageRef = useRef(initPageIndex);
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(hasSSRData ? !!initialHasMore : true);
 
@@ -267,16 +266,18 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const searchEventKey = useMemo(() => buildSearchEventKey(params), [params]);
   // Reset y carga inicial cuando cambian filtros o resultados de imagen
   useEffect(() => {
+    const initPage = Number(initialParams?.pageIndex || 0);
     // Si hay datos SSR sin consumir, restaurarlos en vez de limpiar
     if (hasSSRData && !ssrConsumedRef.current) {
       setItems(ssrItemsRef.current);
       setLoading(false);
       setAiFallback(!!initialAiFallback);
-      setPage(1);
-      pageRef.current = 1;
+      setPage(initPage);
+      pageRef.current = initPage;
       setHasMore(!!initialHasMore);
       hasMoreRef.current = !!initialHasMore;
       setSuggestions(ssrSugRef.current || []);
+      setTotal(initialTotal || 0);
     } else {
       setItems([]);
       setPage(0);
@@ -286,8 +287,9 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       pageRef.current = 0;
       hasMoreRef.current = true;
       setSuggestions([]);
+      setTotal(0);
     }
-    setIsLoadingMore(false);
+    setIsTransitioning(false);
     isLoadingRef.current = false;
     searchEventIdRef.current = null;
   }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, imageSearchResults]);
@@ -341,16 +343,16 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setAiFallback(!!initialAiFallback);
       setHasMore(!!initialHasMore);
       hasMoreRef.current = !!initialHasMore;
-      pageRef.current = initPageIndex + 1;
-      setPage(initPageIndex + 1);
+      pageRef.current = initPageIndex;
+      setPage(initPageIndex);
+      setTotal(initialTotal || 0);
       // Track search event for SSR data
       if (initialTotal > 0) void trackSearchIfNeeded(initialTotal);
       return;
     }
 
     isLoadingRef.current = true;
-    const isFirstPageLoad = nextPage === initPageIndex;
-    if (!isFirstPageLoad) setIsLoadingMore(true);
+    setIsTransitioning(true);
     try {
       await sleep(0);
 
@@ -364,18 +366,20 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           setItems(list);
           setHasMore(false);
           hasMoreRef.current = false;
-          pageRef.current = 1;
-          setPage(1);
+          pageRef.current = 0;
+          setPage(0);
+          setTotal(list.length);
           if (list.length > 0) void trackSearchIfNeeded(list.length);
         } else if (nextPage === 0 && !items.length) {
           // If state is lost (e.g. refresh), just show empty
           setItems([]);
           setHasMore(false);
           hasMoreRef.current = false;
+          setTotal(0);
         }
         isLoadingRef.current = false;
-        if (nextPage === 0) setLoading(false);
-        if (nextPage > 0) setIsLoadingMore(false);
+        setLoading(false);
+        setIsTransitioning(false);
         return; // Skip normal API call
       }
 
@@ -383,33 +387,40 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
         params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
       });
       const list = (res.data?.items || []).map(a => toDisplayItem(a, resolvedLanguage));
-      setItems(prev => isFirstPageLoad ? list : [...prev, ...list]);
-      if (isFirstPageLoad) {
-        setAiFallback(!!res.data?.aiFallback);
-        const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, resolvedLanguage));
-        setSuggestions(sugList);
-      }
-      const total = Number(res.data?.total ?? 0);
+      
+      setItems(list);
+      setAiFallback(!!res.data?.aiFallback);
+      const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, resolvedLanguage));
+      setSuggestions(sugList);
+      
+      const computedTotal = Number(res.data?.total ?? 0);
+      setTotal(computedTotal);
+      
       const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
       const computedHasMore = typeof res.data?.hasMore === 'boolean'
         ? !!res.data.hasMore
-        : ((nextPage + 1) * pageSize < total);
+        : ((nextPage + 1) * pageSize < computedTotal);
       setHasMore(computedHasMore);
-      pageRef.current = nextPage + 1;
-      setPage(pageRef.current);
+      
+      pageRef.current = nextPage;
+      setPage(nextPage);
       hasMoreRef.current = computedHasMore;
 
-      if (isFirstPageLoad) {
-        void trackSearchIfNeeded(total);
+      // Hacer scroll suave hacia arriba del grid de resultados
+      if (typeof window !== 'undefined' && virtualRootRef.current) {
+        const topOfGrid = virtualRootRef.current.getBoundingClientRect().top + window.scrollY - 100;
+        window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
       }
+
+      void trackSearchIfNeeded(computedTotal);
     } catch (e) {
       console.error(e);
-      if (isFirstPageLoad) setItems([]);
+      setItems([]);
       setHasMore(false);
       hasMoreRef.current = false;
     } finally {
-      if (!isFirstPageLoad) setIsLoadingMore(false);
-      if (isFirstPageLoad) setLoading(false);
+      setIsTransitioning(false);
+      setLoading(false);
       isLoadingRef.current = false;
     }
   }, [params, resolvedLanguage, trackSearchIfNeeded, imageSearchResults, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal]);
@@ -420,30 +431,106 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     loadPageReal(initPage);
   }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, resolvedLanguage, imageSearchResults, initialParams?.pageIndex]);
 
-  // Cargar más
-  const loadMoreReal = useCallback(() => {
-    // Evitar disparar la primera carga; esa la hace el efecto inicial
-    if (pageRef.current === 0 && items.length === 0) return;
-    if (!hasMoreRef.current || isLoadingRef.current) return;
-    loadPageReal(pageRef.current);
-  }, [loadPageReal, items.length]);
+  const buildPageUrl = (targetPageIndex) => {
+    if (typeof window === 'undefined') return '#';
+    const sp = new URLSearchParams(window.location.search);
+    sp.set('pageIndex', String(targetPageIndex));
+    return `${window.location.pathname}?${sp.toString()}`;
+  };
 
-  // IntersectionObserver para scroll infinito
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver((entries) => {
-      const [entry] = entries;
-      if (!entry.isIntersecting) return;
-      loadMoreReal();
-    }, { root: null, rootMargin: '200px', threshold: 0 });
-    obs.observe(el);
-    return () => {
-      try { obs.unobserve(el); } catch {}
-      obs.disconnect();
-    };
-  }, [loadMoreReal, page, hasMore, isLoadingMore]);
+  const getPageNumbers = () => {
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const pages = [];
+    
+    pages.push(0);
+    
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages - 2, page + 2);
+    
+    if (page <= 2) {
+      end = Math.min(totalPages - 2, 4);
+    } else if (page >= totalPages - 3) {
+      start = Math.max(1, totalPages - 5);
+    }
+    
+    if (start > 1) {
+      pages.push('ellipsis-start');
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    if (end < totalPages - 2) {
+      pages.push('ellipsis-end');
+    }
+    
+    if (totalPages > 1) {
+      pages.push(totalPages - 1);
+    }
+    
+    return pages;
+  };
 
+  const renderPaginator = () => {
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    if (totalPages <= 1) return null;
+    
+    const pageNumbers = getPageNumbers();
+    
+    return (
+      <nav className="custom-paginator" aria-label="Pagination Navigation">
+        {page > 0 ? (
+          <Link href={buildPageUrl(page - 1)} className="pag-btn pag-btn--nav" aria-label="Previous Page">
+            <span className="arrow">←</span>
+            <span className="text">{isEn ? 'Prev' : 'Ant'}</span>
+          </Link>
+        ) : (
+          <span className="pag-btn pag-btn--nav pag-btn--disabled">
+            <span className="arrow">←</span>
+            <span className="text">{isEn ? 'Prev' : 'Ant'}</span>
+          </span>
+        )}
+        
+        <div className="pag-numbers">
+          {pageNumbers.map((p, index) => {
+            if (p === 'ellipsis-start' || p === 'ellipsis-end') {
+              return (
+                <span key={`ellipsis-${index}`} className="pag-ellipsis">
+                  ...
+                </span>
+              );
+            }
+            
+            const isCurrent = p === page;
+            return (
+              <Link
+                key={p}
+                href={buildPageUrl(p)}
+                className={`pag-btn pag-btn--number ${isCurrent ? 'pag-btn--active' : ''}`}
+                aria-label={`Go to page ${p + 1}`}
+                aria-current={isCurrent ? 'page' : undefined}
+              >
+                {p + 1}
+              </Link>
+            );
+          })}
+        </div>
+        
+        {page < totalPages - 1 ? (
+          <Link href={buildPageUrl(page + 1)} className="pag-btn pag-btn--nav" aria-label="Next Page">
+            <span className="text">{isEn ? 'Next' : 'Sig'}</span>
+            <span className="arrow">→</span>
+          </Link>
+        ) : (
+          <span className="pag-btn pag-btn--nav pag-btn--disabled">
+            <span className="text">{isEn ? 'Next' : 'Sig'}</span>
+            <span className="arrow">→</span>
+          </span>
+        )}
+      </nav>
+    );
+  };
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
@@ -656,8 +743,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
             <span>{isEn ? 'No exact results found. Showing similar suggestions powered by AI.' : 'No encontramos resultados exactos. Mostrando sugerencias similares con IA.'}</span>
           </div>
         )}
-
-        <div className="results-virtual-shell" ref={virtualRootRef}>
+        <div className="results-virtual-shell" ref={virtualRootRef} style={{ opacity: isTransitioning ? 0.65 : 1, transition: 'opacity 0.25s ease' }}>
           {canVirtualize ? (
             <div
               style={{
@@ -696,19 +782,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           )}
         </div>
 
-        {items.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
-            {hasMore ? (
-              <div ref={sentinelRef} style={{ color: '#9aa4c7', fontSize: '.9rem', display:'flex', alignItems:'center', gap:'10px' }}>
-                {isLoadingMore ? <Spinner /> : (isEn ? 'Load more…' : 'Cargar más…')}
-              </div>
-            ) : (
-              <div style={{ color: '#9aa4c7', fontSize: '.9rem' }}>
-                {isEn ? 'No more results' : 'No hay más resultados'}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Paginador principal */}
+        {!loading && items.length > 0 && renderPaginator()}
 
         {/* AI Suggestions */}
         {suggestions.length > 0 && !loading && (
