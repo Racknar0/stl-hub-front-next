@@ -12,7 +12,7 @@ async function fetchHomeSSR(urlPath) {
   const apiBase = getApiBase();
   const url = `${apiBase}${urlPath}`;
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { next: { revalidate: 600 } });
     if (!res.ok) return null;
     return res.json();
   } catch (e) {
@@ -43,7 +43,7 @@ export default async function Page() {
   // 1. Peticiones en paralelo directas en servidor
   const [resLatest, resTopRandomPool, resFree, resCats] = await Promise.all([
     fetchHomeSSR('/api/assets/latest?limit=20'),
-    fetchHomeSSR('/api/assets/search?pageIndex=0&pageSize=80'),
+    fetchHomeSSR('/api/assets/top?limit=80'),
     fetchHomeSSR('/api/assets/search?plan=free&pageIndex=0&pageSize=20'),
     fetchHomeSSR('/api/categories'),
   ]);
@@ -51,7 +51,7 @@ export default async function Page() {
   const latest = Array.isArray(resLatest) ? resLatest : [];
   
   // "Lo más descargado" aleatorizado en el servidor para evitar discrepancia de hidratación
-  const topPool = Array.isArray(resTopRandomPool?.items) ? resTopRandomPool.items : [];
+  const topPool = Array.isArray(resTopRandomPool) ? resTopRandomPool : [];
   const top20 = shuffleArray(topPool).slice(0, 20);
   const top = top20.length ? top20 : latest;
 
