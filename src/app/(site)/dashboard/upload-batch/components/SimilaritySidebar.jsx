@@ -285,9 +285,7 @@ export default function SimilaritySidebar({
                                         size="small"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (confirm('¿Eliminar esta imagen del asset similar?')) {
-                                            onDeleteImageFromSimilar?.(a.id, src)
-                                          }
+                                          onDeleteImageFromSimilar?.(a.id, src);
                                         }}
                                         sx={{
                                           position: 'absolute',

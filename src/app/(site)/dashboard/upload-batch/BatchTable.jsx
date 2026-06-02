@@ -194,6 +194,7 @@ export default function BatchTable() {
     similarityMapRef.current = similarityMap
   }, [similarityMap])
   const similarityLruRef = React.useRef([])
+  const stableSemanticOrderRef = useRef(new Map())
   const http = useMemo(() => new HttpService(), [])
 
   // ── Always-fresh ref to rows for use in async/callback functions ──
@@ -371,7 +372,7 @@ export default function BatchTable() {
     })
     
     try {
-      await http.putData(`/assets/${assetId}`, { images: nextImages })
+      await http.putData('/assets', assetId, { images: nextImages })
       setToast({ open: true, msg: 'Imagen eliminada del asset con éxito', type: 'success' })
     } catch (e) {
       console.error('[SIDEBAR_DELETE_IMG] Failed to delete image from asset', e)
@@ -471,8 +472,26 @@ export default function BatchTable() {
     // 2. Sort each priority group
     const sortedGroups = priorityGroups.map(group => {
       if (semanticSort) {
-        // Semantic fuzzy clustering based on immutable folderName
-        return getSemanticClustered(group)
+        // Check if all items in this group already have a cached semantic order index
+        const hasAllCached = group.every(item => stableSemanticOrderRef.current.has(item.id))
+        
+        let clustered
+        if (hasAllCached) {
+          // Sort based on the cached semantic order index
+          clustered = [...group].sort((a, b) => {
+            const indexA = stableSemanticOrderRef.current.get(a.id)
+            const indexB = stableSemanticOrderRef.current.get(b.id)
+            return indexA - indexB
+          })
+        } else {
+          // Run the clustering algorithm
+          clustered = getSemanticClustered(group)
+          // Update the cache with the new clustered order
+          clustered.forEach((item, index) => {
+            stableSemanticOrderRef.current.set(item.id, index)
+          })
+        }
+        return clustered
       } else {
         // Classic alphabetical sort based on folderName falling back to nombre
         return [...group].sort((a, b) => {
