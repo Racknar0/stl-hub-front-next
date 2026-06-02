@@ -30,6 +30,109 @@ import {
 } from './constants'
 
 
+// ─── Sørensen-Dice & Token Similarity Clustering Helpers ───
+const getCharacterBigrams = (str) => {
+  const bigrams = new Set()
+  for (let i = 0; i < str.length - 1; i++) {
+    bigrams.add(str.substring(i, i + 2))
+  }
+  return bigrams
+}
+
+const getSorensenDiceSimilarity = (setA, setB) => {
+  if (setA.size === 0 || setB.size === 0) return 0
+  let intersection = 0
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection++
+    }
+  }
+  return (2 * intersection) / (setA.size + setB.size)
+}
+
+const getSemanticClustered = (items) => {
+  if (items.length <= 1) return items
+
+  const stopWords = new Set(['stl', 'pack', 'modelo', 'model', '3d', 'print', 'impresion', 'figure', 'figura', 'bust', 'busto', 'v1', 'v2', 'final', 'fixed', 'fix'])
+  
+  // 1. Precompute tokens, bigrams, and alphanumeric names for all items based on immutable folderName
+  const itemData = items.map(item => {
+    const rawName = String(item?.folderName || item?.nombre || '').toLowerCase()
+    
+    // Clean name: remove extensions and typical symbols
+    const cleanName = rawName
+      .replace(/\.(zip|rar|7z|7zs|tar|gz|tgz)(\d+)?$/i, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+    
+    const tokens = cleanName.split(' ')
+      .filter(w => w.length > 1 && !stopWords.has(w))
+    
+    return {
+      item,
+      nameAlnum: cleanName,
+      tokens: new Set(tokens),
+      bigrams: getCharacterBigrams(cleanName)
+    }
+  })
+
+  // Pre-sort itemData alphabetically by cleaned alphanumeric name first for determinism
+  itemData.sort((a, b) => a.nameAlnum.localeCompare(b.nameAlnum, undefined, { numeric: true, sensitivity: 'base' }))
+
+  const sortedList = []
+  const remaining = [...itemData]
+
+  while (remaining.length > 0) {
+    // Take the next alphabetically available item to start the cluster
+    let current = remaining.shift()
+    sortedList.push(current.item)
+
+    let foundNext = true
+    while (foundNext && remaining.length > 0) {
+      let bestIndex = -1
+      let bestScore = 0
+
+      for (let i = 0; i < remaining.length; i++) {
+        const candidate = remaining[i]
+        
+        // Sørensen-Dice bigram similarity
+        const bigramScore = getSorensenDiceSimilarity(current.bigrams, candidate.bigrams)
+        
+        // Jaccard token overlap similarity
+        let tokenIntersection = 0
+        for (const token of current.tokens) {
+          if (candidate.tokens.has(token)) {
+            tokenIntersection++
+          }
+        }
+        
+        let tokenScore = 0
+        if (tokenIntersection > 0) {
+          const tokenUnion = current.tokens.size + candidate.tokens.size - tokenIntersection
+          tokenScore = tokenUnion > 0 ? tokenIntersection / tokenUnion : 0
+        }
+
+        const combinedScore = Math.max(bigramScore, tokenScore)
+        
+        if (combinedScore > bestScore) {
+          bestScore = combinedScore
+          bestIndex = i
+        }
+      }
+
+      // If the best match meets our similarity threshold (0.35)
+      if (bestIndex !== -1 && bestScore >= 0.35) {
+        current = remaining.splice(bestIndex, 1)[0]
+        sortedList.push(current.item)
+      } else {
+        foundNext = false
+      }
+    }
+  }
+
+  return sortedList
+}
+
 export default function BatchTable() {
   const [rows, setRows] = useState([])
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' })
@@ -76,6 +179,7 @@ export default function BatchTable() {
   const [distributionAccountIds, setDistributionAccountIds] = useState([])
   const [reviewMode, setReviewMode] = useState(false)
   const [useTelegramSource, setUseTelegramSource] = useState(false)
+  const [semanticSort, setSemanticSort] = useState(true)
   const [summaryFilter, setSummaryFilter] = useState('all')
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
@@ -344,29 +448,44 @@ export default function BatchTable() {
   const visibleRows = useMemo(() => {
     const base = reviewMode ? reviewRows : rows
     const filtered = base.filter((r) => matchesSummaryFilter(r, summaryFilter))
-    // Sort active items (uploading/processing) to the top, then alphabetically by filename
-    return [...filtered].sort((a, b) => {
-      const priority = (r) => {
-        const st = String(r?.estado || '').toLowerCase()
-        const main = String(r?.mainStatus || '').toUpperCase()
-        const backup = String(r?.backupStatus || '').toUpperCase()
-        // Currently uploading or processing → top
-        if (st === 'procesando' || main === 'UPLOADING' || backup === 'UPLOADING') return 0
-        // Error → second
-        if (st === 'error') return 1
-        // Draft/pending → third
-        if (st === 'borrador') return 2
-        // Completed → bottom
-        return 3
+
+    // 1. Group items by priority status
+    const priorityGroups = [[], [], [], []]
+    
+    filtered.forEach(r => {
+      const st = String(r?.estado || '').toLowerCase()
+      const main = String(r?.mainStatus || '').toUpperCase()
+      const backup = String(r?.backupStatus || '').toUpperCase()
+      
+      if (st === 'procesando' || main === 'UPLOADING' || backup === 'UPLOADING') {
+        priorityGroups[0].push(r)
+      } else if (st === 'error') {
+        priorityGroups[1].push(r)
+      } else if (st === 'borrador') {
+        priorityGroups[2].push(r)
+      } else {
+        priorityGroups[3].push(r)
       }
-      const pDiff = priority(a) - priority(b)
-      if (pDiff !== 0) return pDiff
-      // Same status → sort alphabetically by filename for easy sequential review
-      const nameA = String(a?.nombre || '').toLowerCase()
-      const nameB = String(b?.nombre || '').toLowerCase()
-      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' })
     })
-  }, [reviewMode, reviewRows, rows, matchesSummaryFilter, summaryFilter])
+
+    // 2. Sort each priority group
+    const sortedGroups = priorityGroups.map(group => {
+      if (semanticSort) {
+        // Semantic fuzzy clustering based on immutable folderName
+        return getSemanticClustered(group)
+      } else {
+        // Classic alphabetical sort based on folderName falling back to nombre
+        return [...group].sort((a, b) => {
+          const nameA = String(a?.folderName || a?.nombre || '').toLowerCase()
+          const nameB = String(b?.folderName || b?.nombre || '').toLowerCase()
+          return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' })
+        })
+      }
+    })
+
+    // 3. Flatten sorted groups into a single array
+    return sortedGroups.flat()
+  }, [reviewMode, reviewRows, rows, matchesSummaryFilter, summaryFilter, semanticSort])
 
   const rowIndexById = useMemo(() => {
     const m = new Map()
@@ -838,6 +957,7 @@ export default function BatchTable() {
     return {
       id: item.id,
       batchId: item.batchId,
+      folderName: item.folderName || '',
       nombre: titleEs,
       nombreEn: titleEn,
       categorias: item.categories || [],
@@ -2234,6 +2354,8 @@ export default function BatchTable() {
           setReviewMode={setReviewMode}
           useTelegramSource={useTelegramSource}
           setUseTelegramSource={setUseTelegramSource}
+          semanticSort={semanticSort}
+          setSemanticSort={setSemanticSort}
           http={http}
           setToast={setToast}
           setRows={setRows}

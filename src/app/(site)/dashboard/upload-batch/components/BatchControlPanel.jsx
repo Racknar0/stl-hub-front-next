@@ -66,6 +66,9 @@ export default function BatchControlPanel({
   // ─── Modo revisión ───
   reviewMode,
   setReviewMode,
+  // ─── Agrupamiento semántico ───
+  semanticSort,
+  setSemanticSort,
   // ─── Telegram Source ───
   useTelegramSource,
   setUseTelegramSource,
@@ -313,6 +316,12 @@ export default function BatchControlPanel({
             control={<Switch checked={reviewMode} onChange={(e) => setReviewMode(Boolean(e?.target?.checked))} color="info" size="small" />}
             label={<Typography variant="body2" sx={{ color: '#cbd5e1', fontWeight: 600 }}>Modo Revisión</Typography>}
             sx={{ m: 0, px: 1.5, py: 0.5, borderRadius: 2, border: '1px solid rgba(56,189,248,0.3)', bgcolor: 'rgba(14,116,144,0.1)' }}
+          />
+
+          <FormControlLabel
+            control={<Switch checked={semanticSort} onChange={(e) => setSemanticSort(Boolean(e?.target?.checked))} color="secondary" size="small" />}
+            label={<Typography variant="body2" sx={{ color: '#cbd5e1', fontWeight: 600 }}>Agrupar Similares (Archivo)</Typography>}
+            sx={{ m: 0, px: 1.5, py: 0.5, borderRadius: 2, border: '1px solid rgba(168,85,247,0.3)', bgcolor: 'rgba(168,85,247,0.05)' }}
           />
 
           <Tooltip title="Rotar Proxy de la fila en subida">
