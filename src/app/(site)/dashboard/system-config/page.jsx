@@ -25,6 +25,13 @@ export default function SystemConfigPage() {
   const DEFAULT_PLAN_PRICES = { '1m': '5.00', '3m': '10.00', '6m': '17.00', '12m': '25.00' };
   const [planPrices, setPlanPrices] = useState(DEFAULT_PLAN_PRICES);
 
+  // Email test states
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailStatus, setTestEmailStatus] = useState(null); // 'success' | 'error'
+  const [testEmailError, setTestEmailError] = useState(null);
+  const [testEmailMessageId, setTestEmailMessageId] = useState('');
+
   const http = new HttpService();
 
   useEffect(() => { hydrateToken() }, [hydrateToken]);
@@ -469,6 +476,97 @@ export default function SystemConfigPage() {
                   disabled={savingKey === 'PLAN_PRICES'}
                 >
                   {savingKey === 'PLAN_PRICES' ? 'Guardando...' : 'Guardar Precios'}
+                </button>
+              </div>
+            </article>
+
+            {/* ✉️ Probar Nodemailer (SMTP) */}
+            <article className="setting-card" style={{ border: '1px solid rgba(244,63,94,0.3)' }}>
+              <div className="setting-header">
+                <div className="icon-wrapper" style={{ background: 'rgba(244,63,94,0.15)', color: '#f43f5e' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M22 6l-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h2>✉️ Probar Nodemailer</h2>
+              </div>
+              <div className="setting-body">
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  Envía un correo de prueba de forma inmediata para verificar si las credenciales SMTP en tu archivo <code>.env</code> están funcionando.
+                </p>
+                <div className="form-group">
+                  <label>Correo Destinatario</label>
+                  <input
+                    type="email"
+                    placeholder="ejemplo@correo.com"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    style={{ background: '#1e293b', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px' }}
+                  />
+                </div>
+                {testEmailStatus && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    background: testEmailStatus === 'success' ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)',
+                    border: `1px solid ${testEmailStatus === 'success' ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    color: testEmailStatus === 'success' ? '#34d399' : '#f87171',
+                    wordBreak: 'break-word'
+                  }}>
+                    {testEmailStatus === 'success' ? (
+                      <div>
+                        <strong>✅ ¡Éxito! Correo enviado.</strong>
+                        <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#94a3b8' }}>
+                          Message ID: {testEmailMessageId}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <strong>❌ Fallo de envío:</strong>
+                        <pre style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', fontSize: '0.75rem', fontFamily: 'monospace', color: '#f87171' }}>
+                          {testEmailError}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="setting-footer">
+                <button
+                  className="btn btn-primary"
+                  style={{ background: '#f43f5e', borderColor: '#f43f5e' }}
+                  onClick={async () => {
+                    if (!testEmailAddress) {
+                      await errorAlert('Error', 'Por favor ingresa un correo destinatario.');
+                      return;
+                    }
+                    try {
+                      setTestingEmail(true);
+                      setTestEmailStatus(null);
+                      setTestEmailError(null);
+                      const res = await http.postData('/admin/ops/test-email', { email: testEmailAddress });
+                      if (res.data && res.data.ok) {
+                        setTestEmailStatus('success');
+                        setTestEmailMessageId(res.data.messageId);
+                        await successAlert('Enviado', 'Correo de prueba enviado correctamente.');
+                      } else {
+                        throw new Error(res.data?.message || 'Error desconocido');
+                      }
+                    } catch (e) {
+                      console.error(e);
+                      setTestEmailStatus('error');
+                      setTestEmailError(e?.response?.data?.error || e?.response?.data?.message || e.message || 'Error al enviar');
+                      await errorAlert('Fallo de envío', 'El correo no se pudo enviar. Revisa el log de error en la tarjeta.');
+                    } finally {
+                      setTestingEmail(false);
+                    }
+                  }}
+                  disabled={testingEmail}
+                >
+                  {testingEmail ? 'Enviando...' : 'Enviar Correo de Prueba'}
                 </button>
               </div>
             </article>
