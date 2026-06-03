@@ -80,6 +80,15 @@ export default function BatchControlPanel({
   // ─── Estilos compartidos ───
   compactActionBtnSx,
 }) {
+  const totalAvailableSpaceBytes = React.useMemo(() => {
+    const list = Array.isArray(accountSelectionMeta?.selectable) ? accountSelectionMeta.selectable : []
+    const totalMb = list.reduce((sum, c) => {
+      const capFreeMb = Math.max(0, Number(c.limitMb || 0) - Number(c.usedMb || 0))
+      return sum + capFreeMb
+    }, 0)
+    return totalMb * 1024 * 1024
+  }, [accountSelectionMeta])
+
   return (
     <Box sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(10px)' }}>
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="center" justifyContent="space-between">
@@ -214,55 +223,60 @@ export default function BatchControlPanel({
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(30,41,59,0.6)', p: 0.5, pr: 1.5, borderRadius: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 200, maxWidth: 280 }}>
-              <InputLabel id="batch-dist-label" sx={{ color: '#94a3b8', fontSize: 13, mt: -0.5 }}>Cuentas destino</InputLabel>
-              <Select
-                labelId="batch-dist-label"
-                multiple
-                value={distributionAccountIds || []}
-                onChange={handleDistributionAccountsChange}
-                onOpen={handleDistributionSelectorOpen}
-                onClose={handleDistributionSelectorClose}
-                label="Cuentas destino"
-                renderValue={(selected) => {
-                  const ids = Array.isArray(selected) ? selected.map(Number) : []
-                  if (!ids.length) return <Typography variant="caption">Todas las disponibles</Typography>
-                  return <Typography variant="caption" noWrap>{ids.length} cuentas</Typography>
-                }}
-                sx={{
-                  height: 34,
-                  color: '#f8fafc',
-                  borderRadius: 1.5,
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  bgcolor: 'rgba(15,23,42,0.6)'
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      bgcolor: '#0f172a',
-                      border: '1px solid rgba(71,85,105,0.55)',
+            <Stack spacing={0.5} sx={{ minWidth: 200, maxWidth: 280 }}>
+              <FormControl size="small" fullWidth>
+                <InputLabel id="batch-dist-label" sx={{ color: '#94a3b8', fontSize: 13, mt: -0.5 }}>Cuentas destino</InputLabel>
+                <Select
+                  labelId="batch-dist-label"
+                  multiple
+                  value={distributionAccountIds || []}
+                  onChange={handleDistributionAccountsChange}
+                  onOpen={handleDistributionSelectorOpen}
+                  onClose={handleDistributionSelectorClose}
+                  label="Cuentas destino"
+                  renderValue={(selected) => {
+                    const ids = Array.isArray(selected) ? selected.map(Number) : []
+                    if (!ids.length) return <Typography variant="caption">Todas las disponibles</Typography>
+                    return <Typography variant="caption" noWrap>{ids.length} cuentas</Typography>
+                  }}
+                  sx={{
+                    height: 34,
+                    color: '#f8fafc',
+                    borderRadius: 1.5,
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    bgcolor: 'rgba(15,23,42,0.6)'
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: '#0f172a',
+                        border: '1px solid rgba(71,85,105,0.55)',
+                      },
                     },
-                  },
-                }}
-              >
-                {accountSelectionMeta?.selectable?.map((c) => {
-                  const checked = (distributionAccountIds || []).includes(Number(c.id))
-                  const pct = c.limitMb > 0 ? Math.round((c.usedMb / c.limitMb) * 100) : 0
-                  const capFreeMb = Math.max(0, Number(c.limitMb || 0) - Number(c.usedMb || 0))
-                  return (
-                    <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', '&:hover': { bgcolor: '#1e293b' } }}>
-                      <Checkbox checked={checked} size="small" sx={{ color: '#38bdf8', '&.Mui-checked': { color: '#38bdf8' } }} />
-                      <ListItemText 
-                        primary={c.alias} 
-                        secondary={`${pct}% · ${(capFreeMb / 1024).toFixed(1)} GB libres`}
-                        primaryTypographyProps={{ fontSize: 13, fontWeight: checked ? 700 : 500 }}
-                        secondaryTypographyProps={{ fontSize: 11, color: '#4ade80' }}
-                      />
-                    </MenuItem>
-                  )
-                })}
-              </Select>
-            </FormControl>
+                  }}
+                >
+                  {accountSelectionMeta?.selectable?.map((c) => {
+                    const checked = (distributionAccountIds || []).includes(Number(c.id))
+                    const pct = c.limitMb > 0 ? Math.round((c.usedMb / c.limitMb) * 100) : 0
+                    const capFreeMb = Math.max(0, Number(c.limitMb || 0) - Number(c.usedMb || 0))
+                    return (
+                      <MenuItem key={c.id} value={c.id} sx={{ color: '#e2e8f0', '&:hover': { bgcolor: '#1e293b' } }}>
+                        <Checkbox checked={checked} size="small" sx={{ color: '#38bdf8', '&.Mui-checked': { color: '#38bdf8' } }} />
+                        <ListItemText 
+                          primary={c.alias} 
+                          secondary={`${pct}% · ${(capFreeMb / 1024).toFixed(1)} GB libres`}
+                          primaryTypographyProps={{ fontSize: 13, fontWeight: checked ? 700 : 500 }}
+                          secondaryTypographyProps={{ fontSize: 11, color: '#4ade80' }}
+                        />
+                      </MenuItem>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+              <Typography variant="caption" sx={{ color: '#38bdf8', fontSize: 10, pl: 0.5, fontWeight: 700 }}>
+                Espacio estimado: {formatBytes(totalAvailableSpaceBytes)}
+              </Typography>
+            </Stack>
             <Tooltip title="Asignar automáticamente el peso de los archivos a las cuentas con espacio libre">
               <Button
                 variant="contained"
