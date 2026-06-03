@@ -428,6 +428,10 @@ export default function Page() {
                     const registrations = Number(item?.stats?.registrations || 0);
                     const purchases = Number(item?.stats?.purchases || 0);
 
+                    const visitsToday = Number(item?.statsToday?.visits || 0);
+                    const registrationsToday = Number(item?.statsToday?.registrations || 0);
+                    const purchasesToday = Number(item?.statsToday?.purchases || 0);
+
                     return (
                     <article key={item.id} className="campaign-item">
                       <div className="campaign-item-head">
@@ -445,17 +449,55 @@ export default function Page() {
                         <span>source: {item.source || '-'}</span>
                         <span>medium: {item.medium || '-'}</span>
                       </div>
-                      <div className="campaign-stats">
-                        <span>Visitas: {item?.stats?.visits || 0}</span>
-                        <span>Unicos: {item?.stats?.uniqueVisitors || 0}</span>
-                        <span>Registros: {item?.stats?.registrations || 0}</span>
-                        <span>Compras: {item?.stats?.purchases || 0}</span>
-                        <span>Ingresos: {formatCop(item?.stats?.revenue || 0)}</span>
-                      </div>
-                      <div className="campaign-rates">
-                        <span>Visita {'->'} Registro: {toPct(registrations, visits)}</span>
-                        <span>Visita {'->'} Compra: {toPct(purchases, visits)}</span>
-                        <span>Registro {'->'} Compra: {toPct(purchases, registrations)}</span>
+                      
+                      <div className="campaign-stats-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '1rem',
+                        marginTop: '1rem',
+                        marginBottom: '1.5rem'
+                      }}>
+                        <div className="campaign-stats-col" style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <h4 style={{ margin: '0 0 0.75rem 0', color: '#38bdf8', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hoy (UTC-5)</h4>
+                          <div className="campaign-stats" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem' }}>
+                            <span>Visitas: {visitsToday}</span>
+                            <span>Unicos: {item?.statsToday?.uniqueVisitors || 0}</span>
+                            <span>Registros: {registrationsToday}</span>
+                            <span>Compras: {purchasesToday}</span>
+                            <span>Ingresos: {formatCop(item?.statsToday?.revenue || 0)}</span>
+                          </div>
+                          <div className="campaign-rates" style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: '#888' }}>
+                            <span>Visita {'->'} Registro: {toPct(registrationsToday, visitsToday)}</span>
+                            <span>Visita {'->'} Compra: {toPct(purchasesToday, visitsToday)}</span>
+                            <span>Registro {'->'} Compra: {toPct(purchasesToday, registrationsToday)}</span>
+                          </div>
+                        </div>
+
+                        <div className="campaign-stats-col" style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <h4 style={{ margin: '0 0 0.75rem 0', color: '#10b981', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Histórico</h4>
+                          <div className="campaign-stats" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem' }}>
+                            <span>Visitas: {visits}</span>
+                            <span>Unicos: {item?.stats?.uniqueVisitors || 0}</span>
+                            <span>Registros: {registrations}</span>
+                            <span>Compras: {purchases}</span>
+                            <span>Ingresos: {formatCop(item?.stats?.revenue || 0)}</span>
+                          </div>
+                          <div className="campaign-rates" style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: '#888' }}>
+                            <span>Visita {'->'} Registro: {toPct(registrations, visits)}</span>
+                            <span>Visita {'->'} Compra: {toPct(purchases, visits)}</span>
+                            <span>Registro {'->'} Compra: {toPct(purchases, registrations)}</span>
+                          </div>
+                        </div>
                       </div>
                       <div className="campaign-url">
                         <input type="text" readOnly value={item.trackingUrl || ''} />
