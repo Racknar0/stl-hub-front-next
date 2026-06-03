@@ -152,6 +152,23 @@
     &.anchor { border-color: #ff9800; background: rgba(44, 33, 20, 0.8); }
     &.selected-anchor { border-color: #ff5252; box-shadow: 0 0 15px rgba(255, 82, 82, 0.5); }
     &.selected-file { border-color: #4caf50; }
+    &.to-delete {
+      border-color: #2196f3;
+      box-shadow: 0 0 15px rgba(33, 150, 243, 0.45);
+      background: rgba(33, 150, 243, 0.15);
+
+      .card-img {
+        position: relative;
+        &::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: rgba(33, 150, 243, 0.22);
+          mix-blend-mode: multiply;
+          transition: all 0.2s;
+        }
+      }
+    }
 
     .badge {
       position: absolute; top: 6px; right: 6px;

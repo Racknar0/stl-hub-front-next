@@ -28,6 +28,9 @@ export default function TelegramOrganizer() {
   const [filesToDelete, setFilesToDelete] = useState(new Set());
   const [lastCheckedName, setLastCheckedName] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
+
+  const isShiftDraggingRef = useRef(false);
+  const dragSelectModeRef = useRef('select');
   
   // Interceptador premium de status para alertas flotantes
   const [status, setStatusState] = useState('');
@@ -71,6 +74,15 @@ export default function TelegramOrganizer() {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
   useEffect(() => { loadFiles(); }, []);
+
+  // Global mouseup to stop drag selection
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      isShiftDraggingRef.current = false;
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
 
   // Keyboard: Space = package
   useEffect(() => {
@@ -514,8 +526,46 @@ export default function TelegramOrganizer() {
           {files.map(file => (
             <div
               key={file.name}
-              className={`card ${file.type === 'anchor' ? 'anchor' : ''} ${selectedAnchor === file.name ? 'selected-anchor' : ''} ${selectedFiles.has(file.name) ? 'selected-file' : ''}`}
-              onClick={() => handleCardClick(file.name, file.type)}
+              className={`card ${file.type === 'anchor' ? 'anchor' : ''} ${selectedAnchor === file.name ? 'selected-anchor' : ''} ${selectedFiles.has(file.name) ? 'selected-file' : ''} ${filesToDelete.has(file.name) ? 'to-delete' : ''}`}
+              onClick={(e) => {
+                if (e.shiftKey) return;
+                handleCardClick(file.name, file.type);
+              }}
+              onMouseDown={(e) => {
+                if (e.shiftKey) {
+                  e.preventDefault(); // prevent native ghost drag & text selection
+                  const isChecked = filesToDelete.has(file.name);
+                  const mode = isChecked ? 'deselect' : 'select';
+                  dragSelectModeRef.current = mode;
+                  isShiftDraggingRef.current = true;
+
+                  setFilesToDelete(prev => {
+                    const next = new Set(prev);
+                    if (mode === 'select') {
+                      next.add(file.name);
+                    } else {
+                      next.delete(file.name);
+                    }
+                    return next;
+                  });
+                  setLastCheckedName(file.name);
+                }
+              }}
+              onMouseEnter={() => {
+                if (isShiftDraggingRef.current) {
+                  const mode = dragSelectModeRef.current;
+                  setFilesToDelete(prev => {
+                    const next = new Set(prev);
+                    if (mode === 'select') {
+                      next.add(file.name);
+                    } else {
+                      next.delete(file.name);
+                    }
+                    return next;
+                  });
+                  setLastCheckedName(file.name);
+                }
+              }}
             >
               <input
                 type="checkbox"
@@ -551,7 +601,12 @@ export default function TelegramOrganizer() {
 
               <div className="card-img">
                 {file.type === 'image' ? (
-                  <img src={`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`} loading="lazy" alt={file.name} />
+                  <img 
+                    src={`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`} 
+                    loading="lazy" 
+                    alt={file.name} 
+                    draggable="false" 
+                  />
                 ) : (
                   file.isCompressed ? '📚' : '🗿'
                 )}
