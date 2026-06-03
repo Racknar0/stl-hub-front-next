@@ -192,6 +192,7 @@ const Register = () => {
             if (response.status === 201) {
                 try {
                     sendGTMEvent({ event: 'sign_up', method: 'email', email: email, event_id: eventId });
+                    sendGTMEvent({ event: 'CompleteRegistration', method: 'email', email: email, event_id: eventId });
                 } catch (e) {
                     console.error('GTM sign_up error', e);
                 }
@@ -255,7 +256,9 @@ const Register = () => {
                     // Disparar evento de GTM solo si es un usuario nuevo
                     if (response.data.isNewUser) {
                         try {
-                            sendGTMEvent({ event: 'sign_up', method: 'google', event_id: eventId });
+                            const userEmail = response.data.email || '';
+                            sendGTMEvent({ event: 'sign_up', method: 'google', email: userEmail, event_id: eventId });
+                            sendGTMEvent({ event: 'CompleteRegistration', method: 'google', email: userEmail, event_id: eventId });
                         } catch (e) {
                             console.error('GTM sign_up error', e);
                         }
