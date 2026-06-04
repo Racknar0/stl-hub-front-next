@@ -121,3 +121,15 @@ h1, h2, h3, h4, h5, h6,
 .promo-banner {
   font-family: var(--font-outfit), 'Outfit', sans-serif;
 }
+
+@media (max-width: 768px) {
+  .glow-orb {
+    display: none !important;
+  }
+  .grid-overlay {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+    opacity: 0.12;
+    background-size: 40px 40px;
+  }
+}
