@@ -72,6 +72,8 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
             slidesPerView="auto"
             spaceBetween={12}
             watchOverflow
+            touchStartPreventDefault={false}
+            touchReleaseOnEdges={true}
           >
             {items.map((it, index) => {
               const formatUploadDate = (raw) => {

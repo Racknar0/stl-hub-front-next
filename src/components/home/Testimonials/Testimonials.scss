@@ -2,6 +2,16 @@
 
 .testimonials {
   padding: 1rem 0 2rem;
+
+  .swiper {
+    touch-action: pan-y;
+  }
+  .swiper-wrapper {
+    touch-action: pan-y;
+  }
+  .swiper-slide {
+    touch-action: pan-y;
+  }
 }
 
 .testimonials-title {

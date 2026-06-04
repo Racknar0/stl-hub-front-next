@@ -106,6 +106,8 @@ const Testimonials = ({ items = defaultItems }) => {
 						640: { slidesPerView: 2 },
 						1024: { slidesPerView: 3 },
 					}}
+					touchStartPreventDefault={false}
+					touchReleaseOnEdges={true}
 				>
 					{list.map((it, idx) => (
 						<SwiperSlide key={idx}>

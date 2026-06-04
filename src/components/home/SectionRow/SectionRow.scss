@@ -151,12 +151,20 @@
 .row-slider { 
   overflow: hidden; 
   position: relative; /* para botones */ 
+  touch-action: pan-y;
   /* variables navegación (Swiper 12) */
   --swiper-navigation-size: 10px; /* tamaño del ícono */
   --swiper-navigation-color: #fff; /* color del ícono */
   --swiper-navigation-sides-offset: 6px; /* separación lateral */
+
+  .swiper-wrapper {
+    touch-action: pan-y;
+  }
 }
-.row-slider .swiper-slide { width: auto; }
+.row-slider .swiper-slide { 
+  width: auto; 
+  touch-action: pan-y;
+}
 
 .card-item {
     background: rgba(10, 10, 12, 0.93);

@@ -129,15 +129,18 @@
     min-width: 0; /* permitir que el flex item se reduzca correctamente */
     width: 100%;
     position: relative;
+    touch-action: pan-y;
     /* variables para navegación */
     --swiper-navigation-size: 10px; /* tamaño del ícono (width/height) */
     --swiper-navigation-color: #fff; /* color del ícono */
 }
 .cards .swiper-wrapper {
     align-items: stretch;
+    touch-action: pan-y;
 }
 .cards .swiper-slide {
     width: auto;
+    touch-action: pan-y;
 }
 
 .fcard {

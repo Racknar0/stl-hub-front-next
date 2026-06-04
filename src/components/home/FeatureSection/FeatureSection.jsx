@@ -92,6 +92,8 @@ const FeatureSection = ({
                               grabCursor
                               loop={list.length > 1}
                               loopAdditionalSlides={Math.min(4, list.length)}
+                              touchStartPreventDefault={false}
+                              touchReleaseOnEdges={true}
                           >
                               {list.map((it, index) => {
                                   const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/vite.svg';
