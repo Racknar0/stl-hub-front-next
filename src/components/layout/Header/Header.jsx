@@ -204,6 +204,11 @@ const Header = () => {
   // Auto-hide header on scroll — uses capture to catch scroll on ANY container
   useEffect(() => {
     const onScroll = (e) => {
+      // Don't auto-hide on mobile/tablet viewports
+      if (typeof window !== 'undefined' && window.innerWidth <= 992) {
+        return
+      }
+
       // Read scroll position from whichever element is actually scrolling
       const target = e.target === document ? document.documentElement : e.target
       const currentScrollY = target.scrollTop ?? window.scrollY ?? 0
