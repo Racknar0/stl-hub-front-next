@@ -95,6 +95,9 @@ const SubscribeBar = () => {
                   variant="cyan"
                   className="bar-btn promo-cta-btn"
                   aria-label={isEn ? 'Create account' : 'Crear cuenta'}
+                  icon={(
+                    <span style={{ marginRight: '2px', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center' }}>✨</span>
+                  )}
                 >
                   {isEn ? 'Create free account' : 'Crear cuenta gratis'}
                 </Button>

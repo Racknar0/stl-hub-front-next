@@ -135,16 +135,37 @@
 
 .promo-cta-btn {
   white-space: nowrap;
-  animation: promo-cta-pulse 2s ease-in-out infinite;
+  background: linear-gradient(135deg, #00e7ff 0%, #7c6bff 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 999px;
+  font-weight: 800;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 231, 255, 0.4);
+  animation: promo-cta-pulse 1.8s ease-in-out infinite;
+  
+  &:hover {
+    background: linear-gradient(135deg, #00f0ff 0%, #8c7eff 100%) !important;
+  }
 }
 
 @keyframes promo-cta-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.04); }
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 4px 14px rgba(0, 231, 255, 0.35);
+  }
+  50%      { 
+    transform: scale(1.05); 
+    box-shadow: 0 6px 24px rgba(124, 107, 255, 0.65), 0 0 10px rgba(0, 231, 255, 0.3);
+  }
 }
 
 @media (max-width: 576px) {
+  .promo-bar-content {
+    gap: 0.4rem;
+  }
   .promo-msg {
     font-size: 0.76rem;
+    margin-bottom: 0.1rem;
   }
 }
