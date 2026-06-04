@@ -1120,7 +1120,7 @@ const Header = () => {
         </div>
       </div>
 
-      {!token && (
+      {!token && !['/register', '/login', '/forgot-password', '/en/register', '/en/login', '/en/forgot-password'].includes(pathname || '') && (
         <div className="free-registration-alert-bar" style={{
           background: 'rgba(255, 75, 75, 0.08)',
           borderTop: '1px solid rgba(255, 75, 75, 0.15)',

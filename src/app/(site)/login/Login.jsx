@@ -120,9 +120,26 @@ const Login = () => {
     });
 
 
-    // Scroll to top on mount
+    // Scroll to top on mount (multi-stage reset to fight router scroll restoration and browser focus)
     useEffect(() => {
-        window.scrollTo(0, 0);
+        const resetScroll = () => {
+            window.scrollTo(0, 0);
+            if (typeof document !== 'undefined') {
+                if (document.documentElement) document.documentElement.scrollTop = 0;
+                if (document.body) document.body.scrollTop = 0;
+            }
+        };
+        resetScroll();
+        const t1 = setTimeout(resetScroll, 50);
+        const t2 = setTimeout(resetScroll, 150);
+        const t3 = setTimeout(resetScroll, 300);
+        const t4 = setTimeout(resetScroll, 600);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+            clearTimeout(t4);
+        };
     }, []);
 
     useEffect(() => {
