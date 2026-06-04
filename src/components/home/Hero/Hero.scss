@@ -2,6 +2,16 @@
 
 .hero-iron {
     position: relative;
+
+    .swiper {
+        touch-action: pan-y;
+    }
+    .swiper-wrapper {
+        touch-action: pan-y;
+    }
+    .swiper-slide {
+        touch-action: pan-y;
+    }
 }
 
 .slide {

@@ -25,6 +25,8 @@ const Hero = () => {
                 pagination={{ clickable: true }}
                 navigation
                 loop
+                touchStartPreventDefault={false}
+                touchReleaseOnEdges={true}
             >
                 {slides.map((s, index) => (
                     <SwiperSlide key={s.id}>
