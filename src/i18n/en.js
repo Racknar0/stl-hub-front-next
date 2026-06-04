@@ -64,8 +64,8 @@ const en = {
   },
   home: {
     latest: {
-      title: 'Latest updates & releases',
-      subtitle: 'Discover the latest links',
+      title: 'New arrivals',
+      subtitle: 'Explore the latest added models',
       cta: 'See all'
     },
     top: {
@@ -74,7 +74,8 @@ const en = {
     },
     // New: Free
     free: {
-      title: 'Freebies: free STL files every day',
+      title: 'Daily Gifts',
+      subtitle: 'Random designs every 24h',
       more: 'See all'
     },
     // New: categories

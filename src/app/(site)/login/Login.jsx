@@ -120,6 +120,11 @@ const Login = () => {
     });
 
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         if (token) {
             router.push(homeHref);

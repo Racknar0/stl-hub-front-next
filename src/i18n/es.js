@@ -64,8 +64,8 @@ const es = {
   },
   home: {
     latest: {
-      title: 'Últimas novedades',
-      subtitle: 'Descubre los últimos enlaces',
+      title: 'Recién llegados',
+      subtitle: 'Explora los últimos modelos agregados',
       cta: 'Ver todo'
     },
     top: {
@@ -74,7 +74,8 @@ const es = {
     },
     // Nuevo: Free
     free: {
-      title: 'Freebies: descar STL gratis cada día se renueva diariamente',
+      title: 'Regalos del Día',
+      subtitle: 'Diseños aleatorios cada 24h',
       more: 'Ver todo'
     },
     // Nuevo: categorías

@@ -15,7 +15,7 @@ import '../../common/GlobalLoader/GlobalLoader.scss';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 
-const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '', priority = false, isEn: isEnProp }) => {
+const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '', priority = false, isEn: isEnProp }) => {
   const resolvedLanguage = useResolvedLanguage();
   const isEn = isEnProp !== undefined ? isEnProp : resolvedLanguage === 'en';
   const { t } = useI18n(isEn ? 'en' : 'es');
@@ -43,12 +43,19 @@ const SectionRow = ({ title, linkLabel, linkHref, items = [], onItemClick, loadi
                 maxWidth: "98%"
             }}>
         <div className="header">
-          <h3>{title}</h3>
+          <div className="title-wrapper">
+            <h3>{title}</h3>
+            {subtitle ? <p className="subtitle">{subtitle}</p> : null}
+          </div>
           {/* Botón Ver más opcional */}
           {linkHref ? (
-            <Button variant="cyan" href={linkHref} styles={{ width: '140px', color: '#fff' }}>
-              {finalLinkLabel}
-            </Button>
+            <Link href={linkHref} className="view-all-link">
+              <span>{finalLinkLabel}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </Link>
           ) : null}
         </div>
         {showLoader ? (

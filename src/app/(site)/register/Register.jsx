@@ -45,6 +45,11 @@ const Register = () => {
     const [activationMessage, setActivationMessage] = useState('');
     const [showActivationModal, setShowActivationModal] = useState(false);
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     // Auto-fill gift code from URL
     useEffect(() => {
         if (urlCode && !giftCode) {

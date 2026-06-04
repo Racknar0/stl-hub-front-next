@@ -330,6 +330,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
       <SectionRow
         variantClass="section-row--freebies-glow"
         title={t('home.free.title')}
+        subtitle={t('home.free.subtitle')}
         items={free}
         onItemClick={handleOpen}
         linkHref={isEn ? "/en/search?plan=free" : "/search?plan=free"}

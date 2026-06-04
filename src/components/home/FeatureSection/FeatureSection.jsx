@@ -58,16 +58,20 @@ const FeatureSection = ({
                 <div className="panel">
                     <div className="panel-inner">
                         <div className="intro">
-                            <h2 className="intro-title">{finalTitle}</h2>
+                            <div className="intro-header">
+                                <h2 className="intro-title">{finalTitle}</h2>
+                                <Link
+                                  href={isEn ? '/en/search' : '/search'}
+                                  className="view-all-link view-all-link--latest"
+                                >
+                                  <span>{finalCta}</span>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                  </svg>
+                                </Link>
+                            </div>
                             <p className="intro-subtitle">{finalSubtitle}</p>
-                            <Button variant="purple" styles={{
-                                width: '200px',
-                                height: '50px'
-                            }}
-                            href={isEn ? '/en/search' : '/search'}
-                            >
-                                {finalCta}
-                            </Button>
                         </div>
 
                                                 {/* Slider de cards o loader mientras carga */}
