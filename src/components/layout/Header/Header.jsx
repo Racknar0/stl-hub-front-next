@@ -1119,6 +1119,47 @@ const Header = () => {
           {searchMode === 'ai' && aiDropzoneOpen && imageDropzoneElement}
         </div>
       </div>
+
+      {!token && (
+        <div className="free-registration-alert-bar" style={{
+          background: 'rgba(255, 75, 75, 0.08)',
+          borderTop: '1px solid rgba(255, 75, 75, 0.15)',
+          borderBottom: '1px solid rgba(255, 75, 75, 0.15)',
+          padding: '0.35rem 0.75rem',
+          textAlign: 'center',
+          color: '#ff6b6b',
+          fontSize: '0.78rem',
+          fontWeight: '600',
+          lineHeight: '1.4',
+          letterSpacing: '0.1px',
+          boxShadow: 'inset 0 0 10px rgba(255, 75, 75, 0.03)',
+        }}>
+          🎁 {isEn ? 'To download free models, you must ' : 'Para poder descargar los modelos gratis debes '}
+          <Link href={isEn ? '/en/register' : '/register'} style={{
+            color: '#fff',
+            background: '#ff4b4b',
+            padding: '0.1rem 0.4rem',
+            borderRadius: '4px',
+            textDecoration: 'none',
+            fontWeight: '700',
+            marginLeft: '4px',
+            display: 'inline-block',
+            boxShadow: '0 2px 6px rgba(255, 75, 75, 0.3)',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.03)';
+            e.target.style.background = '#ff6b6b';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.background = '#ff4b4b';
+          }}
+          >
+            {isEn ? 'Register Free' : 'Registrarte'}
+          </Link>
+        </div>
+      )}
     </header>
 
     {/* Mobile drawer overlay */}
