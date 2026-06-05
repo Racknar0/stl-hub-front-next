@@ -64,6 +64,10 @@ export default function SystemConfigPage() {
         values['FREEBIES_DAILY_COUNT'] = '40';
         descs['FREEBIES_DAILY_COUNT'] = 'Cantidad de freebies diarios que se seleccionaran aleatoriamente en el sistema.';
       }
+      if (!values['FREEBIES_ROLLS_COUNT']) {
+        values['FREEBIES_ROLLS_COUNT'] = '3';
+        descs['FREEBIES_ROLLS_COUNT'] = 'Cantidad de tiradas de dados permitidas al día para el minijuego de freebies.';
+      }
 
       // Ensure download limits exist in local state even if not in DB
       if (!values['LIMIT_FREE_PASS_FREE_DOWNLOADS']) {
@@ -401,6 +405,51 @@ export default function SystemConfigPage() {
               </div>
             </article>
 
+            {/* Freebies Rolls Count Setting */}
+            <article className="setting-card">
+              <div className="setting-header">
+                <div className="icon-wrapper" style={{ background: 'rgba(0, 255, 170, 0.15)', color: '#00ffaa' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                    <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                    <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+                    <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h2>FREEBIES_ROLLS_COUNT</h2>
+              </div>
+              <div className="setting-body">
+                <div className="form-group">
+                  <label>Descripcion</label>
+                  <textarea 
+                    value={editDescriptions['FREEBIES_ROLLS_COUNT'] || ''} 
+                    onChange={(e) => setEditDescriptions({...editDescriptions, 'FREEBIES_ROLLS_COUNT': e.target.value})}
+                    placeholder="Describe para que sirve esta configuracion..."
+                    rows={2}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Valor (Tiradas)</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="6"
+                    value={editValues['FREEBIES_ROLLS_COUNT'] || ''} 
+                    onChange={(e) => setEditValues({...editValues, 'FREEBIES_ROLLS_COUNT': e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="setting-footer">
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => handleSave('FREEBIES_ROLLS_COUNT')}
+                  disabled={savingKey === 'FREEBIES_ROLLS_COUNT'}
+                >
+                  {savingKey === 'FREEBIES_ROLLS_COUNT' ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </article>
+
             {/* 💰 Plan Prices */}
             <article className="setting-card" style={{ border: '1px solid rgba(168,85,247,0.3)' }}>
               <div className="setting-header">
@@ -574,6 +623,7 @@ export default function SystemConfigPage() {
             {/* Render any other settings from DB that are not explicitly handled above */}
             {settings.filter(s => ![
               'FREEBIES_DAILY_COUNT',
+              'FREEBIES_ROLLS_COUNT',
               'LAUNCH_PROMO_ACTIVE',
               'LAUNCH_PROMO_DAYS',
               'LAUNCH_PROMO_START',

@@ -66,6 +66,7 @@ const FreebiesGame = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [rollsUsed, setRollsUsed] = useState(0);
+  const [maxRolls, setMaxRolls] = useState(3);
   const [rolling, setRolling] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -82,31 +83,30 @@ const FreebiesGame = () => {
     }
   }, [hydrated, token, router, lang]);
 
-  // Cargar rollsUsed desde localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const today = new Date().toISOString().split('T')[0];
-      const key = `stlhub_free_rolls_${today}`;
-      const val = localStorage.getItem(key);
-      if (val) {
-        setRollsUsed(parseInt(val, 10) || 0);
-      } else {
-        setRollsUsed(0);
-      }
-    }
-  }, []);
-
-  // Fetch de los 100 freebies deterministas
+  // Fetch de los 100 freebies deterministas y de las tiradas del usuario
   const loadFreebies = async () => {
     setLoading(true);
     setError(false);
     try {
       const http = new HttpService();
+      
+      // Consultar freebies
       const res = await http.getData('/assets/search?plan=free&pageIndex=0&pageSize=100');
       const dataItems = Array.isArray(res.data?.items) ? res.data.items : [];
       setItems(dataItems);
+
+      // Consultar tiradas usadas hoy
+      const rollsRes = await http.getData('/me/freebie-rolls');
+      if (rollsRes) {
+        if (typeof rollsRes.rollsUsed === 'number') {
+          setRollsUsed(rollsRes.rollsUsed);
+        }
+        if (typeof rollsRes.maxRolls === 'number') {
+          setMaxRolls(rollsRes.maxRolls);
+        }
+      }
     } catch (err) {
-      console.error('Error fetching freebies game items:', err);
+      console.error('Error fetching freebies game state:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -162,59 +162,86 @@ const FreebiesGame = () => {
     };
   };
 
-  // Dividir freebies en 3 lotes estables
-  const chunkFreebies = (all) => {
+  // Dividir freebies en maxRolls lotes estables
+  const chunkFreebies = (all, numChunks) => {
     const n = all.length;
-    if (n === 0) return [[], [], []];
-    const size1 = Math.floor(n / 3);
-    const size2 = Math.floor(n / 3);
-    const chunk1 = all.slice(0, size1);
-    const chunk2 = all.slice(size1, size1 + size2);
-    const chunk3 = all.slice(size1 + size2);
-    return [chunk1, chunk2, chunk3];
+    if (n === 0) {
+      return Array.from({ length: numChunks }, () => []);
+    }
+    const size = Math.floor(n / numChunks);
+    const chunks = [];
+    for (let i = 0; i < numChunks; i++) {
+      if (i === numChunks - 1) {
+        chunks.push(all.slice(i * size));
+      } else {
+        chunks.push(all.slice(i * size, (i + 1) * size));
+      }
+    }
+    return chunks;
   };
 
   const layers = useMemo(() => {
-    const chunks = chunkFreebies(items);
+    const chunks = chunkFreebies(items, maxRolls);
     return chunks.map(chunk => chunk.map(a => toCardItem(a, lang)));
-  }, [items, lang]);
+  }, [items, lang, maxRolls]);
 
   // Lista de todos los assets revelados para el Modal
   const allVisibleAssets = useMemo(() => {
     const revealed = [];
-    if (rollsUsed >= 1 && layers[0]) revealed.push(...layers[0].slice(0, 8));
-    if (rollsUsed >= 2 && layers[1]) revealed.push(...layers[1].slice(0, 8));
-    if (rollsUsed >= 3 && layers[2]) revealed.push(...layers[2].slice(0, 8));
+    for (let i = 0; i < rollsUsed; i++) {
+      if (layers[i]) {
+        revealed.push(...layers[i]);
+      }
+    }
     return revealed;
   }, [layers, rollsUsed]);
 
   // Manejar lanzamiento de dado
-  const handleRoll = () => {
-    if (rollsUsed >= 3 || rolling) return;
+  const handleRoll = async () => {
+    if (rollsUsed >= maxRolls || rolling) return;
 
     setRolling(true);
-    setTimeout(() => {
+    const startTime = Date.now();
+
+    try {
+      const http = new HttpService();
+      const res = await http.postData('/me/freebie-rolls/roll', {});
+
+      const elapsed = Date.now() - startTime;
+      const remainingDelay = Math.max(0, 1200 - elapsed);
+
+      setTimeout(() => {
+        setRolling(false);
+        if (res) {
+          if (typeof res.rollsUsed === 'number') setRollsUsed(res.rollsUsed);
+          if (typeof res.maxRolls === 'number') setMaxRolls(res.maxRolls);
+        } else {
+          setRollsUsed((prev) => Math.min(maxRolls, prev + 1));
+        }
+      }, remainingDelay);
+    } catch (err) {
+      console.error('Error rolling dice:', err);
       setRolling(false);
-      const nextRoll = rollsUsed + 1;
-      setRollsUsed(nextRoll);
-      if (typeof window !== 'undefined') {
-        const today = new Date().toISOString().split('T')[0];
-        const key = `stlhub_free_rolls_${today}`;
-        localStorage.setItem(key, String(nextRoll));
-      }
-    }, 1200);
+    }
   };
 
   // Obtener la rotación 3D estática del cubo según la tirada actual
   const getCubeTransform = () => {
     if (rolling) return '';
-    switch (rollsUsed) {
+    const face = rollsUsed > 0 ? ((rollsUsed - 1) % 6) + 1 : 0;
+    switch (face) {
       case 1:
         return 'rotateY(0deg) rotateX(0deg)';
       case 2:
         return 'rotateY(180deg) rotateX(0deg)';
       case 3:
         return 'rotateY(0deg) rotateX(90deg)';
+      case 4:
+        return 'rotateY(90deg) rotateX(0deg)';
+      case 5:
+        return 'rotateY(-90deg) rotateX(0deg)';
+      case 6:
+        return 'rotateY(0deg) rotateX(-90deg)';
       default:
         // Estado inicial sin tirar: un poco inclinado
         return 'rotateX(-25deg) rotateY(35deg)';
@@ -281,7 +308,7 @@ const FreebiesGame = () => {
           <div className="game-control-panel">
             <div className="rolls-counter">
               <span className="counter-label">
-                {rollsUsed < 3 ? t('rollsRemaining', 3 - rollsUsed) : t('noRollsRemaining')}
+                {rollsUsed < maxRolls ? t('rollsRemaining', maxRolls - rollsUsed) : t('noRollsRemaining')}
               </span>
             </div>
 
@@ -304,7 +331,7 @@ const FreebiesGame = () => {
               type="button"
               className="game-roll-button"
               onClick={handleRoll}
-              disabled={rollsUsed >= 3 || rolling}
+              disabled={rollsUsed >= maxRolls || rolling}
             >
               {rolling ? t('rolling') : t('rollDice')}
             </button>
@@ -314,130 +341,56 @@ const FreebiesGame = () => {
             </p>
           </div>
 
-          {/* Tablero del Juego (Capas Acumulativas) */}
+          {/* Tablero del Juego (Capas Acumulativas de arriba hacia abajo) */}
           <div className="freebies-game-board">
-            {/* Capa 3: Último lanzamiento */}
-            {rollsUsed >= 3 && layers[2] && layers[2].length > 0 && (
-              <div className="game-layer layer-3">
-                <div className="layer-header">
-                  <h2>{t('layerTitle', 3)}</h2>
-                  <span className="layer-badge">{Math.min(8, layers[2].length)} assets</span>
-                </div>
-                <div className="freebies-grid">
-                  {layers[2].slice(0, 8).map((it) => (
-                    <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
-                      <div className="thumb">
-                        <CardImageSlider
-                          images={it.images}
-                          fallback={it.thumb}
-                          alt={it.title || 'asset'}
-                          sizes="(max-width: 992px) 88vw, 240px"
-                          className="thumb-img"
-                          isAdult={isAssetNSFW(it)}
-                        />
-                      </div>
-                      <div className="info">
-                        <div className="title">{it.title || '-'}</div>
-                        <div className="fbottom">
-                          <div className="chips">
-                            {(it.chips || []).slice(0, 3).map((c, idx) => (
-                              <span className="chip" key={idx}>#{c}</span>
-                            ))}
-                          </div>
-                          <div className="fmeta">
-                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
-                              {t('viewAsset')}
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )}
+            {Array.from({ length: maxRolls }, (_, index) => {
+              const layerNum = maxRolls - index; // De maxRolls a 1
+              const layerIndex = layerNum - 1;
+              const hasBeenRolled = rollsUsed >= layerNum;
+              const layerData = layers[layerIndex];
 
-            {/* Capa 2: Segundo lanzamiento */}
-            {rollsUsed >= 2 && layers[1] && layers[1].length > 0 && (
-              <div className="game-layer layer-2">
-                <div className="layer-header">
-                  <h2>{t('layerTitle', 2)}</h2>
-                  <span className="layer-badge">{Math.min(8, layers[1].length)} assets</span>
-                </div>
-                <div className="freebies-grid">
-                  {layers[1].slice(0, 8).map((it) => (
-                    <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
-                      <div className="thumb">
-                        <CardImageSlider
-                          images={it.images}
-                          fallback={it.thumb}
-                          alt={it.title || 'asset'}
-                          sizes="(max-width: 992px) 88vw, 240px"
-                          className="thumb-img"
-                          isAdult={isAssetNSFW(it)}
-                        />
-                      </div>
-                      <div className="info">
-                        <div className="title">{it.title || '-'}</div>
-                        <div className="fbottom">
-                          <div className="chips">
-                            {(it.chips || []).slice(0, 3).map((c, idx) => (
-                              <span className="chip" key={idx}>#{c}</span>
-                            ))}
-                          </div>
-                          <div className="fmeta">
-                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
-                              {t('viewAsset')}
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )}
+              if (!hasBeenRolled || !layerData || layerData.length === 0) return null;
 
-            {/* Capa 1: Primer lanzamiento */}
-            {rollsUsed >= 1 && layers[0] && layers[0].length > 0 && (
-              <div className="game-layer layer-1">
-                <div className="layer-header">
-                  <h2>{t('layerTitle', 1)}</h2>
-                  <span className="layer-badge">{Math.min(8, layers[0].length)} assets</span>
-                </div>
-                <div className="freebies-grid">
-                  {layers[0].slice(0, 8).map((it) => (
-                    <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
-                      <div className="thumb">
-                        <CardImageSlider
-                          images={it.images}
-                          fallback={it.thumb}
-                          alt={it.title || 'asset'}
-                          sizes="(max-width: 992px) 88vw, 240px"
-                          className="thumb-img"
-                          isAdult={isAssetNSFW(it)}
-                        />
-                      </div>
-                      <div className="info">
-                        <div className="title">{it.title || '-'}</div>
-                        <div className="fbottom">
-                          <div className="chips">
-                            {(it.chips || []).slice(0, 3).map((c, idx) => (
-                              <span className="chip" key={idx}>#{c}</span>
-                            ))}
-                          </div>
-                          <div className="fmeta">
-                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
-                              {t('viewAsset')}
-                            </Link>
+              return (
+                <div className={`game-layer layer-${layerNum}`} key={layerNum}>
+                  <div className="layer-header">
+                    <h2>{t('layerTitle', layerNum)}</h2>
+                    <span className="layer-badge">{layerData.length} assets</span>
+                  </div>
+                  <div className="freebies-grid">
+                    {layerData.map((it) => (
+                      <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
+                        <div className="thumb">
+                          <CardImageSlider
+                            images={it.images}
+                            fallback={it.thumb}
+                            alt={it.title || 'asset'}
+                            sizes="(max-width: 992px) 88vw, 240px"
+                            className="thumb-img"
+                            isAdult={isAssetNSFW(it)}
+                          />
+                        </div>
+                        <div className="info">
+                          <div className="title">{it.title || '-'}</div>
+                          <div className="fbottom">
+                            <div className="chips">
+                              {(it.chips || []).slice(0, 3).map((c, idx) => (
+                                <span className="chip" key={idx}>#{c}</span>
+                              ))}
+                            </div>
+                            <div className="fmeta">
+                              <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
+                                {t('viewAsset')}
+                              </Link>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         </>
       )}
