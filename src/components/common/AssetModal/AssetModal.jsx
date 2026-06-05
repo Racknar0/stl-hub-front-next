@@ -126,6 +126,13 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
             try {
                 const res = await http.getData(`/assets/${data.id}`);
                 const d = res.data || {};
+                
+                if (d.__nsfw_restricted) {
+                    onClose?.();
+                    window.location.href = isEn ? `/en/asset/${d.slug}` : `/asset/${d.slug}`;
+                    return;
+                }
+
                 setData((prev) => ({
                     ...prev,
                     description: String(d.description || prev?.description || '').trim(),
@@ -143,7 +150,7 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                 loadedDetail.current = true;
             } catch {}
         })();
-    }, [open, data?.id, http]);
+    }, [open, data?.id, http, onClose, isEn]);
 
     if (!data) return null;
 
