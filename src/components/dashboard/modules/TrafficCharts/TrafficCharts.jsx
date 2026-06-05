@@ -645,42 +645,24 @@ export default function TrafficCharts() {
       labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
       datasets: [
         { 
-          type: 'line', 
-          label: 'Descargas (Línea)', 
+          label: 'Descargas', 
           data: filledSeries.map((s) => s.count), 
           borderColor: chartColors.downloads.border, 
-          backgroundColor: 'transparent', 
-          borderWidth: 2, 
-          tension: 0.3, 
+          backgroundColor: chartColors.downloads.bg, 
+          fill: true,
+          tension: 0.35, 
           pointRadius: filledSeries.length > 60 ? 0 : 3, 
           pointHoverRadius: 5 
-        },
-        {
-          type: 'bar',
-          label: 'Descargas (Barra)',
-          data: filledSeries.map((s) => s.count),
-          backgroundColor: chartColors.downloads.bg,
-          borderColor: 'transparent',
-          borderRadius: 4
         },
         { 
-          type: 'line', 
-          label: 'Búsquedas (Línea)', 
+          label: 'Búsquedas', 
           data: filledSeries.map((s) => s.searchCount || 0), 
           borderColor: chartColors.searches.border, 
-          backgroundColor: 'transparent', 
-          borderWidth: 2, 
-          tension: 0.3, 
+          backgroundColor: chartColors.searches.bg, 
+          fill: true,
+          tension: 0.35, 
           pointRadius: filledSeries.length > 60 ? 0 : 3, 
           pointHoverRadius: 5 
-        },
-        {
-          type: 'bar',
-          label: 'Búsquedas (Barra)',
-          data: filledSeries.map((s) => s.searchCount || 0),
-          backgroundColor: chartColors.searches.bg,
-          borderColor: 'transparent',
-          borderRadius: 4
         }
       ]
     }
@@ -701,7 +683,7 @@ export default function TrafficCharts() {
       <div className="charts-list">
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
-        <ChartContainer id="downloads-timeseries" supportsDynamicDates={true} fetchFn={fetchDownloadsTimeseries} renderChart={(data) => <Bar data={data} options={commonLineOpts} />} />
+        <ChartContainer id="downloads-timeseries" supportsDynamicDates={true} fetchFn={fetchDownloadsTimeseries} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
 
         <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={stackedBarOpts} />} />
         
