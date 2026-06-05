@@ -1,3 +1,240 @@
 @use '../../../styles/base/variables' as *;
 
-/* Si había estilos específicos extra, mantenemos el import vacío para posibles overrides */
+.home-freebies-game-section {
+  margin: 3.5rem 0;
+  position: relative;
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.25rem;
+    
+    .title-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    
+    .section-title {
+      font-size: clamp(1.3rem, 2.8vw, 2.1rem);
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      white-space: nowrap;
+      font-family: 'Syne', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+    }
+    
+    .section-subtitle {
+      font-size: clamp(0.75rem, 1.5vw, 0.88rem);
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.45);
+      margin: 0;
+    }
+    
+    .view-all-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #00ffaa;
+      background: rgba(0, 255, 170, 0.08);
+      border: 1px solid rgba(0, 255, 170, 0.3);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      
+      &:hover {
+        background: rgba(0, 255, 170, 0.18);
+        border-color: rgba(0, 255, 170, 0.75);
+        box-shadow: 0 0 12px rgba(0, 255, 170, 0.25);
+        transform: translateY(-1px);
+        
+        svg {
+          transform: translateX(3px);
+        }
+      }
+      
+      svg {
+        transition: transform 0.3s ease;
+      }
+    }
+  }
+  
+  .game-slider-container {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 255, 170, 0.15);
+    background: rgba(10, 5, 20, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    padding: 1.5rem 1rem;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(0, 255, 170, 0.2), transparent 40%, transparent 60%, rgba(0, 231, 255, 0.15));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+  }
+  
+  .game-skeletons-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+    opacity: 0.12;
+    pointer-events: none;
+    user-select: none;
+    
+    @media (max-width: 992px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width: 576px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  
+  .game-skeleton-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 0.75rem;
+    height: 310px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: skeleton-pulse 1.8s infinite ease-in-out;
+    
+    .skeleton-thumb {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+    }
+    
+    .skeleton-line {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      
+      &.title {
+        width: 75%;
+        height: 16px;
+      }
+      
+      &.meta {
+        width: 45%;
+      }
+    }
+  }
+  
+  .game-overlay-panel {
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(9, 5, 20, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+  }
+  
+  .game-dice-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 380px;
+    padding: 2rem 2.5rem;
+    background: rgba(20, 10, 35, 0.75);
+    border: 1px solid rgba(0, 255, 170, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 255, 170, 0.1);
+    
+    .game-dice-icon {
+      font-size: 3.25rem;
+      margin-bottom: 0.75rem;
+      display: inline-block;
+      animation: dice-float 4s infinite ease-in-out;
+      filter: drop-shadow(0 0 10px rgba(0, 255, 170, 0.4));
+    }
+    
+    h4 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 0.5rem 0;
+      letter-spacing: 0.5px;
+    }
+    
+    p {
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0 0 1.5rem 0;
+    }
+    
+    .game-roll-btn {
+      width: 100%;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #00ffaa 0%, #00e7ff 100%);
+      color: #05020a;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 15px rgba(0, 255, 170, 0.3);
+      
+      &:hover {
+        transform: scale(1.03) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 255, 170, 0.5);
+      }
+      
+      &:active {
+        transform: scale(0.98) translateY(0);
+      }
+    }
+  }
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes dice-float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(10deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}

@@ -12,6 +12,7 @@ import useStore from '../../../store/useStore';
 import { useI18n } from '../../../i18n';
 import Button from '../../../components/layout/Buttons/Button';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
+import { useRouter } from 'next/navigation';
 
 // Categorías fijas
 const CATEGORIES = [
@@ -71,6 +72,8 @@ const rotateListBy = (arr, steps = 0) => {
 
 const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories, initialCatMap, initialCatOrder }) => {
   const http = new HttpService();
+  const router = useRouter();
+  const token = useStore((s) => s.token);
   const setGlobalLoading = useStore((s)=>s.setGlobalLoading);
   const resolvedLanguage = useResolvedLanguage(lang);
   const globalLoading = useStore((s)=>s.globalLoading);
@@ -82,10 +85,20 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
   // Guardar respuesta cruda
   const [latestRaw, setLatestRaw] = useState(initialLatest || []);
   const [topRaw, setTopRaw] = useState(initialTop || []);
-  // Nuevo: lista Free
-  const [freeRaw, setFreeRaw] = useState(initialFree || []);
 
   const [topRotationStep, setTopRotationStep] = useState(0);
+
+  const handleDiceClick = () => {
+    const targetPath = isEn ? '/en/freebies' : '/freebies';
+    if (token) {
+      router.push(targetPath);
+    } else {
+      const loginPath = isEn 
+        ? `/en/login?returnTo=${encodeURIComponent(targetPath)}` 
+        : `/login?returnTo=${encodeURIComponent(targetPath)}`;
+      router.push(loginPath);
+    }
+  };
   // Categorías y sliders
   const [cats, setCats] = useState(initialCategories || []); // [{ id, name, nameEn, slug, slugEn }]
   const [catsLoadOrder, setCatsLoadOrder] = useState(() => initialCategories || []); // mismo shape, pero barajado para carga
@@ -166,10 +179,9 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
     const load = async () => {
       try {
-        const [res, resTopRandomPool, resFree, resCats] = await Promise.all([
+        const [res, resTopRandomPool, resCats] = await Promise.all([
           http.getData('/assets/latest?limit=20'),
           http.getData('/assets/top?limit=20'),
-          http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20'),
           http.getData('/categories')
         ]);
 
@@ -180,10 +192,6 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         const topArr = Array.isArray(resTopRandomPool.data) ? resTopRandomPool.data : [];
         setTopRaw(topArr.length ? topArr : latestArr);
         setTopRotationStep(0);
-
-        // Nuevo: FREE actuales (público vía /assets/search)
-        const freeArr = Array.isArray(resFree.data?.items) ? resFree.data.items : [];
-        setFreeRaw(freeArr);
 
         // Cargar categorías disponibles
         const catItems = (resCats.data?.items || []).map(c => ({ id: c.id, name: c.name, nameEn: c.nameEn || c.name, slug: c.slug, slugEn: c.slugEn || c.slug }));
@@ -199,7 +207,6 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         setLatestRaw([]);
         setTopRaw([]);
         setTopRotationStep(0);
-        setFreeRaw([]);
         setCats([]);
         setCatsLoadOrder([]);
         setCatPage(0);
@@ -211,7 +218,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
       }
     };
     load();
-  }, [initialLatest, initialCategories, initialTop, initialFree, initialCatMap, initialCatOrder]);
+  }, [initialLatest, initialCategories, initialTop, initialCatMap, initialCatOrder]);
 
   // El auto-rotate de "Lo más descargado" ha sido removido para evitar que el slider
   // se reinicie mientras el usuario interactúa con él o navega hacia la derecha.
@@ -267,7 +274,6 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
     const rotated = rotateListBy(topRaw, topRotationStep);
     return rotated.slice(0,20).map(a => toCardItem(a, currentLang));
   }, [topRaw, topRotationStep, currentLang]);
-  const free = useMemo(() => freeRaw.slice(0,20).map(a => toCardItem(a, currentLang)), [freeRaw, currentLang]);
 
   const catSliders = useMemo(() => (
     catOrder.map(slug => {
@@ -283,12 +289,12 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
   // Build a flat list of all visible assets for modal navigation
   const allVisibleAssets = useMemo(() => {
-    const all = [...latest, ...free, ...top];
+    const all = [...latest, ...top];
     catSliders.forEach(cs => all.push(...cs.items));
     // Deduplicate by id
     const seen = new Set();
     return all.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
-  }, [latest, free, top, catSliders]);
+  }, [latest, top, catSliders]);
 
   const handleOpen = (asset) => {
     setModalAsset(asset);
@@ -325,18 +331,62 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         isEn={isEn}
       />
 
-      {/* Nuevo slider: Gratis (se actualiza diario) */}
-      <SectionRow
-        variantClass="section-row--freebies-glow"
-        title={t('home.free.title')}
-        subtitle={t('home.free.subtitle')}
-        items={free}
-        onItemClick={handleOpen}
-        linkHref={isEn ? "/en/search?plan=free" : "/search?plan=free"}
-        linkLabel={t('home.free.more')}
-        priority={true}
-        isEn={isEn}
-      />
+      {/* Sección del Minijuego de Dados / Regalos del Día */}
+      <section className="home-freebies-game-section">
+        <div className="section-header">
+          <div className="title-wrapper">
+            <h3 className="section-title">
+              {isEn ? 'Daily Gifts' : 'Regalos del Día'}
+            </h3>
+            <p className="section-subtitle">
+              {isEn 
+                ? 'Unlock free premium models every day by rolling the dice' 
+                : 'Desbloquea modelos premium gratuitos cada día barajando el dado'}
+            </p>
+          </div>
+          <button onClick={handleDiceClick} className="view-all-link">
+            {isEn ? 'View Game' : 'Ver juego'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="game-slider-container">
+          <div className="game-skeletons-grid">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="game-skeleton-card">
+                <div className="skeleton-thumb" />
+                <div className="skeleton-line title" />
+                <div className="skeleton-line meta" />
+              </div>
+            ))}
+          </div>
+
+          <div className="game-overlay-panel">
+            <div className="game-dice-wrapper">
+              <span className="game-dice-icon" role="img" aria-label="dice">
+                🎲
+              </span>
+              <h4>
+                {isEn ? 'Try your luck!' : '¡Prueba tu suerte!'}
+              </h4>
+              <p>
+                {isEn 
+                  ? "Roll the dice to reveal today's free premium 3D models. You get 3 daily rolls."
+                  : 'Lanza el dado para revelar los modelos 3D premium gratis de hoy. Tienes 3 tiradas diarias.'}
+              </p>
+              <button 
+                type="button" 
+                className="game-roll-btn" 
+                onClick={handleDiceClick}
+              >
+                {isEn ? 'Shuffle' : 'Barajar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <SectionRow
         title={t('home.top.title')}

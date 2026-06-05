@@ -181,18 +181,54 @@ const BatchRow = React.memo(function BatchRow({
                                             size="small"
                                             onClick={() => setReviewExpanded(!reviewExpanded)}
                                             sx={{
-                                                bgcolor: 'rgba(15,23,42,0.72)',
+                                                bgcolor: reviewExpanded ? 'rgba(15,23,42,0.72)' : '#ea580c',
                                                 color: '#fff',
-                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                border: reviewExpanded ? '1px solid rgba(255,255,255,0.15)' : '2px solid #f97316',
                                                 borderRadius: 1.5,
-                                                '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' },
+                                                boxShadow: reviewExpanded ? 'none' : '0 0 10px #f97316',
+                                                animation: reviewExpanded ? 'none' : 'incandescentGlowBatch 1.2s infinite alternate ease-in-out',
+                                                '@keyframes incandescentGlowBatch': {
+                                                    '0%': {
+                                                        boxShadow: '0 0 4px #ea580c, 0 0 8px #f97316, inset 0 0 4px #ea580c',
+                                                        borderColor: '#f97316',
+                                                        bgcolor: '#c2410c',
+                                                    },
+                                                    '50%': {
+                                                        boxShadow: '0 0 16px #ef4444, 0 0 28px #f59e0b, inset 0 0 8px #ef4444',
+                                                        borderColor: '#fbbf24',
+                                                        bgcolor: '#ea580c',
+                                                    },
+                                                    '100%': {
+                                                        boxShadow: '0 0 4px #ea580c, 0 0 8px #f97316, inset 0 0 4px #ea580c',
+                                                        borderColor: '#f97316',
+                                                        bgcolor: '#c2410c',
+                                                    }
+                                                },
+                                                '&:hover': {
+                                                    bgcolor: '#ef4444',
+                                                    boxShadow: '0 0 20px #ef4444',
+                                                    animation: 'none',
+                                                },
                                             }}
                                         >
                                             {reviewExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Typography variant="caption" sx={{ fontSize: '10px', color: '#7dd3fc', fontWeight: 700 }}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontSize: '10px',
+                                        color: reviewExpanded ? '#7dd3fc' : '#f97316',
+                                        fontWeight: 800,
+                                        textShadow: reviewExpanded ? 'none' : '0 0 4px rgba(249, 115, 22, 0.4)',
+                                        animation: reviewExpanded ? 'none' : 'textPulseBatch 1.2s infinite alternate ease-in-out',
+                                        '@keyframes textPulseBatch': {
+                                            '0%': { opacity: 0.75 },
+                                            '100%': { opacity: 1 }
+                                        }
+                                    }}
+                                >
                                     {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 6}`}
                                 </Typography>
                             </Stack>

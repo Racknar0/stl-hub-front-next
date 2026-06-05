@@ -139,18 +139,54 @@ export default function MetaSeoRow({
                                         onClick={() => onToggleExpandedImages(id)}
                                         disabled={loading}
                                         sx={{
-                                            bgcolor: 'rgba(15,23,42,0.72)',
+                                            bgcolor: metaExpanded ? 'rgba(15,23,42,0.72)' : '#ea580c',
                                             color: '#fff',
-                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            border: metaExpanded ? '1px solid rgba(255,255,255,0.15)' : '2px solid #f97316',
                                             borderRadius: 1.5,
-                                            '&:hover': { bgcolor: 'rgba(30,41,59,0.95)' },
+                                            boxShadow: metaExpanded ? 'none' : '0 0 10px #f97316',
+                                            animation: metaExpanded ? 'none' : 'incandescentGlow 1.2s infinite alternate ease-in-out',
+                                            '@keyframes incandescentGlow': {
+                                                '0%': {
+                                                    boxShadow: '0 0 4px #ea580c, 0 0 8px #f97316, inset 0 0 4px #ea580c',
+                                                    borderColor: '#f97316',
+                                                    bgcolor: '#c2410c',
+                                                },
+                                                '50%': {
+                                                    boxShadow: '0 0 16px #ef4444, 0 0 28px #f59e0b, inset 0 0 8px #ef4444',
+                                                    borderColor: '#fbbf24',
+                                                    bgcolor: '#ea580c',
+                                                },
+                                                '100%': {
+                                                    boxShadow: '0 0 4px #ea580c, 0 0 8px #f97316, inset 0 0 4px #ea580c',
+                                                    borderColor: '#f97316',
+                                                    bgcolor: '#c2410c',
+                                                }
+                                            },
+                                            '&:hover': {
+                                                bgcolor: '#ef4444',
+                                                boxShadow: '0 0 20px #ef4444',
+                                                animation: 'none',
+                                            },
                                         }}
                                     >
                                         {metaExpanded ? <UnfoldLessIcon fontSize="small" /> : <UnfoldMoreIcon fontSize="small" />}
                                     </IconButton>
                                 </span>
                             </Tooltip>
-                            <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', fontWeight: 700 }}>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontSize: '10px',
+                                    color: metaExpanded ? 'text.secondary' : '#f97316',
+                                    fontWeight: 800,
+                                    textShadow: metaExpanded ? 'none' : '0 0 4px rgba(249, 115, 22, 0.4)',
+                                    animation: metaExpanded ? 'none' : 'textPulse 1.2s infinite alternate ease-in-out',
+                                    '@keyframes textPulse': {
+                                        '0%': { opacity: 0.75 },
+                                        '100%': { opacity: 1 }
+                                    }
+                                }}
+                            >
                                 {metaExpanded ? `${rowImages.length}` : `+${rowImages.length - 6}`}
                             </Typography>
                         </Stack>

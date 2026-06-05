@@ -41,10 +41,9 @@ export default async function Page() {
   } catch {}
 
   // 1. Peticiones en paralelo directas en servidor
-  const [resLatest, resTopReal, resFree, resCats] = await Promise.all([
+  const [resLatest, resTopReal, resCats] = await Promise.all([
     fetchHomeSSR('/api/assets/latest?limit=20'),
     fetchHomeSSR('/api/assets/top?limit=20'),
-    fetchHomeSSR('/api/assets/search?plan=free&pageIndex=0&pageSize=20'),
     fetchHomeSSR('/api/categories'),
   ]);
 
@@ -54,7 +53,7 @@ export default async function Page() {
   const topList = Array.isArray(resTopReal) ? resTopReal : [];
   const top = topList.length ? topList : latest;
 
-  const free = Array.isArray(resFree?.items) ? resFree.items : [];
+  const free = [];
 
   // Categorías
   const catsRaw = resCats?.items || [];

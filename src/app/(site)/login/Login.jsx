@@ -36,6 +36,8 @@ const Login = () => {
             ? new URLSearchParams(window.location.search)
             : null;
     const resetToken = searchParams ? searchParams.get('reset') : null;
+    const returnTo = searchParams ? searchParams.get('returnTo') : null;
+    const targetRedirect = returnTo || homeHref;
     const [resetStatus, setResetStatus] = useState(null); // null | 'success' | 'error'
     const [resetMessage, setResetMessage] = useState('');
     const [showResetModal, setShowResetModal] = useState(false);
@@ -66,7 +68,7 @@ const Login = () => {
                 }
 
                 timerAlert('success', response.data.message);
-                router.push(homeHref);
+                router.push(targetRedirect);
             } else {
                 setPassword('');
                 await timerAlert(
@@ -105,7 +107,7 @@ const Login = () => {
                     } catch (e) {}
 
                     timerAlert('success', response.data.message);
-                    router.push(homeHref);
+                    router.push(targetRedirect);
                 }
             } catch (error) {
                 console.error('Google login error', error);
@@ -144,9 +146,9 @@ const Login = () => {
 
     useEffect(() => {
         if (token) {
-            router.push(homeHref);
+            router.push(targetRedirect);
         }
-    }, [token, router, homeHref]);
+    }, [token, router, targetRedirect]);
 
     // guard para evitar dobles llamadas (StrictMode y re-renders)
     const resetTokenRef = useRef(null); // guarda el último token procesado

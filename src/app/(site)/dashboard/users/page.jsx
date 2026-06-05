@@ -49,7 +49,7 @@ export default function UsersPage() {
     // Form create
     const [showForm, setShowForm] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [form, setForm] = useState({ email: '', password: '', daysToAdd: 90 });
+    const [form, setForm] = useState({ email: '', password: '', daysToAdd: 90, roleId: 1 });
 
     // Form edit
     const [showEditForm, setShowEditForm] = useState(false);
@@ -221,7 +221,7 @@ export default function UsersPage() {
             await http.postData('/auth/register-sale', form);
             await successAlert('Usuario creado', 'El usuario fue registrado y activado correctamente');
             setShowForm(false);
-            setForm({ email: '', password: '', daysToAdd: 90 });
+            setForm({ email: '', password: '', daysToAdd: 90, roleId: 1 });
             setPagination((p) => ({ ...p, pageIndex: 0 }));
             fetchUsers();
         } catch (e) {
@@ -371,13 +371,25 @@ export default function UsersPage() {
             <Dialog open={showForm} onClose={() => setShowForm(false)} fullWidth maxWidth="sm">
                 <DialogTitle>Crear usuario</DialogTitle>
                 <Box component="form" onSubmit={onCreate}>
-                    <DialogContent dividers>
-                        <TextField label="Email" type="email" fullWidth required margin="dense" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <TextField label="Email" type="email" fullWidth required value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                             <TextField label="Password" type="text" fullWidth required value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
-                            <MUIButton type="button" variant="outlined" onClick={() => setForm(f => ({ ...f, password: generateStrongPassword(12) }))} disabled={creating}>Generar</MUIButton>
+                            <MUIButton type="button" variant="outlined" sx={{ mt: 0, height: 56 }} onClick={() => setForm(f => ({ ...f, password: generateStrongPassword(12) }))} disabled={creating}>Generar</MUIButton>
                         </Box>
-                        <TextField label="Días de suscripción a añadir" type="number" fullWidth required margin="dense" inputProps={{ min: 1, max: 3650 }} value={form.daysToAdd} onChange={(e) => setForm(f => ({ ...f, daysToAdd: Number(e.target.value) }))} />
+                        <FormControl fullWidth>
+                            <InputLabel id="create-role-label">Rol</InputLabel>
+                            <Select
+                                labelId="create-role-label"
+                                label="Rol"
+                                value={form.roleId}
+                                onChange={(e) => setForm(f => ({ ...f, roleId: Number(e.target.value) }))}
+                            >
+                                <MenuItem value={1}>Usuario</MenuItem>
+                                <MenuItem value={2}>Admin</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <TextField label="Días de suscripción a añadir" type="number" fullWidth required inputProps={{ min: 1, max: 3650 }} value={form.daysToAdd} onChange={(e) => setForm(f => ({ ...f, daysToAdd: Number(e.target.value) }))} />
                     </DialogContent>
                     <DialogActions>
                         <MUIButton onClick={() => setShowForm(false)} disabled={creating}>Cancelar</MUIButton>

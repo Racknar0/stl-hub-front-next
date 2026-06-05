@@ -19,8 +19,13 @@ const Register = () => {
     const router = useRouter();
     const resolvedLanguage = useResolvedLanguage();
     const isEn = resolvedLanguage === 'en';
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const returnTo = searchParams ? searchParams.get('returnTo') : null;
     const homeHref = isEn ? '/en' : '/';
-    const loginHref = isEn ? '/en/login' : '/login';
+    const targetRedirect = returnTo || homeHref;
+    const loginHref = isEn 
+        ? (`/en/login` + (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''))
+        : (`/login` + (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''));
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -38,7 +43,6 @@ const Register = () => {
     const giftCodeTimer = useRef(null);
 
     // Activación automática por token en query param
-    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const activationToken = searchParams ? searchParams.get('activate') : null;
     const urlCode = searchParams ? searchParams.get('code') : null;
     const [activationStatus, setActivationStatus] = useState(null); // null | 'success' | 'error'
@@ -287,7 +291,7 @@ const Register = () => {
                     }
 
                     timerAlert('success', response.data.message);
-                    router.push(homeHref);
+                    router.push(targetRedirect);
                 }
             } catch (error) {
                 console.error('Google register error', error);

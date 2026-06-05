@@ -80,21 +80,19 @@ const shuffleArray = (arr) => {
 
 export default async function EnglishHomePage() {
   // 1. Peticiones en paralelo directas en servidor (SSR en inglés)
-  const [resLatest, resTopRandomPool, resFree, resCats] = await Promise.all([
+  const [resLatest, resTopReal, resCats] = await Promise.all([
     fetchHomeSSR('/api/assets/latest?limit=20'),
-    fetchHomeSSR('/api/assets/search?pageIndex=0&pageSize=80'),
-    fetchHomeSSR('/api/assets/search?plan=free&pageIndex=0&pageSize=20'),
+    fetchHomeSSR('/api/assets/top?limit=20'),
     fetchHomeSSR('/api/categories'),
   ]);
 
   const latest = Array.isArray(resLatest) ? resLatest : [];
   
-  // "Lo más descargado" aleatorizado en el servidor para evitar discrepancia de hidratación
-  const topPool = Array.isArray(resTopRandomPool?.items) ? resTopRandomPool.items : [];
-  const top20 = shuffleArray(topPool).slice(0, 20);
-  const top = top20.length ? top20 : latest;
+  // "Lo más descargado" ordenado de forma real y estable
+  const topList = Array.isArray(resTopReal) ? resTopReal : [];
+  const top = topList.length ? topList : latest;
 
-  const free = Array.isArray(resFree?.items) ? resFree.items : [];
+  const free = [];
 
   // Categorías
   const catsRaw = resCats?.items || [];

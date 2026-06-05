@@ -598,7 +598,7 @@ const Header = () => {
       {!token && !['/register', '/login', '/forgot-password', '/en/register', '/en/login', '/en/forgot-password'].includes(pathname || '') && (
         <div className="free-registration-alert-bar">
           🎁 {isEn ? 'To download free models, you must ' : 'Para poder descargar los modelos gratis debes '}
-          <Link href={isEn ? '/en/register' : '/register'} className="free-reg-btn">
+          <Link href={isEn ? '/en/register?returnTo=/en/freebies' : '/register?returnTo=/freebies'} className="free-reg-btn">
             {isEn ? 'Register Free' : 'Registrarte'}
           </Link>
         </div>
@@ -813,6 +813,11 @@ const Header = () => {
                       <li>
                         <a href={`${isEn ? '/en/search' : '/search'}?randomizer=true`} onClick={() => setExploreOpen(false)}>
                           <span className="mega-quick-icon">🎲</span> Randomizer
+                        </a>
+                      </li>
+                      <li>
+                        <a href={isEn ? '/en/freebies' : '/freebies'} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">🎁</span> {isEn ? 'Daily Gifts' : 'Regalos del Día'}
                         </a>
                       </li>
                       <li>
@@ -1230,6 +1235,7 @@ const Header = () => {
             <a href={isEn ? '/en/search' : '/search'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Latest 3D models' : 'Últimos modelos 3D'}</a>
             <a href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`} onClick={() => setMobileMenuOpen(false)}>Anime</a>
             <a href={`${isEn ? '/en/search' : '/search'}?randomizer=true`} onClick={() => setMobileMenuOpen(false)}>Randomizer</a>
+            <a href={isEn ? '/en/freebies' : '/freebies'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Daily Gifts' : 'Regalos del Día'}</a>
           </div>
         </div>
 

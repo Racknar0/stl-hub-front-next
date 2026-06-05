@@ -1,0 +1,516 @@
+@use '../../../styles/base/variables' as *;
+
+.freebies-game-container {
+  padding: 2.5rem 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 80vh;
+  color: #fff;
+  font-family: 'Outfit', 'Inter', sans-serif;
+
+  .game-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(90deg, #00ffaa, #00e7ff);
+      border-radius: 2px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      font-weight: 850;
+      text-transform: uppercase;
+      font-family: 'Syne', sans-serif;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 30%, rgba(255, 255, 255, 0.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 0.75rem 0;
+    }
+
+    p {
+      font-size: clamp(0.9rem, 1.8vw, 1.15rem);
+      color: rgba(255, 255, 255, 0.6);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+  }
+
+  // Dashboard del Juego (Dados, Contador)
+  .game-control-panel {
+    background: rgba(20, 10, 35, 0.45);
+    border: 1px solid rgba(0, 255, 170, 0.15);
+    border-radius: 24px;
+    padding: 2.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    max-width: 520px;
+    margin: 0 auto 4rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(0, 255, 170, 0.05);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0, 255, 170, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .rolls-counter {
+      text-align: center;
+      z-index: 1;
+
+      .counter-label {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+
+      .counter-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #00ffaa;
+        text-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+        font-family: 'Syne', sans-serif;
+      }
+    }
+
+    .game-roll-button {
+      width: 100%;
+      max-width: 280px;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #00ffaa 0%, #00e7ff 100%);
+      color: #05020a;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 8px 25px rgba(0, 255, 170, 0.3);
+      z-index: 1;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-3px) scale(1.03);
+        box-shadow: 0 12px 30px rgba(0, 255, 170, 0.5);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0) scale(0.98);
+      }
+
+      &:disabled {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.25);
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+    }
+
+    .game-game-info {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
+      text-align: center;
+      line-height: 1.4;
+      z-index: 1;
+      max-width: 380px;
+    }
+  }
+
+  // Escena 3D del Dado
+  .scene {
+    width: 90px;
+    height: 90px;
+    perspective: 500px;
+    z-index: 1;
+    margin: 0.5rem 0;
+  }
+
+  .cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 1.5s cubic-bezier(0.25, 1.25, 0.5, 1);
+
+    &.rolling {
+      animation: cube-spin 1.2s linear infinite;
+    }
+  }
+
+  .cube-face {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border: 2px solid rgba(0, 255, 170, 0.35);
+    background: linear-gradient(135deg, rgba(25, 10, 45, 0.98), rgba(15, 5, 30, 0.98));
+    box-shadow: inset 0 0 15px rgba(0, 255, 170, 0.2), 0 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 8px;
+    box-sizing: border-box;
+
+    .dot {
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00ffaa;
+      align-self: center;
+      justify-self: center;
+      box-shadow: 0 0 8px rgba(0, 255, 170, 0.8);
+    }
+
+    // Ubicaciones de los puntos del dado
+    &.face-1 {
+      transform: rotateY(0deg) translateZ(45px);
+      .dot { grid-area: 2 / 2; }
+    }
+    &.face-2 {
+      transform: rotateY(90deg) translateZ(45px);
+      .dot:nth-child(1) { grid-area: 1 / 1; }
+      .dot:nth-child(2) { grid-area: 3 / 3; }
+    }
+    &.face-3 {
+      transform: rotateY(180deg) translateZ(45px);
+      .dot:nth-child(1) { grid-area: 1 / 1; }
+      .dot:nth-child(2) { grid-area: 2 / 2; }
+      .dot:nth-child(3) { grid-area: 3 / 3; }
+    }
+    &.face-4 {
+      transform: rotateY(-90deg) translateZ(45px);
+      .dot:nth-child(1) { grid-area: 1 / 1; }
+      .dot:nth-child(2) { grid-area: 1 / 3; }
+      .dot:nth-child(3) { grid-area: 3 / 1; }
+      .dot:nth-child(4) { grid-area: 3 / 3; }
+    }
+    &.face-5 {
+      transform: rotateX(90deg) translateZ(45px);
+      .dot:nth-child(1) { grid-area: 1 / 1; }
+      .dot:nth-child(2) { grid-area: 1 / 3; }
+      .dot:nth-child(3) { grid-area: 2 / 2; }
+      .dot:nth-child(4) { grid-area: 3 / 1; }
+      .dot:nth-child(5) { grid-area: 3 / 3; }
+    }
+    &.face-6 {
+      transform: rotateX(-90deg) translateZ(45px);
+      .dot:nth-child(1) { grid-area: 1 / 1; }
+      .dot:nth-child(2) { grid-area: 1 / 3; }
+      .dot:nth-child(3) { grid-area: 2 / 1; }
+      .dot:nth-child(4) { grid-area: 2 / 3; }
+      .dot:nth-child(5) { grid-area: 3 / 1; }
+      .dot:nth-child(6) { grid-area: 3 / 3; }
+    }
+  }
+
+  // Tablero de Capas Acumulativas
+  .freebies-game-board {
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  .game-layer {
+    background: rgba(10, 5, 20, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: layer-slide-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+
+    &.layer-2 {
+      border-color: rgba(0, 231, 255, 0.15);
+      background: rgba(0, 231, 255, 0.02);
+    }
+    &.layer-3 {
+      border-color: rgba(0, 255, 170, 0.15);
+      background: rgba(0, 255, 170, 0.02);
+    }
+
+    .layer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 0.75rem;
+
+      h2 {
+        font-size: 1.35rem;
+        font-weight: 750;
+        margin: 0;
+        font-family: 'Syne', sans-serif;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &::before {
+          content: '';
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+        }
+      }
+
+      .layer-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.65rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.6);
+      }
+    }
+
+    &.layer-1 h2::before { background: rgba(255, 255, 255, 0.6); }
+    &.layer-2 h2::before { background: #00e7ff; }
+    &.layer-3 h2::before { background: #00ffaa; }
+
+    &.layer-2 .layer-badge {
+      background: rgba(0, 231, 255, 0.12);
+      color: #00e7ff;
+    }
+    &.layer-3 .layer-badge {
+      background: rgba(0, 255, 170, 0.12);
+      color: #00ffaa;
+    }
+  }
+
+  // Reutilizando rejilla de cartas
+  .freebies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+    
+    @media (max-width: 576px) {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+  }
+
+  // Estilo de carga
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 1rem;
+    gap: 1.5rem;
+
+    .spinner-bar {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0, 255, 170, 0.1);
+      border-top-color: #00ffaa;
+      border-radius: 50%;
+      animation: spinner-spin 0.8s linear infinite;
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.95rem;
+    }
+  }
+
+  // Estilo de error
+  .error-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(234, 67, 53, 0.06);
+    border: 1px solid rgba(234, 67, 53, 0.2);
+    border-radius: 20px;
+    max-width: 450px;
+    margin: 2rem auto;
+
+    h3 {
+      color: #ea4335;
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.88rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.45;
+    }
+
+    .retry-btn {
+      padding: 0.65rem 1.5rem;
+      background: #ea4335;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+
+      &:hover {
+        background: #d33225;
+      }
+    }
+  }
+}
+
+// Estructura de la Carta (copiada/adaptada de SectionRow)
+.card-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 255, 170, 0.25);
+    box-shadow: 0 10px 25px rgba(0, 255, 170, 0.08);
+
+    .thumb .thumb-img img {
+      transform: scale(1.05);
+    }
+  }
+
+  .thumb {
+    position: relative;
+    padding-top: 100%; // 1:1 Aspect Ratio
+    background: rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+
+    .thumb-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+
+      img {
+        transition: transform 0.5s ease;
+      }
+    }
+  }
+
+  .info {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    .title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      height: 2.8rem;
+    }
+
+    .fbottom {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        overflow: hidden;
+        max-height: 20px;
+
+        .chip {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: rgba(0, 255, 170, 0.7);
+          text-decoration: none;
+          background: rgba(0, 255, 170, 0.05);
+          padding: 1px 6px;
+          border-radius: 4px;
+          border: 1px solid rgba(0, 255, 170, 0.1);
+          white-space: nowrap;
+
+          &:hover {
+            color: #00ffaa;
+            background: rgba(0, 255, 170, 0.12);
+            border-color: rgba(0, 255, 170, 0.35);
+          }
+        }
+      }
+
+      .fmeta {
+        display: flex;
+        justify-content: flex-end;
+
+        a {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.45);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          transition: color 0.3s;
+
+          &:hover {
+            color: #00ffaa;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes cube-spin {
+  0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+}
+
+@keyframes spinner-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes layer-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
