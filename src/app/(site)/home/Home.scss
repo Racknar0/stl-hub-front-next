@@ -77,7 +77,7 @@
     padding: 1.5rem 1rem;
     
     @media (max-width: 576px) {
-      height: 330px; // Evita que se estire demasiado por el grid de esqueletos de fondo
+      height: 250px; // Evita que se estire demasiado y se vea gigante en móvil
       padding: 0;
     }
     
@@ -122,6 +122,10 @@
     gap: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
     animation: skeleton-pulse 1.8s infinite ease-in-out;
+    
+    @media (max-width: 576px) {
+      height: 230px;
+    }
     
     .skeleton-thumb {
       flex: 1;
