@@ -243,18 +243,37 @@ export default function PinterestCalendar() {
     try {
       const http = new HttpService();
 
-      // Window: full day (24 hours = 1440 minutes)
-      const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay, 0, 0, 0);
-      const WINDOW_MINUTES = 1440;
+      const now = new Date();
+      const isToday = selectedDay === now.getDate() && 
+                      currentDate.getMonth() === now.getMonth() && 
+                      currentDate.getFullYear() === now.getFullYear();
+
+      let startTime;
+      let windowMinutes;
+
+      if (isToday) {
+        // Start from current time + 10 minutes buffer
+        startTime = new Date(now.getTime() + 10 * 60000);
+        // Calculate remaining minutes until the end of today (11:59 PM)
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
+        windowMinutes = Math.max(30, Math.floor((endOfDay.getTime() - startTime.getTime()) / 60000));
+      } else {
+        // Future day: start at 12:00 AM (midnight)
+        startTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay, 0, 0, 0);
+        windowMinutes = 1440; // 24 hours
+      }
+
       const totalPins = selectedPins.length;
-      const slotSize = WINDOW_MINUTES / totalPins; // minutes per slot
+      const slotSize = windowMinutes / totalPins;
 
       // Generate randomized times within each slot
       const pinTimes = [];
       for (let i = 0; i < totalPins; i++) {
         const slotStart = i * slotSize;
-        const jitter = Math.floor(Math.random() * (slotSize - 10)) + 5; // 5 min margin
-        pinTimes.push(new Date(dayStart.getTime() + (slotStart + jitter) * 60000));
+        const minMargin = Math.min(5, Math.floor(slotSize / 3));
+        const maxMargin = Math.max(1, Math.floor(slotSize - minMargin * 2));
+        const jitter = Math.floor(Math.random() * maxMargin) + minMargin;
+        pinTimes.push(new Date(startTime.getTime() + (slotStart + jitter) * 60000));
       }
 
       // Flatten all pins in order
@@ -520,6 +539,33 @@ export default function PinterestCalendar() {
                       <div key={asset.id} className="bulk-asset-section">
                         <div className="bulk-asset-header" onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}>
                           <div className="bulk-asset-info">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSearchedAssets(prev => prev.filter(a => a.id !== asset.id));
+                                setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#f87171',
+                                marginRight: '10px',
+                                cursor: 'pointer',
+                                fontSize: '1.2rem',
+                                padding: '0 4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'color 0.2s',
+                                lineHeight: 1
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                              onMouseOut={(e) => e.currentTarget.style.color = '#f87171'}
+                              title="Quitar este asset de la lista"
+                            >
+                              ✕
+                            </button>
                             <span className="asset-id">#{asset.id}</span>
                             <span className="asset-name">{asset.titleEn || asset.title}</span>
                             {assetSelected > 0 && <span className="asset-badge">{assetSelected} sel.</span>}
