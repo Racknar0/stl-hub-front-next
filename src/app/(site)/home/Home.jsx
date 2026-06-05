@@ -168,7 +168,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
       try {
         const [res, resTopRandomPool, resFree, resCats] = await Promise.all([
           http.getData('/assets/latest?limit=20'),
-          http.getData('/assets/search?pageIndex=0&pageSize=80'),
+          http.getData('/assets/top?limit=20'),
           http.getData('/assets/search?plan=free&pageIndex=0&pageSize=20'),
           http.getData('/categories')
         ]);
@@ -176,9 +176,8 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         const latestArr = Array.isArray(res.data) ? res.data : [];
         setLatestRaw(latestArr);
 
-        // "Lo más descargado" simulado con assets aleatorios y refrescado en cada carga.
-        const topPool = Array.isArray(resTopRandomPool.data?.items) ? resTopRandomPool.data.items : [];
-        const topArr = pickRandomItems(topPool, 20);
+        // "Lo más descargado" real
+        const topArr = Array.isArray(resTopRandomPool.data) ? resTopRandomPool.data : [];
         setTopRaw(topArr.length ? topArr : latestArr);
         setTopRotationStep(0);
 
