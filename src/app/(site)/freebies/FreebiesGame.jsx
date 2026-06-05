@@ -56,7 +56,9 @@ const FreebiesGame = () => {
   const lang = resolvedLang === 'en' ? 'en' : 'es';
   const t = (key, val = '') => {
     let str = TRANSLATIONS[lang][key] || key;
-    if (val !== '') str = str.replace('{count}', String(val)).replace('{num}', String(val));
+    if (val !== '') {
+      str = str.replace(/\{count\}/g, String(val)).replace(/\{num\}/g, String(val));
+    }
     return str;
   };
 
@@ -172,16 +174,19 @@ const FreebiesGame = () => {
     return [chunk1, chunk2, chunk3];
   };
 
-  const layers = useMemo(() => chunkFreebies(items), [items]);
+  const layers = useMemo(() => {
+    const chunks = chunkFreebies(items);
+    return chunks.map(chunk => chunk.map(a => toCardItem(a, lang)));
+  }, [items, lang]);
 
   // Lista de todos los assets revelados para el Modal
   const allVisibleAssets = useMemo(() => {
     const revealed = [];
-    if (rollsUsed >= 1 && layers[0]) revealed.push(...layers[0]);
-    if (rollsUsed >= 2 && layers[1]) revealed.push(...layers[1]);
-    if (rollsUsed >= 3 && layers[2]) revealed.push(...layers[2]);
-    return revealed.map(a => toCardItem(a, lang));
-  }, [layers, rollsUsed, lang]);
+    if (rollsUsed >= 1 && layers[0]) revealed.push(...layers[0].slice(0, 8));
+    if (rollsUsed >= 2 && layers[1]) revealed.push(...layers[1].slice(0, 8));
+    if (rollsUsed >= 3 && layers[2]) revealed.push(...layers[2].slice(0, 8));
+    return revealed;
+  }, [layers, rollsUsed]);
 
   // Manejar lanzamiento de dado
   const handleRoll = () => {
@@ -218,7 +223,7 @@ const FreebiesGame = () => {
 
   // Manejadores del Modal
   const handleOpenAsset = (asset) => {
-    setModalAsset(toCardItem(asset, lang));
+    setModalAsset(asset);
     setModalOpen(true);
   };
 
@@ -316,10 +321,10 @@ const FreebiesGame = () => {
               <div className="game-layer layer-3">
                 <div className="layer-header">
                   <h2>{t('layerTitle', 3)}</h2>
-                  <span className="layer-badge">{layers[2].length} assets</span>
+                  <span className="layer-badge">{Math.min(8, layers[2].length)} assets</span>
                 </div>
                 <div className="freebies-grid">
-                  {layers[2].map((it) => (
+                  {layers[2].slice(0, 8).map((it) => (
                     <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
                       <div className="thumb">
                         <CardImageSlider
@@ -332,15 +337,15 @@ const FreebiesGame = () => {
                         />
                       </div>
                       <div className="info">
-                        <div className="title">{(lang === 'en' ? it.titleEn : it.title) || it.title || '-'}</div>
+                        <div className="title">{it.title || '-'}</div>
                         <div className="fbottom">
                           <div className="chips">
-                            {((lang === 'en' ? it.tagsEn : it.tagsEs) || []).slice(0, 3).map((c, idx) => (
+                            {(it.chips || []).slice(0, 3).map((c, idx) => (
                               <span className="chip" key={idx}>#{c}</span>
                             ))}
                           </div>
                           <div className="fmeta">
-                            <Link href={lang === 'en' ? `/en/asset/${it.slug}` : `/asset/${it.slug}`} onClick={(e) => e.stopPropagation()}>
+                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
                               {t('viewAsset')}
                             </Link>
                           </div>
@@ -357,10 +362,10 @@ const FreebiesGame = () => {
               <div className="game-layer layer-2">
                 <div className="layer-header">
                   <h2>{t('layerTitle', 2)}</h2>
-                  <span className="layer-badge">{layers[1].length} assets</span>
+                  <span className="layer-badge">{Math.min(8, layers[1].length)} assets</span>
                 </div>
                 <div className="freebies-grid">
-                  {layers[1].map((it) => (
+                  {layers[1].slice(0, 8).map((it) => (
                     <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
                       <div className="thumb">
                         <CardImageSlider
@@ -373,15 +378,15 @@ const FreebiesGame = () => {
                         />
                       </div>
                       <div className="info">
-                        <div className="title">{(lang === 'en' ? it.titleEn : it.title) || it.title || '-'}</div>
+                        <div className="title">{it.title || '-'}</div>
                         <div className="fbottom">
                           <div className="chips">
-                            {((lang === 'en' ? it.tagsEn : it.tagsEs) || []).slice(0, 3).map((c, idx) => (
+                            {(it.chips || []).slice(0, 3).map((c, idx) => (
                               <span className="chip" key={idx}>#{c}</span>
                             ))}
                           </div>
                           <div className="fmeta">
-                            <Link href={lang === 'en' ? `/en/asset/${it.slug}` : `/asset/${it.slug}`} onClick={(e) => e.stopPropagation()}>
+                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
                               {t('viewAsset')}
                             </Link>
                           </div>
@@ -398,10 +403,10 @@ const FreebiesGame = () => {
               <div className="game-layer layer-1">
                 <div className="layer-header">
                   <h2>{t('layerTitle', 1)}</h2>
-                  <span className="layer-badge">{layers[0].length} assets</span>
+                  <span className="layer-badge">{Math.min(8, layers[0].length)} assets</span>
                 </div>
                 <div className="freebies-grid">
-                  {layers[0].map((it) => (
+                  {layers[0].slice(0, 8).map((it) => (
                     <article className="card-item" key={it.id} onClick={() => handleOpenAsset(it)}>
                       <div className="thumb">
                         <CardImageSlider
@@ -414,15 +419,15 @@ const FreebiesGame = () => {
                         />
                       </div>
                       <div className="info">
-                        <div className="title">{(lang === 'en' ? it.titleEn : it.title) || it.title || '-'}</div>
+                        <div className="title">{it.title || '-'}</div>
                         <div className="fbottom">
                           <div className="chips">
-                            {((lang === 'en' ? it.tagsEn : it.tagsEs) || []).slice(0, 3).map((c, idx) => (
+                            {(it.chips || []).slice(0, 3).map((c, idx) => (
                               <span className="chip" key={idx}>#{c}</span>
                             ))}
                           </div>
                           <div className="fmeta">
-                            <Link href={lang === 'en' ? `/en/asset/${it.slug}` : `/asset/${it.slug}`} onClick={(e) => e.stopPropagation()}>
+                            <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
                               {t('viewAsset')}
                             </Link>
                           </div>
