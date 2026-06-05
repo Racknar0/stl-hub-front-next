@@ -153,10 +153,9 @@ export async function generateMetadata({ params }) {
         : `${site}/asset/${asset.slug}`;
 
     const isAdult = isAssetNSFW(asset);
-    const isFree = !asset.isPremium;
 
-    // NSFW o Gratis: no indexar en Google
-    if (isAdult || isFree) {
+    // NSFW: no indexar, no exponer imágenes reales a crawlers
+    if (isAdult) {
         return {
             title: baseTitle,
             description: desc,
@@ -181,7 +180,7 @@ export async function generateMetadata({ params }) {
                 url: isEn ? `${site}/en/asset/${asset.slug}` : `${site}/asset/${asset.slug}`,
                 images: [{ url: `${site}/logo_horizontal.png` }],
             },
-            ...(isAdult ? { other: { rating: 'adult', 'nsfw-content': 'true' } } : {}),
+            other: { rating: 'adult', 'nsfw-content': 'true' },
         };
     }
 
