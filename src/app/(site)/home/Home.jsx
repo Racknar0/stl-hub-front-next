@@ -333,56 +333,58 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
       {/* Sección del Minijuego de Dados / Regalos del Día */}
       <section className="home-freebies-game-section">
-        <div className="section-header">
-          <div className="title-wrapper">
-            <h3 className="section-title">
-              {isEn ? 'Daily Gifts' : 'Regalos del Día'}
-            </h3>
-            <p className="section-subtitle">
-              {isEn 
-                ? 'Unlock free premium models every day by rolling the dice' 
-                : 'Desbloquea modelos premium gratuitos cada día barajando el dado'}
-            </p>
-          </div>
-          <button onClick={handleDiceClick} className="view-all-link">
-            {isEn ? 'View Game' : 'Ver juego'}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </button>
-        </div>
-
-        <div className="game-slider-container">
-          <div className="game-skeletons-grid">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <div key={idx} className="game-skeleton-card">
-                <div className="skeleton-thumb" />
-                <div className="skeleton-line title" />
-                <div className="skeleton-line meta" />
-              </div>
-            ))}
-          </div>
-
-          <div className="game-overlay-panel">
-            <div className="game-dice-wrapper">
-              <span className="game-dice-icon" role="img" aria-label="dice">
-                🎲
-              </span>
-              <h4>
-                {isEn ? 'Try your luck!' : '¡Prueba tu suerte!'}
-              </h4>
-              <p>
+        <div className="container-narrow">
+          <div className="section-header">
+            <div className="title-wrapper">
+              <h3 className="section-title">
+                {isEn ? 'Daily Gifts' : 'Regalos del Día'}
+              </h3>
+              <p className="section-subtitle">
                 {isEn 
-                  ? "Roll the dice to reveal today's free premium 3D models. You get 3 daily rolls."
-                  : 'Lanza el dado para revelar los modelos 3D premium gratis de hoy. Tienes 3 tiradas diarias.'}
+                  ? 'Unlock free premium models every day by rolling the dice' 
+                  : 'Desbloquea modelos premium gratuitos cada día barajando el dado'}
               </p>
-              <button 
-                type="button" 
-                className="game-roll-btn" 
-                onClick={handleDiceClick}
-              >
-                {isEn ? 'Shuffle' : 'Barajar'}
-              </button>
+            </div>
+            <button onClick={handleDiceClick} className="view-all-link">
+              {isEn ? 'View Game' : 'Ver juego'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="game-slider-container">
+            <div className="game-skeletons-grid">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="game-skeleton-card">
+                  <div className="skeleton-thumb" />
+                  <div className="skeleton-line title" />
+                  <div className="skeleton-line meta" />
+                </div>
+              ))}
+            </div>
+
+            <div className="game-overlay-panel">
+              <div className="game-dice-wrapper">
+                <span className="game-dice-icon" role="img" aria-label="dice">
+                  🎲
+                </span>
+                <h4>
+                  {isEn ? 'Try your luck!' : '¡Prueba tu suerte!'}
+                </h4>
+                <p>
+                  {isEn 
+                    ? "Roll the dice to reveal today's free premium 3D models. You get 3 daily rolls."
+                    : 'Lanza el dado para revelar los modelos 3D premium gratis de hoy. Tienes 3 tiradas diarias.'}
+                </p>
+                <button 
+                  type="button" 
+                  className="game-roll-btn" 
+                  onClick={handleDiceClick}
+                >
+                  {isEn ? 'Shuffle' : 'Barajar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

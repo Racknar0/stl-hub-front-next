@@ -66,6 +66,7 @@ export default function UsersPage() {
     // User detail modal
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
+    const [maxRolls, setMaxRolls] = useState(3);
 
     const generateStrongPassword = (length = 12) => {
         const lowers = 'abcdefghijklmnopqrstuvwxyz';
@@ -108,6 +109,9 @@ export default function UsersPage() {
                 })
             );
             setRowCount(payload.total || 0);
+            if (payload && typeof payload.maxRolls === 'number') {
+                setMaxRolls(payload.maxRolls);
+            }
             setError(null);
         } catch (err) {
             setError('No se pudieron cargar los usuarios');
@@ -281,11 +285,47 @@ export default function UsersPage() {
                     />
                 ),
             },
+            {
+                accessorKey: 'rollsUsed',
+                header: 'Tiradas rest.',
+                size: 130,
+                Cell: ({ row }) => {
+                    const rollsUsed = Number(row.original.rollsUsed ?? 0);
+                    const remaining = Math.max(0, maxRolls - rollsUsed);
+                    const ratio = remaining / maxRolls;
+
+                    let color = '#ef4444'; // rojo
+                    if (ratio === 1) {
+                        color = '#22c55e'; // verde
+                    } else if (ratio >= 0.5) {
+                        color = '#eab308'; // amarillo/naranja
+                    } else if (ratio > 0) {
+                        color = '#f97316'; // naranja
+                    }
+
+                    return (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                                sx={{
+                                    display: 'inline-block',
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: color,
+                                    marginRight: 1,
+                                    boxShadow: `0 0 6px ${color}`,
+                                }}
+                            />
+                            <span>{remaining} / {maxRolls}</span>
+                        </Box>
+                    );
+                }
+            },
             { accessorKey: 'downloadCount', header: 'Descargas', size: 100 },
             { accessorKey: 'subEnds', header: 'Termina', size: 120 },
             { accessorKey: 'subDaysLeft', header: 'Días rest.', size: 100 },
         ],
-        []
+        [maxRolls]
     );
 
     const table = useMaterialReactTable({

@@ -76,6 +76,11 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     padding: 1.5rem 1rem;
     
+    @media (max-width: 576px) {
+      height: 330px; // Evita que se estire demasiado por el grid de esqueletos de fondo
+      padding: 0;
+    }
+    
     &::after {
       content: '';
       position: absolute;
@@ -164,12 +169,22 @@
     border-radius: 20px;
     box-shadow: 0 12px 40px rgba(0, 255, 170, 0.1);
     
+    @media (max-width: 576px) {
+      padding: 1.25rem 1.5rem;
+      max-width: 290px;
+    }
+    
     .game-dice-icon {
       font-size: 3.25rem;
       margin-bottom: 0.75rem;
       display: inline-block;
       animation: dice-float 4s infinite ease-in-out;
       filter: drop-shadow(0 0 10px rgba(0, 255, 170, 0.4));
+      
+      @media (max-width: 576px) {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
     }
     
     h4 {
@@ -178,6 +193,11 @@
       color: #fff;
       margin: 0 0 0.5rem 0;
       letter-spacing: 0.5px;
+      
+      @media (max-width: 576px) {
+        font-size: 1.05rem;
+        margin-bottom: 0.25rem;
+      }
     }
     
     p {
@@ -185,6 +205,11 @@
       line-height: 1.45;
       color: rgba(255, 255, 255, 0.6);
       margin: 0 0 1.5rem 0;
+      
+      @media (max-width: 576px) {
+        font-size: 0.78rem;
+        margin-bottom: 1rem;
+      }
     }
     
     .game-roll-btn {
