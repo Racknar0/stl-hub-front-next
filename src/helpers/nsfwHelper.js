@@ -2,7 +2,12 @@
  * Palabras clave NSFW — deben coincidir con las del backend (nsfwFilter.js).
  * Se usa `includes()` parcial sobre los slugs y nombres de categorías/tags.
  */
-const NSFW_KEYWORDS = ['adult', '18', 'nsfw', 'hentai', 'sexy', 'erotic', 'desnud', 'gore'];
+const NSFW_KEYWORDS = [
+    'adult', '18', 'nsfw', 'hentai', 'sexy', 'erotic', 'erotica', 'desnud', 'gore', 'xxx', 'porn', 'r18', 'fetish', 'fetis', 'bdsm', 'bondage',
+    'bikini', 'bunny-girl', 'bunnygirl', 'pin-up', 'pinup', 'sensual', 'waifu', 'lenceria', 'lingerie', 'nude', 'naked', 'panties', 'topless', 'conejita', 'playboy', 'stripper', 'swimsuit', 'swimwear', 'tanga', 'hilo-dental', 'hilo dental', 'sin-ropa', 'sin ropa',
+    'seductor', 'seductora', 'provocativ', 'boudoir', 'boobs', 'buttocks', 'trasero', 'nalgas', 'gluteos', 'underboob', 'cleavage', 'escote', 'pezon', 'pezones', 'nipple', 'nipples', 'caliente',
+    '3dxm', 'jigglystix', 'digital-dark-pinups'
+];
 
 export const isAssetNSFW = (item) => {
     if (!item) return false;
@@ -28,6 +33,10 @@ export const isAssetNSFW = (item) => {
     };
 
     return (
+        isRestricted(item.title) ||
+        isRestricted(item.slug) ||
+        isRestricted(item.titleEs) ||
+        isRestricted(item.titleEn) ||
         hasAdults(item.tags) ||
         hasAdults(item.tagSlugs) ||
         hasAdults(item.chips) ||
