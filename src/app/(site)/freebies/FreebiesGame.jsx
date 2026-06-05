@@ -97,12 +97,13 @@ const FreebiesGame = () => {
 
       // Consultar tiradas usadas hoy
       const rollsRes = await http.getData('/me/freebie-rolls');
-      if (rollsRes) {
-        if (typeof rollsRes.rollsUsed === 'number') {
-          setRollsUsed(rollsRes.rollsUsed);
+      const rollsData = rollsRes?.data;
+      if (rollsData) {
+        if (typeof rollsData.rollsUsed === 'number') {
+          setRollsUsed(rollsData.rollsUsed);
         }
-        if (typeof rollsRes.maxRolls === 'number') {
-          setMaxRolls(rollsRes.maxRolls);
+        if (typeof rollsData.maxRolls === 'number') {
+          setMaxRolls(rollsData.maxRolls);
         }
       }
     } catch (err) {
@@ -212,9 +213,10 @@ const FreebiesGame = () => {
 
       setTimeout(() => {
         setRolling(false);
-        if (res) {
-          if (typeof res.rollsUsed === 'number') setRollsUsed(res.rollsUsed);
-          if (typeof res.maxRolls === 'number') setMaxRolls(res.maxRolls);
+        const rollsData = res?.data;
+        if (rollsData) {
+          if (typeof rollsData.rollsUsed === 'number') setRollsUsed(rollsData.rollsUsed);
+          if (typeof rollsData.maxRolls === 'number') setMaxRolls(rollsData.maxRolls);
         } else {
           setRollsUsed((prev) => Math.min(maxRolls, prev + 1));
         }
