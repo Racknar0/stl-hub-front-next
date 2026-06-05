@@ -202,6 +202,28 @@ export default function UsersPage() {
         }
     };
 
+    const handleResetRolls = async () => {
+        if (!editForm.id) return;
+        const ok = await confirmAlert(
+            'Reiniciar Tiradas',
+            `¿Deseas reiniciar las tiradas diarias del usuario ${editForm.email} para el día de hoy?`,
+            'Reiniciar',
+            'Cancelar',
+            'warning'
+        );
+        if (!ok) return;
+
+        try {
+            setEditing(true);
+            await http.postData(`/users/${editForm.id}/freebie-rolls/reset`, {});
+            await successAlert('Tiradas reiniciadas', 'Las tiradas diarias del usuario se reiniciaron correctamente.');
+        } catch (err) {
+            await errorAlert('Error', err?.response?.data?.message || 'No se pudieron reiniciar las tiradas');
+        } finally {
+            setEditing(false);
+        }
+    };
+
     const onCreate = async (e) => {
         e.preventDefault();
         if (!form.email || !form.password) {
@@ -468,6 +490,24 @@ export default function UsersPage() {
                             onChange={(e) => setEditForm(f => ({ ...f, daysRemaining: e.target.value === '' ? '' : Number(e.target.value) }))}
                             helperText="Días restantes de suscripción. Pon 0 para quitarla o inhabilitarla."
                         />
+
+                        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Box component="span" sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>Tiradas de Freebies</Box>
+                                <Box component="span" sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Restablecer el límite del día actual para este usuario.</Box>
+                            </Box>
+                            <MUIButton
+                                type="button"
+                                variant="outlined"
+                                color="warning"
+                                onClick={handleResetRolls}
+                                disabled={editing}
+                                size="small"
+                                sx={{ flexShrink: 0 }}
+                            >
+                                Reiniciar Tiradas
+                            </MUIButton>
+                        </Box>
                     </DialogContent>
                     <DialogActions>
                         <MUIButton onClick={() => setShowEditForm(false)} disabled={editing}>
