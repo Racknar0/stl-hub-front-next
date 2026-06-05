@@ -353,18 +353,19 @@
         border-color: rgba(0, 255, 170, 0.25) !important;
         box-shadow: 0 8px 20px rgba(0, 255, 170, 0.08) !important;
 
-        .thumb .thumb-img img {
+        .thumb .thumb-img {
           transform: scale(1.05) !important;
         }
       }
 
       .thumb {
         position: relative !important;
-        padding-top: 100% !important; // 1:1 Aspect Ratio
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        height: auto !important;
+        padding-top: 0 !important;
         background: rgba(0, 0, 0, 0.2) !important;
         overflow: hidden !important;
-        width: 100% !important;
-        height: 0 !important;
         flex: none !important;
         border-top-left-radius: 12px !important;
         border-top-right-radius: 12px !important;
@@ -375,14 +376,8 @@
           left: 0 !important;
           width: 100% !important;
           height: 100% !important;
-          flex: none !important;
-
-          img {
-            transition: transform 0.5s ease !important;
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-          }
+          object-fit: cover !important;
+          transition: transform 0.5s ease !important;
         }
       }
 
