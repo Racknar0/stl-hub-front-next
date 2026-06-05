@@ -111,7 +111,7 @@ function fillMissingBuckets(series, fromStr, toStr, granularity) {
         date: dStr, 
         pv: 0, sessions: 0, visitors: 0,
         total: 0, '1m': 0, '3m': 0, '6m': 0, '12m': 0,
-        count: 0
+        count: 0, registrations: 0, searchCount: 0
       });
     }
 
@@ -143,6 +143,9 @@ const chartColors = {
   pv: { border: '#4facfe', bg: 'rgba(79,172,254,0.15)' },
   sessions: { border: '#00f2fe', bg: 'rgba(0,242,254,0.15)' },
   visitors: { border: '#ff0844', bg: 'rgba(255,8,68,0.15)' },
+  registrations: { border: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  downloads: { border: '#38bdf8', bg: 'rgba(56,189,248,0.15)' },
+  searches: { border: '#ec4899', bg: 'rgba(236,72,153,0.15)' },
 }
 
 const commonLineOpts = {
@@ -222,14 +225,14 @@ const barOpts = {
 const CHART_DESCRIPTIONS = {
     'traffic': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Visión General del Tráfico:</strong> Mide los 3 pilares de tu sitio web día a día:<br/>
+        <strong style={{ color: '#f8fafc' }}>Visión General del Tráfico y Registros:</strong> Mide la actividad y el crecimiento de tu comunidad día a día:<br/>
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
           <li><strong style={{ color: '#ff0844' }}>Visitantes:</strong> Personas reales o dispositivos únicos que entraron.</li>
-          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> Visitas totales (una misma persona puede entrar varias veces y generar varias sesiones).</li>
-          <li><strong style={{ color: '#4facfe' }}>Vistas de Página:</strong> La suma de todos los modelos o páginas que cargaron en esas sesiones.</li>
+          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> Visitas totales.</li>
+          <li><strong style={{ color: '#4facfe' }}>Vistas de Página:</strong> La suma de todos los modelos o páginas que cargaron.</li>
+          <li><strong style={{ color: '#f59e0b' }}>Registros:</strong> Nuevos usuarios que crearon una cuenta.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si 1 persona entra 2 veces al día y mira 5 modelos en total = 1 Visitante, 2 Sesiones, 5 Vistas.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Úsalo para medir el impacto inmediato de tus anuncios. Si haces un video de TikTok y sube el pico rojo y azul, el anuncio funcionó y trajo gente nueva.
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si 1 visitante entra 2 veces, mira 5 modelos y finalmente se registra = 1 Visitante, 2 Sesiones, 5 Vistas, 1 Registro.
       </>
     ),
     'top-pages': (
@@ -308,12 +311,13 @@ const CHART_DESCRIPTIONS = {
     ),
     'downloads-timeseries': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Histórico de Descargas:</strong> Mide la cantidad de archivos descargados día a día.<br/>
+        <strong style={{ color: '#f8fafc' }}>Histórico de Descargas y Búsquedas:</strong> Mide el interés y la conversión de los usuarios día a día:<br/>
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
-          <li><strong style={{ color: '#38bdf8' }}>Descargas Totales:</strong> Suma de todos los modelos STL descargados en el período seleccionado.</li>
+          <li><strong style={{ color: '#38bdf8' }}>Descargas:</strong> Cantidad de archivos STL que los usuarios descargaron.</li>
+          <li><strong style={{ color: '#ec4899' }}>Búsquedas:</strong> Cantidad de búsquedas totales realizadas en la web.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves un pico alto de descargas el día martes, puede coincidir con un nuevo lanzamiento de modelo o una mención en redes.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Compáralo con la "Visión General del Tráfico". Si el tráfico sube pero las descargas no, es probable que los modelos cargados no llamen la atención o haya problemas con las descargas.
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves un pico alto de búsquedas pero pocas descargas, puede significar que los usuarios buscan modelos que aún no tienes.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Compara la tendencia. Si el volumen de búsquedas sube pero las descargas no, tienes una oportunidad de subir los modelos que el mercado está pidiendo.
       </>
     )
   }
@@ -478,6 +482,7 @@ export default function TrafficCharts() {
         { label: 'Vistas de Página', data: filledSeries.map((s) => s.pv), borderColor: chartColors.pv.border, backgroundColor: chartColors.pv.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
         { label: 'Sesiones', data: filledSeries.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
         { label: 'Visitantes', data: filledSeries.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
+        { label: 'Registros', data: filledSeries.map((s) => s.registrations || 0), borderColor: chartColors.registrations.border, backgroundColor: chartColors.registrations.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
       ]
     }
   }, [http])
@@ -641,9 +646,9 @@ export default function TrafficCharts() {
       datasets: [
         { 
           type: 'line', 
-          label: 'Tendencia', 
+          label: 'Descargas (Línea)', 
           data: filledSeries.map((s) => s.count), 
-          borderColor: 'rgba(56, 189, 248, 1)', 
+          borderColor: chartColors.downloads.border, 
           backgroundColor: 'transparent', 
           borderWidth: 2, 
           tension: 0.3, 
@@ -652,9 +657,28 @@ export default function TrafficCharts() {
         },
         {
           type: 'bar',
-          label: 'Descargas',
+          label: 'Descargas (Barra)',
           data: filledSeries.map((s) => s.count),
-          backgroundColor: 'rgba(56, 189, 248, 0.7)',
+          backgroundColor: chartColors.downloads.bg,
+          borderColor: 'transparent',
+          borderRadius: 4
+        },
+        { 
+          type: 'line', 
+          label: 'Búsquedas (Línea)', 
+          data: filledSeries.map((s) => s.searchCount || 0), 
+          borderColor: chartColors.searches.border, 
+          backgroundColor: 'transparent', 
+          borderWidth: 2, 
+          tension: 0.3, 
+          pointRadius: filledSeries.length > 60 ? 0 : 3, 
+          pointHoverRadius: 5 
+        },
+        {
+          type: 'bar',
+          label: 'Búsquedas (Barra)',
+          data: filledSeries.map((s) => s.searchCount || 0),
+          backgroundColor: chartColors.searches.bg,
           borderColor: 'transparent',
           borderRadius: 4
         }
@@ -685,10 +709,6 @@ export default function TrafficCharts() {
           <div style={{ maxWidth: '400px', margin: '0 auto' }}>
             <Doughnut data={data} options={{ plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } }, tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' } } }} />
           </div>
-        )} />
-        
-        <ChartContainer id="user-registrations" supportsDynamicDates={true} fetchFn={fetchRegistrations} renderChart={(data) => (
-          <Bar data={data} options={commonLineOpts} />
         )} />
         
         <ChartContainer 
