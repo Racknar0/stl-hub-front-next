@@ -16,6 +16,7 @@ import { useI18n } from '../../../i18n';
 import Link from 'next/link';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
+import useStore from '../../../store/useStore';
 
 const FeatureSection = ({
     title,
@@ -32,8 +33,10 @@ const FeatureSection = ({
     const finalTitle = title || t('sliders.feature.title');
     const finalSubtitle = subtitle || t('sliders.feature.subtitle');
     const finalCta = ctaLabel || t('sliders.feature.cta');
-        const list = items; // ya viene con título según idioma
-        const showLoader = !Array.isArray(list) || list.length === 0;
+    // Anónimos: ocultar completamente cards NSFW (no solo blur) para proteger cuentas de anuncios
+    const token = useStore((s) => s.token);
+    const list = token ? items : items.filter((it) => !isAssetNSFW(it));
+    const showLoader = !Array.isArray(list) || list.length === 0;
         const Spinner = ({ size = 36 }) => (
             <div className="sk-circle" style={{ width: size, height: size }}>
                 <div className="sk-circle1 sk-child" />

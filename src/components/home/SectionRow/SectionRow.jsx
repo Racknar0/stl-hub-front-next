@@ -14,12 +14,16 @@ import Link from 'next/link';
 import '../../common/GlobalLoader/GlobalLoader.scss';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
+import useStore from '../../../store/useStore';
 
 const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemClick, loading = false, variantClass = '', priority = false, isEn: isEnProp }) => {
   const resolvedLanguage = useResolvedLanguage();
   const isEn = isEnProp !== undefined ? isEnProp : resolvedLanguage === 'en';
   const { t } = useI18n(isEn ? 'en' : 'es');
   const finalLinkLabel = linkLabel || t('sliders.row.more');
+  // Anónimos: ocultar completamente cards NSFW (no solo blur) para proteger cuentas de anuncios
+  const token = useStore((s) => s.token);
+  const visibleItems = token ? items : items.filter((it) => !isAssetNSFW(it));
   const Spinner = ({ size = 36 }) => (
     <div className="sk-circle" style={{ width: size, height: size }}>
       <div className="sk-circle1 sk-child" />
@@ -36,7 +40,7 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
       <div className="sk-circle12 sk-child" />
     </div>
   );
-  const showLoader = loading || !Array.isArray(items) || items.length === 0;
+  const showLoader = loading || !Array.isArray(visibleItems) || visibleItems.length === 0;
   return (
     <section className={`section-row ${variantClass}`.trim()}>
       <div className="container-narrow" style={{
@@ -75,7 +79,7 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
             touchStartPreventDefault={false}
             touchReleaseOnEdges={true}
           >
-            {items.map((it, index) => {
+            {visibleItems.map((it, index) => {
               const formatUploadDate = (raw) => {
                 if (!raw) return null;
                 const d = new Date(raw);
