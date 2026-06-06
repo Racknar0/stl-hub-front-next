@@ -6,24 +6,33 @@ import HttpService from '@/services/HttpService';
 import './PinterestCalendar.scss';
 
 const MAX_PINS_PER_DAY = 15;
-const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
+function getUploadBase() {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      return 'https://api.stl-hub.com/uploads';
+    }
+  }
+  return process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
+}
 
 function resolveImgUrl(img) {
   if (!img) return '';
   
-  // If it's a full localhost URL, rewrite it to use the production base URL
+  const uploadBase = getUploadBase();
+  
   if (img.startsWith('http')) {
-    if (img.includes('localhost:3001/uploads/') || img.includes('localhost:3000/uploads/')) {
+    if (img.includes('/uploads/')) {
       const parts = img.split('/uploads/');
       if (parts.length > 1) {
-        return `${UPLOAD_BASE}/${parts[1]}`;
+        return `${uploadBase}/${parts[1]}`;
       }
     }
     return img;
   }
   
   const clean = String(img).replace(/^\\+|^\/+/, '');
-  return `${UPLOAD_BASE}/${clean}`;
+  return `${uploadBase}/${clean}`;
 }
 
 export default function PinterestCalendar() {
