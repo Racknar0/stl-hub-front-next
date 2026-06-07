@@ -490,374 +490,546 @@ export default function PinterestCalendar() {
             })}
           </div>
         </div>
+      </div>
 
-        {/* SIDE PANEL */}
-        <div className={`side-panel ${selectedDay ? 'open' : ''}`}>
-          {selectedDay && (
-            <div className="panel-content scrollable">
-              <button className="close-panel" onClick={() => { setSelectedDay(null); setPanelMode('list'); }}>✕</button>
-              <h3 className="panel-title">{selectedDay} de {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+      {/* WORKSPACE MODAL */}
+      {selectedDay && (
+        <div className="pinterest-modal-overlay" onClick={() => { setSelectedDay(null); setPanelMode('list'); }}>
+            <div className="pinterest-modal-content" onClick={(e) => e.stopPropagation()}>
+              
+              {/* Modal Header */}
+              <div className="modal-header">
+                <div className="modal-header-info">
+                  <h3>{selectedDay} de {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+                  <div className="modal-header-stats">
+                    {dayPins.length > 0 && (
+                      <>
+                        <span className="stat pending">⏳ {dayPins.filter(p => p.status === 'PENDING').length} Programados</span>
+                        <span className="stat published">✅ {dayPins.filter(p => p.status === 'PUBLISHED').length} Publicados</span>
+                        <span className="stat failed">❌ {dayPins.filter(p => p.status === 'FAILED').length} Errores</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button className="close-modal" onClick={() => { setSelectedDay(null); setPanelMode('list'); }}>✕</button>
+              </div>
 
-              {/* ====== LIST MODE ====== */}
-              {panelMode === 'list' && (
-                <div className="day-pins-view">
-                  {loadingDayPins ? (
-                    <p className="help-text">Cargando pines...</p>
-                  ) : dayPins.length === 0 ? (
-                    <div className="empty-day"><p>No hay pines programados.</p></div>
-                  ) : (
-                    <div className="pins-list">
-                      {dayPins.map(pin => {
-                        const filtersObj = typeof pin.filters === 'string'
-                          ? JSON.parse(pin.filters)
-                          : pin.filters;
-                        const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
-                        return (
-                          <div key={pin.id} className={`pin-item ${expandedPinId === pin.id ? 'expanded' : ''}`}>
-                            <div className={`pin-row status-${pin.status?.toLowerCase()}`} onClick={() => {
-                              if (expandedPinId === pin.id) setExpandedPinId(null);
-                              else { setExpandedPinId(pin.id); setEditPin({ title: pin.title || '', description: pin.description || '', link: pin.link || '' }); }
-                            }}>
-                              <div className="pin-row-info">
-                                {imageUrl && (
-                                  <div className="pin-row-img-wrapper">
-                                    <img src={imageUrl} alt="" className="pin-row-img" />
-                                  </div>
-                                )}
-                                <div className="pin-row-text">
+              {/* Modal Body */}
+              <div className="modal-body">
+                
+                {/* ====== LIST MODE ====== */}
+                {panelMode === 'list' && (
+                  <div className="day-pins-workspace">
+                    <div className="pins-list-column">
+                      {loadingDayPins ? (
+                        <p className="help-text">Cargando pines...</p>
+                      ) : dayPins.length === 0 ? (
+                        <div className="empty-day">
+                          <div className="empty-icon">📅</div>
+                          <p>No hay pines programados para este día.</p>
+                          {!isSelectedDayPast && (
+                            <button className="btn-create-pin-empty" onClick={() => setPanelMode('create')}>
+                              + Crear primer Pin
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="pins-grid">
+                          {dayPins.map(pin => {
+                            const filtersObj = typeof pin.filters === 'string'
+                              ? JSON.parse(pin.filters)
+                              : pin.filters;
+                            const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
+                            const isExpanded = expandedPinId === pin.id;
+                            return (
+                              <div 
+                                key={pin.id} 
+                                className={`pin-card-item ${isExpanded ? 'active' : ''} status-${pin.status?.toLowerCase()}`}
+                                onClick={() => {
+                                  if (isExpanded) {
+                                    setExpandedPinId(null);
+                                  } else {
+                                    setExpandedPinId(pin.id);
+                                    setEditPin({ 
+                                      title: pin.title || '', 
+                                      description: pin.description || '', 
+                                      link: pin.link || '' 
+                                    });
+                                  }
+                                }}
+                              >
+                                <div className="pin-card-img-wrapper">
+                                  {imageUrl ? <img src={imageUrl} alt="" /> : <div className="no-img">No Img</div>}
                                   <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
-                                  <span className="pin-row-title">{pin.title || 'Sin título'}</span>
-                                  <span className="pin-row-time">{new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <div className="pin-card-body">
+                                  <span className="pin-card-time">
+                                    ⏳ {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <h4 className="pin-card-title">{pin.title || 'Sin título'}</h4>
                                 </div>
                               </div>
-                              <div className="pin-row-actions">
-                                {(pin.status === 'PENDING' || pin.status === 'FAILED') && (
-                                  <button className="btn-delete-pin" onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}>🗑</button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
+                      {dayPins.length > 0 && !isSelectedDayPast && (
+                        <button className="btn-create-pin" onClick={() => setPanelMode('create')}>
+                          + Crear Pin
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Detail / Edit Column */}
+                    <div className="pin-detail-column">
+                      {expandedPinId ? (
+                        (() => {
+                          const pin = dayPins.find(p => p.id === expandedPinId);
+                          if (!pin) return <p className="select-prompt">Selecciona un pin de la lista para ver o editar sus detalles.</p>;
+                          
+                          const filtersObj = typeof pin.filters === 'string'
+                            ? JSON.parse(pin.filters)
+                            : pin.filters;
+                          const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
+                          
+                          return (
+                            <div className="pin-detail-card-panel">
+                              <div className="detail-panel-header">
+                                <h4>Detalles del Pin</h4>
+                                <button className="btn-close-detail" onClick={() => setExpandedPinId(null)}>✕</button>
+                              </div>
+                              
+                              {imageUrl && (
+                                <div className="pin-detail-preview">
+                                  <img src={imageUrl} alt="Pin preview" />
+                                </div>
+                              )}
+
+                              <div className="pin-detail-fields">
+                                {pin.status === 'PENDING' ? (
+                                  <>
+                                    <div className="form-group">
+                                      <label>Título</label>
+                                      <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        value={editPin.title} 
+                                        onChange={(e) => setEditPin(p => ({...p, title: e.target.value}))} 
+                                      />
+                                    </div>
+                                    <div className="form-group">
+                                      <label>Descripción</label>
+                                      <textarea 
+                                        className="form-input" 
+                                        rows="5" 
+                                        value={editPin.description} 
+                                        onChange={(e) => setEditPin(p => ({...p, description: e.target.value}))} 
+                                      />
+                                    </div>
+                                    <div className="form-group">
+                                      <label>Link de Destino</label>
+                                      <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        value={editPin.link} 
+                                        onChange={(e) => setEditPin(p => ({...p, link: e.target.value}))} 
+                                      />
+                                    </div>
+                                    <div className="pin-detail-actions">
+                                      <button 
+                                        className="btn-save-pin" 
+                                        onClick={() => handleUpdatePin(pin.id)} 
+                                        disabled={isSavingPin}
+                                      >
+                                        {isSavingPin ? 'Guardando...' : '💾 Guardar Cambios'}
+                                      </button>
+                                      <button 
+                                        className="btn-delete-pin-full" 
+                                        onClick={() => handleDeletePin(pin.id)}
+                                      >
+                                        🗑 Eliminar Pin
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="detail-field">
+                                      <strong>Título:</strong> 
+                                      <p>{pin.title || '—'}</p>
+                                    </div>
+                                    <div className="detail-field">
+                                      <strong>Descripción:</strong> 
+                                      <p>{pin.description || '—'}</p>
+                                    </div>
+                                    <div className="detail-field">
+                                      <strong>Link:</strong> 
+                                      <p>
+                                        {pin.link ? (
+                                          <a href={pin.link} target="_blank" rel="noreferrer">{pin.link} ↗</a>
+                                        ) : '—'}
+                                      </p>
+                                    </div>
+                                    {pin.errorMessage && (
+                                      <div className="detail-field error">
+                                        <strong>Error del Servidor:</strong>
+                                        <p>{pin.errorMessage}</p>
+                                      </div>
+                                    )}
+                                    <div className="pin-detail-actions">
+                                      {pin.status === 'PUBLISHED' && pin.publishedPinId && (
+                                        <a 
+                                          href={`https://pinterest.com/pin/${pin.publishedPinId}`} 
+                                          target="_blank" 
+                                          rel="noreferrer" 
+                                          className="btn-view-external"
+                                        >
+                                          ↗ Ver en Pinterest
+                                        </a>
+                                      )}
+                                      {(pin.status === 'FAILED') && (
+                                        <button 
+                                          className="btn-delete-pin-full" 
+                                          onClick={() => handleDeletePin(pin.id)}
+                                        >
+                                          🗑 Eliminar Pin
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
                                 )}
-                                {pin.status === 'PUBLISHED' && pin.publishedPinId && <a href={`https://pinterest.com/pin/${pin.publishedPinId}`} target="_blank" rel="noreferrer" className="btn-view-pin" onClick={(e) => e.stopPropagation()}>↗</a>}
-                                {pin.status === 'FAILED' && <span className="fail-icon" title={pin.errorMessage || 'Error'}>⚠️</span>}
-                                <span className="expand-arrow">{expandedPinId === pin.id ? '▲' : '▼'}</span>
                               </div>
                             </div>
-                            {expandedPinId === pin.id && (
-                              <div className="pin-detail">
-                                {imageUrl && (
-                                  <div className="pin-detail-preview">
-                                    <img src={imageUrl} alt="Pin preview" />
-                                  </div>
-                                )}
-                              {pin.status === 'PENDING' ? (
-                                <>
-                                  <label>Título</label>
-                                  <input type="text" className="form-input" value={editPin.title} onChange={(e) => setEditPin(p => ({...p, title: e.target.value}))} />
-                                  <label>Descripción</label>
-                                  <textarea className="form-input" rows="3" value={editPin.description} onChange={(e) => setEditPin(p => ({...p, description: e.target.value}))} />
-                                  <label>Link</label>
-                                  <input type="text" className="form-input" value={editPin.link} onChange={(e) => setEditPin(p => ({...p, link: e.target.value}))} />
-                                  <div className="pin-detail-actions">
-                                    <button className="btn-save-pin" onClick={() => handleUpdatePin(pin.id)} disabled={isSavingPin}>{isSavingPin ? 'Guardando...' : '💾 Guardar'}</button>
-                                    <button className="btn-delete-pin-full" onClick={() => handleDeletePin(pin.id)}>🗑 Eliminar</button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="detail-field"><strong>Título:</strong> {pin.title || '—'}</div>
-                                  <div className="detail-field"><strong>Descripción:</strong> {pin.description || '—'}</div>
-                                  <div className="detail-field"><strong>Link:</strong> <a href={pin.link} target="_blank" rel="noreferrer">{pin.link || '—'}</a></div>
-                                  {pin.errorMessage && <div className="detail-field error"><strong>Error:</strong> {pin.errorMessage}</div>}
-                                  {pin.status === 'FAILED' && (
-                                    <div className="pin-detail-actions" style={{ marginTop: '0.75rem' }}>
-                                      <button className="btn-delete-pin-full" onClick={() => handleDeletePin(pin.id)}>🗑 Eliminar</button>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })()
+                      ) : (
+                        <div className="no-selection-placeholder">
+                          <span className="info-icon">💡</span>
+                          <p>Selecciona un pin de la izquierda para ver su detalle o editarlo.</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {!isSelectedDayPast && (
-                    <button className="btn-create-pin" onClick={() => setPanelMode('create')}>+ Crear Pin</button>
-                  )}
-                </div>
-              )}
-
-              {/* ====== CREATE / BULK MODE ====== */}
-              {panelMode === 'create' && (
-                <div className="create-pin-view">
-                  <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); }}>← Volver</button>
-
-                  {/* Selector de pestañas */}
-                  <div className="search-tabs">
-                    <button 
-                      type="button" 
-                      className={`tab-button ${searchType === 'id' ? 'active' : ''}`}
-                      onClick={() => {
-                        setSearchType('id');
-                        setSearchQuery('');
-                        setSearchedAssets([]);
-                        setSelectedPins([]);
-                        setTrendKeyword('');
-                      }}
-                    >
-                      Búsqueda por ID
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`tab-button ${searchType === 'semantic' ? 'active' : ''}`}
-                      onClick={() => {
-                        setSearchType('semantic');
-                        setSearchQuery('');
-                        setSearchedAssets([]);
-                        setSelectedPins([]);
-                        setTrendKeyword('');
-                      }}
-                    >
-                      Buscar Tendencias (IA Qdrant)
-                    </button>
                   </div>
+                )}
 
-                  {/* Search */}
-                  <div className="form-group search-group">
-                    <label>{searchType === 'id' ? 'IDs de los Pins (escribe y presiona Enter o Coma)' : 'Palabra clave de tendencia o concepto'}</label>
+                {/* ====== CREATE / BULK MODE ====== */}
+                {panelMode === 'create' && (
+                  <div className="create-workspace-layout">
                     
-                    {searchType === 'id' ? (
-                      <div className="chips-input-container">
-                        <textarea 
-                          className="chips-textarea"
-                          placeholder="Pega o escribe los IDs aquí (Ej: 20, 23, 28) y presiona Enter para agregarlos..."
-                          value={idInput} 
-                          onChange={(e) => setIdInput(e.target.value)}
-                          onKeyDown={handleIdInputKeyDown}
-                          onBlur={addIdFromInput}
-                          rows="3"
-                        />
+                    {/* Left Column: Picker / Search */}
+                    <div className="workspace-left-pane">
+                      <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); }}>← Volver</button>
+
+                      {/* Selector de pestañas */}
+                      <div className="search-tabs">
+                        <button 
+                          type="button" 
+                          className={`tab-button ${searchType === 'id' ? 'active' : ''}`}
+                          onClick={() => {
+                            setSearchType('id');
+                            setSearchQuery('');
+                            setSearchedAssets([]);
+                            setSelectedPins([]);
+                            setTrendKeyword('');
+                          }}
+                        >
+                          Búsqueda por ID
+                        </button>
+                        <button 
+                          type="button" 
+                          className={`tab-button ${searchType === 'semantic' ? 'active' : ''}`}
+                          onClick={() => {
+                            setSearchType('semantic');
+                            setSearchQuery('');
+                            setSearchedAssets([]);
+                            setSelectedPins([]);
+                            setTrendKeyword('');
+                          }}
+                        >
+                          Buscar Tendencias (IA Qdrant)
+                        </button>
+                      </div>
+
+                      {/* Search Form */}
+                      <div className="form-group search-group">
+                        <label>{searchType === 'id' ? 'IDs de los Pins (escribe y presiona Enter o Coma)' : 'Palabra clave de tendencia o concepto'}</label>
                         
-                        {idChips.length > 0 && (
-                          <div className="chips-display-area">
-                            <div className="chips-display-header">
-                              <span>IDs Agregados ({idChips.length})</span>
-                              <button 
-                                type="button" 
-                                className="btn-clear-all-chips" 
-                                onClick={() => setIdChips([])}
-                              >
-                                Limpiar todos
-                              </button>
-                            </div>
-                            <div className="chips-wrapper">
-                              {idChips.map((chipId) => (
-                                <span key={chipId} className="id-chip">
-                                  #{chipId}
+                        {searchType === 'id' ? (
+                          <div className="chips-input-container">
+                            <textarea 
+                              className="chips-textarea"
+                              placeholder="Pega o escribe los IDs aquí (Ej: 20, 23, 28) y presiona Enter para agregarlos..."
+                              value={idInput} 
+                              onChange={(e) => setIdInput(e.target.value)}
+                              onKeyDown={handleIdInputKeyDown}
+                              onBlur={addIdFromInput}
+                              rows="3"
+                            />
+                            
+                            {idChips.length > 0 && (
+                              <div className="chips-display-area">
+                                <div className="chips-display-header">
+                                  <span>IDs Agregados ({idChips.length})</span>
                                   <button 
                                     type="button" 
-                                    className="btn-remove-chip"
-                                    onClick={() => removeIdChip(chipId)}
+                                    className="btn-clear-all-chips" 
+                                    onClick={() => setIdChips([])}
+                                  >
+                                    Limpiar todos
+                                  </button>
+                                </div>
+                                <div className="chips-wrapper">
+                                  {idChips.map((chipId) => (
+                                    <span key={chipId} className="id-chip">
+                                      #{chipId}
+                                      <button 
+                                        type="button" 
+                                        className="btn-remove-chip"
+                                        onClick={() => removeIdChip(chipId)}
+                                      >
+                                        ✕
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <button className="btn-search-chips" onClick={handleBulkSearch}>
+                              Buscar IDs
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="search-bar">
+                            <input type="text" className="form-input" 
+                              placeholder="Ej: Michael Jackson, Halloween..."
+                              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
+                            <button className="btn-search" onClick={handleBulkSearch}>
+                              Buscar con IA
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Active Trend Badge */}
+                      {trendKeyword && (
+                        <div className="active-trend-badge">
+                          <span>🎯 Tendencia: <strong>{trendKeyword}</strong></span>
+                          <button 
+                            type="button" 
+                            className="btn-clear-trend" 
+                            onClick={() => setTrendKeyword('')}
+                            title="Eliminar tendencia"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Counter */}
+                      {searchedAssets.length > 0 && (
+                        <div className="pin-counter">
+                          <span className={`counter ${selectedPins.length >= MAX_PINS_PER_DAY ? 'max' : ''}`}>
+                            {selectedPins.length}/{MAX_PINS_PER_DAY} imágenes seleccionadas
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Asset List Scroll */}
+                      <div className="workspace-assets-scroll">
+                        {searchedAssets.map(asset => {
+                          const assetSelected = countForAsset(asset.id);
+                          const isExpanded = expandedAssetId === asset.id;
+                          return (
+                            <div key={asset.id} className="bulk-asset-section">
+                              <div className="bulk-asset-header" onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}>
+                                <div className="bulk-asset-info">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSearchedAssets(prev => prev.filter(a => a.id !== asset.id));
+                                      setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
+                                    }}
+                                    className="btn-remove-asset-search"
+                                    title="Quitar este asset de la lista"
                                   >
                                     ✕
                                   </button>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <button className="btn-search-chips" onClick={handleBulkSearch}>
-                          Buscar IDs
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="search-bar">
-                        <input type="text" className="form-input" 
-                          placeholder="Ej: Michael Jackson, Halloween..."
-                          value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
-                        <button className="btn-search" onClick={handleBulkSearch}>
-                          Buscar con IA
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Active Trend Badge */}
-                  {trendKeyword && (
-                    <div className="active-trend-badge">
-                      <span>🎯 Tendencia activa: <strong>{trendKeyword}</strong></span>
-                      <button 
-                        type="button" 
-                        className="btn-clear-trend" 
-                        onClick={() => setTrendKeyword('')}
-                        title="Eliminar tendencia"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Counter */}
-                  {searchedAssets.length > 0 && (
-                    <div className="pin-counter">
-                      <span className={`counter ${selectedPins.length >= MAX_PINS_PER_DAY ? 'max' : ''}`}>
-                        {selectedPins.length}/{MAX_PINS_PER_DAY} imágenes
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Asset Sections */}
-                  {searchedAssets.map(asset => {
-                    const assetSelected = countForAsset(asset.id);
-                    const isExpanded = expandedAssetId === asset.id;
-                    return (
-                      <div key={asset.id} className="bulk-asset-section">
-                        <div className="bulk-asset-header" onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}>
-                          <div className="bulk-asset-info">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSearchedAssets(prev => prev.filter(a => a.id !== asset.id));
-                                setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
-                              }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#f87171',
-                                marginRight: '10px',
-                                cursor: 'pointer',
-                                fontSize: '1.2rem',
-                                padding: '0 4px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'color 0.2s',
-                                lineHeight: 1
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
-                              onMouseOut={(e) => e.currentTarget.style.color = '#f87171'}
-                              title="Quitar este asset de la lista"
-                            >
-                              ✕
-                            </button>
-                            <span className="asset-id">#{asset.id}</span>
-                            <span className="asset-name">{asset.titleEn || asset.title}</span>
-                            {assetSelected > 0 && <span className="asset-badge">{assetSelected} sel.</span>}
-                          </div>
-                          <span className="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
-                        </div>
-
-                        {isExpanded && (
-                          <div className="bulk-asset-body">
-                            {/* Image Grid */}
-                            <div className="image-grid">
-                              {asset.images.map((img, idx) => {
-                                const key = `${asset.id}_${img}`;
-                                const isSelected = selectedPins.some(p => p.key === key);
-                                const url = resolveImgUrl(img);
-                                return (
-                                  <div key={idx} className={`image-card ${isSelected ? 'selected' : ''}`}
-                                    onClick={() => togglePin(asset, img)}>
-                                    <img src={editedImages[key] || url} alt={`Render ${idx}`} />
-                                    {isSelected && <div className="check-overlay">✓</div>}
-                                    <button className="preview-eye" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }}>👁</button>
-                                    <button className="edit-pencil" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }}>✏️</button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* Per-asset AI + Board */}
-                            {assetSelected > 0 && (
-                              <div className="bulk-asset-config">
-                                <div className="config-header">
-                                  <span>Pin Info ({assetSelected} {assetSelected === 1 ? 'imagen' : 'imágenes'})</span>
-                                  <button className={`btn-ai-optimize ${isOptimizing === asset.id ? 'loading' : ''}`}
-                                    disabled={isOptimizing === asset.id}
-                                    onClick={() => handleAiOptimize(asset)}>
-                                    {isOptimizing === asset.id ? '⏳ Generando...' : '✨ Sugerencias SEO'}
-                                  </button>
+                                  <span className="asset-id">#{asset.id}</span>
+                                  <span className="asset-name">{asset.titleEn || asset.title}</span>
+                                  {assetSelected > 0 && <span className="asset-badge">{assetSelected} sel.</span>}
                                 </div>
-
-                                {/* Show each pin's title/desc */}
-                                {selectedPins.filter(p => p.assetId === asset.id).map((pin, i) => (
-                                  <div key={pin.key} className="pin-variation">
-                                    <span className="variation-label">Pin #{i + 1}</span>
-                                    <input type="text" className="form-input" value={pin.pinTitle}
-                                      onChange={(e) => updatePinField(pin.key, 'pinTitle', e.target.value)}
-                                      placeholder="Título del Pin" />
-                                    <textarea className="form-input" rows="4" value={pin.pinDescription}
-                                      onChange={(e) => updatePinField(pin.key, 'pinDescription', e.target.value)}
-                                      placeholder="Descripción del Pin" />
-                                    {pin.pinHashtags?.length > 0 && (
-                                      <div className="pin-hashtags">
-                                        {pin.pinHashtags.map((tag, ti) => (
-                                          <span key={ti} className="hashtag">#{tag}</span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-
-                                <div className="form-group board-group">
-                                  <label>Tablero</label>
-                                  <BoardSelector category={asset.category}
-                                    onSelect={(id) => {
-                                      setSelectedPins(prev => prev.map(p => p.assetId === asset.id ? { ...p, boardId: id } : p));
-                                    }} />
-                                </div>
+                                <span className="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
                               </div>
-                            )}
+
+                              {isExpanded && (
+                                <div className="bulk-asset-body">
+                                  {/* Image Grid */}
+                                  <div className="image-grid">
+                                    {asset.images.map((img, idx) => {
+                                      const key = `${asset.id}_${img}`;
+                                      const isSelected = selectedPins.some(p => p.key === key);
+                                      const url = resolveImgUrl(img);
+                                      return (
+                                        <div key={idx} className={`image-card ${isSelected ? 'selected' : ''}`}
+                                          onClick={() => togglePin(asset, img)}>
+                                          <img src={editedImages[key] || url} alt={`Render ${idx}`} />
+                                          {isSelected && <div className="check-overlay">✓</div>}
+                                          <button className="preview-eye" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }}>👁</button>
+                                          <button className="edit-pencil" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }}>✏️</button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Editor Workspace */}
+                    <div className="workspace-right-pane">
+                      {selectedPins.length === 0 ? (
+                        <div className="empty-workspace-right">
+                          <span className="workspace-icon">📌</span>
+                          <h3>Espacio de Trabajo Vacío</h3>
+                          <p>Selecciona una o más imágenes de los assets de la izquierda para comenzar a configurar tus pines.</p>
+                        </div>
+                      ) : (
+                        <div className="workspace-right-content">
+                          <div className="selected-pins-list">
+                            {searchedAssets.filter(asset => countForAsset(asset.id) > 0).map(asset => {
+                              const assetPins = selectedPins.filter(p => p.assetId === asset.id);
+                              return (
+                                <div key={`config-${asset.id}`} className="asset-config-card">
+                                  
+                                  <div className="asset-config-header">
+                                    <div className="asset-info">
+                                      <span className="asset-id">#{asset.id}</span>
+                                      <h4 className="asset-title">{asset.titleEn || asset.title}</h4>
+                                    </div>
+                                    <div className="asset-meta-actions">
+                                      <button 
+                                        className={`btn-ai-optimize ${isOptimizing === asset.id ? 'loading' : ''}`}
+                                        disabled={isOptimizing === asset.id}
+                                        onClick={() => handleAiOptimize(asset)}
+                                      >
+                                        {isOptimizing === asset.id ? '⏳ Generando...' : '✨ Sugerencias SEO'}
+                                      </button>
+                                      <div className="board-selector-wrapper">
+                                        <label>Tablero Pinterest</label>
+                                        <BoardSelector 
+                                          category={asset.category}
+                                          onSelect={(id) => {
+                                            setSelectedPins(prev => prev.map(p => p.assetId === asset.id ? { ...p, boardId: id } : p));
+                                          }} 
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="pin-variations-list">
+                                    {assetPins.map((pin, i) => (
+                                      <div key={pin.key} className="pin-variation-row">
+                                        
+                                        <div className="variation-img-pane">
+                                          <img src={editedImages[pin.key] || resolveImgUrl(pin.imageUrl)} alt="" />
+                                          <div className="variation-actions">
+                                            <button className="preview-eye" onClick={() => setPreviewImage(editedImages[pin.key] || resolveImgUrl(pin.imageUrl))} title="Previsualizar">👁</button>
+                                            <button className="edit-pencil" onClick={() => setEditingImage({ assetId: asset.id, imageUrl: resolveImgUrl(pin.imageUrl), key: pin.key })} title="Recortar/Editar">✏️</button>
+                                            <button className="btn-remove-variation" onClick={() => togglePin(asset, pin.imageUrl)} title="Quitar pin">✕</button>
+                                          </div>
+                                          <span className="variation-badge">Pin #{i + 1}</span>
+                                        </div>
+
+                                        <div className="variation-fields-pane">
+                                          <div className="form-group">
+                                            <input 
+                                              type="text" 
+                                              className="form-input" 
+                                              value={pin.pinTitle}
+                                              onChange={(e) => updatePinField(pin.key, 'pinTitle', e.target.value)}
+                                              placeholder="Título del Pin" 
+                                            />
+                                          </div>
+                                          <div className="form-group">
+                                            <textarea 
+                                              className="form-input" 
+                                              rows="3" 
+                                              value={pin.pinDescription}
+                                              onChange={(e) => updatePinField(pin.key, 'pinDescription', e.target.value)}
+                                              placeholder="Descripción del Pin" 
+                                            />
+                                          </div>
+                                          {pin.pinHashtags?.length > 0 && (
+                                            <div className="pin-hashtags">
+                                              {pin.pinHashtags.map((tag, ti) => (
+                                                <span key={ti} className="hashtag">#{tag}</span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {/* Global Filters */}
-                  {selectedPins.length > 0 && (
-                    <div className={`global-filters ${showAdvancedFilters ? 'expanded' : ''}`}>
-                      <div className="filters-header" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
-                        <span className="filters-label">⚙️ Ajustes Visuales</span>
-                        <span className="expand-arrow">{showAdvancedFilters ? '▲' : '▼'}</span>
-                      </div>
-                      {showAdvancedFilters && (
-                        <div className="filters-body">
-                          <label className="filter-check">
-                            <input type="checkbox" checked={filters.flip} onChange={(e) => setFilters(f => ({...f, flip: e.target.checked}))} />
-                            <span>🔄 Espejo (Variar imagen)</span>
-                          </label>
-                          <label className="filter-check">
-                            <input type="checkbox" checked={filters.zoom} onChange={(e) => setFilters(f => ({...f, zoom: e.target.checked}))} />
-                            <span>🔍 Auto-Enfoque (Mejorar resolución)</span>
-                          </label>
+
+                          {/* Sticky footer for filters and actions */}
+                          <div className="workspace-footer-sticky">
+                            <div className={`global-filters-inline ${showAdvancedFilters ? 'expanded' : ''}`}>
+                              <div className="filters-header" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
+                                <span className="filters-label">⚙️ Ajustes Visuales</span>
+                                <span className="expand-arrow">{showAdvancedFilters ? '▲' : '▼'}</span>
+                              </div>
+                              {showAdvancedFilters && (
+                                <div className="filters-body">
+                                  <label className="filter-check">
+                                    <input type="checkbox" checked={filters.flip} onChange={(e) => setFilters(f => ({...f, flip: e.target.checked}))} />
+                                    <span>🔄 Espejo (Variar imagen)</span>
+                                  </label>
+                                  <label className="filter-check">
+                                    <input type="checkbox" checked={filters.zoom} onChange={(e) => setFilters(f => ({...f, zoom: e.target.checked}))} />
+                                    <span>🔍 Auto-Enfoque (Mejorar resolución)</span>
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="panel-actions-row">
+                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); }}>Limpiar Todo</button>
+                              {selectedPins.length === 1 && (
+                                <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
+                                  disabled={isPublishingNow} onClick={handlePublishNow}>
+                                  {isPublishingNow ? '⏳ Publicando...' : '🚀 Publicar Ahora'}
+                                </button>
+                              )}
+                              <button className={`btn-primary ${isSubmitting ? 'disabled' : ''}`}
+                                disabled={isSubmitting} onClick={handleScheduleAll}>
+                                {isSubmitting ? 'Procesando...' : `📌 Programar ${selectedPins.length} Pines`}
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
 
-                  {/* Actions */}
-                  {selectedPins.length > 0 && (
-                    <div className="panel-actions">
-                      <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); }}>Limpiar</button>
-                      {selectedPins.length === 1 && (
-                        <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
-                          disabled={isPublishingNow} onClick={handlePublishNow}>
-                          {isPublishingNow ? '⏳ Publicando...' : '🚀 Publicar Ahora'}
-                        </button>
-                      )}
-                      <button className={`btn-primary ${isSubmitting ? 'disabled' : ''}`}
-                        disabled={isSubmitting} onClick={handleScheduleAll}>
-                        {isSubmitting ? 'Procesando...' : `📌 Programar ${selectedPins.length} Pines`}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+                
+              </div>
+
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
       {/* LIGHTBOX */}
       {previewImage && (
