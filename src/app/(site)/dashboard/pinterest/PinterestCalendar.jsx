@@ -41,6 +41,8 @@ export default function PinterestCalendar() {
   const [panelMode, setPanelMode] = useState('list'); // 'list' | 'create'
   const [searchType, setSearchType] = useState('id'); // 'id' | 'semantic'
   const [trendKeyword, setTrendKeyword] = useState('');
+  const [idChips, setIdChips] = useState([]);
+  const [idInput, setIdInput] = useState('');
 
   // Day pins list
   const [dayPins, setDayPins] = useState([]);
@@ -144,6 +146,8 @@ export default function PinterestCalendar() {
     setSearchedAssets([]);
     setSelectedPins([]);
     setSearchQuery('');
+    setIdChips([]);
+    setIdInput('');
   };
 
   // Delete pin
@@ -169,12 +173,45 @@ export default function PinterestCalendar() {
     finally { setIsSavingPin(false); }
   };
 
+  // === CHIPS LOGIC ===
+  const addIdFromInput = () => {
+    const val = idInput.trim();
+    if (!val) return;
+    
+    // Si contiene múltiples números separados por comas o espacios
+    const parts = val.split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+    
+    if (parts.length > 0) {
+      setIdChips(prev => {
+        const next = [...prev];
+        parts.forEach(num => {
+          if (!next.includes(num)) next.push(num);
+        });
+        return next;
+      });
+      setIdInput('');
+    }
+  };
+
+  const handleIdInputKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+      e.preventDefault();
+      addIdFromInput();
+    } else if (e.key === 'Backspace' && !idInput && idChips.length > 0) {
+      setIdChips(prev => prev.slice(0, -1));
+    }
+  };
+
+  const removeIdChip = (idToRemove) => {
+    setIdChips(prev => prev.filter(id => id !== idToRemove));
+  };
+
   // === BULK SEARCH ===
   const handleBulkSearch = async () => {
-    if (!searchQuery.trim()) return;
     try {
       const http = new HttpService();
       if (searchType === 'semantic') {
+        if (!searchQuery.trim()) return;
         const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(searchQuery)}&mode=semantic`);
         if (res.data?.found && res.data.assets?.length > 0) {
           setSearchedAssets(res.data.assets);
@@ -184,7 +221,25 @@ export default function PinterestCalendar() {
           setSearchedAssets([]);
         }
       } else {
-        const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(searchQuery)}&mode=id`);
+        // En búsqueda por ID, si hay algo a medio escribir en el input, lo procesamos primero
+        let activeChips = [...idChips];
+        const val = idInput.trim();
+        if (val) {
+          const parts = val.split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+          parts.forEach(num => {
+            if (!activeChips.includes(num)) activeChips.push(num);
+          });
+          setIdChips(activeChips);
+          setIdInput('');
+        }
+
+        if (activeChips.length === 0) {
+          alert('Ingresa al menos un ID de Pin.');
+          return;
+        }
+
+        const q = activeChips.join(',');
+        const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(q)}&mode=id`);
         if (res.data?.found && res.data.assets?.length > 0) {
           setSearchedAssets(res.data.assets);
           setTrendKeyword(''); // Sin tendencia para búsquedas por ID normales
@@ -567,16 +622,64 @@ export default function PinterestCalendar() {
 
                   {/* Search */}
                   <div className="form-group search-group">
-                    <label>{searchType === 'id' ? 'IDs de los Pins (separados por comas)' : 'Palabra clave de tendencia o concepto'}</label>
-                    <div className="search-bar">
-                      <input type="text" className="form-input" 
-                        placeholder={searchType === 'id' ? "Ej: 20, 23, 28" : "Ej: Michael Jackson, Halloween..."}
-                        value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
-                      <button className="btn-search" onClick={handleBulkSearch}>
-                        {searchType === 'id' ? 'Buscar IDs' : 'Buscar con IA'}
-                      </button>
-                    </div>
+                    <label>{searchType === 'id' ? 'IDs de los Pins (escribe y presiona Enter o Coma)' : 'Palabra clave de tendencia o concepto'}</label>
+                    
+                    {searchType === 'id' ? (
+                      <div className="chips-input-container">
+                        <textarea 
+                          className="chips-textarea"
+                          placeholder="Pega o escribe los IDs aquí (Ej: 20, 23, 28) y presiona Enter para agregarlos..."
+                          value={idInput} 
+                          onChange={(e) => setIdInput(e.target.value)}
+                          onKeyDown={handleIdInputKeyDown}
+                          onBlur={addIdFromInput}
+                          rows="3"
+                        />
+                        
+                        {idChips.length > 0 && (
+                          <div className="chips-display-area">
+                            <div className="chips-display-header">
+                              <span>IDs Agregados ({idChips.length})</span>
+                              <button 
+                                type="button" 
+                                className="btn-clear-all-chips" 
+                                onClick={() => setIdChips([])}
+                              >
+                                Limpiar todos
+                              </button>
+                            </div>
+                            <div className="chips-wrapper">
+                              {idChips.map((chipId) => (
+                                <span key={chipId} className="id-chip">
+                                  #{chipId}
+                                  <button 
+                                    type="button" 
+                                    className="btn-remove-chip"
+                                    onClick={() => removeIdChip(chipId)}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <button className="btn-search-chips" onClick={handleBulkSearch}>
+                          Buscar IDs
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="search-bar">
+                        <input type="text" className="form-input" 
+                          placeholder="Ej: Michael Jackson, Halloween..."
+                          value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
+                        <button className="btn-search" onClick={handleBulkSearch}>
+                          Buscar con IA
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Active Trend Badge */}

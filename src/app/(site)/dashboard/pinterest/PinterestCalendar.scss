@@ -436,6 +436,150 @@
       }
     }
 
+    .chips-input-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+
+      .chips-textarea {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        color: #fff;
+        font-family: inherit;
+        outline: none;
+        resize: vertical;
+        min-height: 80px;
+        font-size: 0.85rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+
+        &:focus {
+          border-color: #ef4444;
+          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+        }
+      }
+
+      .chips-display-area {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 0.75rem;
+
+        .chips-display-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+          font-size: 0.75rem;
+          color: #a1a1aa;
+          font-weight: 600;
+
+          .btn-clear-all-chips {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0;
+            transition: color 0.2s;
+
+            &:hover {
+              color: #fca5a5;
+              text-decoration: underline;
+            }
+          }
+        }
+
+        .chips-wrapper {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+          max-height: 150px;
+          overflow-y: auto;
+          padding-right: 0.25rem;
+
+          &::-webkit-scrollbar {
+            width: 4px;
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+          }
+
+          .id-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            user-select: none;
+            transition: all 0.2s;
+
+            &:hover {
+              background: rgba(239, 68, 68, 0.15);
+              border-color: rgba(239, 68, 68, 0.3);
+            }
+
+            .btn-remove-chip {
+              background: none;
+              border: none;
+              color: #ef4444;
+              font-size: 0.7rem;
+              cursor: pointer;
+              padding: 0;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 14px;
+              height: 14px;
+              border-radius: 50%;
+              transition: all 0.2s;
+
+              &:hover {
+                background: rgba(239, 68, 68, 0.2);
+                color: #fff;
+              }
+            }
+          }
+        }
+      }
+
+      .btn-search-chips {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        border: none;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+
     // Resultados
     .asset-results {
       margin-bottom: 2rem;
