@@ -144,18 +144,26 @@ export default function PinterestCalendar() {
   useEffect(() => { if (selectedDay) fetchDayPins(); }, [selectedDay, fetchDayPins]);
 
   const handleDayClick = (day) => {
-    if (lastDayRef.current !== day) {
-      setSearchedAssets([]);
-      setSelectedPins([]);
-      setSelectedAssets([]);
-      setOptimizedAssets([]);
-      setSearchQuery('');
-      setIdChips([]);
-      setIdInput('');
+    const isSameDay = lastDayRef.current === day;
+    let willKeepSelections = selectedPins.length > 0;
+
+    if (!isSameDay && selectedPins.length > 0) {
+      const keepSelections = confirm(`Tienes ${selectedPins.length} pines seleccionados en la cola de creación. ¿Deseas conservarlos para programarlos en el día ${day}? (Cancelar descartará estos pines y abrirá el listado del día ${day})`);
+      if (!keepSelections) {
+        setSelectedPins([]);
+        setSelectedAssets([]);
+        setOptimizedAssets([]);
+        setSearchedAssets([]);
+        setSearchQuery('');
+        setIdChips([]);
+        setIdInput('');
+        willKeepSelections = false;
+      }
     }
+
     lastDayRef.current = day;
     setSelectedDay(day);
-    setPanelMode('list');
+    setPanelMode(willKeepSelections ? 'create' : 'list');
   };
 
   // Delete pin
@@ -594,7 +602,17 @@ export default function PinterestCalendar() {
 
       {/* WORKSPACE MODAL */}
       {selectedDay && (
-        <div className="pinterest-modal-overlay" onClick={() => { setSelectedDay(null); setPanelMode('list'); }}>
+        <div className="pinterest-modal-overlay" onClick={() => {
+          if (selectedPins.length > 0) {
+            if (confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir del calendario? (Tu selección se conservará si vuelves a abrir el mismo día)')) {
+              setSelectedDay(null);
+              setPanelMode('list');
+            }
+          } else {
+            setSelectedDay(null);
+            setPanelMode('list');
+          }
+        }}>
             <div className="pinterest-modal-content" onClick={(e) => e.stopPropagation()}>
               
               {/* Modal Header */}
@@ -611,7 +629,17 @@ export default function PinterestCalendar() {
                     )}
                   </div>
                 </div>
-                <button className="close-modal" onClick={() => { setSelectedDay(null); setPanelMode('list'); }}>✕</button>
+                <button className="close-modal" onClick={() => {
+                  if (selectedPins.length > 0) {
+                    if (confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir? (Tu selección se conservará si vuelves a abrir el mismo día)')) {
+                      setSelectedDay(null);
+                      setPanelMode('list');
+                    }
+                  } else {
+                    setSelectedDay(null);
+                    setPanelMode('list');
+                  }
+                }}>✕</button>
               </div>
 
               {/* Modal Body */}
@@ -823,7 +851,7 @@ export default function PinterestCalendar() {
                     
                     {/* Left Column: Picker / Search */}
                     <div className="workspace-left-pane">
-                      <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); }}>← Volver</button>
+                      <button className="btn-back-to-list" onClick={() => setPanelMode('list')}>← Volver</button>
 
                       {/* Selector de pestañas */}
                       <div className="search-tabs">
