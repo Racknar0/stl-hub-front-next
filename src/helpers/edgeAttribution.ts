@@ -131,15 +131,106 @@ function decodeTrackingCookie(raw: string | null | undefined): TrackingPayload |
   }
 }
 
+function getReferrerHostname(referrer: string | null | undefined): string | null {
+  if (!referrer) return null;
+  try {
+    return new URL(referrer).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isExternalReferrer(referrer: string | null | undefined, req: NextRequest): boolean {
+  const refHost = getReferrerHostname(referrer);
+  if (!refHost) return false;
+
+  // Exclude localhost
+  if (refHost === 'localhost' || refHost === '127.0.0.1') return false;
+
+  // Exclude our own domain
+  if (refHost === 'stl-hub.com' || refHost.endsWith('.stl-hub.com')) return false;
+
+  return true;
+}
+
 export function queueCampaignTracking(req: NextRequest, event: NextFetchEvent, res: NextResponse) {
   const queryTracking = getTrackingFromSearch(req.nextUrl.searchParams);
-  if (!queryTracking) return;
+  const sessionCookie = req.cookies.get(TRACK_SESSION_COOKIE)?.value;
 
-  const trackingPayload: TrackingPayload = {
-    ...queryTracking,
-    landingUrl: safeUrl(req.url),
-    referrer: safeUrl(req.headers.get('referer')),
-  };
+  // Si no hay parámetros de tracking y la sesión ya existe, no hacemos nada
+  if (!queryTracking && sessionCookie) return;
+
+  let trackingPayload: TrackingPayload | null = null;
+  const referrer = req.headers.get('referer');
+
+  if (queryTracking) {
+    trackingPayload = {
+      ...queryTracking,
+      landingUrl: safeUrl(req.url),
+      referrer: safeUrl(referrer),
+    };
+  } else if (!sessionCookie) {
+    // Nueva sesión sin parámetros de tracking -> Clasificar procedencia
+    if (isExternalReferrer(referrer, req)) {
+      const refHost = getReferrerHostname(referrer)!;
+      let source = refHost;
+      let medium = 'referral';
+
+      if (refHost.includes('pinterest.')) {
+        source = 'pinterest';
+        medium = 'organic';
+      } else if (refHost.includes('facebook.com') || refHost === 'fb.com') {
+        source = 'facebook';
+        medium = 'organic';
+      } else if (refHost === 't.me' || refHost.includes('telegram.')) {
+        source = 'telegram';
+        medium = 'organic';
+      } else if (refHost.includes('instagram.com')) {
+        source = 'instagram';
+        medium = 'organic';
+      } else if (refHost.includes('youtube.com') || refHost === 'youtu.be') {
+        source = 'youtube';
+        medium = 'organic';
+      } else if (refHost.includes('google.')) {
+        source = 'google';
+        medium = 'organic';
+      } else if (refHost.includes('twitter.com') || refHost === 'x.com') {
+        source = 'twitter';
+        medium = 'organic';
+      }
+
+      trackingPayload = {
+        utm_source: source,
+        utm_medium: medium,
+        utm_campaign: 'organic',
+        utm_content: null,
+        utm_term: null,
+        gclid: null,
+        fbclid: null,
+        ttclid: null,
+        msclkid: null,
+        landingUrl: safeUrl(req.url),
+        referrer: safeUrl(referrer),
+      };
+    } else {
+      // Tráfico Directo
+      trackingPayload = {
+        utm_source: 'direct',
+        utm_medium: 'direct',
+        utm_campaign: 'direct',
+        utm_content: null,
+        utm_term: null,
+        gclid: null,
+        fbclid: null,
+        ttclid: null,
+        msclkid: null,
+        landingUrl: safeUrl(req.url),
+        referrer: null,
+      };
+    }
+  }
+
+  if (!trackingPayload) return;
 
   const firstTouch = decodeTrackingCookie(req.cookies.get(TRACK_ATTR_FIRST_COOKIE)?.value);
   if (!firstTouch) {

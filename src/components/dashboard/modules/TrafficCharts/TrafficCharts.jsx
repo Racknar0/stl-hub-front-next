@@ -319,6 +319,19 @@ const CHART_DESCRIPTIONS = {
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves un pico alto de búsquedas pero pocas descargas, puede significar que los usuarios buscan modelos que aún no tienes.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Compara la tendencia. Si el volumen de búsquedas sube pero las descargas no, tienes una oportunidad de subir los modelos que el mercado está pidiendo.
       </>
+    ),
+    'traffic-sources': (
+      <>
+        <strong style={{ color: '#f8fafc' }}>Fuentes de Tráfico (Distribución de Visitas):</strong> Descubre de qué canales provienen tus visitas generales (orgánicas, directas y campañas publicitarias) en el rango de fechas:<br/>
+        <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
+          <li><strong style={{ color: '#4facfe' }}>Directo:</strong> Usuarios que ingresaron escribiendo la URL o sin procedencia registrada (favoritos, etc.).</li>
+          <li><strong style={{ color: '#ec4899' }}>Pinterest:</strong> Tráfico orgánico de pines.</li>
+          <li><strong style={{ color: '#10b981' }}>Google:</strong> Búsquedas gratuitas orgánicas.</li>
+          <li><strong style={{ color: '#f59e0b' }}>Redes Sociales:</strong> Tráfico orgánico de Facebook, Telegram, Instagram, YouTube, etc.</li>
+          <li><strong style={{ color: '#a78bfa' }}>Otros / Campañas:</strong> Campañas específicas creadas por ti.</li>
+        </ul>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Identifica cuál canal te está dando mayor visibilidad gratuita y enfoca tus esfuerzos de contenido orgánico en él.
+      </>
     )
   }
 
@@ -668,6 +681,50 @@ export default function TrafficCharts() {
     }
   }, [http])
 
+  // 10. Traffic Sources Fetcher
+  const fetchTrafficSources = React.useCallback(async (from, to) => {
+    const res = await http.getData(`/metrics/site-visits/sources?from=${from}&to=${to}`)
+    const sourcesData = res?.data
+    if (!sourcesData?.visits?.length) return null
+
+    const visits = sourcesData.visits
+    const labels = visits.map((v) => {
+      const s = String(v.source || '').toLowerCase();
+      if (s === 'direct') return 'Directo';
+      if (s === 'google') return 'Google (Orgánico)';
+      if (s === 'pinterest') return 'Pinterest (Orgánico)';
+      if (s === 'facebook') return 'Facebook (Orgánico)';
+      if (s === 'instagram') return 'Instagram (Orgánico)';
+      if (s === 'telegram') return 'Telegram (Orgánico)';
+      if (s === 'youtube') return 'YouTube (Orgánico)';
+      if (s === 'twitter') return 'Twitter/X (Orgánico)';
+      return v.source; // Campaign slug or other
+    });
+
+    const counts = visits.map((v) => v.count);
+
+    return {
+      labels,
+      datasets: [
+        {
+          data: counts,
+          backgroundColor: [
+            'rgba(79, 172, 254, 0.8)', // blue
+            'rgba(245, 158, 11, 0.8)', // orange/amber
+            'rgba(236, 72, 153, 0.8)', // pink/pinterest
+            'rgba(16, 185, 129, 0.8)', // green
+            'rgba(168, 85, 247, 0.8)', // purple
+            'rgba(239, 68, 68, 0.8)',  // red
+            'rgba(6, 182, 212, 0.8)',  // cyan
+            'rgba(100, 116, 139, 0.8)' // slate for others
+          ],
+          borderColor: 'rgba(15, 23, 42, 0.8)',
+          borderWidth: 2
+        }
+      ]
+    }
+  }, [http])
+
 
   return (
     <div className="traffic-charts-module">
@@ -682,6 +739,12 @@ export default function TrafficCharts() {
 
       <div className="charts-list">
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
+        
+        <ChartContainer id="traffic-sources" supportsDynamicDates={true} fetchFn={fetchTrafficSources} renderChart={(data) => (
+          <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+            <Doughnut data={data} options={{ plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } }, tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' } } }} />
+          </div>
+        )} />
         
         <ChartContainer id="downloads-timeseries" supportsDynamicDates={true} fetchFn={fetchDownloadsTimeseries} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
 

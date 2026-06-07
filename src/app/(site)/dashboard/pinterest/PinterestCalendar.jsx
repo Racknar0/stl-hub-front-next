@@ -302,7 +302,8 @@ export default function PinterestCalendar() {
         }
         
         if (msg) {
-          alert(`⚠️ Alerta de Duplicación:\n${msg}`);
+          const proceed = confirm(`⚠️ Alerta de Duplicación:\n${msg}\n¿Deseas agregar este pin a la cola de todas formas?`);
+          if (!proceed) return;
         }
       }
 
@@ -369,6 +370,41 @@ export default function PinterestCalendar() {
   // Schedule all
   const handleScheduleAll = async () => {
     if (selectedPins.length === 0 || !selectedDay) return;
+
+    // Check if any of the selected pins belong to assets that have already been scheduled/published
+    let duplicateMessages = [];
+    selectedPins.forEach(pin => {
+      const asset = searchedAssets.find(a => a.id === pin.assetId) || selectedAssets.find(a => a.id === pin.assetId);
+      if (asset && asset.queueEntries && asset.queueEntries.length > 0) {
+        const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
+        const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
+        
+        let msg = '';
+        if (published.length > 0) {
+          const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+          msg += `ya fue publicado el: ${dates}`;
+        }
+        if (pending.length > 0) {
+          const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+          if (msg) msg += ' y ';
+          msg += `ya está programado para: ${dates}`;
+        }
+        
+        if (msg) {
+          duplicateMessages.push(`- Asset #${pin.assetId} (${pin.pinTitle || 'Sin título'}): ${msg}.`);
+        }
+      }
+    });
+
+    if (duplicateMessages.length > 0) {
+      const confirmSchedule = confirm(
+        `⚠️ Alertas de Duplicación encontradas:\n\n` +
+        duplicateMessages.join('\n') +
+        `\n\n¿Estás seguro de que deseas programar estos pines de todas formas?`
+      );
+      if (!confirmSchedule) return;
+    }
+
     setIsSubmitting(true);
     try {
       const http = new HttpService();
@@ -457,6 +493,32 @@ export default function PinterestCalendar() {
   const handlePublishNow = async () => {
     if (selectedPins.length !== 1) return;
     const pin = selectedPins[0];
+
+    // Check duplication
+    const asset = searchedAssets.find(a => a.id === pin.assetId) || selectedAssets.find(a => a.id === pin.assetId);
+    if (asset && asset.queueEntries && asset.queueEntries.length > 0) {
+      const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
+      const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
+      
+      let msg = '';
+      if (published.length > 0) {
+        const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+        msg += `ya fue publicado el: ${dates}`;
+      }
+      if (pending.length > 0) {
+        const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+        if (msg) msg += ' y ';
+        msg += `ya está programado para: ${dates}`;
+      }
+      
+      if (msg) {
+        const confirmPublish = confirm(
+          `⚠️ Alerta de Duplicación para Asset #${pin.assetId} (${pin.pinTitle || 'Sin título'}):\n${msg}\n\n¿Estás seguro de que deseas publicar este pin ahora de todas formas?`
+        );
+        if (!confirmPublish) return;
+      }
+    }
+
     setIsPublishingNow(true);
     try {
       const http = new HttpService();
