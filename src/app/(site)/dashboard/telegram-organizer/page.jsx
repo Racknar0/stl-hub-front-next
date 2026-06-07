@@ -226,7 +226,6 @@ export default function TelegramOrganizer() {
   };
 
   const deleteSelected = async () => {
-    if (!confirm(`¿Borrar ${filesToDelete.size} archivos?`)) return;
     const toDelete = Array.from(filesToDelete);
 
     // 1. Optimistic UI updates
