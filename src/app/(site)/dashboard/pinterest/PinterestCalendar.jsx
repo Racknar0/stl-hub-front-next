@@ -452,6 +452,8 @@ export default function PinterestCalendar() {
 
   // Publish NOW (single pin test)
   const [isPublishingNow, setIsPublishingNow] = useState(false);
+  const [isRetryingPin, setIsRetryingPin] = useState(false);
+
   const handlePublishNow = async () => {
     if (selectedPins.length !== 1) return;
     const pin = selectedPins[0];
@@ -479,6 +481,66 @@ export default function PinterestCalendar() {
     } catch (e) {
       alert('\u274c Error: ' + (e?.response?.data?.error || e.message));
     } finally { setIsPublishingNow(false); }
+  };
+
+  const handleRetryPin = async (pinId) => {
+    setIsRetryingPin(true);
+    try {
+      const http = new HttpService();
+      await http.postData(`/pinterest/queue/retry/${pinId}`);
+      alert('\u2705 ¡Pin publicado con éxito en Pinterest!');
+      fetchDayPins();
+      fetchPinStats();
+      setExpandedPinId(null);
+    } catch (e) {
+      alert('\u274c Error al reintentar: ' + (e?.response?.data?.error || e.message));
+    } finally {
+      setIsRetryingPin(false);
+    }
+  const failedDayPins = dayPins.filter(p => p.status === 'FAILED');
+  const pendingDayPins = dayPins.filter(p => p.status === 'PENDING');
+  const publishedDayPins = dayPins.filter(p => p.status === 'PUBLISHED');
+
+  const renderPinCard = (pin) => {
+    const filtersObj = typeof pin.filters === 'string'
+      ? JSON.parse(pin.filters)
+      : pin.filters;
+    const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
+    const isExpanded = expandedPinId === pin.id;
+    return (
+      <div 
+        key={pin.id} 
+        className={`pin-card-item ${isExpanded ? 'active' : ''} status-${pin.status?.toLowerCase()}`}
+        onClick={() => {
+          if (isExpanded) {
+            setExpandedPinId(null);
+          } else {
+            setExpandedPinId(pin.id);
+            setEditPin({ 
+              title: pin.title || '', 
+              description: pin.description || '', 
+              link: pin.link || '' 
+            });
+          }
+        }}
+      >
+        <div className="pin-card-img-wrapper">
+          {imageUrl ? <img src={imageUrl} alt="" /> : <div className="no-img">No Img</div>}
+          <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
+        </div>
+        <div className="pin-card-body">
+          <div className="pin-card-meta">
+            <span className="pin-card-time">
+              ⏳ {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {pin.assetId && (
+              <span className="pin-asset-id-badge">#{pin.assetId}</span>
+            )}
+          </div>
+          <h4 className="pin-card-title">{pin.title || 'Sin título'}</h4>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -662,48 +724,33 @@ export default function PinterestCalendar() {
                           )}
                         </div>
                       ) : (
-                        <div className="pins-grid">
-                          {dayPins.map(pin => {
-                            const filtersObj = typeof pin.filters === 'string'
-                              ? JSON.parse(pin.filters)
-                              : pin.filters;
-                            const imageUrl = resolveImgUrl(filtersObj?.imagePath || filtersObj?.imageUrl || '');
-                            const isExpanded = expandedPinId === pin.id;
-                            return (
-                              <div 
-                                key={pin.id} 
-                                className={`pin-card-item ${isExpanded ? 'active' : ''} status-${pin.status?.toLowerCase()}`}
-                                onClick={() => {
-                                  if (isExpanded) {
-                                    setExpandedPinId(null);
-                                  } else {
-                                    setExpandedPinId(pin.id);
-                                    setEditPin({ 
-                                      title: pin.title || '', 
-                                      description: pin.description || '', 
-                                      link: pin.link || '' 
-                                    });
-                                  }
-                                }}
-                              >
-                                <div className="pin-card-img-wrapper">
-                                  {imageUrl ? <img src={imageUrl} alt="" /> : <div className="no-img">No Img</div>}
-                                  <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
-                                </div>
-                                <div className="pin-card-body">
-                                  <div className="pin-card-meta">
-                                    <span className="pin-card-time">
-                                      ⏳ {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    {pin.assetId && (
-                                      <span className="pin-asset-id-badge">#{pin.assetId}</span>
-                                    )}
-                                  </div>
-                                  <h4 className="pin-card-title">{pin.title || 'Sin título'}</h4>
-                                </div>
+                        <div className="day-pins-sections">
+                          {failedDayPins.length > 0 && (
+                            <div className="pins-status-section failed">
+                              <h4 className="section-title">❌ Errores ({failedDayPins.length})</h4>
+                              <div className="pins-grid">
+                                {failedDayPins.map(pin => renderPinCard(pin))}
                               </div>
-                            );
-                          })}
+                            </div>
+                          )}
+
+                          {pendingDayPins.length > 0 && (
+                            <div className="pins-status-section pending">
+                              <h4 className="section-title">⏳ Programados ({pendingDayPins.length})</h4>
+                              <div className="pins-grid">
+                                {pendingDayPins.map(pin => renderPinCard(pin))}
+                              </div>
+                            </div>
+                          )}
+
+                          {publishedDayPins.length > 0 && (
+                            <div className="pins-status-section published">
+                              <h4 className="section-title">✅ Publicados ({publishedDayPins.length})</h4>
+                              <div className="pins-grid">
+                                {publishedDayPins.map(pin => renderPinCard(pin))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -820,13 +867,22 @@ export default function PinterestCalendar() {
                                           ↗ Ver en Pinterest
                                         </a>
                                       )}
-                                      {(pin.status === 'FAILED') && (
-                                        <button 
-                                          className="btn-delete-pin-full" 
-                                          onClick={() => handleDeletePin(pin.id)}
-                                        >
-                                          🗑 Eliminar Pin
-                                        </button>
+                                      {pin.status === 'FAILED' && (
+                                        <>
+                                          <button 
+                                            className="btn-retry-pin-full" 
+                                            onClick={() => handleRetryPin(pin.id)}
+                                            disabled={isRetryingPin}
+                                          >
+                                            {isRetryingPin ? '⏳ Reintentando...' : '🔄 Reintentar Publicación'}
+                                          </button>
+                                          <button 
+                                            className="btn-delete-pin-full" 
+                                            onClick={() => handleDeletePin(pin.id)}
+                                          >
+                                            🗑 Eliminar Pin
+                                          </button>
+                                        </>
                                       )}
                                     </div>
                                   </>

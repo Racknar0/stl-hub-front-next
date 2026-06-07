@@ -408,8 +408,8 @@
 }
 
 .pinterest-modal-content {
-  width: 94vw;
-  max-width: 1280px;
+  width: 96vw;
+  max-width: 1440px;
   height: 85vh;
   background: rgba(18, 18, 24, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -532,6 +532,50 @@
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 1.25rem;
       margin-bottom: 2rem;
+    }
+
+    .day-pins-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 2.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .pins-status-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .section-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin: 0;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      &.failed .section-title {
+        color: #f87171;
+        border-bottom-color: rgba(239, 68, 68, 0.15);
+      }
+      &.pending .section-title {
+        color: #fbbf24;
+        border-bottom-color: rgba(251, 191, 36, 0.15);
+      }
+      &.published .section-title {
+        color: #4ade80;
+        border-bottom-color: rgba(34, 197, 94, 0.15);
+      }
+
+      .pins-grid {
+        margin-bottom: 0;
+      }
     }
 
     .btn-create-pin {
@@ -803,6 +847,30 @@
         color: #f87171; padding: 0.6rem 1rem; border-radius: 8px;
         font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
         &:hover { background: rgba(239, 68, 68, 0.08); border-color: #ef4444; }
+      }
+
+      .btn-retry-pin-full {
+        flex: 1;
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+        color: white;
+        border: none;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+          transform: translateY(-1px);
+        }
+        &:disabled {
+          opacity: 0.6;
+          cursor: wait;
+          transform: none;
+          box-shadow: none;
+        }
       }
 
       .btn-view-external {
