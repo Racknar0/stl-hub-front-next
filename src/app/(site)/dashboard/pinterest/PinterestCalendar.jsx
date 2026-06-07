@@ -497,6 +497,8 @@ export default function PinterestCalendar() {
     } finally {
       setIsRetryingPin(false);
     }
+  };
+
   const failedDayPins = dayPins.filter(p => p.status === 'FAILED');
   const pendingDayPins = dayPins.filter(p => p.status === 'PENDING');
   const publishedDayPins = dayPins.filter(p => p.status === 'PUBLISHED');
