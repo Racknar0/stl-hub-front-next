@@ -70,6 +70,7 @@ export default function PinterestCalendar() {
   const [croppedUrls, setCroppedUrls] = useState({}); // key -> server-side relative path
   const cropperRef = useRef(null);
   const cropperInstanceRef = useRef(null);
+  const lastDayRef = useRef(null);
 
   // Destroy cropper when editor closes
   useEffect(() => {
@@ -143,13 +144,18 @@ export default function PinterestCalendar() {
   useEffect(() => { if (selectedDay) fetchDayPins(); }, [selectedDay, fetchDayPins]);
 
   const handleDayClick = (day) => {
+    if (lastDayRef.current !== day) {
+      setSearchedAssets([]);
+      setSelectedPins([]);
+      setSelectedAssets([]);
+      setOptimizedAssets([]);
+      setSearchQuery('');
+      setIdChips([]);
+      setIdInput('');
+    }
+    lastDayRef.current = day;
     setSelectedDay(day);
     setPanelMode('list');
-    setSearchedAssets([]);
-    setSelectedPins([]);
-    setSearchQuery('');
-    setIdChips([]);
-    setIdInput('');
   };
 
   // Delete pin
@@ -749,7 +755,6 @@ export default function PinterestCalendar() {
                             setSearchType('id');
                             setSearchQuery('');
                             setSearchedAssets([]);
-                            setSelectedPins([]);
                             setTrendKeyword('');
                           }}
                         >
@@ -762,7 +767,6 @@ export default function PinterestCalendar() {
                             setSearchType('semantic');
                             setSearchQuery('');
                             setSearchedAssets([]);
-                            setSelectedPins([]);
                             setTrendKeyword('');
                           }}
                         >
