@@ -277,6 +277,27 @@ export default function PinterestCalendar() {
         alert(`Máximo ${MAX_PINS_PER_DAY} pines por día.`);
         return;
       }
+
+      // Check if this asset has already been scheduled/published
+      if (asset.queueEntries && asset.queueEntries.length > 0) {
+        const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
+        const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
+        
+        let msg = '';
+        if (published.length > 0) {
+          const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+          msg += `Este asset ya fue publicado en Pinterest el día: ${dates}.\n`;
+        }
+        if (pending.length > 0) {
+          const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+          msg += `Este asset ya está programado para el día: ${dates}.\n`;
+        }
+        
+        if (msg) {
+          alert(`⚠️ Alerta de Duplicación:\n${msg}`);
+        }
+      }
+
       setSelectedPins(prev => [...prev, {
         key,
         assetId: asset.id,
@@ -589,9 +610,14 @@ export default function PinterestCalendar() {
                                   <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
                                 </div>
                                 <div className="pin-card-body">
-                                  <span className="pin-card-time">
-                                    ⏳ {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
+                                  <div className="pin-card-meta">
+                                    <span className="pin-card-time">
+                                      ⏳ {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {pin.assetId && (
+                                      <span className="pin-asset-id-badge">#{pin.assetId}</span>
+                                    )}
+                                  </div>
                                   <h4 className="pin-card-title">{pin.title || 'Sin título'}</h4>
                                 </div>
                               </div>
