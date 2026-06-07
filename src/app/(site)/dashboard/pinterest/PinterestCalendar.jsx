@@ -518,6 +518,12 @@ export default function PinterestCalendar() {
               const dayStats = pinsByDay[day];
               const pinsCount = dayStats?.total || 0;
               const isSelected = selectedDay === day;
+              
+              const dayPinsList = dayStats?.pins || [];
+              const publishedPins = dayPinsList.filter(p => p.status === 'PUBLISHED');
+              const pendingPins = dayPinsList.filter(p => p.status === 'PENDING');
+              const failedPins = dayPinsList.filter(p => p.status === 'FAILED');
+
               return (
                 <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''}`}
                   onClick={() => handleDayClick(day)}>
@@ -526,10 +532,57 @@ export default function PinterestCalendar() {
                     {pinsCount > 0 && <span className="total-chip">{pinsCount} {pinsCount === 1 ? 'Pin' : 'Pins'}</span>}
                   </div>
                   {pinsCount > 0 && (
-                    <div className="day-stats">
-                      {dayStats.published > 0 && <span className="mini-badge published">{dayStats.published} ✓</span>}
-                      {dayStats.pending > 0 && <span className="mini-badge pending">{dayStats.pending} ⏳</span>}
-                      {dayStats.failed > 0 && <span className="mini-badge failed">{dayStats.failed} ✕</span>}
+                    <div className="day-status-groups" onClick={(e) => {
+                      // Permite click en la celda normal
+                    }}>
+                      {publishedPins.length > 0 && (
+                        <div className="status-thumbnail-group published" title={`${publishedPins.length} Publicados`}>
+                          <span className="group-label">✓</span>
+                          <div className="thumbnails-list">
+                            {publishedPins.map(pin => (
+                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
+                                <img
+                                  src={resolveImgUrl(pin.imageUrl)}
+                                  alt=""
+                                  className="day-mini-thumbnail"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {pendingPins.length > 0 && (
+                        <div className="status-thumbnail-group pending" title={`${pendingPins.length} Programados`}>
+                          <span className="group-label">⏳</span>
+                          <div className="thumbnails-list">
+                            {pendingPins.map(pin => (
+                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
+                                <img
+                                  src={resolveImgUrl(pin.imageUrl)}
+                                  alt=""
+                                  className="day-mini-thumbnail"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {failedPins.length > 0 && (
+                        <div className="status-thumbnail-group failed" title={`${failedPins.length} Errores`}>
+                          <span className="group-label">✕</span>
+                          <div className="thumbnails-list">
+                            {failedPins.map(pin => (
+                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
+                                <img
+                                  src={resolveImgUrl(pin.imageUrl)}
+                                  alt=""
+                                  className="day-mini-thumbnail"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
