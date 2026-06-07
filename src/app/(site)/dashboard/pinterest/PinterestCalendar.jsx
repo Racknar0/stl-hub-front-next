@@ -39,6 +39,8 @@ export default function PinterestCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
   const [panelMode, setPanelMode] = useState('list'); // 'list' | 'create'
+  const [searchType, setSearchType] = useState('id'); // 'id' | 'semantic'
+  const [trendKeyword, setTrendKeyword] = useState('');
 
   // Day pins list
   const [dayPins, setDayPins] = useState([]);
@@ -172,12 +174,24 @@ export default function PinterestCalendar() {
     if (!searchQuery.trim()) return;
     try {
       const http = new HttpService();
-      const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(searchQuery)}&mode=id`);
-      if (res.data?.found && res.data.assets?.length > 0) {
-        setSearchedAssets(res.data.assets);
+      if (searchType === 'semantic') {
+        const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(searchQuery)}&mode=semantic`);
+        if (res.data?.found && res.data.assets?.length > 0) {
+          setSearchedAssets(res.data.assets);
+          setTrendKeyword(searchQuery.trim()); // Establecemos la tendencia asociada
+        } else {
+          alert('No se encontraron assets relacionados con este concepto/tendencia.');
+          setSearchedAssets([]);
+        }
       } else {
-        alert('No se encontraron assets.');
-        setSearchedAssets([]);
+        const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(searchQuery)}&mode=id`);
+        if (res.data?.found && res.data.assets?.length > 0) {
+          setSearchedAssets(res.data.assets);
+          setTrendKeyword(''); // Sin tendencia para búsquedas por ID normales
+        } else {
+          alert('No se encontraron assets para los IDs especificados.');
+          setSearchedAssets([]);
+        }
       }
     } catch (e) { alert('Error: ' + e.message); }
     setSelectedPins([]);
@@ -222,6 +236,7 @@ export default function PinterestCalendar() {
         category: asset.category || 'General',
         imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
         variationCount: assetPins.length,
+        trendKeyword: trendKeyword || undefined, // Pasar la tendencia si existe
       });
       const variations = res.data?.variations || [];
       // Apply variations to pins of this asset
@@ -520,16 +535,64 @@ export default function PinterestCalendar() {
                 <div className="create-pin-view">
                   <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); }}>← Volver</button>
 
+                  {/* Selector de pestañas */}
+                  <div className="search-tabs">
+                    <button 
+                      type="button" 
+                      className={`tab-button ${searchType === 'id' ? 'active' : ''}`}
+                      onClick={() => {
+                        setSearchType('id');
+                        setSearchQuery('');
+                        setSearchedAssets([]);
+                        setSelectedPins([]);
+                        setTrendKeyword('');
+                      }}
+                    >
+                      Búsqueda por ID
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`tab-button ${searchType === 'semantic' ? 'active' : ''}`}
+                      onClick={() => {
+                        setSearchType('semantic');
+                        setSearchQuery('');
+                        setSearchedAssets([]);
+                        setSelectedPins([]);
+                        setTrendKeyword('');
+                      }}
+                    >
+                      Buscar Tendencias (IA Qdrant)
+                    </button>
+                  </div>
+
                   {/* Search */}
                   <div className="form-group search-group">
-                    <label>ID pin</label>
+                    <label>{searchType === 'id' ? 'IDs de los Pins (separados por comas)' : 'Palabra clave de tendencia o concepto'}</label>
                     <div className="search-bar">
-                      <input type="text" className="form-input" placeholder="ID pin"
+                      <input type="text" className="form-input" 
+                        placeholder={searchType === 'id' ? "Ej: 20, 23, 28" : "Ej: Michael Jackson, Halloween..."}
                         value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
-                      <button className="btn-search" onClick={handleBulkSearch}>Buscar</button>
+                      <button className="btn-search" onClick={handleBulkSearch}>
+                        {searchType === 'id' ? 'Buscar IDs' : 'Buscar con IA'}
+                      </button>
                     </div>
                   </div>
+
+                  {/* Active Trend Badge */}
+                  {trendKeyword && (
+                    <div className="active-trend-badge">
+                      <span>🎯 Tendencia activa: <strong>{trendKeyword}</strong></span>
+                      <button 
+                        type="button" 
+                        className="btn-clear-trend" 
+                        onClick={() => setTrendKeyword('')}
+                        title="Eliminar tendencia"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
 
                   {/* Counter */}
                   {searchedAssets.length > 0 && (

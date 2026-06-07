@@ -1207,6 +1207,77 @@
 }
 
 // ======= BULK CREATE MODE =======
+.search-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+
+  .tab-button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    &.active {
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #c084fc;
+    }
+  }
+}
+
+.active-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #d8b4fe;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1.25rem;
+  align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.05);
+
+  strong {
+    color: #fff;
+  }
+
+  .btn-clear-trend {
+    background: transparent;
+    border: none;
+    color: #a78bfa;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #fca5a5;
+    }
+  }
+}
+
 .pin-counter {
   text-align: center;
   margin-bottom: 0.75rem;
