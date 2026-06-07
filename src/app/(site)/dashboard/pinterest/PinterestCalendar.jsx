@@ -56,6 +56,7 @@ export default function PinterestCalendar() {
   const [searchedAssets, setSearchedAssets] = useState([]); // array of assets
   // selectedPins: array of { key, assetId, assetData, imageUrl, pinTitle, pinDescription, pinLink, pinHashtags, boardId }
   const [selectedPins, setSelectedPins] = useState([]);
+  const [selectedAssets, setSelectedAssets] = useState([]);
   const [expandedAssetId, setExpandedAssetId] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(null); // assetId being optimized
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -249,7 +250,6 @@ export default function PinterestCalendar() {
         }
       }
     } catch (e) { alert('Error: ' + e.message); }
-    setSelectedPins([]);
   };
 
   // Toggle image selection
@@ -257,7 +257,13 @@ export default function PinterestCalendar() {
     const key = `${asset.id}_${imgUrl}`;
     const exists = selectedPins.find(p => p.key === key);
     if (exists) {
-      setSelectedPins(prev => prev.filter(p => p.key !== key));
+      const newPins = selectedPins.filter(p => p.key !== key);
+      setSelectedPins(newPins);
+      
+      const hasOtherPins = newPins.some(p => p.assetId === asset.id);
+      if (!hasOtherPins) {
+        setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
+      }
     } else {
       if (selectedPins.length >= MAX_PINS_PER_DAY) {
         alert(`Máximo ${MAX_PINS_PER_DAY} pines por día.`);
@@ -273,6 +279,10 @@ export default function PinterestCalendar() {
         pinHashtags: [],
         boardId: 'auto',
       }]);
+      setSelectedAssets(prev => {
+        if (prev.some(a => a.id === asset.id)) return prev;
+        return [...prev, asset];
+      });
     }
   };
 
@@ -386,6 +396,7 @@ export default function PinterestCalendar() {
 
       alert(`¡Éxito! ${totalQueued} pines programados.`);
       setSelectedPins([]);
+      setSelectedAssets([]);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -417,6 +428,7 @@ export default function PinterestCalendar() {
       });
       alert(`\u2705 Publicado! Pinterest ID: ${res.data?.pinId}\n${res.data?.url || ''}`);
       setSelectedPins([]);
+      setSelectedAssets([]);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -718,7 +730,7 @@ export default function PinterestCalendar() {
                     
                     {/* Left Column: Picker / Search */}
                     <div className="workspace-left-pane">
-                      <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); }}>← Volver</button>
+                      <button className="btn-back-to-list" onClick={() => { setPanelMode('list'); setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); }}>← Volver</button>
 
                       {/* Selector de pestañas */}
                       <div className="search-tabs">
@@ -840,10 +852,9 @@ export default function PinterestCalendar() {
                       <div className="workspace-assets-scroll">
                         {searchedAssets.map(asset => {
                           const assetSelected = countForAsset(asset.id);
-                          const isExpanded = expandedAssetId === asset.id;
                           return (
                             <div key={asset.id} className="bulk-asset-section">
-                              <div className="bulk-asset-header" onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}>
+                              <div className="bulk-asset-header">
                                 <div className="bulk-asset-info">
                                   <button
                                     type="button"
@@ -851,6 +862,7 @@ export default function PinterestCalendar() {
                                       e.stopPropagation();
                                       setSearchedAssets(prev => prev.filter(a => a.id !== asset.id));
                                       setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
+                                      setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
                                     }}
                                     className="btn-remove-asset-search"
                                     title="Quitar este asset de la lista"
@@ -861,30 +873,26 @@ export default function PinterestCalendar() {
                                   <span className="asset-name">{asset.titleEn || asset.title}</span>
                                   {assetSelected > 0 && <span className="asset-badge">{assetSelected} sel.</span>}
                                 </div>
-                                <span className="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
                               </div>
 
-                              {isExpanded && (
-                                <div className="bulk-asset-body">
-                                  {/* Image Grid */}
-                                  <div className="image-grid">
-                                    {asset.images.map((img, idx) => {
-                                      const key = `${asset.id}_${img}`;
-                                      const isSelected = selectedPins.some(p => p.key === key);
-                                      const url = resolveImgUrl(img);
-                                      return (
-                                        <div key={idx} className={`image-card ${isSelected ? 'selected' : ''}`}
-                                          onClick={() => togglePin(asset, img)}>
-                                          <img src={editedImages[key] || url} alt={`Render ${idx}`} />
-                                          {isSelected && <div className="check-overlay">✓</div>}
-                                          <button className="preview-eye" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }}>👁</button>
-                                          <button className="edit-pencil" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }}>✏️</button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                              <div className="bulk-asset-body">
+                                <div className="horizontal-image-scroll">
+                                  {asset.images.map((img, idx) => {
+                                    const key = `${asset.id}_${img}`;
+                                    const isSelected = selectedPins.some(p => p.key === key);
+                                    const url = resolveImgUrl(img);
+                                    return (
+                                      <div key={idx} className={`image-card ${isSelected ? 'selected' : ''}`}
+                                        onClick={() => togglePin(asset, img)}>
+                                        <img src={editedImages[key] || url} alt={`Render ${idx}`} />
+                                        {isSelected && <div className="check-overlay">✓</div>}
+                                        <button className="preview-eye" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }}>👁</button>
+                                        <button className="edit-pencil" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }}>✏️</button>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           );
                         })}
@@ -902,7 +910,7 @@ export default function PinterestCalendar() {
                       ) : (
                         <div className="workspace-right-content">
                           <div className="selected-pins-list">
-                            {searchedAssets.filter(asset => countForAsset(asset.id) > 0).map(asset => {
+                            {selectedAssets.map(asset => {
                               const assetPins = selectedPins.filter(p => p.assetId === asset.id);
                               return (
                                 <div key={`config-${asset.id}`} className="asset-config-card">
@@ -1005,7 +1013,7 @@ export default function PinterestCalendar() {
                             </div>
 
                             <div className="panel-actions-row">
-                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); }}>Limpiar Todo</button>
+                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); }}>Limpiar Todo</button>
                               {selectedPins.length === 1 && (
                                 <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
                                   disabled={isPublishingNow} onClick={handlePublishNow}>
