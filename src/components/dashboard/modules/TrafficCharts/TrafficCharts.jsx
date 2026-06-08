@@ -427,7 +427,7 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
       </div>
 
       {/* Render Area */}
-      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads'].includes(id) ? { height: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 32)}px`, maxHeight: 'none', transition: 'height 0.3s ease' } : {}}>
+      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads', 'traffic-sources'].includes(id) ? { height: 'auto', maxHeight: 'none', minHeight: id === 'traffic-sources' ? 'unset' : `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 32)}px`, transition: 'height 0.3s ease' } : {}}>
         {loading ? (
           <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
         ) : !data ? (
@@ -681,48 +681,33 @@ export default function TrafficCharts() {
     }
   }, [http])
 
-  // 10. Traffic Sources Fetcher
+  // 10. Traffic Sources Fetcher — returns raw data for custom panel
   const fetchTrafficSources = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/site-visits/sources?from=${from}&to=${to}`)
     const sourcesData = res?.data
     if (!sourcesData?.visits?.length) return null
-
-    const visits = sourcesData.visits
-    const labels = visits.map((v) => {
-      const s = String(v.source || '').toLowerCase();
-      if (s === 'direct') return 'Directo';
-      if (s === 'google') return 'Google (Orgánico)';
-      if (s === 'pinterest') return 'Pinterest (Orgánico)';
-      if (s === 'facebook') return 'Facebook (Orgánico)';
-      if (s === 'instagram') return 'Instagram (Orgánico)';
-      if (s === 'telegram') return 'Telegram (Orgánico)';
-      if (s === 'youtube') return 'YouTube (Orgánico)';
-      if (s === 'twitter') return 'Twitter/X (Orgánico)';
-      return v.source; // Campaign slug or other
-    });
-
-    const counts = visits.map((v) => v.count);
-
-    return {
-      labels,
-      datasets: [
-        {
-          data: counts,
-          backgroundColor: [
-            'rgba(79, 172, 254, 0.8)', // blue
-            'rgba(245, 158, 11, 0.8)', // orange/amber
-            'rgba(236, 72, 153, 0.8)', // pink/pinterest
-            'rgba(16, 185, 129, 0.8)', // green
-            'rgba(168, 85, 247, 0.8)', // purple
-            'rgba(239, 68, 68, 0.8)',  // red
-            'rgba(6, 182, 212, 0.8)',  // cyan
-            'rgba(100, 116, 139, 0.8)' // slate for others
-          ],
-          borderColor: 'rgba(15, 23, 42, 0.8)',
-          borderWidth: 2
-        }
-      ]
+    // Return raw rows enriched with label/color/icon
+    const SOURCE_META = {
+      direct:    { label: 'Directo',             icon: '🔗', color: '#4facfe' },
+      google:    { label: 'Google (Orgánico)',    icon: '🔍', color: '#34d399' },
+      pinterest: { label: 'Pinterest (Orgánico)', icon: '📌', color: '#ec4899' },
+      facebook:  { label: 'Facebook (Orgánico)',  icon: '👥', color: '#60a5fa' },
+      instagram: { label: 'Instagram (Orgánico)', icon: '📷', color: '#f472b6' },
+      telegram:  { label: 'Telegram (Orgánico)',  icon: '✈️',  color: '#38bdf8' },
+      youtube:   { label: 'YouTube (Orgánico)',   icon: '▶️',  color: '#f87171' },
+      twitter:   { label: 'Twitter/X (Orgánico)', icon: '🐦', color: '#94a3b8' },
+      organic:   { label: 'Orgánico (Otro)',       icon: '🌿', color: '#a3e635' },
     }
+    const COLORS = ['#4facfe','#f59e0b','#ec4899','#34d399','#a78bfa','#ef4444','#06b6d4','#f97316','#94a3b8']
+    const totalSessions = sourcesData.visits.reduce((s, v) => s + Number(v.sessions || 0), 0)
+    const rows = sourcesData.visits.map((v, i) => {
+      const key = String(v.source || '').toLowerCase()
+      const meta = SOURCE_META[key] || { label: v.source, icon: '📊', color: COLORS[i % COLORS.length] }
+      const sessions = Number(v.sessions || 0)
+      const pct = totalSessions > 0 ? Math.round((sessions / totalSessions) * 100) : 0
+      return { ...v, ...meta, sessions, pct }
+    })
+    return { rows, totalSessions }
   }, [http])
 
 
@@ -741,8 +726,67 @@ export default function TrafficCharts() {
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
         
         <ChartContainer id="traffic-sources" supportsDynamicDates={true} fetchFn={fetchTrafficSources} renderChart={(data) => (
-          <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <Doughnut data={data} options={{ plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } }, tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' } } }} />
+          <div style={{ width: '100%' }}>
+            {/* Summary KPIs */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 160px', background: 'rgba(79,172,254,0.08)', border: '1px solid rgba(79,172,254,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Sesiones Totales</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#f8fafc' }}>{Number(data.totalSessions || 0).toLocaleString()}</div>
+              </div>
+              <div style={{ flex: '1 1 160px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Canales Detectados</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#f8fafc' }}>{data.rows.length}</div>
+              </div>
+              <div style={{ flex: '1 1 160px', background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Canal Principal</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>{data.rows[0]?.icon}</span>
+                  <span>{data.rows[0]?.label || '—'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Header row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 100px 80px 80px 54px', gap: '10px', alignItems: 'center', padding: '0 4px 10px 4px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: '8px' }}>
+              <div />
+              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canal</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Sesiones</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Visitantes</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Visitas</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>%</div>
+            </div>
+
+            {/* Rows */}
+            {data.rows.map((row, i) => (
+              <div key={row.source} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 100px 80px 80px 54px', gap: '10px', alignItems: 'center', padding: '10px 4px', borderRadius: '8px', transition: 'background 0.15s', background: i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent' }}>
+                {/* Icon */}
+                <div style={{ fontSize: '1.1rem', textAlign: 'center' }}>{row.icon}</div>
+
+                {/* Label + bar */}
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '5px' }}>{row.label}</div>
+                  <div style={{ height: '6px', borderRadius: '99px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${row.pct}%`, borderRadius: '99px', background: `linear-gradient(90deg, ${row.color}, ${row.color}bb)`, transition: 'width 0.6s ease', minWidth: row.pct > 0 ? '4px' : '0' }} />
+                  </div>
+                </div>
+
+                {/* Sessions */}
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#cbd5e1', textAlign: 'right' }}>{Number(row.sessions || 0).toLocaleString()}</div>
+
+                {/* Unique Visitors */}
+                <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>{Number(row.uniqueVisitors || 0).toLocaleString()}</div>
+
+                {/* Total count */}
+                <div style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'right' }}>{Number(row.count || 0).toLocaleString()}</div>
+
+                {/* Percentage badge */}
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '99px', fontSize: '0.78rem', fontWeight: '700', color: row.color, background: `${row.color}22`, border: `1px solid ${row.color}44` }}>
+                    {row.pct}%
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         )} />
         
