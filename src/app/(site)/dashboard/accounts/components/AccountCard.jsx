@@ -36,6 +36,8 @@ export default function AccountCard({
         );
     };
 
+    const isMainWithoutBackup = acc.type === 'main' && (!acc.backups || acc.backups.length === 0);
+
     const total = acc.storageTotalMB > 0 ? acc.storageTotalMB : FREE_QUOTA_MB;
     const used = Math.max(0, acc.storageUsedMB || 0);
     const pct = Math.min(100, total ? (used / total) * 100 : 0);
@@ -76,17 +78,22 @@ export default function AccountCard({
                 cursor: 'pointer',
                 position: 'relative',
                 borderRadius: '10px',
-                background: 'rgba(15, 23, 42, 0.65)',
+                background: isMainWithoutBackup
+                    ? 'rgba(239, 68, 68, 0.18)'
+                    : 'rgba(15, 23, 42, 0.65)',
                 backdropFilter: 'blur(12px)',
-                border:
-                    acc.status === 'CONNECTED'
-                        ? '1px solid rgba(14, 102, 19, 0.35)'
-                        : acc.status === 'ERROR'
-                          ? '1px solid rgba(255, 0, 0, 0.4)'
-                          : '1px solid rgba(255,255,255,0.08)',
+                border: isMainWithoutBackup
+                    ? '1.5px dashed rgba(239, 68, 68, 0.7)'
+                    : acc.status === 'CONNECTED'
+                      ? '1px solid rgba(14, 102, 19, 0.35)'
+                      : acc.status === 'ERROR'
+                        ? '1px solid rgba(255, 0, 0, 0.4)'
+                        : '1px solid rgba(255,255,255,0.08)',
                 transition: 'all .2s',
                 '&:hover': {
-                    borderColor: 'rgba(139, 92, 246, 0.5)',
+                    borderColor: isMainWithoutBackup
+                        ? 'rgba(239, 68, 68, 0.9)'
+                        : 'rgba(139, 92, 246, 0.5)',
                 },
                 overflow: 'hidden',
                 p: 1.2,
