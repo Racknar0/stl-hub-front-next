@@ -30,6 +30,8 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showGoogleLogin, setShowGoogleLogin] = useState(true);
+    const [showResend, setShowResend] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
 
     // tomar los pathparameters
     const searchParams =
@@ -72,18 +74,28 @@ const Login = () => {
                 router.push(targetRedirect);
             } else {
                 setPassword('');
+                const errMsg = response.data?.message || '';
+                const isGracePeriodError = errMsg.includes('grace period') || errMsg.includes('período de gracia');
+                if (isGracePeriodError) {
+                    setShowResend(true);
+                }
                 await timerAlert(
                     isEn ? 'Login error' : 'Error de inicio',
-                    response.data?.message || (isEn ? 'Login failed.' : 'Error al iniciar sesión.'),
-                    3000
+                    errMsg || (isEn ? 'Login failed.' : 'Error al iniciar sesión.'),
+                    4000
                 );
             }
         } catch (err) {
             setPassword('');
+            const errMsg = err?.response?.data?.message || '';
+            const isGracePeriodError = errMsg.includes('grace period') || errMsg.includes('período de gracia');
+            if (isGracePeriodError) {
+                setShowResend(true);
+            }
             await timerAlert(
                 isEn ? 'Login error' : 'Error de inicio',
-                err?.response?.data?.message || (isEn ? 'Login failed.' : 'Error al iniciar sesión.'),
-                3000
+                errMsg || (isEn ? 'Login failed.' : 'Error al iniciar sesión.'),
+                4000
             );
         } finally {
             setLoading(false);
@@ -233,6 +245,27 @@ const Login = () => {
             );
         } finally {
             setResetLoading(false);
+        }
+    };
+
+    const handleResendActivation = async () => {
+        if (!username) return;
+        setResendLoading(true);
+        try {
+            const response = await httpService.postData('/auth/resend-activation', {
+                email: username,
+                language: isEn ? 'en' : 'es'
+            });
+            if (response.status === 200) {
+                timerAlert('success', response.data.message);
+                setShowResend(false);
+            } else {
+                timerAlert('error', response.data.message);
+            }
+        } catch (err) {
+            timerAlert('error', err?.response?.data?.message || (isEn ? 'Failed to resend.' : 'Error al reenviar.'));
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -425,6 +458,45 @@ const Login = () => {
                                         : 'Acceder'}
                                 </button>
                             </form>
+                            {showResend && (
+                                <div className="resend-activation-container" style={{
+                                    marginTop: '15px',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(231, 76, 60, 0.1)',
+                                    border: '1px solid rgba(231, 76, 60, 0.2)',
+                                    textAlign: 'center',
+                                    marginBottom: '15px'
+                                }}>
+                                    <p style={{ fontSize: '0.85rem', color: '#e74c3c', marginBottom: '8px', lineHeight: '1.4' }}>
+                                        {isEn 
+                                            ? 'Did not receive the activation email or did it expire?' 
+                                            : '¿No recibiste el correo de activación o ya expiró?'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        disabled={resendLoading}
+                                        onClick={handleResendActivation}
+                                        style={{
+                                            background: '#e74c3c',
+                                            color: '#fff',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            transition: 'opacity 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.opacity = '0.9'}
+                                        onMouseOut={(e) => e.target.style.opacity = '1'}
+                                    >
+                                        {resendLoading 
+                                            ? (isEn ? 'Sending...' : 'Enviando...') 
+                                            : (isEn ? 'Resend Activation Email' : 'Reenviar Correo de Activación')}
+                                    </button>
+                                </div>
+                            )}
                             <p className="login-help">
                                 {isEn
                                     ? "Don't have an account?"
