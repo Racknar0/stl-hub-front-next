@@ -18,9 +18,18 @@ export default function LanguageOverlay() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Mostrar solo si el usuario nunca eligió idioma manualmente
+  // Mostrar solo si el usuario nunca eligió idioma manualmente y no es un bot de búsqueda
   useEffect(() => {
     if (typeof window === 'undefined') return
+    
+    const ua = navigator.userAgent || '';
+    const isBot = /bot|google|baidu|bing|msn|duckduckgo|teoma|slurp|yandex|spider|crawl|inspection/i.test(ua);
+    
+    if (isBot) {
+      setShow(false);
+      return;
+    }
+
     const chosen = window.localStorage.getItem('lang_chosen')
     setShow(!chosen)
   }, [])
