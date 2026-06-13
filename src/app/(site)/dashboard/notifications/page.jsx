@@ -19,13 +19,17 @@ export default function NotificationsPage(){
   const [loading, setLoading] = useState(false)
   const [marking, setMarking] = useState(false)
   const [filter, setFilter] = useState('ALL') // ALL | UNREAD | READ
-  const [tabType, setTabType] = useState('AUTOMATION')
+  const [tabType, setTabType] = useState('SALES')
 
   // Tipos disponibles
   const types = [
-    { key:'AUTOMATION', label:'Automatizaciones' },
     { key:'SALES', label:'Ventas' },
-    { key:'REPORT', label:'Reportes' }
+    { key:'BILLING', label:'Cobros/Pasarelas' },
+    { key:'MAIL', label:'Correos' },
+    { key:'STORAGE', label:'Almacenamiento/Backups' },
+    { key:'SOCIAL', label:'Redes Sociales' },
+    { key:'REPORT', label:'Reportes' },
+    { key:'AUTOMATION', label:'Automatizaciones' }
   ]
 
   // Filtrar por tipo
@@ -104,8 +108,29 @@ export default function NotificationsPage(){
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Refrescar"><span><IconButton onClick={fetchAll} disabled={loading}><RefreshIcon /></IconButton></span></Tooltip>
             <Tooltip title="Marcar todas como leídas"><span><IconButton color="primary" onClick={markAll} disabled={marking || unreadCount===0}><DoneAllIcon /></IconButton></span></Tooltip>
-            {/* Limpiar automatizaciones */}
-            <Tooltip title="Limpiar automatizaciones"><span><IconButton color="error" onClick={async ()=>{ try{ setMarking(true); await http.postData('/admin/notifications/clear-automation', {}); await successAlert('Hecho', 'Notificaciones de automatizaciones eliminadas'); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudieron eliminar las automatizaciones'); } finally{ setMarking(false); } }} disabled={marking || items.filter(i=>i.type==='AUTOMATION').length===0}><DeleteIcon /></IconButton></span></Tooltip>
+            {/* Limpiar notificaciones de la pestaña activa */}
+            <Tooltip title={`Limpiar todo en ${types.find(t => t.key === tabType)?.label || tabType}`}>
+              <span>
+                <IconButton
+                  color="error"
+                  onClick={async () => {
+                    try {
+                      setMarking(true)
+                      await http.postData('/admin/notifications/clear-by-type', { type: tabType })
+                      await successAlert('Hecho', `Notificaciones de tipo ${types.find(t => t.key === tabType)?.label || tabType} eliminadas`)
+                      await fetchAll()
+                    } catch (e) {
+                      await errorAlert('Error', 'No se pudieron eliminar las notificaciones')
+                    } finally {
+                      setMarking(false)
+                    }
+                  }}
+                  disabled={marking || items.filter(i => i.type === tabType).length === 0}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
         } />
         <CardContent sx={{ pt:0 }}>
@@ -146,16 +171,14 @@ export default function NotificationsPage(){
                       <Typography variant="subtitle2" sx={{ fontWeight: unread ? 700 : 500, fontSize: '1rem', lineHeight:1.2, color:'#222' }}>{n.title}</Typography>
                       {n.body && <Typography variant="body2" sx={{ whiteSpace:'pre-wrap', opacity:0.95, mt:0.3, fontSize:'0.97rem', lineHeight:1.25, color:'#222' }}>{n.body}</Typography>}
                     </Box>
-                    {/* Borrar notificación si es de automatización */}
-                    {n.type==='AUTOMATION' && (
-                      <Tooltip title="Eliminar automatización">
-                        <span>
-                          <IconButton size="small" onClick={async()=>{ try{ await http.deleteData('/admin/notifications', n.id); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudo eliminar'); } }} color="error" sx={{p:0.5}}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    )}
+                    {/* Borrar notificación individual */}
+                    <Tooltip title="Eliminar notificación">
+                      <span>
+                        <IconButton size="small" onClick={async()=>{ try{ await http.deleteData('/admin/notifications', n.id); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudo eliminar'); } }} color="error" sx={{p:0.5}}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                     <Tooltip title={unread ? 'Marcar como leída' : 'Marcar como no leída'}>
                       <span>
                         <IconButton size="small" onClick={()=>toggleOne(n)} color={unread ? 'info':'default'} sx={{p:0.5}}>
@@ -173,3 +196,4 @@ export default function NotificationsPage(){
     </div>
   )
 }
+
