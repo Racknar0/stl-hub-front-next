@@ -1462,12 +1462,11 @@ export default function BatchTable() {
 
     if (itemsToClear.length > 0) {
       try {
-        const promises = itemsToClear.map(row => 
-          http.patchData('/batch-imports/items', row.id, {
-            targetAccount: null
-          })
-        )
-        await Promise.all(promises)
+        const payloadItems = itemsToClear.map(row => ({
+          id: row.id,
+          targetAccount: null
+        }))
+        await http.postData('/batch-imports/items-bulk', { items: payloadItems })
         setToast({ open: true, msg: 'Cuentas desasignadas de todos los assets y guardado en la BD.', type: 'success' })
       } catch (e) {
         console.error('Error al guardar desasignación en BD:', e)
@@ -2010,12 +2009,11 @@ export default function BatchTable() {
     })
 
     try {
-      const promises = itemsToSave.map(row => 
-        http.patchData('/batch-imports/items', row.id, {
-          targetAccount: row.cuenta ? Number(row.cuenta) : null
-        })
-      )
-      await Promise.all(promises)
+      const payloadItems = itemsToSave.map(row => ({
+        id: row.id,
+        targetAccount: row.cuenta ? Number(row.cuenta) : null
+      }))
+      await http.postData('/batch-imports/items-bulk', { items: payloadItems })
       
       if (unassignedCount > 0) {
          setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles y se guardó la distribución en la BD.`, type: 'warning' })
@@ -2154,18 +2152,17 @@ export default function BatchTable() {
         return Number(a?.id || 0) - Number(b?.id || 0)
       })
 
-      const savePromises = readyRowsSorted.map(row => 
-        http.patchData('/batch-imports/items', row.id, {
-          title: row.nombre,
-          titleEn: row.nombreEn,
-          description: row.description,
-          descriptionEn: row.descriptionEn,
-          targetAccount: row.cuenta,
-          categories: row.categorias,
-          tags: row.tags
-        })
-      )
-      await Promise.all(savePromises)
+      const payloadItems = readyRowsSorted.map(row => ({
+        id: row.id,
+        title: row.nombre,
+        titleEn: row.nombreEn,
+        description: row.description,
+        descriptionEn: row.descriptionEn,
+        targetAccount: row.cuenta,
+        categories: row.categorias,
+        tags: row.tags
+      }))
+      await http.postData('/batch-imports/items-bulk', { items: payloadItems })
 
       // 2. Confirmar items para pasarlos a QUEUED en el Worker
       const itemIds = readyRowsSorted.map(r => r.id)
