@@ -63,7 +63,7 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
           ) : null}
         </div>
         {showLoader ? (
-          <div className="cards-skeleton-row" style={{ display: 'flex', gap: 12, overflow: 'hidden', width: '100%' }}>
+          <div className="cards-skeleton-row">
             {Array.from({ length: 4 }).map((_, idx) => (
               <CardSkeleton key={idx} />
             ))}

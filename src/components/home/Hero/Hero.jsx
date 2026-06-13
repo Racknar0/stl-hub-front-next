@@ -36,7 +36,7 @@ const Hero = () => {
                                 alt={s.title || 'Hero slide'}
                                 fill
                                 sizes="100vw"
-                                priority={index === 0}
+                                priority={true}
                                 style={{ objectFit: 'cover' }}
                             />
                             <div className="overlay" />

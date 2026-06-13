@@ -299,6 +299,7 @@ export default function MetaSeoTab({
                     maxHeight: metaReviewMode
                         ? (showReviewControls ? 'calc(100vh - 180px)' : 'calc(100vh - 16px)')
                         : 'calc(100vh - 260px)',
+                    minHeight: '350px',
                     overflowY: 'scroll',
                     overflowAnchor: 'none',
                     '& .MuiTableCell-head': {

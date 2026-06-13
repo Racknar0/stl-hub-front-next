@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   TextField,
@@ -45,6 +45,37 @@ export default function ToolbarBusqueda({
   seoFilter, setSeoFilter,
   onClearAll,
 }) {
+  const [localQ, setLocalQ] = useState(q || '')
+  const [localAccountQ, setLocalAccountQ] = useState(accountQ || '')
+  const [localAssetIdQ, setLocalAssetIdQ] = useState(assetIdQ || '')
+
+  useEffect(() => {
+    setLocalQ(q || '')
+  }, [q])
+
+  useEffect(() => {
+    setLocalAccountQ(accountQ || '')
+  }, [accountQ])
+
+  useEffect(() => {
+    setLocalAssetIdQ(assetIdQ || '')
+  }, [assetIdQ])
+
+  const handleBuscar = () => {
+    setQ(localQ)
+    onBuscar?.(localQ)
+  }
+
+  const handleBuscarCuenta = () => {
+    setAccountQ(localAccountQ)
+    onBuscarCuenta?.(localAccountQ)
+  }
+
+  const handleBuscarId = () => {
+    setAssetIdQ(localAssetIdQ)
+    onBuscarId?.(localAssetIdQ)
+  }
+
   const acSx = {
     minWidth: 160,
     maxWidth: 200,
@@ -140,20 +171,20 @@ export default function ToolbarBusqueda({
         <TextField
           size="small"
           placeholder="Buscar por nombre o archivo"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={localQ}
+          onChange={(e) => setLocalQ(e.target.value)}
           sx={{ minWidth: 260 }}
-          onKeyDown={(e) => { if (e.key === 'Enter') { onBuscar() } }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscar() } }}
         />
-        <Button variant="outlined" onClick={onBuscar}>Buscar</Button>
+        <Button variant="outlined" onClick={handleBuscar}>Buscar</Button>
 
         {/* Buscar por cuenta */}
-        <TextField size="small" placeholder="Cuenta (alias o ID)" value={accountQ} onChange={(e) => setAccountQ(e.target.value)} sx={{ minWidth: 200 }} onKeyDown={(e) => { if (e.key === 'Enter') { onBuscarCuenta() } }} />
-        <Button variant="outlined" onClick={onBuscarCuenta}>Por cuenta</Button>
+        <TextField size="small" placeholder="Cuenta (alias o ID)" value={localAccountQ} onChange={(e) => setLocalAccountQ(e.target.value)} sx={{ minWidth: 200 }} onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscarCuenta() } }} />
+        <Button variant="outlined" onClick={handleBuscarCuenta}>Por cuenta</Button>
 
         {/* Buscar por ID */}
-        <TextField size="small" placeholder="Asset ID" type="number" value={assetIdQ} onChange={(e) => setAssetIdQ(e.target.value)} sx={{ width: 140 }} onKeyDown={(e) => { if (e.key === 'Enter') { onBuscarId() } }} />
-        <Button variant="outlined" onClick={onBuscarId}>Por ID</Button>
+        <TextField size="small" placeholder="Asset ID" type="number" value={localAssetIdQ} onChange={(e) => setLocalAssetIdQ(e.target.value)} sx={{ width: 140 }} onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscarId() } }} />
+        <Button variant="outlined" onClick={handleBuscarId}>Por ID</Button>
 
         {/* Filtro categoría */}
         <Autocomplete

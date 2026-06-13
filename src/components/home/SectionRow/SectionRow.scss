@@ -309,3 +309,15 @@
     .card-item { height: 330px; }
     .card-item .thumb { height: 180px; flex-basis: 180px; }
 }
+
+.cards-skeleton-row {
+  display: flex;
+  gap: 12px;
+  overflow: hidden;
+  width: 100%;
+  height: 375px;
+
+  @media (max-width: 992px) {
+    height: 330px;
+  }
+}

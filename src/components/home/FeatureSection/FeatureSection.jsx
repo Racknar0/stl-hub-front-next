@@ -79,7 +79,7 @@ const FeatureSection = ({
 
                                                 {/* Slider de cards o loader mientras carga */}
                                                 {showLoader ? (
-                                                    <div className="cards-skeleton-row" style={{ display: 'flex', gap: 12, overflow: 'hidden', width: '100%' }}>
+                                                    <div className="cards-skeleton-row">
                                                         {Array.from({ length: 4 }).map((_, idx) => (
                                                             <CardSkeleton key={idx} />
                                                         ))}

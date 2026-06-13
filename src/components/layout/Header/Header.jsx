@@ -295,13 +295,7 @@ const Header = () => {
       const input = e.currentTarget.querySelector('input[type="text"]')
       const val = input?.value?.trim() || ''
 
-      if (val || imageSearchFile) {
-        sendGTMEvent({ event: 'search_performed',
-          search_term: val || 'image_search',
-          search_type: searchMode
-        });
-      }
-
+      // Set loading state immediately so UI updates instantly
       if (searchMode === 'ai') {
         if (aiVisualTimerRef.current) clearTimeout(aiVisualTimerRef.current)
         setAiVisualSearching(true)
@@ -309,63 +303,87 @@ const Header = () => {
           setAiVisualSearching(false)
           aiVisualTimerRef.current = null
         }, 8000)
-
-        // Si hay imagen cargada, hacer búsqueda visual por API
-        if (imageSearchFile) {
-          try {
-            const formData = new FormData()
-            formData.append('image', imageSearchFile)
-            if (val) formData.append('text', val)
-            formData.append('limit', '200')
-
-            const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
-            const res = await fetch(`${apiBase}/api/ai/search-by-image`, {
-              method: 'POST',
-              body: formData,
-            })
-            const data = await res.json()
-
-            if (res.ok && Array.isArray(data?.items)) {
-              // Store results in Zustand for the search page
-              setImageSearchResults({
-                items: data.items,
-                total: data.total || data.items.length,
-                query: val || imageSearchFile.name,
-              })
-              // 1-second delay for elegance so the user sees the animation and success state
-              await new Promise(r => setTimeout(r, 1000))
-              
-              // Close dropzone without flipping searchMode (avoids re-animation jump)
-              setAiDropzoneOpen(false)
-              let url = `/search?image_search=true`
-              if (val) url += `&q=${encodeURIComponent(val)}`
-              router.push(url)
-            } else {
-              console.error('Image search error:', data?.message)
-              // Fallback to text AI search
-              let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
-              url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
-              router.push(url)
-            }
-          } catch (fetchErr) {
-            console.error('Image search fetch error:', fetchErr)
-            let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
-            url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
-            router.push(url)
-          }
-          return
-        }
-        
-        // Navegación para búsqueda IA (solo texto)
-        setAiDropzoneOpen(false)
-        let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
-        url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
-        router.push(url)
-        return
+      } else {
+        setSearchLoading(true)
       }
-      setSearchLoading(true)
-      let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
-      router.push(url)
+
+      // Defer navigation and heavy GTM / fetch calls
+      setTimeout(async () => {
+        try {
+          if (val || imageSearchFile) {
+            sendGTMEvent({ event: 'search_performed',
+              search_term: val || 'image_search',
+              search_type: searchMode
+            });
+          }
+
+          if (searchMode === 'ai') {
+            // Si hay imagen cargada, hacer búsqueda visual por API
+            if (imageSearchFile) {
+              try {
+                const formData = new FormData()
+                formData.append('image', imageSearchFile)
+                if (val) formData.append('text', val)
+                formData.append('limit', '200')
+
+                const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+                const res = await fetch(`${apiBase}/api/ai/search-by-image`, {
+                  method: 'POST',
+                  body: formData,
+                })
+                const data = await res.json()
+
+                if (res.ok && Array.isArray(data?.items)) {
+                  // Store results in Zustand for the search page
+                  setImageSearchResults({
+                    items: data.items,
+                    total: data.total || data.items.length,
+                    query: val || imageSearchFile.name,
+                  })
+                  // 1-second delay for elegance so the user sees the animation and success state
+                  await new Promise(r => setTimeout(r, 1000))
+                  
+                  // Close dropzone without flipping searchMode (avoids re-animation jump)
+                  setAiDropzoneOpen(false)
+                  let url = `/search?image_search=true`
+                  if (val) url += `&q=${encodeURIComponent(val)}`
+                  router.push(url)
+                } else {
+                  console.error('Image search error:', data?.message)
+                  // Fallback to text AI search
+                  let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
+                  url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
+                  router.push(url)
+                }
+              } catch (fetchErr) {
+                console.error('Image search fetch error:', fetchErr)
+                let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search'
+                url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true'
+                router.push(url)
+              }
+              return
+            }
+            
+            // Navegación para búsqueda IA (solo texto)
+            setAiDropzoneOpen(false)
+            let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
+            url += (url.includes('?') ? '&' : '?') + 'is_ai_search=true';
+            router.push(url)
+            return
+          }
+          let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
+          router.push(url)
+        } catch (err) {
+          console.error('Navigation error on search submit in deferred task', err)
+          setSearchLoading(false)
+          setAiVisualSearching(false)
+          if (aiVisualTimerRef.current) {
+            clearTimeout(aiVisualTimerRef.current)
+            aiVisualTimerRef.current = null
+          }
+        }
+      }, 0);
+
     } catch (err) {
       console.error('Navigation error on search submit', err)
       setSearchLoading(false)

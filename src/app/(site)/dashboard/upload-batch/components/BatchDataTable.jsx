@@ -54,6 +54,7 @@ export default function BatchDataTable({
       ref={reviewScrollRef}
       sx={{
         maxHeight: reviewMode ? 'calc(100vh - 24px)' : 'calc(100vh - 280px)',
+        minHeight: '350px',
         overflowY: 'scroll',
         overflowAnchor: 'none',
         borderRadius: 2,

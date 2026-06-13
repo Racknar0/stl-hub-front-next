@@ -2181,8 +2181,9 @@ export default function AssetsAdminPage() {
     };
 
     // Handler: buscar por ID (movido fuera de MRT)
-    const handleBuscarId = async () => {
-        const idNum = Number(assetIdQ);
+    const handleBuscarId = async (idVal) => {
+        const targetId = idVal !== undefined ? idVal : assetIdQ;
+        const idNum = Number(targetId);
         if (!Number.isFinite(idNum) || idNum <= 0) return;
         try {
             setLoading(true);
@@ -2209,8 +2210,9 @@ export default function AssetsAdminPage() {
                     <ToolbarBusqueda
                         q={q}
                         setQ={setQ}
-                        onBuscar={() => {
-                            setSearchTerm(q);
+                        onBuscar={(val) => {
+                            const term = val !== undefined ? val : q;
+                            setSearchTerm(term);
                             setPageIndex(0);
                             setShowFreeOnly(false);
                         }}
