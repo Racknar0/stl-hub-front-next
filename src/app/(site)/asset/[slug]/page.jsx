@@ -91,6 +91,12 @@ async function fetchAsset(slug) {
     }
 }
 
+function cleanTitlePrefix(rawTitle) {
+    let t = String(rawTitle || '').trim();
+    // Quita prefijos tipo "stl - ", "STL ", "stl  -" case insensitive
+    return t.replace(/^stl\s*[-–—\s]*\s*/i, '');
+}
+
 export async function generateMetadata({ params }) {
     const { slug } = await params;
     const asset = await fetchAsset(slug);
@@ -132,10 +138,12 @@ export async function generateMetadata({ params }) {
         isEn = h.get('x-lang') === 'en';
     } catch {}
 
-    const safeTitleEs = (asset.title || 'modelo 3D').length > 40 ? (asset.title || 'modelo 3D').substring(0, 40) + '...' : (asset.title || 'modelo 3D');
+    const cleanedEs = cleanTitlePrefix(asset.title || 'modelo 3D');
+    const safeTitleEs = cleanedEs.length > 40 ? cleanedEs.substring(0, 40) + '...' : cleanedEs;
     const titleEs = `Descargar STL: ${safeTitleEs} | STLHUB`;
     
-    const safeTitleEn = (asset.titleEn || asset.title || '3D model').length > 40 ? (asset.titleEn || asset.title || '3D model').substring(0, 40) + '...' : (asset.titleEn || asset.title || '3D model');
+    const cleanedEn = cleanTitlePrefix(asset.titleEn || asset.title || '3D model');
+    const safeTitleEn = cleanedEn.length > 40 ? cleanedEn.substring(0, 40) + '...' : cleanedEn;
     const titleEn = `Download STL: ${safeTitleEn} | STLHUB`;
     const catEs = asset.categories?.[0]?.es || asset.categories?.[0]?.name || '';
     const catEn = asset.categories?.[0]?.en || asset.categories?.[0]?.nameEn || catEs;
