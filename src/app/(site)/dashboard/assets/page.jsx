@@ -2253,7 +2253,7 @@ export default function AssetsAdminPage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
                     <Tabs
                         value={tab}
-                        onChange={(_, v) => setTab(v)}
+                        onChange={(_, v) => React.startTransition(() => setTab(v))}
                         sx={{
                             bgcolor: (theme) =>
                                 theme.palette.mode === 'dark'

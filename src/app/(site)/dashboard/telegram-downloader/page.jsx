@@ -17,6 +17,7 @@ function ChannelAvatar({ channel, size = '70px' }) {
       <img
         src={imageUrl}
         alt={channel.label || channel.name}
+        loading="lazy"
         onError={() => setHasError(true)}
         style={{
           width: size,

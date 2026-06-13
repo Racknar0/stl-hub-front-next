@@ -989,6 +989,7 @@ const BatchRow = React.memo(function BatchRow({
                                         key={i}
                                         src={srcUrl}
                                         variant="rounded"
+                                        imgProps={{ loading: 'lazy' }}
                                         sx={{
                                             width: 200,
                                             height: 200,
