@@ -192,6 +192,18 @@ export async function generateMetadata({ params }) {
         };
     }
 
+    // Normalizar URLs de imagen para OG: las imágenes del backend vienen como rutas relativas
+    // o con el dominio de api.stl-hub.com. Necesitan ser URLs absolutas accesibles públicamente.
+    const uploadsBase = 'https://api.stl-hub.com/uploads';
+    const ogImages = asset.images?.length
+        ? asset.images.slice(0, 1).map((i) => ({
+              url: i.startsWith('http') ? i : `${uploadsBase}/${i.replace(/^\/+/, '')}`,
+              width: 1200,
+              height: 630,
+              alt: baseTitle,
+          }))
+        : [{ url: `${site}/logo_horizontal.png`, width: 1200, height: 630 }];
+
     return {
         title: baseTitle,
         description: desc,
@@ -219,9 +231,13 @@ export async function generateMetadata({ params }) {
             type: 'article',
             locale: isEn ? 'en_US' : 'es_ES',
             url: canonicalPath,
-            images: asset.images?.length
-                ? asset.images.slice(0, 1).map((i) => ({ url: i }))
-                : ['/logo_horizontal.png'],
+            images: ogImages,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: baseTitle,
+            description: desc,
+            images: ogImages.map((i) => i.url),
         },
     };
 }
