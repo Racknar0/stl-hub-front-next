@@ -91,9 +91,21 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
                 return `${dd}-${mmm}-${yyyy}`;
               };
               const uploadDate = formatUploadDate(it.createdAt);
+              const cardHref = it.detailUrl || (isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`);
               return (
                 <SwiperSlide key={it.id}>
-                  <article className="card-item" onClick={() => onItemClick?.(it)}>
+                  {/* SEO: Link nativo envuelve toda la card para que Googlebot pueda rastrear /asset/[slug].
+                      onClick intercepta el click del usuario para abrir el modal sin navegar. */}
+                  <Link
+                    href={cardHref}
+                    className="card-item"
+                    onClick={(e) => {
+                      if (!it.slug) return;
+                      e.preventDefault();
+                      onItemClick?.(it);
+                    }}
+                    aria-label={`${it.title || 'Modelo STL'} — ver detalle`}
+                  >
                     <div className="thumb">
                       <CardImageSlider
                         images={it.images}
@@ -111,36 +123,29 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
                       <div className="fbottom">
                         <div className="chips">
                           {it.chips?.map((c, idx) => (
-                            <Link
+                            <span
                               className="chip chip--link"
                               key={idx}
-                              href={isEn ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}` : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = isEn
+                                  ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`
+                                  : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`;
+                              }}
                             >
                               #{c}
-                            </Link>
+                            </span>
                           ))}
                         </div>
-                        {(uploadDate || it.slug) && (
-                          <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {it.slug ? (
-                              <Link
-                                href={it.detailUrl || (isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`)}
-                                onClick={(e)=>{ e.stopPropagation(); }}
-                                aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
-                                style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
-                              >
-                                {uploadDate && <span>upload · {uploadDate} · detail</span>}
-                                <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
-                              </Link>
-                            ) : (
-                              uploadDate && <span>upload: {uploadDate}</span>
-                            )}
+                        {uploadDate && (
+                          <div className="fmeta" aria-hidden="true">
+                            <span>upload · {uploadDate}</span>
                           </div>
                         )}
                       </div>
                     </div>
-                  </article>
+                  </Link>
                 </SwiperSlide>
               );
             })}

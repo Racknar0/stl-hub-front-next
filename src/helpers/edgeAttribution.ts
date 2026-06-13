@@ -154,6 +154,13 @@ function isExternalReferrer(referrer: string | null | undefined, req: NextReques
 }
 
 export function queueCampaignTracking(req: NextRequest, event: NextFetchEvent, res: NextResponse) {
+  // SEO CRÍTICO: Si el visitante es un bot de búsqueda, NO escribir cookies.
+  // Cuando Next.js detecta Set-Cookie en la respuesta, fuerza Cache-Control: private, no-store,
+  // lo que impide que Google cachee e indexe las páginas correctamente.
+  const ua = req.headers.get('user-agent') || '';
+  const isSearchBot = /googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|baiduspider|slurp|teoma|robot|crawler|spider|bot\b/i.test(ua);
+  if (isSearchBot) return;
+
   const queryTracking = getTrackingFromSearch(req.nextUrl.searchParams);
   const sessionCookie = req.cookies.get(TRACK_SESSION_COOKIE)?.value;
 

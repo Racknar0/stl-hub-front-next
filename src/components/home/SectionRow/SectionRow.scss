@@ -181,6 +181,9 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     transition: border-color 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
     overflow: hidden;
+    /* Reset de estilos de <a> cuando card-item es un Link */
+    text-decoration: none;
+    color: inherit;
 }
 .card-item:hover {
     border-color: rgba(255, 255, 255, 0.12);
