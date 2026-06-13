@@ -188,7 +188,7 @@ const Register = () => {
         e.preventDefault();
         setError('');
         setSuccess('');
-        if (!email || !password || !confirmPassword) {
+        if (!email || !password) {
             setError(
                 isEn
                     ? 'Please fill in all fields.'
