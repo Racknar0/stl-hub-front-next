@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 const DRY_RUN = process.argv.includes('--dry-run') || process.argv.includes('-d');
 const LIMIT = Number(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || 200); // Límite diario estándar o personalizado
@@ -38,6 +39,43 @@ try {
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com').replace(/\/$/, '');
 const API_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || SITE_URL).replace(/\/$/, '');
+
+// Helper to send email alerts on failure
+async function sendEmailAlert(subject, htmlContent) {
+  if (DRY_RUN) return;
+
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+  const fromEmail = process.env.SMTP_EMAIL || '"STL Hub Indexer" <noreply@stl-hub.com>';
+  const toEmail = process.env.NEXT_PUBLIC_OFFICIAL_EMAIL || 'stlhubmega@gmail.com';
+
+  if (!host || !user || !pass) {
+    console.warn(`[WARNING] No se puede enviar alerta de correo. Faltan variables SMTP en el .env.`);
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      tls: { rejectUnauthorized: false }
+    });
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: toEmail,
+      subject,
+      html: htmlContent
+    });
+    console.log(`   ✉️ Alerta de correo enviada con éxito a: ${toEmail}`);
+  } catch (err) {
+    console.error(`❌ Error al enviar alerta de correo: ${err.message}`);
+  }
+}
 
 // 2. Cargar archivo service_account.json
 const serviceAccountPath = path.join(process.cwd(), 'service_account.json');
@@ -127,6 +165,13 @@ async function run() {
     console.log(`📋 Se obtuvieron ${slugs.length} assets válidos del backend (NSFW/No publicados filtrados).`);
   } catch (err) {
     console.error(`❌ Error al conectar con el backend: ${err.message}`);
+    await sendEmailAlert(
+      '⚠️ ERROR: Falló conexión de Indexador Google con el Backend',
+      `<h3>Fallo al conectar con el backend</h3>
+       <p>El indexador automático de Google en producción no pudo obtener la lista de assets.</p>
+       <p><strong>Detalle del error:</strong> ${err.message}</p>
+       <p>Por favor verifica que la API en <code>${API_URL}</code> esté funcionando correctamente.</p>`
+    );
     process.exit(1);
   }
 
@@ -177,6 +222,13 @@ async function run() {
     console.log(`🔑 Token de acceso obtenido con éxito.`);
   } catch (err) {
     console.error(`❌ Error al obtener token: ${err.message}`);
+    await sendEmailAlert(
+      '⚠️ ERROR: Falló autenticación de Indexador Google',
+      `<h3>Fallo de credenciales con Google Indexing API</h3>
+       <p>El indexador automático no pudo obtener el token de acceso de Google OAuth.</p>
+       <p><strong>Detalle del error:</strong> ${err.message}</p>
+       <p>Verifica que el archivo <code>service_account.json</code> en la raíz sea válido y tenga permisos en la Google Search Console.</p>`
+    );
     process.exit(1);
   }
 
@@ -237,9 +289,29 @@ async function run() {
   console.log(`   Exitosos:   ${successCount}`);
   console.log(`   Fallidos:   ${failCount}`);
   console.log(`   Historial guardado en: ${historyPath}\n`);
+
+  if (failCount > 0) {
+    await sendEmailAlert(
+      `⚠️ ALERTA: Fallas en envío de indexación Google (${failCount} fallidos)`,
+      `<h3>Fallo parcial al enviar URLs a Google Indexing API</h3>
+       <p>Durante la indexación diaria, algunas URLs reportaron error.</p>
+       <p><strong>Resultados del lote:</strong></p>
+       <ul>
+         <li>URLs exitosas: ${successCount}</li>
+         <li>URLs fallidas: ${failCount}</li>
+       </ul>
+       <p>Revisa el archivo de log en el servidor para ver el detalle de las URLs con error.</p>`
+    );
+  }
 }
 
-run().catch(err => {
+run().catch(async err => {
   console.error(`❌ Error general: ${err.message}`);
+  await sendEmailAlert(
+    '⚠️ ERROR: Fallo general en el Indexador Google',
+    `<h3>Fallo crítico general</h3>
+     <p>El script de indexación de Google terminó con un error no controlado.</p>
+     <p><strong>Detalle del error:</strong> ${err.message}</p>`
+  );
   process.exit(1);
 });
