@@ -10,12 +10,16 @@
  *   node scripts/warm-cache.mjs --limit=500  → 500 páginas
  */
 
-const SITE       = process.env.WARM_SITE_URL  || 'https://stl-hub.com';
-const API        = process.env.WARM_API_URL   || 'https://stl-hub.com';
-const LIMIT      = Number(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || 2000);
+const SITE        = process.env.WARM_SITE_URL     || 'https://stl-hub.com';
+// IMPORTANTE: la API de slugs debe consultarse al backend directamente (puerto interno).
+// Si se usa el dominio público (stl-hub.com/api/...), Cloudflare lo enruta al frontend Next.js
+// que NO tiene ese endpoint y devuelve 403. En el VPS siempre usar localhost:3001.
+const API         = process.env.WARM_API_URL      || 'http://localhost:3001';
+const LIMIT       = Number(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || 2000);
 const CONCURRENCY = 10;   // peticiones simultáneas
 const DELAY_MS    = 100;  // pausa entre batches (ms) para no saturar el server
 const TIMEOUT_MS  = 8000; // timeout por página
+
 
 async function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
