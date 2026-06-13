@@ -248,8 +248,8 @@ const Register = () => {
                 }
                 
                 let successMsg = isEn
-                    ? 'Registration successful! Welcome to STL HUB.'
-                    : '¡Registro exitoso! Bienvenido a STL HUB.';
+                    ? 'Welcome to STL HUB. Remember to check your email (and spam folder) to activate your account.'
+                    : 'Bienvenido a STL HUB. Recuerda revisar tu correo (y la carpeta de spam) para activar tu cuenta.';
                 
                 if (giftRedeemed) {
                     successMsg += isEn
