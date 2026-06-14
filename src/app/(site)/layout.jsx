@@ -6,6 +6,7 @@ import HttpService from '@/services/HttpService';
 import useStore from '@/store/useStore';
 import { PromoProvider } from '@/hooks/usePromo';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import ClientTracker from '../../components/common/ClientTracker/ClientTracker';
 
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
@@ -69,6 +70,7 @@ export default function SiteLayout({ children }) {
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
       <PromoProvider>
+        <ClientTracker />
         <Suspense fallback={null}>
           <Layout>
             {children}

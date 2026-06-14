@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { NextFetchEvent } from 'next/server';
-import { queueCampaignTracking } from './helpers/edgeAttribution';
 
 const IGNORE = /^\/(_next|api|favicon\.ico|.*\.[a-z0-9]+)$/i;
 const CANONICAL_HOST = 'stl-hub.com';
@@ -74,43 +73,34 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
     return NextResponse.redirect(url, 308);
   }
 
-  // /en → cookie en y seguimos (la rewrite la hace next.config.js)
+  // /en → header x-lang=en para SSR (sin cookie para evitar Cache-Control: private)
   if (pathname === '/en' || pathname.startsWith('/en/')) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-lang', 'en');
 
-    const res = NextResponse.next({
+    return NextResponse.next({
       request: {
         headers: requestHeaders,
       },
     });
-    res.cookies.set('lang', 'en', { path: '/' });
-    queueCampaignTracking(req, event, res);
-    return res;
   }
 
-  // /es → cookie es y (opcional) redirige a la ruta base sin /es
+  // /es → redirige a la ruta base sin /es
   if (pathname === '/es' || pathname.startsWith('/es/')) {
     const url = req.nextUrl.clone();
     url.pathname = pathname.replace(/^\/es/, '') || '/';
-    const res = NextResponse.redirect(url, 308);
-    res.cookies.set('lang', 'es', { path: '/' });
-    queueCampaignTracking(req, event, res);
-    return res;
+    return NextResponse.redirect(url, 308);
   }
 
   // Resto de rutas (base) → por defecto ES
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-lang', 'es');
 
-  const res = NextResponse.next({
+  return NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
-  res.cookies.set('lang', 'es', { path: '/' });
-  queueCampaignTracking(req, event, res);
-  return res;
 }
 
 export const config = {
