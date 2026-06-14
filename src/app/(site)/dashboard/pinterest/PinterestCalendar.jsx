@@ -60,6 +60,9 @@ export default function PinterestCalendar() {
   const [optimizedAssets, setOptimizedAssets] = useState([]);
   const [expandedAssetId, setExpandedAssetId] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(null); // assetId being optimized
+  const [isOptimizingAll, setIsOptimizingAll] = useState(false);
+  const [rangeStartId, setRangeStartId] = useState('');
+  const [rangeCount, setRangeCount] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [filters, setFilters] = useState({ flip: true, zoom: true });
@@ -236,6 +239,25 @@ export default function PinterestCalendar() {
           alert('No se encontraron assets relacionados con este concepto/tendencia.');
           setSearchedAssets([]);
         }
+      } else if (searchType === 'range') {
+        const startId = parseInt(rangeStartId, 10);
+        const count = parseInt(rangeCount, 10);
+        if (isNaN(startId) || startId < 0) {
+          alert('Ingresa un ID inicial válido (número positivo).');
+          return;
+        }
+        if (isNaN(count) || count <= 0) {
+          alert('Ingresa una cantidad de assets a buscar válida (mayor a 0).');
+          return;
+        }
+        const res = await http.getData(`/pinterest/search-assets?q=${startId}&mode=range&count=${count}`);
+        if (res.data?.found && res.data.assets?.length > 0) {
+          setSearchedAssets(res.data.assets);
+          setTrendKeyword(''); // Sin tendencia para búsquedas por rango
+        } else {
+          alert('No se encontraron assets para el rango especificado.');
+          setSearchedAssets([]);
+        }
       } else {
         // En búsqueda por ID, si hay algo a medio escribir en el input, lo procesamos primero
         let activeChips = [...idChips];
@@ -360,6 +382,60 @@ export default function PinterestCalendar() {
       });
     } catch (e) { alert('Error AI: ' + (e?.response?.data?.error || e.message)); }
     finally { setIsOptimizing(null); }
+  };
+
+  // AI optimize all selected assets sequentially
+  const handleAiOptimizeAll = async () => {
+    if (selectedAssets.length === 0) return;
+    setIsOptimizingAll(true);
+    try {
+      const http = new HttpService();
+      for (const asset of selectedAssets) {
+        const assetPins = selectedPins.filter(p => p.assetId === asset.id);
+        if (assetPins.length === 0) continue; // Skip if no images selected
+
+        setIsOptimizing(asset.id);
+        try {
+          const res = await http.postData('/pinterest/ai-optimize', {
+            title: asset.titleEn || asset.title,
+            description: asset.descriptionEn || asset.description,
+            tags: asset.tags || [],
+            category: asset.category || 'General',
+            imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
+            variationCount: assetPins.length,
+            trendKeyword: trendKeyword || undefined,
+          });
+          const variations = res.data?.variations || [];
+          
+          setSelectedPins(prev => prev.map(pin => {
+            if (pin.assetId !== asset.id) return pin;
+            const idx = assetPins.findIndex(p => p.key === pin.key);
+            const v = variations[idx] || variations[0] || {};
+            return {
+              ...pin,
+              pinTitle: v.pinTitle || pin.pinTitle,
+              pinDescription: v.pinDescription || pin.pinDescription,
+              pinHashtags: v.pinHashtags || pin.pinHashtags,
+            };
+          }));
+
+          setOptimizedAssets(prev => {
+            if (prev.includes(asset.id)) return prev;
+            return [...prev, asset.id];
+          });
+        } catch (err) {
+          console.error(`Error optimizando asset #${asset.id}:`, err);
+        } finally {
+          setIsOptimizing(null);
+        }
+      }
+      alert('Optimización con IA de todos los assets completada.');
+    } catch (e) {
+      alert('Error en optimización masiva: ' + e.message);
+    } finally {
+      setIsOptimizingAll(false);
+      setIsOptimizing(null);
+    }
   };
 
   // Update a specific pin field
@@ -999,11 +1075,29 @@ export default function PinterestCalendar() {
                         >
                           Buscar Tendencias (IA Qdrant)
                         </button>
+                        <button 
+                          type="button" 
+                          className={`tab-button ${searchType === 'range' ? 'active' : ''}`}
+                          onClick={() => {
+                            setSearchType('range');
+                            setSearchQuery('');
+                            setSearchedAssets([]);
+                            setTrendKeyword('');
+                          }}
+                        >
+                          Publicación masiva
+                        </button>
                       </div>
 
                       {/* Search Form */}
                       <div className="form-group search-group">
-                        <label>{searchType === 'id' ? 'IDs de los Pins (escribe y presiona Enter o Coma)' : 'Palabra clave de tendencia o concepto'}</label>
+                        <label>
+                          {searchType === 'id' 
+                            ? 'IDs de los Pins (escribe y presiona Enter o Coma)' 
+                            : searchType === 'range'
+                            ? 'Rango de búsqueda de assets por ID'
+                            : 'Palabra clave de tendencia o concepto'}
+                        </label>
                         
                         {searchType === 'id' ? (
                           <div className="chips-input-container">
@@ -1048,6 +1142,38 @@ export default function PinterestCalendar() {
                             
                             <button className="btn-search-chips" onClick={handleBulkSearch}>
                               Buscar IDs
+                            </button>
+                          </div>
+                        ) : searchType === 'range' ? (
+                          <div className="range-search-container">
+                            <div className="range-inputs-row">
+                              <div className="range-field">
+                                <label htmlFor="range-start-id">ID inicial (inclusivo)</label>
+                                <input 
+                                  id="range-start-id"
+                                  type="number" 
+                                  className="form-input"
+                                  placeholder="Ej: 3000"
+                                  value={rangeStartId}
+                                  onChange={(e) => setRangeStartId(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()}
+                                />
+                              </div>
+                              <div className="range-field">
+                                <label htmlFor="range-count">Cantidad a buscar</label>
+                                <input 
+                                  id="range-count"
+                                  type="number" 
+                                  className="form-input"
+                                  placeholder="Ej: 10"
+                                  value={rangeCount}
+                                  onChange={(e) => setRangeCount(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()}
+                                />
+                              </div>
+                            </div>
+                            <button className="btn-search-range" onClick={handleBulkSearch}>
+                              Buscar Rango
                             </button>
                           </div>
                         ) : (
@@ -1149,6 +1275,17 @@ export default function PinterestCalendar() {
                         </div>
                       ) : (
                         <div className="workspace-right-content">
+                          <div className="workspace-right-header">
+                            <h3>Configuración de Pines</h3>
+                            <button
+                              type="button"
+                              className={`btn-optimize-all ${isOptimizingAll ? 'disabled' : ''}`}
+                              disabled={isOptimizingAll || selectedAssets.length === 0}
+                              onClick={handleAiOptimizeAll}
+                            >
+                              {isOptimizingAll ? '⏳ Optimizando todos...' : '✨ Generar sugerencias de todos'}
+                            </button>
+                          </div>
                           <div className="selected-pins-list">
                             {selectedAssets.map(asset => {
                               const assetPins = selectedPins.filter(p => p.assetId === asset.id);
