@@ -61,6 +61,7 @@ export default function PinterestCalendar() {
   const [expandedAssetId, setExpandedAssetId] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(null); // assetId being optimized
   const [isOptimizingAll, setIsOptimizingAll] = useState(false);
+  const [failedOptimizationsCount, setFailedOptimizationsCount] = useState(0);
   const [rangeStartId, setRangeStartId] = useState('');
   const [rangeCount, setRangeCount] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -392,15 +393,38 @@ export default function PinterestCalendar() {
     setIsOptimizing(asset.id);
     try {
       const http = new HttpService();
-      const res = await http.postData('/pinterest/ai-optimize', {
-        title: asset.titleEn || asset.title,
-        description: asset.descriptionEn || asset.description,
-        tags: asset.tags || [],
-        category: asset.category || 'General',
-        imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
-        variationCount: assetPins.length,
-        trendKeyword: trendKeyword || undefined, // Pasar la tendencia si existe
-      });
+      
+      let attempts = 3;
+      let success = false;
+      let res = null;
+      let lastError = null;
+
+      while (attempts > 0 && !success) {
+        try {
+          res = await http.postData('/pinterest/ai-optimize', {
+            title: asset.titleEn || asset.title,
+            description: asset.descriptionEn || asset.description,
+            tags: asset.tags || [],
+            category: asset.category || 'General',
+            imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
+            variationCount: assetPins.length,
+            trendKeyword: trendKeyword || undefined, // Pasar la tendencia si existe
+          });
+          success = true;
+        } catch (err) {
+          lastError = err;
+          attempts--;
+          if (attempts > 0) {
+            console.warn(`Intento de optimización fallido para asset #${asset.id}. Reintentando en 500ms...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      if (!success) {
+        throw lastError || new Error('Fallo al optimizar con IA tras 3 intentos');
+      }
+
       const variations = res.data?.variations || [];
       // Apply variations to pins of this asset
       setSelectedPins(prev => prev.map(pin => {
@@ -418,33 +442,62 @@ export default function PinterestCalendar() {
         if (prev.includes(asset.id)) return prev;
         return [...prev, asset.id];
       });
+      // Remove from failed count if it succeeds now
+      setFailedOptimizationsCount(prev => Math.max(0, prev - 1));
     } catch (e) { alert('Error AI: ' + (e?.response?.data?.error || e.message)); }
     finally { setIsOptimizing(null); }
   };
 
   // AI optimize all selected assets sequentially
   const handleAiOptimizeAll = async () => {
-    if (selectedAssets.length === 0) return;
+    // Only optimize assets that are not already optimized
+    const assetsToOptimize = selectedAssets.filter(a => !optimizedAssets.includes(a.id));
+    if (assetsToOptimize.length === 0) {
+      alert('Todos los assets ya están optimizados.');
+      return;
+    }
+
     setIsOptimizingAll(true);
+    setFailedOptimizationsCount(0); // Reset count
+    let failedCount = 0;
+
     try {
       const http = new HttpService();
-      for (const asset of selectedAssets) {
+      for (const asset of assetsToOptimize) {
         const assetPins = selectedPins.filter(p => p.assetId === asset.id);
         if (assetPins.length === 0) continue; // Skip if no images selected
 
         setIsOptimizing(asset.id);
-        try {
-          const res = await http.postData('/pinterest/ai-optimize', {
-            title: asset.titleEn || asset.title,
-            description: asset.descriptionEn || asset.description,
-            tags: asset.tags || [],
-            category: asset.category || 'General',
-            imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
-            variationCount: assetPins.length,
-            trendKeyword: trendKeyword || undefined,
-          });
-          const variations = res.data?.variations || [];
-          
+        let attempts = 3;
+        let success = false;
+        let variations = [];
+
+        while (attempts > 0 && !success) {
+          try {
+            const res = await http.postData('/pinterest/ai-optimize', {
+              title: asset.titleEn || asset.title,
+              description: asset.descriptionEn || asset.description,
+              tags: asset.tags || [],
+              category: asset.category || 'General',
+              imageUrl: resolveImgUrl(assetPins[0]?.imageUrl),
+              variationCount: assetPins.length,
+              trendKeyword: trendKeyword || undefined,
+            });
+            variations = res.data?.variations || [];
+            success = true;
+          } catch (err) {
+            attempts--;
+            if (attempts === 0) {
+              failedCount++;
+              console.error(`Error optimizando asset #${asset.id} tras 3 intentos:`, err);
+            } else {
+              console.warn(`Intento de optimización masiva fallido para asset #${asset.id}. Reintentando en 500ms...`);
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+        }
+
+        if (success) {
           setSelectedPins(prev => prev.map(pin => {
             if (pin.assetId !== asset.id) return pin;
             const idx = assetPins.findIndex(p => p.key === pin.key);
@@ -461,13 +514,17 @@ export default function PinterestCalendar() {
             if (prev.includes(asset.id)) return prev;
             return [...prev, asset.id];
           });
-        } catch (err) {
-          console.error(`Error optimizando asset #${asset.id}:`, err);
-        } finally {
-          setIsOptimizing(null);
         }
+
+        setIsOptimizing(null);
       }
-      alert('Optimización con IA de todos los assets completada.');
+
+      setFailedOptimizationsCount(failedCount);
+      if (failedCount > 0) {
+        alert(`Optimización masiva finalizada. ${failedCount} assets fallaron tras 3 intentos (ver alerta en la cabecera del espacio de trabajo).`);
+      } else {
+        alert('¡Optimización con IA de todos los assets completada con éxito!');
+      }
     } catch (e) {
       alert('Error en optimización masiva: ' + e.message);
     } finally {
@@ -484,6 +541,13 @@ export default function PinterestCalendar() {
   // Schedule all
   const handleScheduleAll = async () => {
     if (selectedPins.length === 0 || !selectedDay) return;
+
+    // Verify that all selected assets have suggestions generated
+    const nonOptimized = selectedAssets.filter(a => !optimizedAssets.includes(a.id));
+    if (nonOptimized.length > 0) {
+      alert(`⚠️ Error: No se pueden programar pines sin sugerencias de IA generadas. Faltan optimizar ${nonOptimized.length} assets.`);
+      return;
+    }
 
     // Check if any of the selected pins belong to assets that have already been scheduled/published
     let duplicateMessages = [];
@@ -589,6 +653,7 @@ export default function PinterestCalendar() {
       setSelectedPins([]);
       setSelectedAssets([]);
       setOptimizedAssets([]);
+      setFailedOptimizationsCount(0);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -607,6 +672,12 @@ export default function PinterestCalendar() {
   const handlePublishNow = async () => {
     if (selectedPins.length !== 1) return;
     const pin = selectedPins[0];
+
+    // Verify that the asset of this pin has suggestions generated
+    if (!optimizedAssets.includes(pin.assetId)) {
+      alert(`⚠️ Error: No se puede publicar un pin sin sugerencias de IA generadas. Por favor optimiza primero el asset.`);
+      return;
+    }
 
     // Check duplication
     const asset = searchedAssets.find(a => a.id === pin.assetId) || selectedAssets.find(a => a.id === pin.assetId);
@@ -650,6 +721,7 @@ export default function PinterestCalendar() {
       setSelectedPins([]);
       setSelectedAssets([]);
       setOptimizedAssets([]);
+      setFailedOptimizationsCount(0);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -1353,6 +1425,24 @@ export default function PinterestCalendar() {
                             </div>
                           )}
 
+                          {failedOptimizationsCount > 0 && (
+                            <div className="failed-optimizations-warning">
+                              <div className="warning-text">
+                                <span className="warning-icon">❌</span>
+                                <span>
+                                  <strong>Error de Optimización:</strong> Faltan <strong>{failedOptimizationsCount}</strong> assets por optimizar con IA (fallaron tras 3 intentos). No se pueden programar/publicar hasta optimizarse.
+                                </span>
+                              </div>
+                              <button 
+                                type="button" 
+                                className="btn-retry-failed-opt" 
+                                onClick={handleAiOptimizeAll}
+                              >
+                                🔄 Reintentar fallidos
+                              </button>
+                            </div>
+                          )}
+
                           <div className="selected-pins-list">
                             {selectedAssets.map(asset => {
                               const assetPins = selectedPins.filter(p => p.assetId === asset.id);
@@ -1480,7 +1570,7 @@ export default function PinterestCalendar() {
                             </div>
 
                             <div className="panel-actions-row">
-                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); }}>Limpiar Todo</button>
+                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); setFailedOptimizationsCount(0); }}>Limpiar Todo</button>
                               {selectedPins.length === 1 && (
                                 <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
                                   disabled={isPublishingNow} onClick={handlePublishNow}>
