@@ -86,12 +86,45 @@ export default function PinterestCalendar() {
   // Stats + connection status
   const [stats, setStats] = useState({ published: 0, pending: 0, failed: 0 });
   const [pinterestStatus, setPinterestStatus] = useState({ connected: false, username: '' });
+  const [boards, setBoards] = useState([]);
+  const [loadingBoards, setLoadingBoards] = useState(false);
+
+  const fetchBoards = async () => {
+    setLoadingBoards(true);
+    try {
+      const http = new HttpService();
+      const res = await http.getData('/pinterest/boards');
+      setBoards(res.data?.boards || []);
+    } catch (e) {
+      console.error('Error fetching boards:', e);
+      setBoards([]);
+    } finally {
+      setLoadingBoards(false);
+    }
+  };
 
   useEffect(() => {
     const http = new HttpService();
     http.getData('/pinterest/stats').then(r => { if (r.data) setStats(r.data); }).catch(() => {});
     http.getData('/pinterest/connection-status').then(r => { if (r.data) setPinterestStatus(r.data); }).catch(() => {});
+    fetchBoards();
   }, []);
+
+  // Auto-map selected pins to boards when the boards list is updated
+  useEffect(() => {
+    if (boards.length > 0) {
+      setSelectedPins(prev => prev.map(pin => {
+        if (pin.boardId === 'auto' || pin.boardId === 'Automático') {
+          const categoryName = pin.category || 'General';
+          const matchingBoard = boards.find(b => b.name.toLowerCase() === categoryName.toLowerCase());
+          if (matchingBoard) {
+            return { ...pin, boardId: matchingBoard.id };
+          }
+        }
+        return pin;
+      }));
+    }
+  }, [boards]);
 
   const handleDisconnect = async (e) => {
     e.stopPropagation();
@@ -329,6 +362,10 @@ export default function PinterestCalendar() {
         }
       }
 
+      const categoryName = asset.category || 'General';
+      const matchingBoard = boards.find(b => b.name.toLowerCase() === categoryName.toLowerCase());
+      const resolvedBoardId = matchingBoard ? matchingBoard.id : 'auto';
+
       setSelectedPins(prev => [...prev, {
         key,
         assetId: asset.id,
@@ -337,7 +374,8 @@ export default function PinterestCalendar() {
         pinDescription: asset.descriptionEn || asset.description || '',
         pinLink: `https://stl-hub.com/en/asset/${asset.slug || asset.id}`,
         pinHashtags: [],
-        boardId: 'auto',
+        boardId: resolvedBoardId,
+        category: categoryName,
       }]);
       setSelectedAssets(prev => {
         if (prev.some(a => a.id === asset.id)) return prev;
@@ -682,6 +720,15 @@ export default function PinterestCalendar() {
       </div>
     );
   };
+
+  const missingBoards = [];
+  selectedPins.forEach(p => {
+    const catName = p.category || 'General';
+    const exists = boards.some(b => b.name.toLowerCase() === catName.toLowerCase());
+    if (!exists && !missingBoards.includes(catName)) {
+      missingBoards.push(catName);
+    }
+  });
 
   return (
     <div className="pinterest-calendar-container">
@@ -1286,6 +1333,26 @@ export default function PinterestCalendar() {
                               {isOptimizingAll ? '⏳ Optimizando todos...' : '✨ Generar sugerencias de todos'}
                             </button>
                           </div>
+
+                          {missingBoards.length > 0 && (
+                            <div className="missing-boards-warning">
+                              <div className="warning-text">
+                                <span className="warning-icon">⚠️</span>
+                                <span>
+                                  <strong>Faltan tableros en Pinterest:</strong> Debes crear manualmente los tableros para las siguientes categorías: <strong>{missingBoards.join(', ')}</strong>
+                                </span>
+                              </div>
+                              <button 
+                                type="button" 
+                                className={`btn-sync-boards ${loadingBoards ? 'loading' : ''}`}
+                                disabled={loadingBoards} 
+                                onClick={fetchBoards}
+                              >
+                                {loadingBoards ? '⏳ Sincronizando...' : '🔄 Sincronizar tableros'}
+                              </button>
+                            </div>
+                          )}
+
                           <div className="selected-pins-list">
                             {selectedAssets.map(asset => {
                               const assetPins = selectedPins.filter(p => p.assetId === asset.id);
@@ -1327,9 +1394,14 @@ export default function PinterestCalendar() {
                                         <label>Tablero Pinterest</label>
                                         <BoardSelector 
                                           category={asset.category}
+                                          boards={boards}
+                                          selected={assetPins.length > 0 ? assetPins[0].boardId : 'auto'}
                                           onSelect={(id) => {
                                             setSelectedPins(prev => prev.map(p => p.assetId === asset.id ? { ...p, boardId: id } : p));
-                                          }} 
+                                          }}
+                                          onCreateBoard={(newBoard) => {
+                                            setBoards(prev => [...prev, newBoard]);
+                                          }}
                                         />
                                       </div>
                                     </div>
@@ -1506,20 +1578,12 @@ export default function PinterestCalendar() {
 }
 
 // Board Selector
-function BoardSelector({ category, onSelect }) {
-  const [boards, setBoards] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState('auto');
+function BoardSelector({ category, selected, boards, onSelect, onCreateBoard }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    const http = new HttpService();
-    http.getData('/pinterest/boards').then(res => setBoards(res.data?.boards || [])).catch(() => setBoards([])).finally(() => setLoading(false));
-  }, []);
-
-  const handleChange = (e) => { setSelected(e.target.value); onSelect(e.target.value); };
+  const handleChange = (e) => { onSelect(e.target.value); };
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setCreating(true);
@@ -1527,27 +1591,49 @@ function BoardSelector({ category, onSelect }) {
       const http = new HttpService();
       const res = await http.postData('/pinterest/boards', { name: newName.trim() });
       const board = res.data?.board;
-      if (board) { setBoards(prev => [...prev, board]); setSelected(board.id); onSelect(board.id); setNewName(''); setShowCreate(false); }
+      if (board) {
+        onCreateBoard(board);
+        onSelect(board.id);
+        setNewName('');
+        setShowCreate(false);
+      }
     } catch (e) { alert('Error: ' + e.message); }
     finally { setCreating(false); }
   };
 
   return (
     <div className="board-selector">
-      <select className="form-input" value={selected} onChange={handleChange} disabled={loading}>
+      <select className="form-input" value={selected} onChange={handleChange}>
         <option value="auto">Automático ({category || 'General'})</option>
-        {boards.map(b => <option key={b.id} value={b.id}>{b.name} ({b.pinCount ?? 0} pines)</option>)}
+        {boards.map(b => (
+          <option key={b.id} value={b.id}>
+            {b.name} ({b.pinCount ?? 0} pines)
+          </option>
+        ))}
       </select>
       {!showCreate ? (
-        <button className="btn-create-board" onClick={() => setShowCreate(true)} type="button">+ Crear Tablero</button>
+        <button className="btn-create-board" onClick={() => setShowCreate(true)} type="button">
+          + Crear Tablero
+        </button>
       ) : (
         <div className="create-board-inline">
-          <input type="text" className="form-input" placeholder="Nombre" value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleCreate()} autoFocus />
-          <button className="btn-confirm-create" onClick={handleCreate} disabled={creating}>{creating ? '...' : '✓'}</button>
-          <button className="btn-cancel-create" onClick={() => { setShowCreate(false); setNewName(''); }}>✕</button>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Nombre"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            autoFocus
+          />
+          <button className="btn-confirm-create" onClick={handleCreate} disabled={creating}>
+            {creating ? '...' : '✓'}
+          </button>
+          <button className="btn-cancel-create" onClick={() => { setShowCreate(false); setNewName(''); }}>
+            ✕
+          </button>
         </div>
       )}
-      {loading && <span className="board-loading">Cargando...</span>}
     </div>
   );
 }
