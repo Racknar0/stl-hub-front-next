@@ -5,7 +5,6 @@ import "./globals.css";
 import LangSetter from "./LangSetter";
 import { GoogleTagManager } from '@next/third-parties/google';
 import { DM_Sans, Syne, Outfit, Montserrat, Poppins } from 'next/font/google';
-import { headers } from 'next/headers';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -96,12 +95,11 @@ export async function generateMetadata() {
   };
 }
 
-export default async function RootLayout({ children }) {
-  let htmlLang = 'es';
-  try {
-    const h = await headers();
-    htmlLang = h.get('x-lang') === 'en' ? 'en' : 'es';
-  } catch {}
+export default function RootLayout({ children }) {
+  // NO llamar headers() aquí — convierte TODAS las páginas en dinámicas
+  // con Cache-Control: private,no-store, bloqueando la indexación de Google.
+  // LangSetter (client component) ya actualiza el lang del <html> dinámicamente.
+  const htmlLang = 'es';
 
   return (
     <html lang={htmlLang} className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${montserrat.variable} ${poppins.variable}`} suppressHydrationWarning>
