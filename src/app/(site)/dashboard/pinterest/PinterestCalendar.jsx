@@ -61,7 +61,7 @@ export default function PinterestCalendar() {
   const [expandedAssetId, setExpandedAssetId] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(null); // assetId being optimized
   const [isOptimizingAll, setIsOptimizingAll] = useState(false);
-  const [failedOptimizationsCount, setFailedOptimizationsCount] = useState(0);
+  const [failedAssets, setFailedAssets] = useState([]);
   const [rangeStartId, setRangeStartId] = useState('');
   const [rangeCount, setRangeCount] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -335,6 +335,7 @@ export default function PinterestCalendar() {
       if (!hasOtherPins) {
         setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
         setOptimizedAssets(prev => prev.filter(id => id !== asset.id));
+        setFailedAssets(prev => prev.filter(id => id !== asset.id));
       }
     } else {
       if (selectedPins.length >= MAX_PINS_PER_DAY) {
@@ -442,9 +443,16 @@ export default function PinterestCalendar() {
         if (prev.includes(asset.id)) return prev;
         return [...prev, asset.id];
       });
-      // Remove from failed count if it succeeds now
-      setFailedOptimizationsCount(prev => Math.max(0, prev - 1));
-    } catch (e) { alert('Error AI: ' + (e?.response?.data?.error || e.message)); }
+      // Remove from failed list if it succeeds now
+      setFailedAssets(prev => prev.filter(id => id !== asset.id));
+    } catch (e) { 
+      // Add to failed list
+      setFailedAssets(prev => {
+        if (prev.includes(asset.id)) return prev;
+        return [...prev, asset.id];
+      });
+      alert('Error AI: ' + (e?.response?.data?.error || e.message)); 
+    }
     finally { setIsOptimizing(null); }
   };
 
@@ -458,8 +466,8 @@ export default function PinterestCalendar() {
     }
 
     setIsOptimizingAll(true);
-    setFailedOptimizationsCount(0); // Reset count
-    let failedCount = 0;
+    setFailedAssets(prev => prev.filter(id => !assetsToOptimize.some(a => a.id === id))); // Reset targeted failed
+    let failedList = [];
 
     try {
       const http = new HttpService();
@@ -488,7 +496,7 @@ export default function PinterestCalendar() {
           } catch (err) {
             attempts--;
             if (attempts === 0) {
-              failedCount++;
+              failedList.push(asset.id);
               console.error(`Error optimizando asset #${asset.id} tras 3 intentos:`, err);
             } else {
               console.warn(`Intento de optimización masiva fallido para asset #${asset.id}. Reintentando en 500ms...`);
@@ -514,14 +522,15 @@ export default function PinterestCalendar() {
             if (prev.includes(asset.id)) return prev;
             return [...prev, asset.id];
           });
+          setFailedAssets(prev => prev.filter(id => id !== asset.id)); // Remove on success
         }
 
         setIsOptimizing(null);
       }
 
-      setFailedOptimizationsCount(failedCount);
-      if (failedCount > 0) {
-        alert(`Optimización masiva finalizada. ${failedCount} assets fallaron tras 3 intentos (ver alerta en la cabecera del espacio de trabajo).`);
+      if (failedList.length > 0) {
+        setFailedAssets(prev => Array.from(new Set([...prev, ...failedList])));
+        alert(`Optimización masiva finalizada. ${failedList.length} assets fallaron tras 3 intentos (ver alerta en la cabecera del espacio de trabajo).`);
       } else {
         alert('¡Optimización con IA de todos los assets completada con éxito!');
       }
@@ -653,7 +662,7 @@ export default function PinterestCalendar() {
       setSelectedPins([]);
       setSelectedAssets([]);
       setOptimizedAssets([]);
-      setFailedOptimizationsCount(0);
+      setFailedAssets([]);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -721,7 +730,7 @@ export default function PinterestCalendar() {
       setSelectedPins([]);
       setSelectedAssets([]);
       setOptimizedAssets([]);
-      setFailedOptimizationsCount(0);
+      setFailedAssets([]);
       setSearchedAssets([]);
       setPanelMode('list');
       fetchDayPins();
@@ -801,6 +810,10 @@ export default function PinterestCalendar() {
       missingBoards.push(catName);
     }
   });
+
+  const failedOptimizationsCount = selectedAssets.filter(
+    a => failedAssets.includes(a.id) && !optimizedAssets.includes(a.id)
+  ).length;
 
   return (
     <div className="pinterest-calendar-container">
@@ -1348,6 +1361,7 @@ export default function PinterestCalendar() {
                                       setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
                                       setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
                                       setOptimizedAssets(prev => prev.filter(id => id !== asset.id));
+                                      setFailedAssets(prev => prev.filter(id => id !== asset.id));
                                     }}
                                     className="btn-remove-asset-search"
                                     title="Quitar este asset de la lista"
@@ -1467,6 +1481,7 @@ export default function PinterestCalendar() {
                                           setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
                                           setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
                                           setOptimizedAssets(prev => prev.filter(id => id !== asset.id));
+                                          setFailedAssets(prev => prev.filter(id => id !== asset.id));
                                         }}
                                       >
                                         🗑️ Quitar
@@ -1570,7 +1585,7 @@ export default function PinterestCalendar() {
                             </div>
 
                             <div className="panel-actions-row">
-                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); setFailedOptimizationsCount(0); }}>Limpiar Todo</button>
+                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); setFailedAssets([]); }}>Limpiar Todo</button>
                               {selectedPins.length === 1 && (
                                 <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
                                   disabled={isPublishingNow} onClick={handlePublishNow}>
