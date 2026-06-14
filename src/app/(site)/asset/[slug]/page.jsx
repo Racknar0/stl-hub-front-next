@@ -130,13 +130,14 @@ export async function generateMetadata({ params }) {
         };
     }
 
-    // Detectar idioma desde header inyectado por middleware
-    let isEn = false;
-    try {
-        const { headers } = await import('next/headers');
-        const h = await headers();
-        isEn = h.get('x-lang') === 'en';
-    } catch {}
+    // Detectar idioma desde el slug de la URL.
+    // NO usar headers() aquí: en Next.js App Router, headers() convierte la página
+    // en dinámica y fuerza Cache-Control: private,no-store, bloqueando la indexación.
+    // La ruta /en/asset/[slug] se reescribe a /asset/[slug] por next.config.mjs,
+    // pero el middleware ya pone x-lang=en. Como no podemos leer headers sin
+    // hacer la página dinámica, asumimos ES por defecto. La versión EN tiene
+    // su propia entrada en el sitemap con hreflang.
+    const isEn = false;
 
     const cleanedEs = cleanTitlePrefix(asset.title || 'modelo 3D');
     const safeTitleEs = cleanedEs.length > 40 ? cleanedEs.substring(0, 40) + '...' : cleanedEs;
@@ -254,12 +255,8 @@ export default async function AssetPage({ params }) {
     // Delegamos al componente cliente NsfwAssetGate que detecta si el usuario
     // está logueado (token en localStorage) y re-fetchea con JWT si es necesario.
     if (asset?.__nsfw_restricted) {
-        let restrictedIsEn = false;
-        try {
-            const { headers } = await import('next/headers');
-            const h = await headers();
-            restrictedIsEn = h.get('x-lang') === 'en';
-        } catch {}
+        // No llamar headers() — fuerza Cache-Control: private
+        const restrictedIsEn = false;
         const NsfwAssetGate = (await import('./NsfwAssetGate')).default;
         return <NsfwAssetGate slug={slug} isEn={restrictedIsEn} />;
     }
@@ -298,13 +295,11 @@ export default async function AssetPage({ params }) {
     const descriptionEs = descriptionEsRaw || buildGenericDescriptionEs(asset.title, tagsEs, catEs);
     const descriptionEn = descriptionEnRaw || buildGenericDescriptionEn(asset.titleEn || asset.title, tagsEn, catEn);
 
-    // Detectar idioma desde header inyectado por middleware
-    let pageIsEn = false;
-    try {
-        const { headers } = await import('next/headers');
-        const h = await headers();
-        pageIsEn = h.get('x-lang') === 'en';
-    } catch {}
+    // Detectar idioma sin llamar headers() (que fuerza Cache-Control: private).
+    // La ruta /en/asset/... se reescribe a /asset/..., así que no podemos
+    // distinguir idioma sin headers(). Defaulteamos a ES; el contenido EN
+    // se resuelve client-side por useResolvedLanguage / el hook del layout.
+    const pageIsEn = false;
 
     // Título y descripción según idioma
     const displayTitle = pageIsEn ? (asset.titleEn || asset.title || 'STL Model') : (asset.title || 'Modelo STL');
