@@ -63,6 +63,72 @@ const Header = () => {
     return () => { mounted = false };
   }, [token]);
 
+  // --- USER NOTIFICATIONS STATE & ACTIONS ---
+  const [notifMenuOpen, setNotifMenuOpen] = React.useState(false);
+  const [notifList, setNotifList] = React.useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = React.useState(0);
+  const notifRef = useRef(null);
+
+  const fetchNotifs = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [countRes, listRes] = await Promise.all([
+        axiosInstance.get('/me/notifications/unread-count'),
+        axiosInstance.get('/me/notifications?page=1&pageSize=5')
+      ]);
+      setUnreadNotifCount(countRes.data?.count || 0);
+      setNotifList(listRes.data?.data || []);
+    } catch (e) {
+      console.warn('Load notifications failed', e);
+    }
+  }, [token]);
+
+  React.useEffect(() => {
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 60000);
+    return () => clearInterval(interval);
+  }, [fetchNotifs]);
+
+  React.useEffect(() => {
+    function handleClickOutside(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifMenuOpen(false);
+      }
+    }
+    if (notifMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [notifMenuOpen]);
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await axiosInstance.post('/me/notifications/read-all');
+      fetchNotifs();
+    } catch (e) {
+      console.warn('Mark all read failed', e);
+    }
+  };
+
+  const handleNotifClick = async (n) => {
+    try {
+      if (!n.isRead) {
+        await axiosInstance.patch(`/me/notifications/${n.id}/read`);
+      }
+      setNotifMenuOpen(false);
+      fetchNotifs();
+      if (n.assetId) {
+        router.push(isEn ? `/en/asset/${n.assetId}` : `/asset/${n.assetId}`);
+      } else {
+        router.push(accountHref);
+      }
+    } catch (e) {
+      console.warn('Notification action failed', e);
+    }
+  };
+
   // Cerrar el menú al hacer click fuera
   React.useEffect(() => {
     function handleClickOutside(e) {
@@ -943,52 +1009,123 @@ const Header = () => {
 
 
             {token && (
-              <div ref={profileMenuRef} className="profile-menu-wrap">
-                <button
-                  type="button"
-                  className="profile-circle-btn"
-                  aria-haspopup="true"
-                  aria-expanded={profileMenuOpen}
-                  onClick={() => setProfileMenuOpen((v) => !v)}
-                  title={profile?.email || 'Usuario'}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/>
-                    <path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/>
-                  </svg>
-                </button>
-                {profileMenuOpen && (
-                  <div className="profile-dropdown-menu">
-                    <div className="profile-dropdown-header">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/><path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/></svg>
-                      {profile?.email || 'Usuario'}
-                    </div>
-                    <div className="profile-dropdown-actions">
-                      
-                      
-                      <Button 
-                        styles={{width: '100%'}} 
-                        as={Link} href={accountHref} 
-                        variant="cyan" 
-                        width="lg" 
-                        aria-label={t('header.account')} 
-                        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/><path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >
-                          {isEn ? 'My profile' : 'Mi perfil'}
-                        </Button>
+              <>
+                {/* Notification Bell Dropdown */}
+                <div ref={notifRef} className="notif-menu-wrap">
+                  <button
+                    type="button"
+                    className="notif-bell-btn"
+                    aria-haspopup="true"
+                    aria-expanded={notifMenuOpen}
+                    onClick={() => {
+                      setNotifMenuOpen((v) => !v);
+                      if (!notifMenuOpen) {
+                        fetchNotifs();
+                      }
+                    }}
+                    title={isEn ? 'Notifications' : 'Notificaciones'}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9ZM13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {unreadNotifCount > 0 && (
+                      <span className="notif-count-badge">{unreadNotifCount}</span>
+                    )}
+                  </button>
 
-                        {isAdmin && (
-                          <Button
-                              styles={{width: '100%'}}
-                            as={Link} href="/dashboard" variant="cyan" aria-label="Dashboard" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>} >
-                              {isEn ? 'Dashboard' : 'Panel'}
-                            </Button>
-                          )}
-
-                          <Button styles={{width: '100%'}} type="button" onClick={handleLogout} variant="dangerOutline" width="lg" aria-label={t('header.logout')} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >{t('header.logout')}</Button>
+                  {notifMenuOpen && (
+                    <div className="notif-dropdown-menu">
+                      <div className="notif-dropdown-header">
+                        <span>{isEn ? 'Notifications' : 'Notificaciones'}</span>
+                        {unreadNotifCount > 0 && (
+                          <button type="button" className="mark-all-read-btn" onClick={handleMarkAllAsRead}>
+                            {isEn ? 'Mark all read' : 'Marcar todas leídas'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="notif-dropdown-list">
+                        {notifList.length > 0 ? (
+                          notifList.map((n) => (
+                            <div
+                              key={n.id}
+                              className={`notif-item ${!n.isRead ? 'unread' : ''}`}
+                              onClick={() => handleNotifClick(n)}
+                            >
+                              <div className="notif-item-dot" />
+                              <div className="notif-item-content">
+                                <div className="notif-item-title">{n.title}</div>
+                                {n.body && <div className="notif-item-body">{n.body}</div>}
+                                <div className="notif-item-time">
+                                  {new Date(n.createdAt).toLocaleDateString(isEn ? 'en-US' : 'es-ES', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="notif-empty">
+                            {isEn ? 'No notifications' : 'Sin notificaciones'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="notif-dropdown-footer">
+                        <Link href={accountHref} onClick={() => setNotifMenuOpen(false)}>
+                          {isEn ? 'View all notifications' : 'Ver todas las notificaciones'}
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+
+                <div ref={profileMenuRef} className="profile-menu-wrap">
+                  <button
+                    type="button"
+                    className="profile-circle-btn"
+                    aria-haspopup="true"
+                    aria-expanded={profileMenuOpen}
+                    onClick={() => setProfileMenuOpen((v) => !v)}
+                    title={profile?.email || 'Usuario'}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/>
+                      <path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                  {profileMenuOpen && (
+                    <div className="profile-dropdown-menu">
+                      <div className="profile-dropdown-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#b59cff" strokeWidth="2"/><path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="#b59cff" strokeWidth="2"/></svg>
+                        {profile?.email || 'Usuario'}
+                      </div>
+                      <div className="profile-dropdown-actions">
+                        <Button 
+                          styles={{width: '100%'}} 
+                          as={Link} href={accountHref} 
+                          variant="cyan" 
+                          width="lg" 
+                          aria-label={t('header.account')} 
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2"/><path d="M21 22a9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >
+                            {isEn ? 'My profile' : 'Mi perfil'}
+                          </Button>
+
+                          {isAdmin && (
+                            <Button
+                                styles={{width: '100%'}}
+                              as={Link} href="/dashboard" variant="cyan" aria-label="Dashboard" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>} >
+                                {isEn ? 'Dashboard' : 'Panel'}
+                              </Button>
+                            )}
+
+                            <Button styles={{width: '100%'}} type="button" onClick={handleLogout} variant="dangerOutline" width="lg" aria-label={t('header.logout')} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>} >{t('header.logout')}</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
             {!token && (
               <Button
@@ -1278,6 +1415,24 @@ const Header = () => {
               <a href={accountHref} className="drawer-btn" onClick={() => setMobileMenuOpen(false)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 20c0-2.5 3.5-4.5 8-4.5s8 2 8 4.5" stroke="currentColor" strokeWidth="2"/></svg>
                 {isEn ? 'My profile' : 'Mi perfil'}
+              </a>
+              <a href={accountHref} className="drawer-btn" onClick={() => setMobileMenuOpen(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9ZM13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {isEn ? 'Notifications' : 'Notificaciones'}
+                {unreadNotifCount > 0 && (
+                  <span className="notif-count-badge-mobile" style={{
+                    background: '#ff4b4b',
+                    color: '#fff',
+                    borderRadius: '99px',
+                    padding: '2px 6px',
+                    fontSize: '0.7rem',
+                    fontWeight: '800',
+                    marginLeft: 'auto',
+                    boxShadow: '0 0 4px #ff4b4b'
+                  }}>{unreadNotifCount}</span>
+                )}
               </a>
               {isAdmin && (
                 <a href="/dashboard" className="drawer-btn" onClick={() => setMobileMenuOpen(false)}>

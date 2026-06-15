@@ -100,9 +100,42 @@ export default function NotificationsPage(){
       <Card className="glass" sx={{ mb: 2 }}>
         <CardHeader title={<>
           <Tabs value={tabType} onChange={(_,v)=>setTabType(v)} variant="scrollable" scrollButtons="auto">
-            {types.map(t => (
-              <Tab key={t.key} value={t.key} label={t.label + ` (${items.filter(i=>i.type===t.key).filter(i=>i.status==='UNREAD').length}/${items.filter(i=>i.type===t.key).length})`} />
-            ))}
+            {types.map(t => {
+              const unreadInTab = items.filter(i => i.type === t.key && i.status === 'UNREAD').length;
+              const totalInTab = items.filter(i => i.type === t.key).length;
+              return (
+                <Tab
+                  key={t.key}
+                  value={t.key}
+                  sx={{
+                    fontWeight: unreadInTab > 0 ? 700 : 500,
+                    color: unreadInTab > 0 ? '#ff4d4d !important' : 'inherit',
+                    backgroundColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.05) !important' : 'transparent',
+                    borderRadius: '8px',
+                    margin: '4px 2px',
+                    minHeight: '40px',
+                    height: '40px',
+                    padding: '6px 12px',
+                    transition: 'all 0.2s',
+                    border: unreadInTab > 0 ? '1px dashed rgba(255, 77, 77, 0.2)' : '1px solid transparent',
+                    '&.Mui-selected': {
+                      backgroundColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.12) !important' : 'rgba(139, 92, 246, 0.08) !important',
+                      color: unreadInTab > 0 ? '#ff3b30 !important' : '#8b5cf6 !important',
+                      borderColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.4)' : 'rgba(139, 92, 246, 0.3)',
+                    }
+                  }}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <span>{t.label}</span>
+                      {unreadInTab > 0 && (
+                        <Box sx={{ width: 8, height: 8, bgcolor: '#ff4d4d', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 6px #ff4d4d' }} />
+                      )}
+                      <span style={{ fontSize: '0.85em', opacity: 0.75 }}>({unreadInTab}/{totalInTab})</span>
+                    </Box>
+                  }
+                />
+              );
+            })}
           </Tabs>
         </>} action={
           <Stack direction="row" spacing={1} alignItems="center">
@@ -171,6 +204,40 @@ export default function NotificationsPage(){
                       <Typography variant="subtitle2" sx={{ fontWeight: unread ? 700 : 500, fontSize: '1rem', lineHeight:1.2, color:'#222' }}>{n.title}</Typography>
                       {n.body && <Typography variant="body2" sx={{ whiteSpace:'pre-wrap', opacity:0.95, mt:0.3, fontSize:'0.97rem', lineHeight:1.25, color:'#222' }}>{n.body}</Typography>}
                     </Box>
+                    {(() => {
+                      const match = n.body?.match(/assetId=(\d+)/);
+                      const assetId = match ? match[1] : null;
+                      if (n.type === 'REPORT' && assetId) {
+                        return (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="secondary"
+                            sx={{ textTransform: 'none', borderRadius: '6px', fontSize: '0.82rem', mr: 1, minWidth: 110 }}
+                            onClick={async () => {
+                              if (!confirm('¿Deseas intentar restaurar este asset ahora?')) return;
+                              try {
+                                setLoading(true);
+                                const res = await http.postData(`/assets/${assetId}/restore-link`, {});
+                                if (res?.ok) {
+                                  await successAlert('Éxito', `Asset restaurado con éxito. Link: ${res.link}`);
+                                } else {
+                                  await errorAlert('Error', 'No se pudo restaurar el asset.');
+                                }
+                                await fetchAll();
+                              } catch (e) {
+                                await errorAlert('Error', e?.response?.data?.message || 'Error al intentar restaurar.');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          >
+                            Restaurar Asset
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
                     {/* Borrar notificación individual */}
                     <Tooltip title="Eliminar notificación">
                       <span>

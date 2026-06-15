@@ -37,6 +37,13 @@ const Account = () => {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalAsset, setModalAsset] = React.useState(null);
 
+  // User notifications
+  const [notifs, setNotifs] = useState([]);
+  const [notifTotal, setNotifTotal] = useState(0);
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const NOTIF_PAGE_SIZE = 10;
+
   // Gift code redeem
   const [redeemCode, setRedeemCode] = React.useState('');
   const [redeemLoading, setRedeemLoading] = React.useState(false);
@@ -83,15 +90,55 @@ const Account = () => {
     } finally { setDlLoading(false); }
   }, []);
 
+  const fetchUserNotifs = useCallback(async (page = 1) => {
+    setNotifLoading(true);
+    try {
+      const res = await axiosInstance.get(`/me/notifications?page=${page}&pageSize=${NOTIF_PAGE_SIZE}`);
+      setNotifs(res.data?.data || []);
+      setNotifTotal(res.data?.total || 0);
+      setNotifPage(page);
+    } catch (e) {
+      console.warn('Load notifications failed', e);
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
+
+  const handleMarkAsRead = async (n) => {
+    if (n.isRead) {
+      if (n.assetId) onClickSeeAsset(n.assetId);
+      return;
+    }
+    try {
+      await axiosInstance.patch(`/me/notifications/${n.id}/read`);
+      fetchUserNotifs(notifPage);
+      if (n.assetId) {
+        onClickSeeAsset(n.assetId);
+      }
+    } catch (e) {
+      console.warn('Mark read failed', e);
+    }
+  };
+
+  const handleMarkAllUserNotifsAsRead = async () => {
+    try {
+      await axiosInstance.post('/me/notifications/read-all');
+      fetchUserNotifs(1);
+    } catch (e) {
+      console.warn('Mark all read failed', e);
+    }
+  };
+
   React.useEffect(()=>{
     let mounted = true;
     async function load(){
       try {
         setLoading(true);
-        const [p, d, s] = await Promise.all([
+        const [p, d, s, n] = await Promise.all([
           axiosInstance.get('/me/profile'),
           axiosInstance.get(`/me/downloads?page=1&pageSize=${DL_PAGE_SIZE}`),
           axiosInstance.get('/me/stats'),
+          axiosInstance.get(`/me/notifications?page=1&pageSize=${NOTIF_PAGE_SIZE}`),
         ]);
         if (!mounted) return;
         setProfile(p.data);
@@ -99,6 +146,9 @@ const Account = () => {
         setDlTotal(d.data?.total || 0);
         setDlPage(1);
         setStats(s.data || { totalDownloads: 0, topCategories: [] });
+        setNotifs(n.data?.data || []);
+        setNotifTotal(n.data?.total || 0);
+        setNotifPage(1);
       } catch (e) {
         console.warn('Account load error', e?.response?.data || e.message);
       } finally { setLoading(false); }
@@ -132,50 +182,126 @@ const Account = () => {
       </div>
 
       <div className="account-grid">
-        <div className="card">
-          <h4>{isEn ? 'My subscription' : 'Mi suscripción'}</h4>
-          {loading && <p>{isEn ? 'Loading...' : 'Cargando...'}</p>}
-          {profile && (
-            <>
-              <p><strong>{isEn ? 'Email' : 'Email'}:</strong> {profile.email}</p>
-              <p><strong>{isEn ? 'Registered' : 'Registro'}:</strong> {new Date(profile.createdAt).toLocaleDateString(dateLocale)}</p>
-              <p><strong>{isEn ? 'Status' : 'Estado'}:</strong> {profile.subscription?.status}</p>
-              <p><strong>{isEn ? 'Expires' : 'Expira'}:</strong> {profile.subscription?.currentPeriodEnd ? new Date(profile.subscription.currentPeriodEnd).toLocaleString(dateLocale) : '-'}</p>
-              <p><strong>{isEn ? 'Days remaining' : 'Días restantes'}:</strong> {profile.subscription?.daysRemaining ?? 0}</p>
-              <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
-                <button className="btn-pill fill mt-4" onClick={onOpenPlans}>
-                  {isEn ? 'Top up days' : 'Recargar días'}
+        <div className="account-col-left">
+          {/* Mi Suscripcion & Gift Code */}
+          <div className="card">
+            <h4>{isEn ? 'My subscription' : 'Mi suscripción'}</h4>
+            {loading && <p>{isEn ? 'Loading...' : 'Cargando...'}</p>}
+            {profile && (
+              <>
+                <p><strong>{isEn ? 'Email' : 'Email'}:</strong> {profile.email}</p>
+                <p><strong>{isEn ? 'Registered' : 'Registro'}:</strong> {new Date(profile.createdAt).toLocaleDateString(dateLocale)}</p>
+                <p><strong>{isEn ? 'Status' : 'Estado'}:</strong> {profile.subscription?.status}</p>
+                <p><strong>{isEn ? 'Expires' : 'Expira'}:</strong> {profile.subscription?.currentPeriodEnd ? new Date(profile.subscription.currentPeriodEnd).toLocaleString(dateLocale) : '-'}</p>
+                <p><strong>{isEn ? 'Days remaining' : 'Días restantes'}:</strong> {profile.subscription?.daysRemaining ?? 0}</p>
+                <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
+                  <button className="btn-pill fill mt-4" onClick={onOpenPlans}>
+                    {isEn ? 'Top up days' : 'Recargar días'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Gift Code Redeem */}
+            <div className="gift-redeem-section">
+              <h5>{isEn ? '🎁 Redeem a gift code' : '🎁 Canjear código de regalo'}</h5>
+              <div className="gift-redeem-row">
+                <input
+                  type="text"
+                  value={redeemCode}
+                  onChange={(e) => { setRedeemCode(e.target.value.toUpperCase()); setRedeemMsg(null); }}
+                  placeholder={isEn ? 'Enter your code' : 'Ingresa tu código'}
+                  maxLength={30}
+                  disabled={redeemLoading}
+                />
+                <button
+                  className="btn-pill fill"
+                  onClick={onRedeemCode}
+                  disabled={redeemLoading || !redeemCode.trim()}
+                >
+                  {redeemLoading
+                    ? (isEn ? 'Redeeming...' : 'Canjeando...')
+                    : (isEn ? 'Redeem' : 'Canjear')}
                 </button>
               </div>
-            </>
-          )}
-
-          {/* Gift Code Redeem */}
-          <div className="gift-redeem-section">
-            <h5>{isEn ? '🎁 Redeem a gift code' : '🎁 Canjear código de regalo'}</h5>
-            <div className="gift-redeem-row">
-              <input
-                type="text"
-                value={redeemCode}
-                onChange={(e) => { setRedeemCode(e.target.value.toUpperCase()); setRedeemMsg(null); }}
-                placeholder={isEn ? 'Enter your code' : 'Ingresa tu código'}
-                maxLength={30}
-                disabled={redeemLoading}
-              />
-              <button
-                className="btn-pill fill"
-                onClick={onRedeemCode}
-                disabled={redeemLoading || !redeemCode.trim()}
-              >
-                {redeemLoading
-                  ? (isEn ? 'Redeeming...' : 'Canjeando...')
-                  : (isEn ? 'Redeem' : 'Canjear')}
-              </button>
+              {redeemMsg && (
+                <p className={`redeem-msg ${redeemMsg.type === 'ok' ? 'is-ok' : 'is-err'}`}>
+                  {redeemMsg.text}
+                </p>
+              )}
             </div>
-            {redeemMsg && (
-              <p className={`redeem-msg ${redeemMsg.type === 'ok' ? 'is-ok' : 'is-err'}`}>
-                {redeemMsg.text}
-              </p>
+          </div>
+
+          {/* Historial de Notificaciones */}
+          <div className="card">
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem'}}>
+              <h4 style={{margin:0}}>{isEn ? 'Notifications' : 'Notificaciones'}</h4>
+              {notifs.filter(n => !n.isRead).length > 0 && (
+                <button
+                  className="btn-pill outline"
+                  style={{padding:'.2rem .5rem', fontSize:'.75rem', minWidth:'auto'}}
+                  onClick={handleMarkAllUserNotifsAsRead}
+                >
+                  {isEn ? 'Mark all read' : 'Marcar todas leídas'}
+                </button>
+              )}
+            </div>
+
+            {notifLoading ? (
+              <p style={{color:'#818199', textAlign:'center', padding:'.5rem 0'}}>{isEn ? 'Loading...' : 'Cargando...'}</p>
+            ) : notifs?.length ? (
+              <>
+                <ul className="notif-history-list">
+                  {notifs.map((n) => (
+                    <li
+                      key={n.id}
+                      className={`notif-history-item ${!n.isRead ? 'unread' : ''}`}
+                      onClick={() => handleMarkAsRead(n)}
+                    >
+                      <div className="notif-history-bullet" />
+                      <div className="notif-history-content">
+                        <div className="notif-history-title">{n.title}</div>
+                        {n.body && <div className="notif-history-body">{n.body}</div>}
+                        <div className="notif-history-time">
+                          {new Date(n.createdAt).toLocaleString(dateLocale, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                      {n.assetId && (
+                        <button className="btn-pill outline" style={{padding:'.2rem .5rem', fontSize:'.75rem', minWidth:'auto', marginLeft:'auto'}} onClick={(e)=>{ e.stopPropagation(); onClickSeeAsset(n.assetId); }}>
+                          {isEn ? 'View asset' : 'Ver asset'}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+
+                {notifTotal > NOTIF_PAGE_SIZE && (
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:'.4rem', marginTop:'1.2rem'}}>
+                    <button
+                      className="btn-pill outline"
+                      style={{padding:'.2rem .5rem', fontSize:'.8rem', minWidth:'auto'}}
+                      disabled={notifPage <= 1 || notifLoading}
+                      onClick={() => fetchUserNotifs(notifPage - 1)}
+                    >←</button>
+                    <span style={{fontSize:'.8rem', color:'#818199'}}>
+                      {notifPage} / {Math.ceil(notifTotal / NOTIF_PAGE_SIZE)}
+                    </span>
+                    <button
+                      className="btn-pill outline"
+                      style={{padding:'.2rem .5rem', fontSize:'.8rem', minWidth:'auto'}}
+                      disabled={notifPage >= Math.ceil(notifTotal / NOTIF_PAGE_SIZE) || notifLoading}
+                      onClick={() => fetchUserNotifs(notifPage + 1)}
+                    >→</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p style={{color:'#818199'}}>{isEn ? 'No notifications.' : 'Sin notificaciones.'}</p>
             )}
           </div>
         </div>
