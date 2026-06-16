@@ -57,7 +57,7 @@ async function fetchHomeSSR(urlPath) {
   const apiBase = getApiBase();
   const url = `${apiBase}${urlPath}`;
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { next: { revalidate: 600 } });
     if (!res.ok) return null;
     return res.json();
   } catch (e) {
