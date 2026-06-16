@@ -119,11 +119,7 @@ const Header = () => {
       }
       setNotifMenuOpen(false);
       fetchNotifs();
-      if (n.assetId) {
-        router.push(isEn ? `/en/asset/${n.assetId}` : `/asset/${n.assetId}`);
-      } else {
-        router.push(accountHref);
-      }
+      router.push(accountHref);
     } catch (e) {
       console.warn('Notification action failed', e);
     }

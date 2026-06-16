@@ -272,7 +272,7 @@ const Account = () => {
                         </div>
                       </div>
                       {n.assetId && (
-                        <button className="btn-pill outline" style={{padding:'.2rem .5rem', fontSize:'.75rem', minWidth:'auto', marginLeft:'auto'}} onClick={(e)=>{ e.stopPropagation(); onClickSeeAsset(n.assetId); }}>
+                        <button className="btn-pill outline" style={{padding:'.2rem .5rem', fontSize:'.75rem', minWidth:'auto', width:'auto', flexShrink: 0, marginLeft:'auto'}} onClick={(e)=>{ e.stopPropagation(); onClickSeeAsset(n.assetId); }}>
                           {isEn ? 'View asset' : 'Ver asset'}
                         </button>
                       )}
