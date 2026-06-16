@@ -901,6 +901,11 @@ const Header = () => {
                         </a>
                       </li>
                       <li>
+                        <a href={isEn ? '/en/free-3d-models' : '/modelos-3d-gratis'} onClick={() => setExploreOpen(false)}>
+                          <span className="mega-quick-icon">📂</span> {isEn ? 'Free STL Models' : 'Modelos STL Gratis'}
+                        </a>
+                      </li>
+                      <li>
                         <a href={isEn ? '/en/suscripcion' : '/suscripcion'} onClick={() => setExploreOpen(false)}>
                           <span className="mega-quick-icon">💎</span> {isEn ? 'Premium Plans' : 'Planes Premium'}
                         </a>
@@ -1387,6 +1392,7 @@ const Header = () => {
             <a href={`${isEn ? '/en/search' : '/search'}?q=${encodeURIComponent('anime')}&is_ai_search=true`} onClick={() => setMobileMenuOpen(false)}>Anime</a>
             <a href={`${isEn ? '/en/search' : '/search'}?randomizer=true`} onClick={() => setMobileMenuOpen(false)}>Randomizer</a>
             <a href={isEn ? '/en/freebies' : '/freebies'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Daily Gifts' : 'Regalos del Día'}</a>
+            <a href={isEn ? '/en/free-3d-models' : '/modelos-3d-gratis'} onClick={() => setMobileMenuOpen(false)}>{isEn ? 'Free STL Models' : 'Modelos STL Gratis'}</a>
           </div>
         </div>
 

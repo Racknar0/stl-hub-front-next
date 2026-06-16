@@ -41,6 +41,20 @@ export default async function sitemap() {
       priority: 0.4,
       alternates: { languages: { 'es-ES': `${base}/suscripcion`, 'en-US': `${base}/en/suscripcion`, 'x-default': `${base}/suscripcion` } },
     },
+    {
+      url: `${base}/modelos-3d-gratis`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.8,
+      alternates: { languages: { 'es-ES': `${base}/modelos-3d-gratis`, 'en-US': `${base}/en/free-3d-models`, 'x-default': `${base}/modelos-3d-gratis` } },
+    },
+    {
+      url: `${base}/en/free-3d-models`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+      alternates: { languages: { 'es-ES': `${base}/modelos-3d-gratis`, 'en-US': `${base}/en/free-3d-models`, 'x-default': `${base}/modelos-3d-gratis` } },
+    },
   ];
 
   // Fetch ALL published slugs — estas son las únicas páginas de contenido único que deben indexarse

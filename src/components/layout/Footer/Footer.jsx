@@ -76,6 +76,12 @@ const Footer = () => {
               >
                 {privacyText}
               </Link>
+              <Link 
+                href={isEn ? "/en/free-3d-models" : "/modelos-3d-gratis"} 
+                className="policies-btn"
+              >
+                {isEn ? "Free STL Models" : "Modelos STL Gratis"}
+              </Link>
             </div>
           </div>
         </div>
