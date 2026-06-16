@@ -1,6 +1,5 @@
 import React from 'react';
 import Home from './home/Home';
-import { headers } from 'next/headers';
 
 const PAGE_SIZE = 20;
 
@@ -34,11 +33,7 @@ const shuffleArray = (arr) => {
 };
 
 export default async function Page() {
-  let lang = 'es';
-  try {
-    const h = await headers();
-    lang = h.get('x-lang') === 'en' ? 'en' : 'es';
-  } catch {}
+  const lang = 'es';
 
   // 1. Peticiones en paralelo directas en servidor
   const [resLatest, resTopReal, resCats] = await Promise.all([
