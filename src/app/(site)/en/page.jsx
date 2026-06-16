@@ -5,7 +5,7 @@ const SITE_URL = 'https://stl-hub.com';
 const PAGE_SIZE = 20;
 
 export const metadata = {
-  title: 'Download free & premium STL files via MEGA | 3D models & cosplay – STL HUB',
+  title: 'Free & Premium 3D STL Models for Printing | Download via MEGA – STL HUB',
   description:
     'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links, fast downloads, previews and files optimized for FDM & resin printers.',
   keywords: [
@@ -32,7 +32,7 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: 'STL HUB — Premium 3D Models & STL Downloads (Mega)',
+    title: 'Free & Premium 3D STL Models — STL HUB',
     description:
       'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links, fast downloads.',
     siteName: 'STL HUB',
@@ -43,7 +43,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'STL HUB — Download Premium STL via Mega',
+    title: 'Free & Premium 3D STL Models — STL HUB',
     description:
       'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links.',
   },

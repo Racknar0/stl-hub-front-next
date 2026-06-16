@@ -46,7 +46,7 @@ const SITE_URL = 'https://stl-hub.com';
 export async function generateMetadata() {
   // Metadata estática en español (Google no envía cookies,
   // siempre verá la versión ES — que es la principal para SEO)
-  const title = "Descargar STL gratis y premium por MEGA | Modelos 3D y cosplay – STL HUB";
+  const title = "Modelos 3D y STL Gratis y Premium para Impresión | Descargar por MEGA – STL HUB";
   const description = "Descarga STL gratis y premium listos para imprimir: modelos 3D, props y piezas de cosplay. Enlaces directos por MEGA gratis, descargas rápidas, previews y archivos optimizados para FDM y resina.";
   const keywords = [
     'descargar stl gratis','descargar stl por mega gratis','descarga stl','modelos 3d imprimir','stl mega','stl free','archivos stl gratis','modelos 3d cosplay','stl premium','stl resin','stl fdm'
@@ -78,7 +78,7 @@ export async function generateMetadata() {
       },
     },
     openGraph: {
-      title: "STL HUB — Modelos 3D y STL premium (Mega)",
+      title: "Modelos 3D y STL Gratis y Premium — STL HUB",
       description,
       siteName: "STL HUB",
       type: "website",
@@ -88,7 +88,7 @@ export async function generateMetadata() {
     },
     twitter: {
       card: "summary_large_image",
-      title: "STL HUB — Descarga STL premium por Mega",
+      title: "Modelos 3D y STL Gratis y Premium — STL HUB",
       description,
     },
     keywords,
