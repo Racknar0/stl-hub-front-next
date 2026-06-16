@@ -15,6 +15,7 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
   const [captchaToken, setCaptchaToken] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState('idle'); // idle | success | error
+  const recaptchaRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!open) {
@@ -22,6 +23,7 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
       setCaptchaToken('');
       setSubmitting(false);
       setStatus('idle');
+      recaptchaRef.current?.reset();
     }
   }, [open]);
 
@@ -37,6 +39,8 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
       try { onSubmitted?.('success'); } catch {}
     } catch {
       setStatus('error');
+      setCaptchaToken('');
+      recaptchaRef.current?.reset();
     } finally {
       setSubmitting(false);
     }
@@ -78,6 +82,7 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
       {status !== 'success' && (
         <div style={{ marginBottom: '.9rem', display: 'flex', justifyContent: 'center' }}>
           <ReCAPTCHA
+            ref={recaptchaRef}
             sitekey={process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY}
             onChange={setCaptchaToken}
             theme="dark"
@@ -87,8 +92,13 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
         </div>
       )}
 
-      {status === 'idle' && (
-        <div className="actions center" style={{ justifyContent: 'center' }}>
+      {status !== 'success' && (
+        <div className="actions center" style={{ justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          {status === 'error' && (
+            <div style={{ color: '#ff8a8a', marginBottom: '.5rem', fontSize: '0.9rem', textAlign: 'center' }}>
+              {isEn ? 'Could not send the report. Please solve the captcha again.' : 'No se pudo enviar el reporte. Por favor resuelve el captcha de nuevo.'}
+            </div>
+          )}
           <Button
             onClick={handleSubmit}
             disabled={!captchaToken || submitting || !assetId}
@@ -96,22 +106,10 @@ export default function ReportBrokenModal({ open, onClose, assetId, assetTitle, 
             className="btn-big"
           >
             {submitting && <span className="btn-spinner" aria-hidden />}
-            {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Send' : 'Enviar')}
+            {submitting
+              ? (isEn ? 'Sending...' : 'Enviando...')
+              : (status === 'error' ? (isEn ? 'Retry' : 'Reintentar') : (isEn ? 'Send' : 'Enviar'))}
           </Button>
-        </div>
-      )}
-
-      {status === 'error' && (
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#ff8a8a', marginBottom: '.75rem' }}>
-            {isEn ? 'Could not send the report. Try later.' : 'No se pudo enviar el reporte. Intenta más tarde.'}
-          </div>
-          <div className="actions center" style={{ justifyContent: 'center' }}>
-            <Button onClick={handleSubmit} disabled={!captchaToken || submitting || !assetId} variant="purple" className="btn-big">
-              {submitting && <span className="btn-spinner" aria-hidden />}
-              {submitting ? (isEn ? 'Sending...' : 'Enviando...') : (isEn ? 'Retry' : 'Reintentar')}
-            </Button>
-          </div>
         </div>
       )}
 
