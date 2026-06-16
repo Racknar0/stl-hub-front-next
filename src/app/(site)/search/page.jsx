@@ -44,7 +44,30 @@ async function fetchSearchSSR(params) {
   }
 }
 
+function formatLabel(val) {
+  return String(val || '')
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
 function buildTitle(params, isEn) {
+  // 1. Optimización para Categorías
+  if (params.categories && !params.q && !params.tags) {
+    const catLabel = formatLabel(params.categories.split(',')[0]);
+    return isEn
+      ? `${catLabel} 3D STL Models - Free & Premium | STLHUB`
+      : `Modelos 3D STL de ${catLabel} Gratis y Premium | STLHUB`;
+  }
+
+  // 2. Optimización para Etiquetas (Tags)
+  if (params.tags && !params.q && !params.categories) {
+    const tagLabel = formatLabel(params.tags.split(',')[0]);
+    return isEn
+      ? `${tagLabel} 3D STL Models - Free & Premium | STLHUB`
+      : `Modelos 3D STL de ${tagLabel} Gratis y Premium | STLHUB`;
+  }
+
+  // Fallback genérico para búsquedas combinadas o de texto
   const parts = [];
   if (params.q) parts.push(params.q);
   if (params.tags) parts.push(params.tags.split(',').slice(0, 3).join(', '));
@@ -66,6 +89,22 @@ function buildTitle(params, isEn) {
 function buildDescription(params, total, isEn) {
   const q = params.q || '';
   const count = Number(total || 0);
+
+  // 1. Optimización para Categorías
+  if (params.categories && !q && !params.tags) {
+    const catLabel = formatLabel(params.categories.split(',')[0]);
+    return isEn
+      ? `Download the best ${catLabel} 3D STL models and files ready for FDM and Resin 3D printing. Premium and free designs on STLHUB via MEGA.`
+      : `Descarga los mejores archivos y modelos 3D STL de ${catLabel} listos para imprimir en FDM y Resina. Diseños premium y gratuitos en STLHUB por MEGA.`;
+  }
+
+  // 2. Optimización para Etiquetas (Tags)
+  if (params.tags && !q && !params.categories) {
+    const tagLabel = formatLabel(params.tags.split(',')[0]);
+    return isEn
+      ? `Explore our collection of ${tagLabel} 3D STL models for FDM and Resin 3D printing. Get premium and free files on STLHUB via MEGA.`
+      : `Explora nuestra colección de modelos 3D STL de ${tagLabel} para impresión 3D FDM y Resina. Consigue archivos premium y gratis en STLHUB por MEGA.`;
+  }
 
   if (q && count > 0) {
     return isEn
