@@ -12,9 +12,10 @@ const nextConfig = {
   },
 
   // 👉 Permite servir el árbol de páginas bajo /en (middleware gestiona x-lang para contenido EN)
+  // Excluimos la ruta /en/asset/* para que Next.js pueda resolver físicamente la página en inglés.
   async rewrites() {
     return [
-      { source: '/en/:path*', destination: '/:path*' },
+      { source: '/en/:path((?!asset(?:/|$)).*)', destination: '/:path*' },
     ];
   },
 };
