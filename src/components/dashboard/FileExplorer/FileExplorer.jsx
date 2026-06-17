@@ -29,7 +29,7 @@ import {
     DeleteSweep as PurgeIcon
 } from '@mui/icons-material';
 
-export default function FileExplorer({ initialPath = '/', isModal = false, onClose = null }) {
+export default function FileExplorer({ initialPath = '/', isModal = false, onClose = null, accountId = null }) {
     const [files, setFiles] = useState([]);
     const [currentPath, setCurrentPath] = useState(initialPath);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -63,7 +63,10 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     const loadFiles = useCallback(async (path = '/') => {
         try {
             setLoading(true);
-            const res = await http.getData(`/file-explorer/list?path=${encodeURIComponent(path)}`);
+            const url = accountId
+                ? `/accounts/${accountId}/file-explorer/list?path=${encodeURIComponent(path)}`
+                : `/file-explorer/list?path=${encodeURIComponent(path)}`;
+            const res = await http.getData(url);
             if (res.data?.success) {
                 const sortedFiles = res.data.files.sort((a, b) => {
                     if (a.isDir === b.isDir) return a.name.localeCompare(b.name);
@@ -80,7 +83,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         } finally {
             setLoading(false);
         }
-    }, [http]);
+    }, [http, accountId]);
 
     useEffect(() => {
         loadFiles(initialPath);
@@ -88,8 +91,11 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
 
     const loadAllFolders = async () => {
         try {
-            const res = await http.getData(`/file-explorer/list?path=/`);
-            let roots = [{ id: '/', name: 'Raíz (uploads)' }];
+            const url = accountId
+                ? `/accounts/${accountId}/file-explorer/list?path=/`
+                : `/file-explorer/list?path=/`;
+            const res = await http.getData(url);
+            let roots = [{ id: '/', name: accountId ? 'Raíz' : 'Raíz (uploads)' }];
             if (res.data?.success) {
                 const subDirs = res.data.files.filter(f => f.isDir).map(f => ({ id: f.id, name: f.id }));
                 setFoldersList([...roots, ...subDirs]);
@@ -118,7 +124,10 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         handleMenuClose();
         if (confirm(`¿Borrar "${selectedFile.name}" permanentemente?`)) {
             try {
-                const res = await http.postData('/file-explorer/delete', { files: [selectedFile.id] });
+                const url = accountId
+                    ? `/accounts/${accountId}/file-explorer/delete`
+                    : '/file-explorer/delete';
+                const res = await http.postData(url, { files: [selectedFile.id] });
                 if (res.data?.success === false) {
                     alert(`Error al borrar: ${res.data?.message || 'desconocido'}`);
                 }
@@ -134,7 +143,10 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         if (!selectedFile?.isDir) return;
         if (confirm(`¿Purgar TODO el contenido de "${selectedFile.name}"?\n\nSe eliminarán todos los archivos y subcarpetas dentro, pero la carpeta se mantiene.`)) {
             try {
-                const res = await http.postData('/file-explorer/purge', { folder: selectedFile.id });
+                const url = accountId
+                    ? `/accounts/${accountId}/file-explorer/purge`
+                    : '/file-explorer/purge';
+                const res = await http.postData(url, { folder: selectedFile.id });
                 alert(res.data?.message || 'Carpeta purgada');
             } catch (e) {
                 alert(`Error al purgar: ${e?.response?.data?.message || e.message}`);
@@ -160,13 +172,22 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         try {
             if (dialogMode === 'createFolder') {
                 if (!dialogInput) return;
-                await http.postData('/file-explorer/create-folder', { currentPath, folderName: dialogInput });
+                const url = accountId
+                    ? `/accounts/${accountId}/file-explorer/create-folder`
+                    : '/file-explorer/create-folder';
+                await http.postData(url, { currentPath, folderName: dialogInput });
             } else if (dialogMode === 'rename') {
                 if (!dialogInput || dialogInput === selectedFile.name) return;
-                await http.postData('/file-explorer/rename', { file: selectedFile.id, newName: dialogInput });
+                const url = accountId
+                    ? `/accounts/${accountId}/file-explorer/rename`
+                    : '/file-explorer/rename';
+                await http.postData(url, { file: selectedFile.id, newName: dialogInput });
             } else if (dialogMode === 'move') {
                 if (!moveDestination) return;
-                await http.postData('/file-explorer/move', { files: [selectedFile.id], destination: moveDestination });
+                const url = accountId
+                    ? `/accounts/${accountId}/file-explorer/move`
+                    : '/file-explorer/move';
+                await http.postData(url, { files: [selectedFile.id], destination: moveDestination });
             }
             closeDialog();
             loadFiles(currentPath);
@@ -176,7 +197,7 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     };
 
     const parts = currentPath.split('/').filter(Boolean);
-    const breadcrumbs = [{ label: 'uploads', path: '/' }];
+    const breadcrumbs = [{ label: accountId ? 'Raíz' : 'uploads', path: '/' }];
     let accum = '';
     for (const part of parts) {
         accum += `/${part}`;
@@ -232,7 +253,9 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
     return (
         <Box sx={{ p: isModal ? 2 : 3, height: isModal ? '80vh' : 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', bgcolor: isModal ? '#0f172a' : 'transparent', borderRadius: isModal ? '8px' : 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                <Typography variant={isModal ? 'h5' : 'h4'} sx={{ color: 'white', fontWeight: 600 }}>Explorador de Archivos</Typography>
+                <Typography variant={isModal ? 'h5' : 'h4'} sx={{ color: 'white', fontWeight: 600 }}>
+                    {accountId ? 'Explorador de Archivos Live' : 'Explorador de Archivos'}
+                </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         {viewMode === 'grid' && (

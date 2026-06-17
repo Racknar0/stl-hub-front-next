@@ -7,12 +7,15 @@ import {
     Stack,
     TextField,
     CircularProgress,
+    Dialog,
+    DialogContent,
 } from '@mui/material';
 import StatusChip from './StatusChip';
 import AppButton from '@/components/layout/Buttons/Button';
 import accountService from '@/services/AccountService';
 import { confirmAlert, errorAlert, timerAlert } from '@/helpers/alerts';
 import AlignmentModal from './AlignmentModal';
+import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 
 function formatMB(bytes) {
     const n = Number(bytes);
@@ -43,6 +46,7 @@ export default function AccountDrawer({
     const [alignmentOpen, setAlignmentOpen] = useState(false);
     const [restoreLoading, setRestoreLoading] = useState(false);
     const [restoreResult, setRestoreResult] = useState(null);
+    const [explorerOpen, setExplorerOpen] = useState(false);
 
     const [editAlias, setEditAlias] = useState('');
     const [editType, setEditType] = useState('main');
@@ -229,20 +233,32 @@ export default function AccountDrawer({
             <Box sx={{ p: 2 }}>
                 {selected && (
                     <>
-                        <Typography
-                            className="fw-bold"
-                            variant="h6"
-                            sx={{ mb: 1 }}
-                        >
-                            {selected.alias}
-                        </Typography>
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                        >
-                            {selected.email}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                            <Box>
+                                <Typography
+                                    className="fw-bold"
+                                    variant="h6"
+                                >
+                                    {selected.alias}
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    {selected.email}
+                                </Typography>
+                            </Box>
+                            {selected.status === 'CONNECTED' && (
+                                <AppButton
+                                    variant="purple"
+                                    width="160px"
+                                    styles={{ height: 34, fontWeight: 600, fontSize: '.72rem' }}
+                                    onClick={() => setExplorerOpen(true)}
+                                >
+                                    Abrir Cuenta (Live)
+                                </AppButton>
+                            )}
+                        </Stack>
                         <Divider sx={{ mb: 2 }} />
 
                         <Typography className="fw-bold" variant="subtitle2" sx={{ mb: 1 }}>
@@ -653,6 +669,30 @@ export default function AccountDrawer({
                     onClose={() => setAlignmentOpen(false)}
                     account={selected}
                 />
+            )}
+            {selected && (
+                <Dialog
+                    open={explorerOpen}
+                    onClose={() => setExplorerOpen(false)}
+                    maxWidth="lg"
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            bgcolor: '#0f172a',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'white',
+                            '& .MuiDialogContent-root': { p: 0 }
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <FileExplorer
+                            isModal={true}
+                            onClose={() => setExplorerOpen(false)}
+                            accountId={selected.id}
+                        />
+                    </DialogContent>
+                </Dialog>
             )}
         </Drawer>
     );
