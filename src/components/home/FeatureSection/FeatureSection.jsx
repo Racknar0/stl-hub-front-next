@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useTransition } from 'react';
 import Button from '../../layout/Buttons/Button';
 import './FeatureSection.scss';
 // Reutilizamos el spinner del loader global (estilos)
@@ -14,6 +14,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
 import useStore from '../../../store/useStore';
@@ -53,6 +54,16 @@ const FeatureSection = ({
                 <div className="sk-circle12 sk-child" />
             </div>
         );
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+
+    const handleCtaClick = (e) => {
+        e.preventDefault();
+        startTransition(() => {
+            router.push(isEn ? '/en/search' : '/search');
+        });
+    };
+
     return (
         <section className={`feature-section ${variantClass}`.trim()}>
             <div className="container-narrow" style={{
@@ -65,13 +76,22 @@ const FeatureSection = ({
                                 <h2 className="intro-title">{finalTitle}</h2>
                                 <Link
                                   href={isEn ? '/en/search' : '/search'}
+                                  onClick={handleCtaClick}
                                   className="view-all-link view-all-link--latest"
+                                  style={isPending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
                                 >
-                                  <span>{finalCta}</span>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    <polyline points="12 5 19 12 12 19"></polyline>
-                                  </svg>
+                                  <span>{isPending ? (isEn ? 'Loading...' : 'Cargando...') : finalCta}</span>
+                                  {isPending ? (
+                                    <svg className="button-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ display: 'inline-block' }}>
+                                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5" style={{ opacity: 0.25 }} />
+                                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+                                    </svg>
+                                  ) : (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
+                                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                                      <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                  )}
                                 </Link>
                             </div>
                             <p className="intro-subtitle">{finalSubtitle}</p>

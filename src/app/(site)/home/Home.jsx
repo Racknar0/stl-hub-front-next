@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState, useMemo, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useMemo, useLayoutEffect, useTransition } from 'react';
 import './Home.scss';
 import Hero from '../../../components/home/Hero/Hero';
 import SectionRow from '../../../components/home/SectionRow/SectionRow';
@@ -88,16 +88,20 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
   const [topRotationStep, setTopRotationStep] = useState(0);
 
+  const [isDicePending, startDiceTransition] = useTransition();
+
   const handleDiceClick = () => {
     const targetPath = isEn ? '/en/freebies' : '/freebies';
-    if (token) {
-      router.push(targetPath);
-    } else {
-      const loginPath = isEn 
-        ? `/en/login?returnTo=${encodeURIComponent(targetPath)}` 
-        : `/login?returnTo=${encodeURIComponent(targetPath)}`;
-      router.push(loginPath);
-    }
+    startDiceTransition(() => {
+      if (token) {
+        router.push(targetPath);
+      } else {
+        const loginPath = isEn 
+          ? `/en/login?returnTo=${encodeURIComponent(targetPath)}` 
+          : `/login?returnTo=${encodeURIComponent(targetPath)}`;
+        router.push(loginPath);
+      }
+    });
   };
   // Categorías y sliders
   const [cats, setCats] = useState(initialCategories || []); // [{ id, name, nameEn, slug, slugEn }]
@@ -345,11 +349,23 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
                   : 'Desbloquea modelos premium gratuitos cada día barajando el dado'}
               </p>
             </div>
-            <button onClick={handleDiceClick} className="view-all-link">
-              {isEn ? 'View Game' : 'Ver juego'}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
+            <button 
+              onClick={handleDiceClick} 
+              className="view-all-link"
+              disabled={isDicePending}
+              style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
+            >
+              <span>{isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? 'View Game' : 'Ver juego')}</span>
+              {isDicePending ? (
+                <svg className="button-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ display: 'inline-block' }}>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5" style={{ opacity: 0.25 }} />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              )}
             </button>
           </div>
 
@@ -381,8 +397,10 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
                   type="button" 
                   className="game-roll-btn" 
                   onClick={handleDiceClick}
+                  disabled={isDicePending}
+                  style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
                 >
-                  {isEn ? 'Shuffle' : 'Barajar'}
+                  {isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? 'Shuffle' : 'Barajar')}
                 </button>
               </div>
             </div>

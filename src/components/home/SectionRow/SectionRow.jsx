@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useTransition } from 'react';
 import './SectionRow.scss';
 import Button from '../../layout/Buttons/Button';
 import CardImageSlider from '../../common/CardImageSlider/CardImageSlider';
@@ -11,6 +11,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useI18n } from '../../../i18n';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import '../../common/GlobalLoader/GlobalLoader.scss';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { isAssetNSFW } from '../../../helpers/nsfwHelper';
@@ -40,6 +41,16 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
       <div className="sk-circle12 sk-child" />
     </div>
   );
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const handleLinkClick = (e) => {
+    e.preventDefault();
+    startTransition(() => {
+      router.push(linkHref);
+    });
+  };
+
   const showLoader = loading || !Array.isArray(visibleItems) || visibleItems.length === 0;
   return (
     <section className={`section-row ${variantClass}`.trim()}>
@@ -53,12 +64,24 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
           </div>
           {/* Botón Ver más opcional */}
           {linkHref ? (
-            <Link href={linkHref} className="view-all-link">
-              <span>{finalLinkLabel}</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
-              </svg>
+            <Link 
+              href={linkHref} 
+              onClick={handleLinkClick}
+              className="view-all-link"
+              style={isPending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
+            >
+              <span>{isPending ? (isEn ? 'Loading...' : 'Cargando...') : finalLinkLabel}</span>
+              {isPending ? (
+                <svg className="button-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ display: 'inline-block' }}>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5" style={{ opacity: 0.25 }} />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              )}
             </Link>
           ) : null}
         </div>
