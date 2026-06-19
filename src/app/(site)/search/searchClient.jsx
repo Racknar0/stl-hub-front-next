@@ -616,6 +616,23 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           priority={false}
         />
       </div>
+      {it.chips && it.chips.length > 0 && (
+        <div className="chips">
+          {(it.chips || []).slice(0, 3).map((c, i) => (
+            <Link
+              key={i}
+              className="chip chip--link"
+              href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
+              onClick={(e) => { e.stopPropagation(); }}
+            >
+              #{c}
+            </Link>
+          ))}
+          {(it.chips || []).length > 3 && (
+            <span className="chip">+{(it.chips || []).length - 3}</span>
+          )}
+        </div>
+      )}
       <div className="finfo">
         <div className="ftitle">
           {(() => {
@@ -635,21 +652,6 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           })()}
         </div>
         <div className="fbottom">
-          <div className="chips">
-            {(it.chips || []).slice(0, 3).map((c, i) => (
-              <Link
-                key={i}
-                className="chip chip--link"
-                href={`/search?tags=${encodeURIComponent((it.tagSlugs||[])[i] ?? c)}`}
-                onClick={(e) => { e.stopPropagation(); }}
-              >
-                #{c}
-              </Link>
-            ))}
-            {(it.chips || []).length > 3 && (
-              <span className="chip">+{(it.chips || []).length - 3}</span>
-            )}
-          </div>
           {(() => {
             if (!it.createdAt && !it.slug) return null;
             let dateStr = '';
@@ -664,19 +666,18 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
               }
             }
             return (
-              <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                {it.slug ? (
+              <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
+                {dateStr && <span>upload · {dateStr}</span>}
+                {it.slug && (
                   <Link
                     href={isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`}
                     onClick={(e)=>{ e.stopPropagation(); void trackClick(it.id); }}
                     aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
-                    style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
+                    className="detail-link-btn"
                   >
-                    {dateStr && <span>upload · {dateStr} · detail</span>}
+                    {isEn ? 'detail' : 'detalle'}
                     <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
                   </Link>
-                ) : (
-                  dateStr && <span>upload: {dateStr}</span>
                 )}
               </div>
             );

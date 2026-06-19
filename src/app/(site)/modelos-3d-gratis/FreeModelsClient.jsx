@@ -161,43 +161,45 @@ export default function FreeModelsClient({ initialItems = [], lang = 'es' }) {
                   priority={false}
                 />
               </div>
-              <div className="finfo">
-                <div className="ftitle" style={{ fontSize: '0.9rem', height: '2.5rem', overflow: 'hidden' }}>
-                  {(() => {
-                    if (!it.title) return '-';
-                    const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
-                    if (match) {
-                      const rest = match[2];
-                      const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
-                      return (
-                        <>
-                          <span className="sr-only">{match[1]}</span>
-                          <span>{capitalized}</span>
-                        </>
-                      );
-                    }
-                    return it.title.charAt(0).toUpperCase() + it.title.slice(1);
-                  })()}
-                </div>
-                <div className="fbottom">
-                  <div className="chips">
-                    {(it.chips || []).slice(0, 3).map((c, i) => (
-                      <span key={i} className="chip">
-                        #{c}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="fmeta" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-                    <Link
-                      href={it.detailUrl}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '0.75rem', fontWeight: '600' }}
-                    >
-                      {t.viewDetail}
-                    </Link>
-                  </div>
-                </div>
-              </div>
+      {it.chips && it.chips.length > 0 && (
+        <div className="chips">
+          {(it.chips || []).slice(0, 3).map((c, i) => (
+            <span key={i} className="chip">
+              #{c}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="finfo">
+        <div className="ftitle" style={{ fontSize: '0.9rem', height: '2.5rem', overflow: 'hidden' }}>
+          {(() => {
+            if (!it.title) return '-';
+            const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
+            if (match) {
+              const rest = match[2];
+              const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
+              return (
+                <>
+                  <span className="sr-only">{match[1]}</span>
+                  <span>{capitalized}</span>
+                </>
+              );
+            }
+            return it.title.charAt(0).toUpperCase() + it.title.slice(1);
+          })()}
+        </div>
+        <div className="fbottom">
+          <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%', marginTop: 'auto' }}>
+            <Link
+              href={it.detailUrl}
+              onClick={(e) => e.stopPropagation()}
+              className="detail-link-btn"
+            >
+              {t.viewDetail}
+            </Link>
+          </div>
+        </div>
+      </div>
             </article>
           ))}
         </div>
