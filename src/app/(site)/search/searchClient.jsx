@@ -477,12 +477,32 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     if (totalPages <= 1) return null;
     
     const pageNumbers = getPageNumbers();
+
+    const handlePageClick = (e) => {
+      if (isTransitioning) {
+        e.preventDefault();
+        return;
+      }
+      setIsTransitioning(true);
+    };
+
+    const PagSpinner = () => (
+      <svg className="pag-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <circle cx="12" cy="12" r="10" style={{ opacity: 0.2 }} />
+        <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+      </svg>
+    );
     
     return (
-      <nav className="custom-paginator" aria-label="Pagination Navigation">
+      <nav className={`custom-paginator${isTransitioning ? ' is-loading' : ''}`} aria-label="Pagination Navigation">
         {page > 0 ? (
-          <Link href={buildPageUrl(page - 1)} className="pag-btn pag-btn--nav" aria-label="Previous Page">
-            <span className="arrow">←</span>
+          <Link
+            href={buildPageUrl(page - 1)}
+            className={`pag-btn pag-btn--nav${isTransitioning ? ' pag-btn--loading' : ''}`}
+            aria-label="Previous Page"
+            onClick={handlePageClick}
+          >
+            {isTransitioning ? <PagSpinner /> : <span className="arrow">←</span>}
             <span className="text">{isEn ? 'Prev' : 'Ant'}</span>
           </Link>
         ) : (
@@ -510,6 +530,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
                 className={`pag-btn pag-btn--number ${isCurrent ? 'pag-btn--active' : ''}`}
                 aria-label={`Go to page ${p + 1}`}
                 aria-current={isCurrent ? 'page' : undefined}
+                onClick={handlePageClick}
               >
                 {p + 1}
               </Link>
@@ -518,9 +539,14 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
         </div>
         
         {page < totalPages - 1 ? (
-          <Link href={buildPageUrl(page + 1)} className="pag-btn pag-btn--nav" aria-label="Next Page">
+          <Link
+            href={buildPageUrl(page + 1)}
+            className={`pag-btn pag-btn--nav${isTransitioning ? ' pag-btn--loading' : ''}`}
+            aria-label="Next Page"
+            onClick={handlePageClick}
+          >
             <span className="text">{isEn ? 'Next' : 'Sig'}</span>
-            <span className="arrow">→</span>
+            {isTransitioning ? <PagSpinner /> : <span className="arrow">→</span>}
           </Link>
         ) : (
           <span className="pag-btn pag-btn--nav pag-btn--disabled">

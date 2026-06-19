@@ -457,6 +457,11 @@
             color: #4b526d;
             cursor: not-allowed;
         }
+
+        &--loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
     }
 
     .pag-ellipsis {
@@ -493,4 +498,14 @@
             width: 20px;
         }
     }
+}
+
+.pag-spinner {
+  animation: pag-spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes pag-spin {
+  to { transform: rotate(360deg); }
 }
