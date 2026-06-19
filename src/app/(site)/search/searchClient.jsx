@@ -195,6 +195,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(hasSSRData ? !!initialHasMore : true);
   const cacheRef = useRef({});
+  const isInitialRender = useRef(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -447,17 +448,6 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setPage(nextPage);
       hasMoreRef.current = data.hasMore;
 
-      // Hacer scroll suave hacia arriba del grid de resultados, soportando scrollElement
-      if (typeof window !== 'undefined') {
-        if (scrollElement && scrollElement !== document.body) {
-          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
-          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        } else {
-          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
-          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        }
-      }
-
       void trackSearchIfNeeded(data.total);
     } catch (e) {
       console.error(e);
@@ -469,7 +459,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [trackSearchIfNeeded, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal, fetchPageData, scrollElement]);
+  }, [trackSearchIfNeeded, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal, fetchPageData]);
 
   const handlePageClick = useCallback(async (e, targetPage) => {
     if (e) e.preventDefault();
@@ -494,24 +484,13 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       const newUrl = buildPageUrl(targetPage);
       window.history.pushState(null, '', newUrl);
 
-      // Scroll suave
-      if (typeof window !== 'undefined') {
-        if (scrollElement && scrollElement !== document.body) {
-          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
-          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        } else {
-          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
-          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        }
-      }
-
       void trackSearchIfNeeded(data.total);
     } catch (err) {
       console.error(err);
     } finally {
       setIsTransitioning(false);
     }
-  }, [page, isTransitioning, fetchPageData, buildPageUrl, trackSearchIfNeeded, scrollElement]);
+  }, [page, isTransitioning, fetchPageData, buildPageUrl, trackSearchIfNeeded]);
 
   const handlePageHover = useCallback((targetPage) => {
     const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -552,6 +531,28 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       window.removeEventListener('popstate', handlePopState);
     };
   }, [loadPageReal]);
+
+  // Central scroll-to-top handler on page change
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        if (scrollElement && scrollElement !== document.body) {
+          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
+          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        } else {
+          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
+          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        }
+      }
+    }, 150); // 150ms timeout ensures virtualizer row measurements are fully finished
+
+    return () => clearTimeout(timer);
+  }, [page, scrollElement]);
 
   const getPageNumbers = () => {
     const totalPages = Math.ceil(total / PAGE_SIZE);
