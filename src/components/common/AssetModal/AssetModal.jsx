@@ -133,22 +133,37 @@ export default function AssetModal({ open, onClose, asset, descriptionLimit = nu
                     return;
                 }
 
-                setData((prev) => ({
-                    ...prev,
-                    description: String(d.description || prev?.description || '').trim(),
-                    descriptionEn: String(d.descriptionEn || prev?.descriptionEn || '').trim(),
-                    categories: Array.isArray(d.categories)
-                        ? d.categories
-                        : prev?.categories,
-                    titleEn: d.titleEn ?? prev?.titleEn,
-                    tagsEn: Array.isArray(d.tagsEn) ? d.tagsEn : prev?.tagsEn,
-                    tagsEs: Array.isArray(d.tagsEs) ? d.tagsEs : prev?.tagsEs,
-                    archiveSizeB: d.archiveSizeB ?? prev?.archiveSizeB,
-                    fileSizeB: d.fileSizeB ?? prev?.fileSizeB,
-                    updatedAt: d.updatedAt ?? prev?.updatedAt,
-                }));
+                setData((prev) => {
+                    const nextCategories = Array.isArray(d.categories) && d.categories.length ? d.categories : prev?.categories;
+                    const nextTags = Array.isArray(d.tags) && d.tags.length ? d.tags : prev?.tags;
+                    const derivedEs = Array.isArray(d.tagsEs) && d.tagsEs.length 
+                        ? d.tagsEs 
+                        : (Array.isArray(d.tags) ? d.tags.map((t) => t.slug).filter(Boolean) : prev?.tagsEs);
+                    const derivedEn = Array.isArray(d.tagsEn) && d.tagsEn.length 
+                        ? d.tagsEn 
+                        : (Array.isArray(d.tags) ? d.tags.map((t) => t.nameEn || t.name || t.slug).filter(Boolean) : prev?.tagsEn);
+
+                    return {
+                        ...prev,
+                        description: String(d.description || prev?.description || '').trim(),
+                        descriptionEn: String(d.descriptionEn || prev?.descriptionEn || '').trim(),
+                        categories: nextCategories,
+                        titleEn: d.titleEn ?? prev?.titleEn,
+                        tags: nextTags,
+                        tagsEn: derivedEn,
+                        tagsEs: derivedEs,
+                        chipsEs: derivedEs,
+                        chipsEn: derivedEn,
+                        tagSlugs: derivedEs,
+                        archiveSizeB: d.archiveSizeB ?? prev?.archiveSizeB,
+                        fileSizeB: d.fileSizeB ?? prev?.fileSizeB,
+                        updatedAt: d.updatedAt ?? prev?.updatedAt,
+                    };
+                });
                 loadedDetail.current = true;
-            } catch {}
+            } catch (err) {
+                console.error('[AssetModal] Error loading detail:', err);
+            }
         })();
     }, [open, data?.id, http, onClose, isEn]);
 

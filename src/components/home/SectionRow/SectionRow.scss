@@ -265,7 +265,7 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.chips {
+.card-item .chips {
     position: absolute;
     top: 12px;
     left: 12px;
@@ -327,7 +327,7 @@
         box-shadow: 0 0 8px rgba(124, 107, 255, 0.2);
     }
 }
-.chip {
+.card-item .chip {
     background: rgba(10, 10, 15, 0.75);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -340,7 +340,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     transition: all 0.2s ease;
 }
-.chip--link:hover {
+.card-item .chip--link:hover {
     background: #7c6bff;
     border-color: #9082ff;
     color: #fff;
