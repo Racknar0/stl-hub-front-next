@@ -173,7 +173,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [order, setOrder] = useState(initialParams?.order || '');
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
-  const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search !== 'false');
+  const [isAiSearch, setIsAiSearch] = useState(initialParams?.q ? (initialParams?.is_ai_search !== 'false') : false);
   const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
   const initPageIndex = Number(initialParams?.pageIndex || 0);
   const [page, setPage] = useState(initPageIndex); // zero-based pageIndex tracker
@@ -247,7 +247,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     setTags(normalizeCsvList(initialParams?.tags || ''));
     setOrder(initialParams?.order || '');
     setPlan(initialParams?.plan || '');
-    setIsAiSearch(initialParams?.is_ai_search !== 'false');
+    setIsAiSearch(initialParams?.q ? (initialParams?.is_ai_search !== 'false') : false);
   }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order, initialParams?.plan, initialParams?.is_ai_search]);
 
   const [modalOpen, setModalOpen] = useState(false);

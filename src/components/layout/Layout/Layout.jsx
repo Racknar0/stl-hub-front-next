@@ -23,11 +23,23 @@ const Layout = ({ children }) => {
   const searchParams = useSearchParams()
   const isDashboard = pathname?.includes('/dashboard') || pathname?.includes('/admin')
 
+  const [isMobile, setIsMobile] = useState(false)
+
   useEffect(() => {
     hydrateToken()
     hydrateLanguage()
     setHydrated(true)
   }, [hydrateToken, hydrateLanguage])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 992 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Cuando la ruta termina de cambiar, apagamos el loader global.
   useEffect(() => {
@@ -52,7 +64,7 @@ const Layout = ({ children }) => {
       <GlobalLoader />
 
       {/* Ambient Background */}
-      {!isDashboard && (
+      {!isDashboard && !isMobile && (
         <>
           <VantaBackground />
           <SplashCursor />
