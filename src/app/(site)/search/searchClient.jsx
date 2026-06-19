@@ -447,10 +447,15 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setPage(nextPage);
       hasMoreRef.current = data.hasMore;
 
-      // Hacer scroll suave hacia arriba del grid de resultados
-      if (typeof window !== 'undefined' && virtualRootRef.current) {
-        const topOfGrid = virtualRootRef.current.getBoundingClientRect().top + window.scrollY - 100;
-        window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+      // Hacer scroll suave hacia arriba del grid de resultados, soportando scrollElement
+      if (typeof window !== 'undefined') {
+        if (scrollElement && scrollElement !== document.body) {
+          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
+          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        } else {
+          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
+          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        }
       }
 
       void trackSearchIfNeeded(data.total);
@@ -464,7 +469,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [trackSearchIfNeeded, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal, fetchPageData]);
+  }, [trackSearchIfNeeded, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal, fetchPageData, scrollElement]);
 
   const handlePageClick = useCallback(async (e, targetPage) => {
     if (e) e.preventDefault();
@@ -490,9 +495,14 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       window.history.pushState(null, '', newUrl);
 
       // Scroll suave
-      if (typeof window !== 'undefined' && virtualRootRef.current) {
-        const topOfGrid = virtualRootRef.current.getBoundingClientRect().top + window.scrollY - 100;
-        window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+      if (typeof window !== 'undefined') {
+        if (scrollElement && scrollElement !== document.body) {
+          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
+          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        } else {
+          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
+          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+        }
       }
 
       void trackSearchIfNeeded(data.total);
@@ -501,7 +511,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     } finally {
       setIsTransitioning(false);
     }
-  }, [page, isTransitioning, fetchPageData, buildPageUrl, trackSearchIfNeeded]);
+  }, [page, isTransitioning, fetchPageData, buildPageUrl, trackSearchIfNeeded, scrollElement]);
 
   const handlePageHover = useCallback((targetPage) => {
     const totalPages = Math.ceil(total / PAGE_SIZE);
