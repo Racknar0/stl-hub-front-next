@@ -539,17 +539,25 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       return;
     }
 
-    const timer = setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        if (scrollElement && scrollElement !== document.body) {
-          const topOfGrid = (virtualRootRef.current?.offsetTop ?? 0) - 100;
-          scrollElement.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        } else {
-          const topOfGrid = (virtualRootRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 100;
-          window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
-        }
+    const triggerScroll = () => {
+      if (typeof window === 'undefined') return;
+
+      // Scroll window, documentElement and body instantly to cover all browsers/layouts
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
+      document.body.scrollTo({ top: 0, behavior: 'auto' });
+
+      // Scroll virtualizer container if it is a custom div
+      if (scrollElement && scrollElement !== document.body) {
+        scrollElement.scrollTo({ top: 0, behavior: 'auto' });
       }
-    }, 150); // 150ms timeout ensures virtualizer row measurements are fully finished
+    };
+
+    // Trigger instantly
+    triggerScroll();
+
+    // Trigger again after 60ms to override any dynamic rendering layout shifts
+    const timer = setTimeout(triggerScroll, 60);
 
     return () => clearTimeout(timer);
   }, [page, scrollElement]);
