@@ -617,7 +617,23 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
         />
       </div>
       <div className="finfo">
-        <div className="ftitle">{it.title}</div>
+        <div className="ftitle">
+          {(() => {
+            if (!it.title) return '-';
+            const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
+            if (match) {
+              const rest = match[2];
+              const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
+              return (
+                <>
+                  <span className="sr-only">{match[1]}</span>
+                  <span>{capitalized}</span>
+                </>
+              );
+            }
+            return it.title.charAt(0).toUpperCase() + it.title.slice(1);
+          })()}
+        </div>
         <div className="fbottom">
           <div className="chips">
             {(it.chips || []).slice(0, 3).map((c, i) => (
@@ -667,7 +683,6 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
           })()}
         </div>
       </div>
-      <span className="badge" aria-hidden="true">✓</span>
     </article>
   );
 

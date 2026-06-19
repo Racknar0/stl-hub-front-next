@@ -7,7 +7,7 @@ import { useNSFW } from '../../../hooks/useNSFW';
 import './CardImageSlider.scss';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
+import { Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
@@ -158,10 +158,15 @@ const CardImageSlider = ({
     >
       <Swiper
         className="card-image-slider-swiper"
-        modules={[Navigation]}
+        modules={[Navigation, Autoplay]}
         navigation={{
           prevEl: `.${prevClass}`,
           nextEl: `.${nextClass}`,
+        }}
+        autoplay={{
+          delay: 1800,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: false,
         }}
         loop
         nested

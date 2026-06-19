@@ -165,14 +165,16 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
                           if (!it.title) return '-';
                           const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
                           if (match) {
+                            const rest = match[2];
+                            const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
                             return (
                               <>
                                 <span className="sr-only">{match[1]}</span>
-                                <span>{match[2]}</span>
+                                <span>{capitalized}</span>
                               </>
                             );
                           }
-                          return it.title;
+                          return it.title.charAt(0).toUpperCase() + it.title.slice(1);
                         })()}
                       </div>
                       <div className="fbottom">

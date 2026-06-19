@@ -162,7 +162,23 @@ export default function FreeModelsClient({ initialItems = [], lang = 'es' }) {
                 />
               </div>
               <div className="finfo">
-                <div className="ftitle" style={{ fontSize: '0.9rem', height: '2.5rem', overflow: 'hidden' }}>{it.title}</div>
+                <div className="ftitle" style={{ fontSize: '0.9rem', height: '2.5rem', overflow: 'hidden' }}>
+                  {(() => {
+                    if (!it.title) return '-';
+                    const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
+                    if (match) {
+                      const rest = match[2];
+                      const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
+                      return (
+                        <>
+                          <span className="sr-only">{match[1]}</span>
+                          <span>{capitalized}</span>
+                        </>
+                      );
+                    }
+                    return it.title.charAt(0).toUpperCase() + it.title.slice(1);
+                  })()}
+                </div>
                 <div className="fbottom">
                   <div className="chips">
                     {(it.chips || []).slice(0, 3).map((c, i) => (

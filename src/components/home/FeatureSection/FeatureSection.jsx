@@ -161,21 +161,23 @@ const FeatureSection = ({
                                                   </div>
                                               )}
                                               <div className="finfo">
-                                                   <div className="ftitle">
-                                                     {(() => {
-                                                       if (!it.title) return '-';
-                                                       const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
-                                                       if (match) {
-                                                         return (
-                                                           <>
-                                                             <span className="sr-only">{match[1]}</span>
-                                                             <span>{match[2]}</span>
-                                                           </>
-                                                         );
-                                                       }
-                                                       return it.title;
-                                                     })()}
-                                                   </div>
+                                                    <div className="ftitle">
+                                                      {(() => {
+                                                        if (!it.title) return '-';
+                                                        const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
+                                                        if (match) {
+                                                          const rest = match[2];
+                                                          const capitalized = rest.charAt(0).toUpperCase() + rest.slice(1);
+                                                          return (
+                                                            <>
+                                                              <span className="sr-only">{match[1]}</span>
+                                                              <span>{capitalized}</span>
+                                                            </>
+                                                          );
+                                                        }
+                                                        return it.title.charAt(0).toUpperCase() + it.title.slice(1);
+                                                      })()}
+                                                    </div>
                                                   <div className="fbottom">
                                                       {(uploadDate || it.slug) && (
                                                           <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
