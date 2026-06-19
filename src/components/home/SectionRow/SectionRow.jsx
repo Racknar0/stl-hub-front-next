@@ -160,8 +160,21 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
                       </div>
                     )}
                     <div className="info">
-                      {/* it.title ya viene en el idioma derivado por Home */}
-                      <div className="title">{it.title || '-'}</div>
+                      <div className="title">
+                        {(() => {
+                          if (!it.title) return '-';
+                          const match = it.title.match(/^(\s*STL\s*-\s*)(.*)$/i);
+                          if (match) {
+                            return (
+                              <>
+                                <span className="sr-only">{match[1]}</span>
+                                <span>{match[2]}</span>
+                              </>
+                            );
+                          }
+                          return it.title;
+                        })()}
+                      </div>
                       <div className="fbottom">
                         {(uploadDate || it.slug) && (
                           <div className="fmeta" aria-hidden="true" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>

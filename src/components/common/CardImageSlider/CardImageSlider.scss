@@ -26,6 +26,20 @@
 .card-image-slider-img-contain {
   object-fit: contain !important;
   z-index: 2;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 10px,
+    black calc(100% - 10px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 10px,
+    black calc(100% - 10px),
+    transparent 100%
+  );
 }
 
 .card-image-slider-nav {
