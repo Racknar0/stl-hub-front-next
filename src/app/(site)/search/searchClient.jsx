@@ -173,7 +173,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const [order, setOrder] = useState(initialParams?.order || '');
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
-  const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search === 'true');
+  const [isAiSearch, setIsAiSearch] = useState(initialParams?.is_ai_search !== 'false');
   const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
   const initPageIndex = Number(initialParams?.pageIndex || 0);
   const [page, setPage] = useState(initPageIndex); // zero-based pageIndex tracker
@@ -247,7 +247,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     setTags(normalizeCsvList(initialParams?.tags || ''));
     setOrder(initialParams?.order || '');
     setPlan(initialParams?.plan || '');
-    setIsAiSearch(initialParams?.is_ai_search === 'true');
+    setIsAiSearch(initialParams?.is_ai_search !== 'false');
   }, [initialParams?.q, initialParams?.categories, initialParams?.tags, initialParams?.order, initialParams?.plan, initialParams?.is_ai_search]);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -259,7 +259,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     tags: normalizeCsvList(tags),
     order,
     plan,
-    is_ai_search: isAiSearch ? 'true' : undefined,
+    is_ai_search: isAiSearch ? 'true' : 'false',
   }), [q, categories, tags, order, plan, isAiSearch]);
 
   const catList = useMemo(() => normalizeCsvList(categories).split(',').map(s => s.trim()).filter(Boolean), [categories]);
@@ -979,6 +979,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
                 if (tags) qParams.set('tags', tags);
                 if (order) qParams.set('order', order);
                 if (plan) qParams.set('plan', plan);
+                qParams.set('is_ai_search', isAiSearch ? 'true' : 'false');
                 qParams.set('pageIndex', String(p));
                 return (
                   <Link key={p} href={isEn ? `/en/search?${qParams.toString()}` : `/search?${qParams.toString()}`} prefetch={false} style={{ color: '#b59cff', textDecoration: 'underline', padding: '0 4px' }}>

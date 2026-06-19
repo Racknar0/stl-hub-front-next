@@ -30,7 +30,10 @@ async function fetchSearchSSR(params) {
   if (params.tags) url.searchParams.set('tags', params.tags);
   if (params.order) url.searchParams.set('order', params.order);
   if (params.plan) url.searchParams.set('plan', params.plan);
-  if (params.is_ai_search) url.searchParams.set('is_ai_search', params.is_ai_search);
+  
+  const sendAi = params.is_ai_search !== 'false';
+  url.searchParams.set('is_ai_search', sendAi ? 'true' : 'false');
+  
   url.searchParams.set('pageIndex', String(params.pageIndex || '0'));
   url.searchParams.set('pageSize', String(PAGE_SIZE));
 
@@ -177,7 +180,7 @@ export async function generateMetadata({ searchParams }) {
   const total = Number(data?.total || 0);
   const pageItemsCount = Array.isArray(data?.items) ? data.items.length : 0;
   const isAiFallback = data?.aiFallback === true;
-  const isAiSearch = params.is_ai_search === 'true';
+  const isAiSearch = params.is_ai_search !== 'false';
   const isImageSearch = params.image_search === 'true';
   const isFirstPage = pageIndexNumber === 0;
 

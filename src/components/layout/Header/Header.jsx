@@ -19,12 +19,20 @@ import { sendGTMEvent } from '@next/third-parties/google'
  * Inner component that safely reads useSearchParams inside Suspense.
  * Resets the search loading state when pathname/searchParams change.
  */
-function SearchParamsWatcher({ onReset }) {
+function SearchParamsWatcher({ onReset, setSearchMode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     onReset()
+    const isSearchPage = pathname.includes('/search')
+    if (isSearchPage) {
+      const isAi = searchParams?.get('is_ai_search') === 'true' || searchParams?.get('image_search') === 'true'
+      setSearchMode(isAi ? 'ai' : 'normal')
+    } else {
+      setSearchMode('ai')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, searchParams?.toString()])
 
   return null
@@ -154,7 +162,7 @@ const Header = () => {
   const [exploreOpen, setExploreOpen] = useState(false)
   const exploreRef = useRef(null)
   const [searchLoading, setSearchLoading] = useState(false)
-  const [searchMode, setSearchMode] = useState('normal')
+  const [searchMode, setSearchMode] = useState('ai')
   const [aiVisualSearching, setAiVisualSearching] = useState(false)
   const aiVisualTimerRef = useRef(null)
   const [imageSearchFile, setImageSearchFile] = useState(null)
@@ -286,7 +294,11 @@ const Header = () => {
       if (diff > 5 && currentScrollY > 60) {
         if (headerRef.current) {
           const h = headerRef.current.offsetHeight || 120
-          headerRef.current.style.top = `-${h + 10}px`
+          // Si el panel de búsqueda por imagen (dropzone) está abierto, sumamos un offset extra
+          // de 180px para esconderlo por completo hacia arriba.
+          const hasOpenDropzone = headerRef.current.querySelector('.ai-dropzone-open') !== null
+          const dropzoneOffset = hasOpenDropzone ? 180 : 0
+          headerRef.current.style.top = `-${h + 10 + dropzoneOffset}px`
         }
         lastScrollY.current = currentScrollY
       } else if (diff < -5) {
@@ -434,6 +446,7 @@ const Header = () => {
             return
           }
           let url = val ? `/search?q=${encodeURIComponent(val)}` : '/search';
+          url += (url.includes('?') ? '&' : '?') + 'is_ai_search=false';
           router.push(url)
         } catch (err) {
           console.error('Navigation error on search submit in deferred task', err)
@@ -457,10 +470,16 @@ const Header = () => {
     }
   }
 
-  const normalSearchTitle = isEn ? 'Normal search' : 'Búsqueda normal'
+  const normalSearchTitle = isEn ? 'Exact match search' : 'Búsqueda por texto exacto'
   const aiSearchTitle = isEn ? 'AI search' : 'Búsqueda con IA'
-  const normalModeLabel = isEn ? 'Normal' : 'Normal'
-  const aiModeLabel = 'IA'
+  
+  // Desktop labels
+  const normalModeLabel = isEn ? '🔍 Exact Match' : '🔍 Texto Exacto'
+  const aiModeLabel = isEn ? '✨ AI Search' : '✨ Búsqueda IA'
+
+  // Mobile labels
+  const normalModeLabelMobile = isEn ? '🔍 Text' : '🔍 Texto'
+  const aiModeLabelMobile = isEn ? '✨ AI' : '✨ IA'
   const accountHref = isEn ? '/en/account' : '/account'
   const searchModeTitle = isEn ? 'Search mode' : 'Modo de búsqueda'
   const searchPlaceholder = searchMode === 'ai'
@@ -690,6 +709,7 @@ const Header = () => {
           onReset={() => {
             setSearchLoading(false)
           }}
+          setSearchMode={setSearchMode}
         />
       </Suspense>
       <div className="container-narrow">
@@ -942,18 +962,6 @@ const Header = () => {
                 </>
               )}
               <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
-                <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
-                  <button
-                    type="button"
-                    className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
-                    aria-pressed={searchMode === 'normal'}
-                    aria-label={normalSearchTitle}
-                    disabled={isSearchBusy}
-                    onClick={() => setSearchMode('normal')}
-                  >
-                    {normalModeLabel}
-                  </button>
-                </Tooltip>
                 <Tooltip title={isEn ? "Semantic & image search powered by AI" : "Búsqueda semántica y visual potenciada por IA"} arrow placement="bottom">
                   <button
                     type="button"
@@ -964,6 +972,18 @@ const Header = () => {
                     onClick={() => setSearchMode('ai')}
                   >
                     {aiModeLabel}
+                  </button>
+                </Tooltip>
+                <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
+                  <button
+                    type="button"
+                    className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                    aria-pressed={searchMode === 'normal'}
+                    aria-label={normalSearchTitle}
+                    disabled={isSearchBusy}
+                    onClick={() => setSearchMode('normal')}
+                  >
+                    {normalModeLabel}
                   </button>
                 </Tooltip>
               </div>
@@ -1229,18 +1249,6 @@ const Header = () => {
         <div className={`search-panel d-lg-none ${searchMode === 'ai' && aiDropzoneOpen ? 'ai-dropzone-open' : ''}`} role="search">
           <form className={`search-form ${searchMode === 'ai' ? 'ai-mode' : ''} ${aiVisualSearching || searchLoading ? 'ai-searching' : ''}`} onSubmit={onSearchSubmit}>
             <div className="search-mode-toggle" role="group" aria-label={searchModeTitle}>
-              <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
-                <button
-                  type="button"
-                  className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
-                  aria-pressed={searchMode === 'normal'}
-                  aria-label={normalSearchTitle}
-                  disabled={isSearchBusy}
-                  onClick={() => setSearchMode('normal')}
-                >
-                  {normalModeLabel}
-                </button>
-              </Tooltip>
               <Tooltip title={isEn ? "Semantic & image search powered by AI" : "Búsqueda semántica y visual potenciada por IA"} arrow placement="bottom">
                 <button
                   type="button"
@@ -1250,7 +1258,19 @@ const Header = () => {
                   disabled={isSearchBusy}
                   onClick={() => setSearchMode('ai')}
                 >
-                  {aiModeLabel}
+                  {aiModeLabelMobile}
+                </button>
+              </Tooltip>
+              <Tooltip title={isEn ? "Standard keyword search" : "Búsqueda estándar por palabras clave"} arrow placement="bottom">
+                <button
+                  type="button"
+                  className={`mode-btn ${searchMode === 'normal' ? 'active' : ''}`}
+                  aria-pressed={searchMode === 'normal'}
+                  aria-label={normalSearchTitle}
+                  disabled={isSearchBusy}
+                  onClick={() => setSearchMode('normal')}
+                >
+                  {normalModeLabelMobile}
                 </button>
               </Tooltip>
             </div>
