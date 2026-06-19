@@ -140,30 +140,48 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
                         priority={index < 4 && priority}
                       />
                     </div>
+                    {it.chips && it.chips.length > 0 && (
+                      <div className="chips">
+                        {it.chips.map((c, idx) => (
+                          <span
+                            className="chip chip--link"
+                            key={idx}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              window.location.href = isEn
+                                ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`
+                                : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`;
+                            }}
+                          >
+                            #{c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="info">
                       {/* it.title ya viene en el idioma derivado por Home */}
                       <div className="title">{it.title || '-'}</div>
                       <div className="fbottom">
-                        <div className="chips">
-                          {it.chips?.map((c, idx) => (
-                            <span
-                              className="chip chip--link"
-                              key={idx}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.location.href = isEn
-                                  ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`
-                                  : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`;
-                              }}
-                            >
-                              #{c}
-                            </span>
-                          ))}
-                        </div>
-                        {uploadDate && (
-                          <div className="fmeta" aria-hidden="true">
-                            <span>upload · {uploadDate}</span>
+                        {(uploadDate || it.slug) && (
+                          <div className="fmeta" aria-hidden="true" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
+                            {uploadDate && <span>upload · {uploadDate}</span>}
+                            {it.slug && (
+                              <span
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  router.push(cardHref);
+                                }}
+                                className="detail-link-btn"
+                                style={{ cursor: 'pointer' }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Ver detalle de ${it.title || ''}`}
+                              >
+                                {isEn ? 'detail' : 'detalle'}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

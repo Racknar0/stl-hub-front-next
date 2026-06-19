@@ -146,44 +146,42 @@ const FeatureSection = ({
                                                        priority={index < 4}
                                                    />
                                               </div>
+                                              {it.chips && it.chips.length > 0 && (
+                                                  <div className="chips">
+                                                      {it.chips.map((c, idx) => (
+                                                          <Link
+                                                            className="chip chip--link"
+                                                            key={idx}
+                                                            href={isEn ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}` : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                          >
+                                                            #{c}
+                                                          </Link>
+                                                      ))}
+                                                  </div>
+                                              )}
                                               <div className="finfo">
                                                   {/* it.title ya está en el idioma activo */}
                                                   <div className="ftitle">{it.title || '-'}</div>
                                                   <div className="fbottom">
-                                                      <div className="chips">
-                                                          {it.chips?.map((c, idx) => (
-                                                              <Link
-                                                                className="chip chip--link"
-                                                                key={idx}
-                                                                                                                                href={isEn ? `/en/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}` : `/search?tags=${encodeURIComponent((it.tagSlugs||[])[idx] ?? c)}`}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                              >
-                                                                #{c}
-                                                              </Link>
-                                                          ))}
-                                                      </div>
                                                       {(uploadDate || it.slug) && (
-                                                          <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                                                              {it.slug ? (
+                                                          <div className="fmeta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
+                                                              {uploadDate && <span>upload · {uploadDate}</span>}
+                                                              {it.slug && (
                                                                   <Link
                                                                       href={it.detailUrl || (isEn ? `/en/asset/${it.slug}` : `/asset/${it.slug}`)}
                                                                       onClick={(e)=>{ e.stopPropagation(); }}
+                                                                      className="detail-link-btn"
                                                                       aria-label={`Ver detalle del modelo STL ${it.title || ''} para descargar`}
-                                                                      style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 6 }}
                                                                   >
-                                                                      {uploadDate && <span>upload · {uploadDate} · detail</span>}
+                                                                      {isEn ? 'detail' : 'detalle'}
                                                                       <span className="sr-only">{`Modelo 3D ${it.title || ''} STL gratis`}</span>
                                                                   </Link>
-                                                              ) : (
-                                                                  uploadDate && <span>upload: {uploadDate}</span>
                                                               )}
                                                           </div>
                                                       )}
                                                   </div>
                                               </div>
-                                              <span className="badge" aria-hidden="true">
-                                                  ✓
-                                              </span>
                                           </article>
                                       </SwiperSlide>
                                   );
