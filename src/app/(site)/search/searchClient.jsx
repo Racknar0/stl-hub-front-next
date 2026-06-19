@@ -22,7 +22,7 @@ const PAGE_SIZE = 48;
 const GRID_GAP_PX = 10;
 const GRID_MIN_CARD_WIDTH_PX = 240;
 const GRID_CARD_HEIGHT_DESKTOP = 370;
-const GRID_CARD_HEIGHT_MOBILE = 390;
+const GRID_CARD_HEIGHT_MOBILE = 330;
 
 function stripLeadingHashes(value) {
   return String(value || '').replace(/^#+/, '');
