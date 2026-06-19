@@ -194,6 +194,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const pageRef = useRef(initPageIndex);
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(hasSSRData ? !!initialHasMore : true);
+  const cacheRef = useRef({});
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -266,6 +267,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   const searchEventKey = useMemo(() => buildSearchEventKey(params), [params]);
   // Reset y carga inicial cuando cambian filtros o resultados de imagen
   useEffect(() => {
+    cacheRef.current = {};
     const initPage = Number(initialParams?.pageIndex || 0);
     // Si hay datos SSR sin consumir, restaurarlos en vez de limpiar
     if (hasSSRData && !ssrConsumedRef.current) {
@@ -330,6 +332,74 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     }
   }, []);
 
+  const buildPageUrl = useCallback((targetPageIndex) => {
+    if (typeof window === 'undefined') return '#';
+    const sp = new URLSearchParams(window.location.search);
+    sp.set('pageIndex', String(targetPageIndex));
+    return `${window.location.pathname}?${sp.toString()}`;
+  }, []);
+
+  const fetchPageData = useCallback((targetPage) => {
+    if (cacheRef.current[targetPage]) {
+      return cacheRef.current[targetPage];
+    }
+
+    const promise = (async () => {
+      // Check for image search results in Zustand store
+      const isImageSearch = typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).get('image_search') === 'true';
+
+      if (isImageSearch) {
+        if (targetPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
+          const list = imageSearchResults.items.map(a => toDisplayItem(a, resolvedLanguage));
+          return {
+            items: list,
+            total: list.length,
+            hasMore: false,
+            suggestions: [],
+            aiFallback: false,
+          };
+        }
+        return {
+          items: [],
+          total: 0,
+          hasMore: false,
+          suggestions: [],
+          aiFallback: false,
+        };
+      }
+
+      const res = await axios.get('/assets/search', {
+        params: { ...params, pageIndex: targetPage, pageSize: PAGE_SIZE },
+      });
+      const list = (res.data?.items || []).map(a => toDisplayItem(a, resolvedLanguage));
+      const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, resolvedLanguage));
+      const computedTotal = Number(res.data?.total ?? 0);
+      const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
+      const computedHasMore = typeof res.data?.hasMore === 'boolean'
+        ? !!res.data.hasMore
+        : ((targetPage + 1) * pageSize < computedTotal);
+
+      return {
+        items: list,
+        total: computedTotal,
+        hasMore: computedHasMore,
+        suggestions: sugList,
+        aiFallback: !!res.data?.aiFallback,
+      };
+    })();
+
+    cacheRef.current[targetPage] = promise;
+
+    promise.then((data) => {
+      cacheRef.current[targetPage] = data;
+    }).catch((err) => {
+      delete cacheRef.current[targetPage];
+    });
+
+    return promise;
+  }, [params, resolvedLanguage, imageSearchResults]);
+
   const loadPageReal = useCallback(async (nextPage) => {
     if (isLoadingRef.current) return;
 
@@ -346,7 +416,16 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       pageRef.current = initPageIndex;
       setPage(initPageIndex);
       setTotal(initialTotal || 0);
-      // Track search event for SSR data
+
+      // Seed SSR initial data to cache
+      cacheRef.current[initPageIndex] = {
+        items: ssrItemsRef.current,
+        total: initialTotal || 0,
+        hasMore: !!initialHasMore,
+        suggestions: ssrSugRef.current || [],
+        aiFallback: !!initialAiFallback,
+      };
+
       if (initialTotal > 0) void trackSearchIfNeeded(initialTotal);
       return;
     }
@@ -356,55 +435,17 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     try {
       await sleep(0);
 
-      // Check for image search results in Zustand store
-      const isImageSearch = typeof window !== 'undefined'
-        && new URLSearchParams(window.location.search).get('image_search') === 'true';
+      const dataOrPromise = fetchPageData(nextPage);
+      const data = dataOrPromise instanceof Promise ? await dataOrPromise : dataOrPromise;
 
-      if (isImageSearch) {
-        if (nextPage === 0 && imageSearchResults && Array.isArray(imageSearchResults?.items)) {
-          const list = imageSearchResults.items.map(a => toDisplayItem(a, resolvedLanguage));
-          setItems(list);
-          setHasMore(false);
-          hasMoreRef.current = false;
-          pageRef.current = 0;
-          setPage(0);
-          setTotal(list.length);
-          if (list.length > 0) void trackSearchIfNeeded(list.length);
-        } else if (nextPage === 0 && !items.length) {
-          // If state is lost (e.g. refresh), just show empty
-          setItems([]);
-          setHasMore(false);
-          hasMoreRef.current = false;
-          setTotal(0);
-        }
-        isLoadingRef.current = false;
-        setLoading(false);
-        setIsTransitioning(false);
-        return; // Skip normal API call
-      }
-
-      const res = await axios.get('/assets/search', {
-        params: { ...params, pageIndex: nextPage, pageSize: PAGE_SIZE },
-      });
-      const list = (res.data?.items || []).map(a => toDisplayItem(a, resolvedLanguage));
-      
-      setItems(list);
-      setAiFallback(!!res.data?.aiFallback);
-      const sugList = (res.data?.suggestions || []).map(a => toDisplayItem(a, resolvedLanguage));
-      setSuggestions(sugList);
-      
-      const computedTotal = Number(res.data?.total ?? 0);
-      setTotal(computedTotal);
-      
-      const pageSize = Number(res.data?.pageSize ?? PAGE_SIZE);
-      const computedHasMore = typeof res.data?.hasMore === 'boolean'
-        ? !!res.data.hasMore
-        : ((nextPage + 1) * pageSize < computedTotal);
-      setHasMore(computedHasMore);
-      
+      setItems(data.items);
+      setAiFallback(data.aiFallback);
+      setSuggestions(data.suggestions);
+      setTotal(data.total);
+      setHasMore(data.hasMore);
       pageRef.current = nextPage;
       setPage(nextPage);
-      hasMoreRef.current = computedHasMore;
+      hasMoreRef.current = data.hasMore;
 
       // Hacer scroll suave hacia arriba del grid de resultados
       if (typeof window !== 'undefined' && virtualRootRef.current) {
@@ -412,7 +453,7 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
         window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
       }
 
-      void trackSearchIfNeeded(computedTotal);
+      void trackSearchIfNeeded(data.total);
     } catch (e) {
       console.error(e);
       setItems([]);
@@ -423,20 +464,84 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
       setLoading(false);
       isLoadingRef.current = false;
     }
-  }, [params, resolvedLanguage, trackSearchIfNeeded, imageSearchResults, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal]);
+  }, [trackSearchIfNeeded, initialParams?.pageIndex, hasSSRData, initialAiFallback, initialHasMore, initialTotal, fetchPageData]);
+
+  const handlePageClick = useCallback(async (e, targetPage) => {
+    if (e) e.preventDefault();
+    if (isTransitioning) return;
+    if (targetPage === page) return;
+
+    setIsTransitioning(true);
+    try {
+      const dataOrPromise = fetchPageData(targetPage);
+      const data = dataOrPromise instanceof Promise ? await dataOrPromise : dataOrPromise;
+
+      setItems(data.items);
+      setAiFallback(data.aiFallback);
+      setSuggestions(data.suggestions);
+      setTotal(data.total);
+      setHasMore(data.hasMore);
+      pageRef.current = targetPage;
+      setPage(targetPage);
+      hasMoreRef.current = data.hasMore;
+
+      // Sync browser URL bar
+      const newUrl = buildPageUrl(targetPage);
+      window.history.pushState(null, '', newUrl);
+
+      // Scroll suave
+      if (typeof window !== 'undefined' && virtualRootRef.current) {
+        const topOfGrid = virtualRootRef.current.getBoundingClientRect().top + window.scrollY - 100;
+        window.scrollTo({ top: Math.max(0, topOfGrid), behavior: 'smooth' });
+      }
+
+      void trackSearchIfNeeded(data.total);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsTransitioning(false);
+    }
+  }, [page, isTransitioning, fetchPageData, buildPageUrl, trackSearchIfNeeded]);
+
+  const handlePageHover = useCallback((targetPage) => {
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    if (targetPage >= 0 && targetPage < totalPages) {
+      fetchPageData(targetPage);
+    }
+  }, [total, fetchPageData]);
 
   // Carga inicial
   useEffect(() => {
     const initPage = Number(initialParams?.pageIndex || 0);
     loadPageReal(initPage);
-  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, resolvedLanguage, imageSearchResults, initialParams?.pageIndex]);
+  }, [params.q, params.categories, params.tags, params.order, params.plan, params.is_ai_search, resolvedLanguage, imageSearchResults, initialParams?.pageIndex, loadPageReal]);
 
-  const buildPageUrl = (targetPageIndex) => {
-    if (typeof window === 'undefined') return '#';
-    const sp = new URLSearchParams(window.location.search);
-    sp.set('pageIndex', String(targetPageIndex));
-    return `${window.location.pathname}?${sp.toString()}`;
-  };
+  // Auto-precargar la siguiente página (+1) en segundo plano con un pequeño retardo
+  useEffect(() => {
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const nextPage = page + 1;
+    if (nextPage < totalPages) {
+      const timer = setTimeout(() => {
+        fetchPageData(nextPage);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [page, total, fetchPageData]);
+
+  // Escuchar el evento popstate para retroceder/avanzar en el historial del navegador
+  useEffect(() => {
+    const handlePopState = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const newPage = Number(sp.get('pageIndex') || 0);
+      if (newPage !== pageRef.current) {
+        loadPageReal(newPage);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [loadPageReal]);
 
   const getPageNumbers = () => {
     const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -478,14 +583,6 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
     
     const pageNumbers = getPageNumbers();
 
-    const handlePageClick = (e) => {
-      if (isTransitioning) {
-        e.preventDefault();
-        return;
-      }
-      setIsTransitioning(true);
-    };
-
     const PagSpinner = () => (
       <svg className="pag-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
         <circle cx="12" cy="12" r="10" style={{ opacity: 0.2 }} />
@@ -500,7 +597,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
             href={buildPageUrl(page - 1)}
             className={`pag-btn pag-btn--nav${isTransitioning ? ' pag-btn--loading' : ''}`}
             aria-label="Previous Page"
-            onClick={handlePageClick}
+            onClick={(e) => handlePageClick(e, page - 1)}
+            onMouseEnter={() => handlePageHover(page - 1)}
           >
             {isTransitioning ? <PagSpinner /> : <span className="arrow">←</span>}
             <span className="text">{isEn ? 'Prev' : 'Ant'}</span>
@@ -530,7 +628,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
                 className={`pag-btn pag-btn--number ${isCurrent ? 'pag-btn--active' : ''}`}
                 aria-label={`Go to page ${p + 1}`}
                 aria-current={isCurrent ? 'page' : undefined}
-                onClick={handlePageClick}
+                onClick={(e) => handlePageClick(e, p)}
+                onMouseEnter={() => handlePageHover(p)}
               >
                 {p + 1}
               </Link>
@@ -543,7 +642,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
             href={buildPageUrl(page + 1)}
             className={`pag-btn pag-btn--nav${isTransitioning ? ' pag-btn--loading' : ''}`}
             aria-label="Next Page"
-            onClick={handlePageClick}
+            onClick={(e) => handlePageClick(e, page + 1)}
+            onMouseEnter={() => handlePageHover(page + 1)}
           >
             <span className="text">{isEn ? 'Next' : 'Sig'}</span>
             {isTransitioning ? <PagSpinner /> : <span className="arrow">→</span>}
