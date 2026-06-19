@@ -114,12 +114,22 @@ const CardImageSlider = ({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {!applyBlur && (
+          <Image
+            src={safeSrc}
+            alt=""
+            fill
+            sizes="10px"
+            className="card-image-slider-bg-blur"
+            priority={false}
+          />
+        )}
         <Image
           src={safeSrc}
           alt={alt}
           fill
           sizes={sizes}
-          className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
+          className={`${className} ${applyBlur ? 'card-image-slider-img nsfw-blur' : 'card-image-slider-img-contain'}`}
           priority={priority}
         />
         {applyBlur && (
@@ -164,12 +174,22 @@ const CardImageSlider = ({
           return (
             <SwiperSlide key={`${idx}-${safe}`}>
               <div className="card-image-slider-slide">
+                {!applyBlur && (
+                  <Image
+                    src={safe}
+                    alt=""
+                    fill
+                    sizes="10px"
+                    className="card-image-slider-bg-blur"
+                    priority={false}
+                  />
+                )}
                 <Image
                   src={safe}
                   alt={alt}
                   fill
                   sizes={sizes}
-                  className={`${className} card-image-slider-img ${applyBlur ? 'nsfw-blur' : ''}`}
+                  className={`${className} ${applyBlur ? 'card-image-slider-img nsfw-blur' : 'card-image-slider-img-contain'}`}
                   priority={priority}
                 />
               </div>
