@@ -99,6 +99,8 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
             slidesPerView="auto"
             spaceBetween={12}
             watchOverflow
+            observer
+            observeParents
             touchStartPreventDefault={false}
             touchReleaseOnEdges={true}
           >

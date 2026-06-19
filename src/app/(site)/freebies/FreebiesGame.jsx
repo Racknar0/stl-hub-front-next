@@ -372,6 +372,13 @@ const FreebiesGame = () => {
                             isAdult={isAssetNSFW(it)}
                           />
                         </div>
+                        {it.chips && it.chips.length > 0 && (
+                          <div className="chips">
+                            {it.chips.slice(0, 3).map((c, idx) => (
+                              <span className="chip" key={idx}>#{c}</span>
+                            ))}
+                          </div>
+                        )}
                         <div className="info">
                           <div className="title">
                             {(() => {
@@ -391,11 +398,6 @@ const FreebiesGame = () => {
                             })()}
                           </div>
                           <div className="fbottom">
-                            <div className="chips">
-                              {(it.chips || []).slice(0, 3).map((c, idx) => (
-                                <span className="chip" key={idx}>#{c}</span>
-                              ))}
-                            </div>
                             <div className="fmeta">
                               <Link href={it.detailUrl} onClick={(e) => e.stopPropagation()}>
                                 {t('viewAsset')}

@@ -6,6 +6,15 @@
   position: relative;
 }
 
+/* Swiper genera .swiper-wrapper y .swiper-slide internamente;
+   sin altura explícita, las <Image fill> (absolutas) quedan invisibles */
+.card-image-slider-swiper .swiper-wrapper {
+  height: 100% !important;
+}
+.card-image-slider-swiper .swiper-slide {
+  height: 100% !important;
+}
+
 .card-image-slider-slide {
   position: relative; /* para Image fill */
   overflow: hidden;

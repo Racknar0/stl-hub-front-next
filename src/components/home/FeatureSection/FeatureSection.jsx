@@ -113,6 +113,8 @@ const FeatureSection = ({
                               slidesPerView="auto"
                               spaceBetween={12}
                               grabCursor
+                              observer
+                              observeParents
                               loop={list.length > 1}
                               loopAdditionalSlides={Math.min(4, list.length)}
                               touchStartPreventDefault={false}

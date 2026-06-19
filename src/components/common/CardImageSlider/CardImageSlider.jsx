@@ -168,6 +168,9 @@ const CardImageSlider = ({
           disableOnInteraction: false,
           pauseOnMouseEnter: false,
         }}
+        slidesPerView={1}
+        observer
+        observeParents
         loop
         nested
         speed={520}

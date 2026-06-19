@@ -172,6 +172,23 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
   useEffect(() => {
     if (initialLatest && initialLatest.length > 0) {
+      // Sincronizar estado desde props SSR.
+      // Necesario para navegación cliente (back/forward) donde el componente
+      // se re-renderiza con nuevas props pero useState no re-inicializa.
+      setLatestRaw(initialLatest);
+      setTopRaw(initialTop && initialTop.length > 0 ? initialTop : initialLatest);
+      setTopRotationStep(0);
+      if (initialCategories && initialCategories.length > 0) {
+        setCats(initialCategories);
+      }
+      if (initialCatMap && Object.keys(initialCatMap).length > 0) {
+        setCatMap(initialCatMap);
+      }
+      if (initialCatOrder && initialCatOrder.length > 0) {
+        setCatOrder(initialCatOrder);
+        setCatPage(1);
+        setCatsLoadedAll(initialCatOrder.length >= (initialCategories || []).length);
+      }
       setGlobalLoading(false);
       // Mantener las 4 primeras estables (para evitar layout shift con SSR), 
       // y barajar el resto para mantener la aleatoriedad en "Cargar más"
