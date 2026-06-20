@@ -60,12 +60,12 @@ export default async function Page() {
     slugEn: c.slugEn || c.slug
   }));
 
-  // Cargar las primeras 4 categorías para SSR
+  // Cargar las primeras 8 categorías para SSR
   const initialCatMap = {};
   const initialCatOrder = [];
 
   if (categories.length > 0) {
-    const slice = categories.slice(0, 4);
+    const slice = categories.slice(0, 8);
     const results = await Promise.allSettled(
       slice.map(cat => fetchHomeSSR(`/api/assets/search?categories=${encodeURIComponent(cat.slug)}&pageIndex=0&pageSize=20`))
     );

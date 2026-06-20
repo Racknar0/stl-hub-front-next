@@ -107,7 +107,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
   const [cats, setCats] = useState(initialCategories || []); // [{ id, name, nameEn, slug, slugEn }]
   const [catsLoadOrder, setCatsLoadOrder] = useState(() => initialCategories || []); // mismo shape, pero barajado para carga
   const [catPage, setCatPage] = useState(initialCatOrder && initialCatOrder.length > 0 ? 1 : 0);
-  const BATCH_SIZE = 4;
+  const BATCH_SIZE = 8;
   const CAT_SLIDER_LIMIT = 20;
   const [catMap, setCatMap] = useState(initialCatMap || {}); // slug -> raw items
   const [catOrder, setCatOrder] = useState(initialCatOrder || []); // slugs con resultados en orden de carga
@@ -190,10 +190,10 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         setCatsLoadedAll(initialCatOrder.length >= (initialCategories || []).length);
       }
       setGlobalLoading(false);
-      // Mantener las 4 primeras estables (para evitar layout shift con SSR), 
+      // Mantener las 8 primeras estables (para evitar layout shift con SSR), 
       // y barajar el resto para mantener la aleatoriedad en "Cargar más"
-      const preloadedCats = (initialCategories || []).slice(0, 4);
-      const remainingCats = (initialCategories || []).slice(4);
+      const preloadedCats = (initialCategories || []).slice(0, 8);
+      const remainingCats = (initialCategories || []).slice(8);
       setCatsLoadOrder([...preloadedCats, ...shuffleArray(remainingCats)]);
       return;
     }
