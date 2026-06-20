@@ -51,6 +51,10 @@ const SectionRow = ({ title, subtitle, linkLabel, linkHref, items = [], onItemCl
     });
   };
 
+  if (!loading && (!Array.isArray(visibleItems) || visibleItems.length === 0)) {
+    return null;
+  }
+
   const showLoader = loading || !Array.isArray(visibleItems) || visibleItems.length === 0;
   return (
     <section className={`section-row ${variantClass}`.trim()}>
