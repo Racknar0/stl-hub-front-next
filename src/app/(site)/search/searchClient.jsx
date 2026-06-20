@@ -982,12 +982,14 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
               {Array.from({ length: Math.min(100, totalPages) }).map((_, i) => {
                 const p = i;
                 const qParams = new URLSearchParams();
-                if (q) qParams.set('q', q);
+                if (q) {
+                  qParams.set('q', q);
+                  qParams.set('is_ai_search', isAiSearch ? 'true' : 'false');
+                }
                 if (categories) qParams.set('categories', categories);
                 if (tags) qParams.set('tags', tags);
                 if (order) qParams.set('order', order);
                 if (plan) qParams.set('plan', plan);
-                qParams.set('is_ai_search', isAiSearch ? 'true' : 'false');
                 qParams.set('pageIndex', String(p));
                 return (
                   <Link key={p} href={isEn ? `/en/search?${qParams.toString()}` : `/search?${qParams.toString()}`} prefetch={false} style={{ color: '#b59cff', textDecoration: 'underline', padding: '0 4px' }}>

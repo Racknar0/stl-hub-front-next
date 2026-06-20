@@ -27,7 +27,8 @@ function SearchParamsWatcher({ onReset, setSearchMode }) {
     onReset()
     const isSearchPage = pathname.includes('/search')
     if (isSearchPage) {
-      const isAi = searchParams?.get('is_ai_search') !== 'false';
+      const hasQ = !!searchParams?.get('q');
+      const isAi = !hasQ || searchParams?.get('is_ai_search') !== 'false';
       setSearchMode(isAi ? 'ai' : 'normal')
     } else {
       setSearchMode('ai')
