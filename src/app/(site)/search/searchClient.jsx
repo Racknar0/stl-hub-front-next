@@ -20,7 +20,6 @@ const SEARCH_EVENT_DEDUPE_MS = 8000;
 const PAGE_SIZE = 48;
 
 const GRID_GAP_PX = 10;
-const GRID_MIN_CARD_WIDTH_PX = 340;
 const GRID_CARD_HEIGHT_DESKTOP = 450;
 const GRID_CARD_HEIGHT_TABLET = 450;
 const GRID_CARD_HEIGHT_MOBILE_PHONE = 450;
@@ -175,6 +174,16 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   // Nuevo: plan (free|premium)
   const [plan, setPlan] = useState(initialParams?.plan || '');
   const [isAiSearch, setIsAiSearch] = useState(initialParams?.q ? (initialParams?.is_ai_search !== 'false') : false);
+  const [minCardWidth, setMinCardWidth] = useState(320);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const computed = getComputedStyle(document.documentElement).getPropertyValue('--grid-min-card-width');
+    const val = parseInt(computed, 10);
+    if (!isNaN(val) && val > 0) {
+      setMinCardWidth(val);
+    }
+  }, []);
   const [aiFallback, setAiFallback] = useState(!!initialAiFallback);
   const initPageIndex = Number(initialParams?.pageIndex || 0);
   const [page, setPage] = useState(initPageIndex); // zero-based pageIndex tracker
@@ -716,8 +725,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
 
   const columns = useMemo(() => {
     const width = Math.max(1, Number(virtualMetrics.width || 1));
-    return Math.max(1, Math.floor((width + GRID_GAP_PX) / (GRID_MIN_CARD_WIDTH_PX + GRID_GAP_PX)));
-  }, [virtualMetrics.width]);
+    return Math.max(1, Math.floor((width + GRID_GAP_PX) / (minCardWidth + GRID_GAP_PX)));
+  }, [virtualMetrics.width, minCardWidth]);
 
   const rowHeight = useMemo(() => {
     return 450 + GRID_GAP_PX;

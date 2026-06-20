@@ -1,5 +1,9 @@
 @use '../../../styles/base/variables' as *;
 
+:root {
+    --grid-min-card-width: 320px;
+}
+
 /* sr-only utility class */
 .sr-only {
     position: absolute !important;
@@ -56,7 +60,7 @@
 
 .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--grid-min-card-width), 1fr));
     gap: 10px;
 
     /* Centrar el conjunto de columnas cuando hay hueco */
@@ -504,4 +508,19 @@
 
 @keyframes pag-spin {
   to { transform: rotate(360deg); }
+}
+
+.search-page,
+.free-models-page {
+    .fcard {
+        min-width: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+        height: 450px !important;
+
+        @media (max-width: 600px) {
+            max-width: 330px !important;
+            margin: 0 auto !important;
+        }
+    }
 }
