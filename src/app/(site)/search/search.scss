@@ -56,7 +56,7 @@
 
 .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 10px;
 
     /* Centrar el conjunto de columnas cuando hay hueco */
