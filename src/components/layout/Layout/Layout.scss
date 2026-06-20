@@ -14,3 +14,11 @@
 .app-main {
     flex: 1;
 }
+
+@media (max-width: 992px) {
+  body {
+    background: radial-gradient(circle at 50% -20%, #25194c 0%, #141824 60%, #0b0e16 100%) !important;
+    background-attachment: fixed !important;
+  }
+}
+
