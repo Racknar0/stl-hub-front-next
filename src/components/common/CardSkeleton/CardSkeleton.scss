@@ -3,11 +3,10 @@
 .card-skeleton {
   background: rgba(10, 10, 12, 0.65);
   border-radius: 20px;
-  min-width: 240px;
-  max-width: 240px;
-  width: 240px;
+  min-width: 0;
+  width: 100%;
   flex-shrink: 0;
-  height: 375px;
+  height: 450px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   position: relative;
   display: flex;
@@ -29,8 +28,8 @@
 
   &__thumb {
     width: 100%;
-    flex: 0 0 230px;
-    height: 250px;
+    flex: 0 0 290px;
+    height: 290px;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     background-color: rgba(255, 255, 255, 0.02);
@@ -89,13 +88,9 @@
   }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 600px) {
   .card-skeleton {
-    height: 330px;
-
-    &__thumb {
-      height: 180px;
-      flex-basis: 180px;
-    }
+    max-width: 330px;
+    margin: 0 auto;
   }
 }

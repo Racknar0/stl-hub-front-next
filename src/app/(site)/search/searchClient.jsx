@@ -20,9 +20,10 @@ const SEARCH_EVENT_DEDUPE_MS = 8000;
 const PAGE_SIZE = 48;
 
 const GRID_GAP_PX = 10;
-const GRID_MIN_CARD_WIDTH_PX = 240;
-const GRID_CARD_HEIGHT_DESKTOP = 370;
-const GRID_CARD_HEIGHT_MOBILE = 330;
+const GRID_MIN_CARD_WIDTH_PX = 330;
+const GRID_CARD_HEIGHT_DESKTOP = 450;
+const GRID_CARD_HEIGHT_TABLET = 450;
+const GRID_CARD_HEIGHT_MOBILE_PHONE = 450;
 
 function stripLeadingHashes(value) {
   return String(value || '').replace(/^#+/, '');
@@ -719,10 +720,8 @@ export default function SearchClient({ initialParams, initialItems, initialTotal
   }, [virtualMetrics.width]);
 
   const rowHeight = useMemo(() => {
-    return Number(virtualMetrics.windowW || 0) <= 992
-      ? GRID_CARD_HEIGHT_MOBILE + GRID_GAP_PX
-      : GRID_CARD_HEIGHT_DESKTOP + GRID_GAP_PX;
-  }, [virtualMetrics.windowW]);
+    return 450 + GRID_GAP_PX;
+  }, []);
 
   const rowCount = useMemo(() => Math.ceil(items.length / columns), [items.length, columns]);
 
