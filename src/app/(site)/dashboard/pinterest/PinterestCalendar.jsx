@@ -313,11 +313,43 @@ export default function PinterestCalendar() {
         const q = activeChips.join(',');
         const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(q)}&mode=id`);
         if (res.data?.found && res.data.assets?.length > 0) {
-          setSearchedAssets(res.data.assets);
+          const fetchedAssets = res.data.assets;
+          const filteredAssets = [];
+
+          for (const asset of fetchedAssets) {
+            if (asset.queueEntries && asset.queueEntries.length > 0) {
+              const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
+              const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
+              
+              let msg = '';
+              if (published.length > 0) {
+                const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+                msg += `ya fue publicado el: ${dates}`;
+              }
+              if (pending.length > 0) {
+                const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
+                if (msg) msg += ' y ';
+                msg += `ya está programado para: ${dates}`;
+              }
+
+              const proceed = confirm(`⚠️ Alerta de Duplicación:\nEl Asset #${asset.id} (${asset.title || 'Sin título'}) ${msg}.\n\n¿Deseas continuar agregándolo al espacio de trabajo? (Aceptar para continuar, Cancelar para eliminar)`);
+              if (proceed) {
+                filteredAssets.push(asset);
+              }
+            } else {
+              filteredAssets.push(asset);
+            }
+          }
+
+          setSearchedAssets(filteredAssets);
+          // Actualizar idChips solo con los IDs de los assets válidos y aceptados
+          const acceptedIds = filteredAssets.map(a => a.id);
+          setIdChips(acceptedIds);
           setTrendKeyword(''); // Sin tendencia para búsquedas por ID normales
         } else {
           alert('No se encontraron assets para los IDs especificados.');
           setSearchedAssets([]);
+          setIdChips([]); // Limpiar chips si no se encontró ninguno
         }
       }
     } catch (e) { alert('Error: ' + e.message); }
@@ -341,27 +373,6 @@ export default function PinterestCalendar() {
       if (selectedPins.length >= MAX_PINS_PER_DAY) {
         alert(`Máximo ${MAX_PINS_PER_DAY} pines por día.`);
         return;
-      }
-
-      // Check if this asset has already been scheduled/published
-      if (asset.queueEntries && asset.queueEntries.length > 0) {
-        const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
-        const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
-        
-        let msg = '';
-        if (published.length > 0) {
-          const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
-          msg += `Este asset ya fue publicado en Pinterest el día: ${dates}.\n`;
-        }
-        if (pending.length > 0) {
-          const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
-          msg += `Este asset ya está programado para el día: ${dates}.\n`;
-        }
-        
-        if (msg) {
-          const proceed = confirm(`⚠️ Alerta de Duplicación:\n${msg}\n¿Deseas agregar este pin a la cola de todas formas?`);
-          if (!proceed) return;
-        }
       }
 
       const categoryName = asset.category || 'General';
