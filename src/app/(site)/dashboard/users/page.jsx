@@ -40,7 +40,7 @@ export default function UsersPage() {
 
     const [data, setData] = useState([]);
     const [rowCount, setRowCount] = useState(0);
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 500 });
     const [q, setQ] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -263,6 +263,14 @@ export default function UsersPage() {
         setDetailOpen(true);
     };
 
+    // Helper: código ISO 2 letras → emoji de bandera ("CO" → "🇨🇴", "US" → "🇺🇸")
+    const countryFlag = (code) => {
+        if (!code || code.length !== 2) return '';
+        return String.fromCodePoint(
+            ...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+        );
+    };
+
     const columns = useMemo(
         () => [
             { accessorKey: 'id', header: 'ID', size: 70 },
@@ -322,6 +330,48 @@ export default function UsersPage() {
                 }
             },
             { accessorKey: 'downloadCount', header: 'Descargas', size: 100 },
+            {
+                accessorKey: 'registerCountry',
+                header: '🌍 Reg.',
+                size: 80,
+                Cell: ({ row }) => {
+                    const code = row.original.registerCountry;
+                    if (!code) return <span style={{ color: '#64748b' }}>—</span>;
+                    return (
+                        <Tooltip title={`${code} — ${row.original.registerIp || '?'}`}>
+                            <span style={{ fontSize: '1.1rem', cursor: 'default' }}>
+                                {countryFlag(code)} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{code}</span>
+                            </span>
+                        </Tooltip>
+                    );
+                },
+            },
+            {
+                accessorKey: 'lastLoginCountry',
+                header: '🌍 Login',
+                size: 80,
+                Cell: ({ row }) => {
+                    const code = row.original.lastLoginCountry;
+                    if (!code) return <span style={{ color: '#64748b' }}>—</span>;
+                    return (
+                        <Tooltip title={`${code} — ${row.original.lastLoginIp || '?'}`}>
+                            <span style={{ fontSize: '1.1rem', cursor: 'default' }}>
+                                {countryFlag(code)} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{code}</span>
+                            </span>
+                        </Tooltip>
+                    );
+                },
+            },
+            {
+                accessorKey: 'lastLoginIp',
+                header: 'IP Login',
+                size: 130,
+                Cell: ({ cell }) => (
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#94a3b8' }}>
+                        {cell.getValue() || '—'}
+                    </span>
+                ),
+            },
             { accessorKey: 'subEnds', header: 'Termina', size: 120 },
             { accessorKey: 'subDaysLeft', header: 'Días rest.', size: 100 },
         ],
