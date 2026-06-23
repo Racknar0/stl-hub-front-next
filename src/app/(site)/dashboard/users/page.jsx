@@ -263,11 +263,31 @@ export default function UsersPage() {
         setDetailOpen(true);
     };
 
-    // Helper: código ISO 2 letras → emoji de bandera ("CO" → "🇨🇴", "US" → "🇺🇸")
-    const countryFlag = (code) => {
-        if (!code || code.length !== 2) return '';
-        return String.fromCodePoint(
-            ...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+    // Helper: ISO 2-letter code -> Spanish country name
+    const getCountryName = (code) => {
+        if (!code) return '';
+        try {
+            const regionNames = new Intl.DisplayNames(['es'], { type: 'region' });
+            return regionNames.of(code.toUpperCase()) || code;
+        } catch (e) {
+            return code;
+        }
+    };
+
+    // Helper: render flag image + country name
+    const renderFlag = (code) => {
+        if (!code) return null;
+        const lowerCode = code.toLowerCase();
+        const countryName = getCountryName(code);
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <img
+                    src={`https://flagcdn.com/${lowerCode}.svg`}
+                    alt={countryName}
+                    style={{ width: '18px', height: '13px', borderRadius: '1px', objectFit: 'cover' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{countryName}</span>
+            </Box>
         );
     };
 
@@ -333,21 +353,17 @@ export default function UsersPage() {
             {
                 id: 'registerIpCountry',
                 header: 'IP Registro',
-                size: 140,
+                size: 160,
                 Cell: ({ row }) => {
                     const ip = row.original.registerIp;
                     const code = row.original.registerCountry;
                     if (!ip && !code) return <span style={{ color: '#64748b' }}>—</span>;
                     return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#cbd5e1' }}>
                                 {ip || '—'}
                             </span>
-                            {code ? (
-                                <span style={{ fontSize: '1rem', cursor: 'default', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {countryFlag(code)} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{code}</span>
-                                </span>
-                            ) : null}
+                            {code ? renderFlag(code) : null}
                         </Box>
                     );
                 },
@@ -355,21 +371,17 @@ export default function UsersPage() {
             {
                 id: 'lastLoginIpCountry',
                 header: 'Último Login',
-                size: 140,
+                size: 160,
                 Cell: ({ row }) => {
                     const ip = row.original.lastLoginIp;
                     const code = row.original.lastLoginCountry;
                     if (!ip && !code) return <span style={{ color: '#64748b' }}>—</span>;
                     return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#cbd5e1' }}>
                                 {ip || '—'}
                             </span>
-                            {code ? (
-                                <span style={{ fontSize: '1rem', cursor: 'default', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {countryFlag(code)} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{code}</span>
-                                </span>
-                            ) : null}
+                            {code ? renderFlag(code) : null}
                         </Box>
                     );
                 },
