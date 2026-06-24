@@ -1056,11 +1056,11 @@ export default function TelegramDownloader() {
           </div>
 
           <button className="btn btn-secondary" onClick={handleGetInfo} style={{ width: '100%', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }} disabled={isDownloading || !selectedChannel || scanning || channelInfo?.loading}>
-            {scanProgress && scanProgress.scanned && scanProgress.maxLimit ? (
+            {scanProgress && scanProgress.scanned !== undefined && scanProgress.maxLimit ? (
                <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${(scanProgress.scanned / scanProgress.maxLimit) * 100}%`, background: 'rgba(0, 242, 254, 0.25)', transition: 'width 0.3s ease-out' }} />
             ) : null}
             <span style={{ position: 'relative', zIndex: 1 }}>
-              {channelInfo?.loading ? 'Consultando info...' : scanning || scanProgress ? (scanProgress?.scanned ? `Escaneando mensajes (${scanProgress.scanned} / ${scanProgress.maxLimit})...` : 'Iniciando escaneo...') : 'Verificar Nuevos Archivos'}
+              {channelInfo?.loading ? 'Consultando info...' : scanning || scanProgress ? (scanProgress?.scanned !== undefined ? `Escaneando mensajes (${scanProgress.scanned} / ${scanProgress.maxLimit})...` : 'Iniciando escaneo...') : 'Verificar Nuevos Archivos'}
             </span>
           </button>
 
@@ -1347,7 +1347,7 @@ export default function TelegramDownloader() {
                             ⚡ Cargar
                           </button>
                           <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes" style={{ width: isScanning ? 'auto' : '32px', padding: isScanning ? '0 6px' : '0' }}>
-                            {isScanning ? (scanProgress?.scanned && scanProgress?.maxLimit ? `${Math.round((scanProgress.scanned / scanProgress.maxLimit) * 100)}%` : '⏳') : '🔍'}
+                            {isScanning ? (scanProgress?.scanned !== undefined && scanProgress?.maxLimit ? `${Math.round((scanProgress.scanned / scanProgress.maxLimit) * 100)}%` : '⏳') : '🔍'}
                           </button>
                           <a href={getTelegramUrl(c.name)} target="_blank" rel="noopener noreferrer" className="table-action-btn open" title="Abrir en Telegram">🔗</a>
                           <button className="table-action-btn delete" onClick={() => handleDeleteChannel(c.name)} title="Eliminar canal">🗑️</button>
