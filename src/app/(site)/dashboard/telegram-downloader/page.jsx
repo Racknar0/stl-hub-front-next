@@ -122,6 +122,7 @@ export default function TelegramDownloader() {
   const [channelInfo, setChannelInfo] = useState(null);
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(null);
 
   // Channel table state
   const [editedChannels, setEditedChannels] = useState({});
@@ -667,6 +668,9 @@ export default function TelegramDownloader() {
       else if (data.type === 'finish') { setIsDownloading(false); setDownloadInfo(null); addLog('¡Descarga completada!', 'success'); }
       else if (data.type === 'error') addLog(`Error: ${data.message}`, 'error');
       else if (data.type === 'info') addLog(data.message, 'info');
+      else if (data.type === 'scan_progress') setScanProgress(data);
+      else if (data.type === 'scan_start') setScanProgress({ started: true });
+      else if (data.type === 'scan_finish') setScanProgress(null);
     };
   };
 
@@ -1051,8 +1055,13 @@ export default function TelegramDownloader() {
             <input type="number" value={maxGB} onChange={e => setMaxGB(Number(e.target.value) || 150)} disabled={isDownloading} min={1} max={500} />
           </div>
 
-          <button className="btn btn-secondary" onClick={handleGetInfo} style={{ width: '100%', marginBottom: '1.5rem' }} disabled={isDownloading || !selectedChannel || scanning}>
-            {channelInfo?.loading || scanning ? 'Consultando y escaneando...' : 'Verificar Nuevos Archivos'}
+          <button className="btn btn-secondary" onClick={handleGetInfo} style={{ width: '100%', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }} disabled={isDownloading || !selectedChannel || scanning || channelInfo?.loading}>
+            {scanProgress && scanProgress.scanned && scanProgress.maxLimit ? (
+               <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${(scanProgress.scanned / scanProgress.maxLimit) * 100}%`, background: 'rgba(0, 242, 254, 0.25)', transition: 'width 0.3s ease-out' }} />
+            ) : null}
+            <span style={{ position: 'relative', zIndex: 1 }}>
+              {channelInfo?.loading ? 'Consultando info...' : scanning || scanProgress ? (scanProgress?.scanned ? `Escaneando mensajes (${scanProgress.scanned} / ${scanProgress.maxLimit})...` : 'Iniciando escaneo...') : 'Verificar Nuevos Archivos'}
+            </span>
           </button>
 
           {/* SCAN RESULT - only after clicking Verificar */}
@@ -1337,8 +1346,8 @@ export default function TelegramDownloader() {
                           >
                             ⚡ Cargar
                           </button>
-                          <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes">
-                            {isScanning ? '⏳' : '🔍'}
+                          <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes" style={{ width: isScanning ? 'auto' : '32px', padding: isScanning ? '0 6px' : '0' }}>
+                            {isScanning ? (scanProgress?.scanned && scanProgress?.maxLimit ? `${Math.round((scanProgress.scanned / scanProgress.maxLimit) * 100)}%` : '⏳') : '🔍'}
                           </button>
                           <a href={getTelegramUrl(c.name)} target="_blank" rel="noopener noreferrer" className="table-action-btn open" title="Abrir en Telegram">🔗</a>
                           <button className="table-action-btn delete" onClick={() => handleDeleteChannel(c.name)} title="Eliminar canal">🗑️</button>
