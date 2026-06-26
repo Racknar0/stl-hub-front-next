@@ -685,7 +685,14 @@ export default function TelegramDownloader() {
   };
 
   const handleCancel = async () => {
-    try { await http.postData('/telegram/cancel', {}); addLog('Cancelación solicitada...', 'info'); setIsDownloading(false); setDownloadInfo(null); }
+    try { 
+      await http.postData('/telegram/cancel', {}); 
+      addLog('Cancelación solicitada...', 'info'); 
+      setIsDownloading(false); 
+      setDownloadInfo(null);
+      setScanningChannel(null);
+      setScanProgress(null);
+    }
     catch { alert('Error cancelling'); }
   };
 
@@ -1349,6 +1356,11 @@ export default function TelegramDownloader() {
                           <button className="table-action-btn scan" onClick={() => handleQuickScan(c.name)} disabled={isScanning} title="Escanear nuevos mensajes" style={{ width: isScanning ? 'auto' : '32px', padding: isScanning ? '0 6px' : '0' }}>
                             {isScanning ? (scanProgress?.scanned !== undefined && scanProgress?.maxLimit ? `${Math.round((scanProgress.scanned / scanProgress.maxLimit) * 100)}%` : '⏳') : '🔍'}
                           </button>
+                          {isScanning && (
+                            <button className="table-action-btn delete" onClick={handleCancel} title="Cancelar escaneo" style={{ marginLeft: '4px' }}>
+                              ❌
+                            </button>
+                          )}
                           <a href={getTelegramUrl(c.name)} target="_blank" rel="noopener noreferrer" className="table-action-btn open" title="Abrir en Telegram">🔗</a>
                           <button className="table-action-btn delete" onClick={() => handleDeleteChannel(c.name)} title="Eliminar canal">🗑️</button>
                         </div>
