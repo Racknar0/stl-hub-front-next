@@ -131,7 +131,7 @@ export default function DownloadLimitModal({
       primaryBtnText: isEn ? '👑 View Premium Plans' : '👑 Ver Planes Premium',
       primaryBtnUrl: '/suscripcion',
       secondaryBtnText: isEn ? '🎁 Claim Daily Gifts' : '🎁 Reclamar Regalos del Día',
-      secondaryBtnUrl: isEn ? '/en/freebies' : '/freebies'
+      secondaryBtnUrl: '/freebies'
     },
     'expired': {
       title: isEn ? 'Subscription Expired' : 'Suscripción Vencida',
