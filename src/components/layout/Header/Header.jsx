@@ -500,18 +500,19 @@ const Header = () => {
       setLanguage(l);
       setLangOpen(false);
 
-      // Navegar a la URL del idioma correcto
       const isEnTarget = l === 'en';
       let targetPath = pathname || '/';
 
       if (isEnTarget) {
-        // Si no está ya en /en/*, añadir prefijo
-        if (!targetPath.startsWith('/en')) {
+        if (targetPath === '/modelos-3d-gratis') {
+          targetPath = '/en/free-3d-models';
+        } else if (!targetPath.startsWith('/en')) {
           targetPath = '/en' + (targetPath === '/' ? '' : targetPath);
         }
       } else {
-        // Si está en /en/*, quitar el prefijo
-        if (targetPath.startsWith('/en/')) {
+        if (targetPath === '/en/free-3d-models') {
+          targetPath = '/modelos-3d-gratis';
+        } else if (targetPath.startsWith('/en/')) {
           targetPath = targetPath.slice(3); // quita "/en"
         } else if (targetPath === '/en') {
           targetPath = '/';

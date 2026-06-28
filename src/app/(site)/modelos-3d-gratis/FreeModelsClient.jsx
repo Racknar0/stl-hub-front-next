@@ -41,15 +41,13 @@ export default function FreeModelsClient({ initialItems = [], totalCount = 100, 
   const currentLang = lang === 'en' ? 'en' : 'es';
   const t = TEXTS[currentLang];
 
-  const remainingCount = Math.max(0, totalCount - 33);
-  
   const pageDescText = currentLang === 'en'
-    ? `Every 24 hours we select ${totalCount} models from our premium catalog and release them completely free. Here are the first 33 models for today. Get them before they rotate at midnight!`
-    : `Cada 24 horas seleccionamos ${totalCount} modelos de nuestro catálogo premium y los liberamos completamente gratis. Aquí tienes los primeros 33 modelos de hoy. ¡Consíguelos antes de que roten a la medianoche!`;
+    ? 'Every 24 hours we select hundreds of models from our premium catalog and release them completely free. Here are the first 33 models for today. Get them before they rotate at midnight!'
+    : 'Cada 24 horas seleccionamos cientos de modelos de nuestro catálogo premium y los liberamos completamente gratis. Aquí tienes los primeros 33 modelos de hoy. ¡Consíguelos antes de que roten a la medianoche!';
 
   const bannerTitleText = currentLang === 'en'
-    ? `Unlock ${remainingCount} more gifts today!`
-    : `¡Desbloquea ${remainingCount} regalos más hoy!`;
+    ? 'Unlock more gifts today!'
+    : '¡Desbloquea más regalos hoy!';
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);

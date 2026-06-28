@@ -1,7 +1,7 @@
 import React from 'react';
 import FreeModelsClient from '../../modelos-3d-gratis/FreeModelsClient';
 
-export const revalidate = 3600; // ISR cada 1 hora para sincronizar con la rotación diaria de medianoche
+export const dynamic = 'force-dynamic';
 
 const SITE = 'https://stl-hub.com';
 
