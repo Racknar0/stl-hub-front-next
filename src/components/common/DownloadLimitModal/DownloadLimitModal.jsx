@@ -130,7 +130,7 @@ export default function DownloadLimitModal({
       ),
       primaryBtnText: isEn ? '👑 View Premium Plans' : '👑 Ver Planes Premium',
       primaryBtnUrl: '/suscripcion',
-      secondaryBtnText: isEn ? '🎲 Try Daily Minigame' : '🎲 Probar Minijuego de Dados',
+      secondaryBtnText: isEn ? '🎁 Claim Daily Gifts' : '🎁 Reclamar Regalos del Día',
       secondaryBtnUrl: isEn ? '/en/freebies' : '/freebies'
     },
     'expired': {
