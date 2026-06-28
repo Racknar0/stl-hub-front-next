@@ -235,6 +235,13 @@ export default function FreeModelsClient({ initialItems = [], totalCount = 100, 
             </svg>
             <span>{t.bannerBtn}</span>
           </Link>
+          {!token && (
+            <p className="login-warning-text" style={{ color: '#ff4d4d', fontSize: '0.85rem', marginTop: '8px', marginBottom: '4px', fontWeight: 'bold', textAlign: 'center' }}>
+              {currentLang === 'en'
+                ? '⚠️ You must log in to roll the dice.'
+                : '⚠️ Debes iniciar sesión para lanzar los dados.'}
+            </p>
+          )}
           <p className="btn-caption">{t.bannerCaption}</p>
         </div>
       </section>
