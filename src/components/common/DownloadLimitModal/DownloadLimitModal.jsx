@@ -120,8 +120,8 @@ export default function DownloadLimitModal({
     'no-sub': {
       title: isEn ? 'Premium Access Required' : 'Acceso Premium Requerido',
       description: isEn
-        ? 'This high-quality model is reserved for Premium members. Activate a subscription to download this and thousands of other exclusive STL models.'
-        : 'Este modelo de alta calidad está reservado para miembros Premium. Activa una suscripción para descargar este y miles de otros modelos STL exclusivos.',
+        ? 'To download models limitlessly, join our premium club. Get unlimited downloads and access the highest quality STL files on the market.'
+        : 'Para descargar modelos ilimitadamente, únete a nuestro club premium. Consigue descargas sin límites y accede a los archivos STL de mejor calidad del mercado.',
       icon: (
         <svg className="modal-icon neon-purple" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" />
@@ -130,7 +130,8 @@ export default function DownloadLimitModal({
       ),
       primaryBtnText: isEn ? '👑 View Premium Plans' : '👑 Ver Planes Premium',
       primaryBtnUrl: '/suscripcion',
-      secondaryBtnText: isEn ? 'Close' : 'Cerrar'
+      secondaryBtnText: isEn ? '🎲 Try Daily Minigame' : '🎲 Probar Minijuego de Dados',
+      secondaryBtnUrl: isEn ? '/en/freebies' : '/freebies'
     },
     'expired': {
       title: isEn ? 'Subscription Expired' : 'Suscripción Vencida',
