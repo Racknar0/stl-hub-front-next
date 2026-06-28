@@ -18,21 +18,25 @@ async function fetchFreeModels() {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[modelos-3d-gratis] fetch status error:', res.status);
       }
-      return [];
+      return { items: [], total: 100 };
     }
     const data = await res.json();
-    return Array.isArray(data?.items) ? data.items : [];
+    return {
+      items: Array.isArray(data?.items) ? data.items : [],
+      total: Number.isFinite(data?.total) ? data.total : 100
+    };
   } catch (e) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('[modelos-3d-gratis] fetch exception:', e?.message);
     }
-    return [];
+    return { items: [], total: 100 };
   }
 }
 
 export async function generateMetadata() {
+  const { total } = await fetchFreeModels();
   const title = 'Modelos 3D STL Gratis — Regalos del Día | STLHUB';
-  const description = 'Descarga archivos STL gratis de calidad premium para impresión 3D FDM y Resina. 100 modelos nuevos gratis cada 24 horas. ¡Explora los regalos de hoy!';
+  const description = `Descarga archivos STL gratis de calidad premium para impresión 3D FDM y Resina. ${total} modelos nuevos gratis cada 24 horas. ¡Explora los regalos de hoy!`;
   const canonicalUrl = `${SITE}/modelos-3d-gratis`;
 
   return {
@@ -68,7 +72,7 @@ export async function generateMetadata() {
 }
 
 export default async function Page() {
-  const items = await fetchFreeModels();
+  const { items, total } = await fetchFreeModels();
 
-  return <FreeModelsClient initialItems={items} lang="es" />;
+  return <FreeModelsClient initialItems={items} totalCount={total} lang="es" />;
 }

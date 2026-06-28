@@ -36,10 +36,20 @@ const TEXTS = {
   }
 };
 
-export default function FreeModelsClient({ initialItems = [], lang = 'es' }) {
+export default function FreeModelsClient({ initialItems = [], totalCount = 100, lang = 'es' }) {
   const token = useStore((s) => s.token);
   const currentLang = lang === 'en' ? 'en' : 'es';
   const t = TEXTS[currentLang];
+
+  const remainingCount = Math.max(0, totalCount - 33);
+  
+  const pageDescText = currentLang === 'en'
+    ? `Every 24 hours we select ${totalCount} models from our premium catalog and release them completely free. Here are the first 33 models for today. Get them before they rotate at midnight!`
+    : `Cada 24 horas seleccionamos ${totalCount} modelos de nuestro catálogo premium y los liberamos completamente gratis. Aquí tienes los primeros 33 modelos de hoy. ¡Consíguelos antes de que roten a la medianoche!`;
+
+  const bannerTitleText = currentLang === 'en'
+    ? `Unlock ${remainingCount} more gifts today!`
+    : `¡Desbloquea ${remainingCount} regalos más hoy!`;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
@@ -138,7 +148,7 @@ export default function FreeModelsClient({ initialItems = [], lang = 'es' }) {
       {/* Header */}
       <section className="free-models-header">
         <h1>{t.pageTitle}</h1>
-        <p>{t.pageDesc}</p>
+        <p>{pageDescText}</p>
       </section>
 
       {/* Grid de 33 modelos */}
@@ -209,7 +219,7 @@ export default function FreeModelsClient({ initialItems = [], lang = 'es' }) {
       <section className="minigame-cta-banner">
         <div className="banner-content">
           <span className="badge">{t.bannerBadge}</span>
-          <h2>{t.bannerTitle}</h2>
+          <h2>{bannerTitleText}</h2>
           <p>{t.bannerDesc}</p>
         </div>
         <div className="banner-actions">

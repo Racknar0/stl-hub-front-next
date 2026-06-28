@@ -117,7 +117,7 @@ const SubscribeBar = () => {
     const subscribeCta = isEn ? 'Subscribe' : 'Suscríbete';
 
     const freeMessage = isEn ? "Don't worry, download our free models" : 'No te preocupes, descarga nuestros modelos gratis';
-    const freeHref = isEn ? '/en/search?plan=free' : '/search?plan=free';
+    const freeHref = isEn ? '/en/free-3d-models' : '/modelos-3d-gratis';
     const freeCta = isEn ? 'See free' : 'Ver gratis';
 
   return (
