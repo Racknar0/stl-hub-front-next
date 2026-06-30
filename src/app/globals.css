@@ -1,13 +1,6 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0b0e16;
+  --foreground: #ededed;
 }
 
 html,
@@ -35,10 +28,8 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+html {
+  color-scheme: dark;
 }
 
 /* Ambient Background */
@@ -111,10 +102,13 @@ h1, h2, h3, h4, h5, h6,
 .section-row .header h3,
 .feature-section .intro-title,
 .feature-section .ftitle,
+.fcard .ftitle,
+.ftitle,
 .hero-title,
 .nsfw-title,
 .card-item .title {
   font-family: var(--font-syne), 'Syne', var(--font-poppins), 'Poppins', sans-serif;
+  color: #ffffff;
 }
 
 .hero-subtitle,
