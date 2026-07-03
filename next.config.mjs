@@ -15,6 +15,7 @@ const nextConfig = {
   // Excluimos la ruta /en/asset/* para que Next.js pueda resolver físicamente la página en inglés.
   async rewrites() {
     return [
+      { source: '/sitemap.xml', destination: '/sitemap-index' },
       { source: '/en/:path((?!asset(?:/|$)).*)', destination: '/:path*' },
     ];
   },
