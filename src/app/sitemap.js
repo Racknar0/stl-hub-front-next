@@ -66,11 +66,22 @@ export default async function sitemap() {
         if (!r?.slug) continue;
         const url = `${base}/asset/${r.slug}`;
         const urlEn = `${base}/en/asset/${r.slug}`;
+        
+        // Entrada en español
         entries.push({
           url,
           lastModified: r.updatedAt ? new Date(r.updatedAt) : now,
           changeFrequency: 'weekly',
           priority: 0.9,
+          alternates: { languages: { 'es-ES': url, 'en-US': urlEn, 'x-default': url } },
+        });
+
+        // Entrada en inglés
+        entries.push({
+          url: urlEn,
+          lastModified: r.updatedAt ? new Date(r.updatedAt) : now,
+          changeFrequency: 'weekly',
+          priority: 0.8,
           alternates: { languages: { 'es-ES': url, 'en-US': urlEn, 'x-default': url } },
         });
       }
