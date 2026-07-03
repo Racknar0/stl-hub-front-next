@@ -13,7 +13,7 @@ async function fetchFreeModels() {
   const apiBase = getApiBase();
   const url = `${apiBase}/api/assets/search?plan=free&pageIndex=0&pageSize=33`;
   try {
-    const res = await fetch(url, { next: { revalidate } });
+    const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[free-3d-models] fetch status error:', res.status);
