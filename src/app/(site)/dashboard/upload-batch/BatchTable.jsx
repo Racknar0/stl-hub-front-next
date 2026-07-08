@@ -539,7 +539,8 @@ export default function BatchTable() {
     if (!value) return ''
     if (/^https?:\/\//i.test(value)) return value
     const rel = value.replace(/^\/+/, '')
-    return `${uploadsBase}/uploads/${rel}`
+    const encodedRel = rel.split('/').map(segment => encodeURIComponent(segment)).join('/')
+    return `${uploadsBase}/uploads/${encodedRel}`
   }, [uploadsBase])
 
   const startSimilarityCheck = useCallback(async (row) => {

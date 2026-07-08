@@ -431,7 +431,7 @@ const BatchRow = React.memo(function BatchRow({
                                     {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 6)).map((img, i) => {
                                         const srcUrl = img.startsWith('http')
                                             ? img
-                                            : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
+                                            : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img.split('/').map(segment => encodeURIComponent(segment)).join('/')}`;
                                         const isPrimary = i === 0;
                                         return (
                                             <Box key={i} sx={{
@@ -983,7 +983,7 @@ const BatchRow = React.memo(function BatchRow({
                             row.imagenes.slice(0, 3).map((img, i) => {
                                 const srcUrl = img.startsWith('http')
                                     ? img
-                                    : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img}`;
+                                    : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img.split('/').map(segment => encodeURIComponent(segment)).join('/')}`;
                                 return (
                                     <Avatar
                                         key={i}

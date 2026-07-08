@@ -20,19 +20,23 @@ function resolveImgUrl(img) {
   if (!img) return '';
   
   const uploadBase = getUploadBase();
+  let pathPart = '';
   
   if (img.startsWith('http')) {
     if (img.includes('/uploads/')) {
       const parts = img.split('/uploads/');
       if (parts.length > 1) {
-        return `${uploadBase}/${parts[1]}`;
+        pathPart = parts[1];
       }
+    } else {
+      return img;
     }
-    return img;
+  } else {
+    pathPart = String(img).replace(/^\\+|^\/+/, '');
   }
-  
-  const clean = String(img).replace(/^\\+|^\/+/, '');
-  return `${uploadBase}/${clean}`;
+
+  const encodedPath = pathPart.split('/').map(segment => encodeURIComponent(segment)).join('/');
+  return `${uploadBase}/${encodedPath}`;
 }
 
 export default function PinterestCalendar() {
