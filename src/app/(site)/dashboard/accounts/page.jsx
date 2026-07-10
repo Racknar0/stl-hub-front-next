@@ -364,7 +364,8 @@ export default function AccountsOverviewPage() {
             const q = filterSearch.trim().toLowerCase();
             list = list.filter((a) =>
                 (a.alias || '').toLowerCase().includes(q) ||
-                (a.email || '').toLowerCase().includes(q)
+                (a.email || '').toLowerCase().includes(q) ||
+                String(a.id).includes(q)
             );
         }
 
@@ -442,7 +443,7 @@ export default function AccountsOverviewPage() {
                 {/* Búsqueda */}
                 <TextField
                     size="small"
-                    placeholder="Buscar alias o email…"
+                    placeholder="Buscar ID, alias o email…"
                     value={filterSearch}
                     onChange={(e) => setFilterSearch(e.target.value)}
                     InputProps={{

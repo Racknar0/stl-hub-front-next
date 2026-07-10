@@ -160,7 +160,7 @@ export default function AccountCard({
                         minWidth: 0,
                     }}
                 >
-                    {acc.alias}
+                    {`[ID: ${acc.id}] ${acc.alias}`}
                 </Box>
                 <Box
                     component="span"

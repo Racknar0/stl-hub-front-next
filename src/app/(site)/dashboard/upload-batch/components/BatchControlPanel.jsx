@@ -277,25 +277,6 @@ export default function BatchControlPanel({
                 Espacio estimado: {formatBytes(totalAvailableSpaceBytes)}
               </Typography>
             </Stack>
-            <Tooltip title="Asignar automáticamente el peso de los archivos a las cuentas con espacio libre">
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={async () => {
-                  if (await confirmAlert('¿Distribuir automáticamente?', '¿Distribuir los assets automáticamente entre las cuentas destino seleccionadas?')) {
-                    handleAutoDistribute({ preferredAccountIds: distributionAccountIdsRef?.current })
-                  }
-                }}
-                sx={{
-                  borderRadius: 1.5, textTransform: 'none', fontWeight: 600, height: 30, px: 2,
-                  background: 'linear-gradient(135deg, #a855f7, #7e22ce)',
-                  '&:hover': { background: 'linear-gradient(135deg, #9333ea, #6b21a8)' }
-                }}
-              >
-                Distribuir
-              </Button>
-            </Tooltip>
 
             <Tooltip title="Quitar todas las cuentas asignadas a los assets y deseleccionarlas">
               <Button
