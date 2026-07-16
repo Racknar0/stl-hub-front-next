@@ -8,7 +8,15 @@ import React from 'react'
 import { Box, Stack, Typography, LinearProgress, Chip, Button } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 
-export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', onSummaryFilterChange, reviewMode = false, setReviewMode }) {
+export default function BatchSummaryBar({
+  tableSummary,
+  summaryFilter = 'all',
+  onSummaryFilterChange,
+  reviewMode = false,
+  setReviewMode,
+  sizeFilterGb,
+  setSizeFilterGb,
+}) {
   const triggerFilter = (filter) => {
     if (typeof onSummaryFilterChange === 'function') {
       onSummaryFilterChange(filter)
@@ -81,7 +89,7 @@ export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', o
         }}
       />
 
-      <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+      <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap" alignItems="center">
         <Chip
           size="small"
           clickable
@@ -138,6 +146,58 @@ export default function BatchSummaryBar({ tableSummary, summaryFilter = 'all', o
           aria-pressed={summaryFilter === 'error'}
           sx={{ bgcolor: 'rgba(239,68,68,0.2)', color: '#fecaca' }}
         />
+
+        {sizeFilterGb && Number(sizeFilterGb) > 0 && (
+          <Chip
+            size="small"
+            clickable
+            label={`Pesados (>= ${sizeFilterGb} GB): ${tableSummary.heavyCount || 0}`}
+            onClick={() => triggerFilter('heavy')}
+            aria-pressed={summaryFilter === 'heavy'}
+            sx={{
+              bgcolor: 'rgba(239, 68, 68, 0.25)',
+              color: '#fca5a5',
+              fontWeight: 'bold',
+              border: summaryFilter === 'heavy' ? '1px solid #ef4444' : 'none',
+              boxShadow: summaryFilter === 'heavy' ? '0 0 8px rgba(239, 68, 68, 0.4)' : 'none',
+            }}
+          />
+        )}
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 'auto', display: 'inline-flex' }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>
+            Filtrar pesado &gt;=
+          </Typography>
+          <input
+            type="number"
+            min="0.1"
+            step="0.1"
+            value={sizeFilterGb}
+            onChange={(e) => {
+              const val = e.target.value
+              setSizeFilterGb(val)
+              // Si se limpia el input y teníamos seleccionado el filtro de pesados, volvemos a mostrar todos
+              if (!val && summaryFilter === 'heavy') {
+                triggerFilter('all')
+              }
+            }}
+            placeholder="GB"
+            style={{
+              width: '60px',
+              height: '24px',
+              borderRadius: '6px',
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              fontSize: '11px',
+              fontWeight: '800',
+              textAlign: 'center',
+              outline: 'none',
+            }}
+          />
+        </Stack>
       </Stack>
     </Box>
   )

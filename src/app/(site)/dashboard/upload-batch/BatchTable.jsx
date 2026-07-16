@@ -181,6 +181,7 @@ export default function BatchTable() {
   const [useTelegramSource, setUseTelegramSource] = useState(false)
   const [semanticSort, setSemanticSort] = useState(true)
   const [summaryFilter, setSummaryFilter] = useState('all')
+  const [sizeFilterGb, setSizeFilterGb] = useState('')
   const [reviewScrollTop, setReviewScrollTop] = useState(0)
   const reviewScrollRef = React.useRef(null)
 
@@ -431,8 +432,12 @@ export default function BatchTable() {
     }
     if (currentFilter === 'completed') return st === 'completado'
     if (currentFilter === 'error') return st === 'error'
+    if (currentFilter === 'heavy') {
+      const minSizeMb = (Number(sizeFilterGb) || 0) * 1024
+      return Number(row?.pesoMB || 0) >= minSizeMb
+    }
     return true
-  }, [isRowReadyForQueue])
+  }, [isRowReadyForQueue, sizeFilterGb])
 
   const handleSummaryFilterChange = useCallback((nextFilter) => {
     const normalized = String(nextFilter || 'all').toLowerCase()
@@ -2250,6 +2255,11 @@ export default function BatchTable() {
     const readyPct = retryable > 0 ? Math.round((ready / retryable) * 100) : 0
     const readyGb = readyRows.reduce((acc, r) => acc + Number(r.pesoMB || 0), 0) / 1024
 
+    const heavyCount = rows.filter((r) => {
+      const minSizeMb = (Number(sizeFilterGb) || 0) * 1024
+      return Number(r?.pesoMB || 0) >= minSizeMb
+    }).length
+
     return {
       total,
       retryable,
@@ -2261,8 +2271,9 @@ export default function BatchTable() {
       error,
       readyPct,
       readyGb,
+      heavyCount,
     }
-  }, [rows, isRowReadyForQueue])
+  }, [rows, isRowReadyForQueue, sizeFilterGb])
 
   const distributionSelectionSummary = useMemo(() => {
     const selectedIds = Array.from(new Set(
@@ -2405,6 +2416,8 @@ export default function BatchTable() {
           onSummaryFilterChange={handleSummaryFilterChange}
           reviewMode={reviewMode}
           setReviewMode={setReviewMode}
+          sizeFilterGb={sizeFilterGb}
+          setSizeFilterGb={setSizeFilterGb}
         />
       )}
 
