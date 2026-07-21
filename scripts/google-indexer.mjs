@@ -190,7 +190,18 @@ async function run() {
     targetUrls.push(`${SITE_URL}/en/asset/${slug}`);
   });
 
-  // 3. Lote prioritario diario (envía el bloque completo del sitemap)
+  // 3. Cargar el historial de indexación local
+  const historyPath = path.join(process.cwd(), 'scripts', 'indexed_history.json');
+  let history = {};
+  if (fs.existsSync(historyPath)) {
+    try {
+      history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+    } catch {
+      // Ignorar error si está corrupto
+    }
+  }
+
+  // 4. Lote prioritario diario (envía el bloque completo del sitemap)
   const batch = targetUrls.slice(0, LIMIT);
   console.log(`📊 URLs prioritarias en la lista: ${targetUrls.length} | Lote seleccionado hoy: ${batch.length} URLs.\n`);
 
