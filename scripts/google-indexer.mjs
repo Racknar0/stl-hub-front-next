@@ -153,11 +153,11 @@ async function run() {
   console.log(`   Backend API:  ${API_URL}`);
   console.log(`   Modo:         ${DRY_RUN ? 'SIMULACIÓN (Dry-run) 🧪' : 'PRODUCCIÓN (Envío Real) ⚡'}\n`);
 
-  // 1. Obtener slugs aprobados/seguros del backend (limitado al bloque prioritario de drip-feed)
-  const SITEMAP_ASSET_LIMIT = 40;
+  // 1. Obtener slugs aprobados/seguros del backend (limitado a los 50 assets iniciales fijos)
+  const SITEMAP_ASSET_LIMIT = 50;
   let slugs = [];
   try {
-    const slugsEndpoint = `${API_URL}/api/assets/slugs?limit=${SITEMAP_ASSET_LIMIT}`;
+    const slugsEndpoint = `${API_URL}/api/assets/slugs?limit=${SITEMAP_ASSET_LIMIT}&sortBy=id&order=asc`;
     console.log(`🔍 Obteniendo lista de assets desde: ${slugsEndpoint}...`);
     const res = await fetch(slugsEndpoint);
     if (!res.ok) throw new Error(`El backend respondió con código ${res.status}`);

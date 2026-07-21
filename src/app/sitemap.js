@@ -8,7 +8,7 @@ const SITEMAP_REVALIDATE_SECONDS = 3600;
 // │  AJUSTA ESTE NÚMERO para ir subiendo las URLs progresivamente  │
 // │  Fase 1: 40  │  Fase 2: 100  │  Fase 3: 500  │  Fase 4: ALL  │
 // └─────────────────────────────────────────────────────────────────┘
-const SITEMAP_ASSET_LIMIT = 40;
+const SITEMAP_ASSET_LIMIT = 50;
 
 export default async function sitemap() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com').replace(/\/$/, '');
@@ -57,10 +57,10 @@ export default async function sitemap() {
     }
   );
 
-  // ── Assets limitados (drip-feed) ──
+  // ── Assets iniciales fijos por ID asc (drip-feed) ──
   try {
     const res = await fetch(
-      `${apiBase}/api/assets/slugs?limit=${SITEMAP_ASSET_LIMIT}`,
+      `${apiBase}/api/assets/slugs?limit=${SITEMAP_ASSET_LIMIT}&sortBy=id&order=asc`,
       { next: { revalidate: SITEMAP_REVALIDATE_SECONDS } }
     );
     if (res.ok) {
