@@ -153,16 +153,17 @@ async function run() {
   console.log(`   Backend API:  ${API_URL}`);
   console.log(`   Modo:         ${DRY_RUN ? 'SIMULACIÓN (Dry-run) 🧪' : 'PRODUCCIÓN (Envío Real) ⚡'}\n`);
 
-  // 1. Obtener slugs aprobados/seguros del backend (más recientes primero)
+  // 1. Obtener slugs aprobados/seguros del backend (limitado al bloque prioritario de drip-feed)
+  const SITEMAP_ASSET_LIMIT = 40;
   let slugs = [];
   try {
-    const slugsEndpoint = `${API_URL}/api/assets/slugs?limit=50000`;
+    const slugsEndpoint = `${API_URL}/api/assets/slugs?limit=${SITEMAP_ASSET_LIMIT}`;
     console.log(`🔍 Obteniendo lista de assets desde: ${slugsEndpoint}...`);
     const res = await fetch(slugsEndpoint);
     if (!res.ok) throw new Error(`El backend respondió con código ${res.status}`);
     const rows = await res.json();
     slugs = rows.map(r => r.slug).filter(Boolean);
-    console.log(`📋 Se obtuvieron ${slugs.length} assets válidos del backend (NSFW/No publicados filtrados).`);
+    console.log(`📋 Se obtuvieron ${slugs.length} assets prioritarios del backend.`);
   } catch (err) {
     console.error(`❌ Error al conectar con el backend: ${err.message}`);
     await sendEmailAlert(
@@ -175,37 +176,24 @@ async function run() {
     process.exit(1);
   }
 
-  // 2. Construir lista de URLs (ES y EN)
-  const targetUrls = [];
+  // 2. Construir lista de URLs prioritarias (Estáticas + Assets ES y EN)
+  const targetUrls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/en`,
+    `${SITE_URL}/modelos-3d-gratis`,
+    `${SITE_URL}/en/free-3d-models`,
+    `${SITE_URL}/suscripcion`
+  ];
+
   slugs.forEach(slug => {
     targetUrls.push(`${SITE_URL}/asset/${slug}`);
     targetUrls.push(`${SITE_URL}/en/asset/${slug}`);
   });
 
-  // 3. Cargar el historial de indexación local
-  const historyPath = path.join(process.cwd(), 'scripts', 'indexed_history.json');
-  let history = {};
-  if (fs.existsSync(historyPath)) {
-    try {
-      history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-    } catch {
-      console.warn(`[WARNING] Historial corrupto. Reiniciando historial.`);
-    }
-  }
+  // 3. Lote prioritario diario (envía el bloque completo del sitemap)
+  const batch = targetUrls.slice(0, LIMIT);
+  console.log(`📊 URLs prioritarias en la lista: ${targetUrls.length} | Lote seleccionado hoy: ${batch.length} URLs.\n`);
 
-  // 4. Filtrar URLs pendientes (no indexadas aún en esta rotación)
-  const pendingUrls = targetUrls.filter(url => !history[url]);
-  console.log(`📊 URLs totales: ${targetUrls.length} | Ya enviadas anteriormente: ${targetUrls.length - pendingUrls.length} | Pendientes: ${pendingUrls.length}`);
-
-  if (pendingUrls.length === 0) {
-    console.log(`\n🎉 ¡Todas las URLs de tu catálogo ya han sido enviadas!`);
-    console.log(`   Para reiniciar la rotación completa, borra el archivo: ${historyPath}`);
-    process.exit(0);
-  }
-
-  // 5. Tomar lote de 200 candidatas
-  const batch = pendingUrls.slice(0, LIMIT);
-  console.log(`📦 Lote de hoy seleccionado: ${batch.length} URLs.\n`);
 
   if (DRY_RUN) {
     console.log(`🧪 --- MODO SIMULACIÓN: Listando las URLs seleccionadas para hoy ---`);
