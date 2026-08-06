@@ -36,7 +36,7 @@ axiosInstance.interceptors.response.use(
       try { useStore.getState().logout(); } catch {}
     }
     if (error.response?.status === 400) {
-      const message = error.response?.data?.message || 'Bad Request';
+      const message = error.response?.data?.error || error.response?.data?.message || 'Bad Request';
       timerAlert('Error', message, 3000);
     }
     return Promise.reject(error);

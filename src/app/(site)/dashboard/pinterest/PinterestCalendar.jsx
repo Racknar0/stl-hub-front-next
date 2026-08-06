@@ -654,34 +654,76 @@ export default function PinterestCalendar() {
       for (const pins of Object.values(byAsset)) allPins.push(...pins);
 
       let totalQueued = 0;
+      const successfulKeys = new Set();
+      const failedPins = [];
+
       for (let i = 0; i < allPins.length; i++) {
         const pin = allPins[i];
         const assetId = pin.assetId;
-          const hashtags = pin.pinHashtags.length > 0 ? '\n\n' + pin.pinHashtags.map(h => '#' + h).join(' ') : '';
-          const finalImageUrl = croppedUrls[pin.key] || pin.imageUrl;
-          const payload = {
-            assetId: parseInt(assetId),
-            images: [finalImageUrl],
-            scheduledAt: pinTimes[i].toISOString(),
-            boardId: pin.boardId || 'auto',
-            title: pin.pinTitle,
-            description: pin.pinDescription + hashtags,
-            link: pin.pinLink,
-            filters: { flip: filters.flip, zoom: filters.zoom ? 1.05 : 1 },
-          };
+        const hashtags = pin.pinHashtags.length > 0 ? '\n\n' + pin.pinHashtags.map(h => '#' + h).join(' ') : '';
+        const finalImageUrl = croppedUrls[pin.key] || pin.imageUrl;
+        const payload = {
+          assetId: parseInt(assetId),
+          images: [finalImageUrl],
+          scheduledAt: pinTimes[i].toISOString(),
+          boardId: pin.boardId || 'auto',
+          title: pin.pinTitle,
+          description: pin.pinDescription + hashtags,
+          link: pin.pinLink,
+          filters: { flip: filters.flip, zoom: filters.zoom ? 1.05 : 1 },
+        };
+
+        try {
           const res = await http.postData('/pinterest/schedule', payload);
           totalQueued += res.data?.queued || 0;
+          successfulKeys.add(pin.key);
+        } catch (err) {
+          const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Error desconocido';
+          failedPins.push({
+            assetId: pin.assetId,
+            title: pin.pinTitle,
+            error: errMsg
+          });
+        }
       }
 
-      alert(`¡Éxito! ${totalQueued} pines programados.`);
-      setSelectedPins([]);
-      setSelectedAssets([]);
-      setOptimizedAssets([]);
-      setFailedAssets([]);
-      setSearchedAssets([]);
-      setPanelMode('list');
       fetchDayPins();
       fetchPinStats();
+
+      if (successfulKeys.size > 0) {
+        setSelectedPins(prev => prev.filter(p => !successfulKeys.has(p.key)));
+        
+        // Find asset IDs whose pins were ALL successfully scheduled
+        const remainingPins = selectedPins.filter(p => !successfulKeys.has(p.key));
+        const remainingAssetIds = new Set(remainingPins.map(p => p.assetId));
+
+        setSelectedAssets(prev => prev.filter(a => remainingAssetIds.has(a.id)));
+        setOptimizedAssets(prev => prev.filter(id => remainingAssetIds.has(id)));
+        setFailedAssets(prev => prev.filter(id => remainingAssetIds.has(id)));
+        setSearchedAssets(prev => prev.filter(a => remainingAssetIds.has(a.id)));
+      }
+
+      if (failedPins.length === 0) {
+        alert(`¡Éxito! ${totalQueued} pines programados.`);
+        setSelectedPins([]);
+        setSelectedAssets([]);
+        setOptimizedAssets([]);
+        setFailedAssets([]);
+        setSearchedAssets([]);
+        setPanelMode('list');
+      } else {
+        const errorDetails = failedPins
+          .map(f => `• Asset #${f.assetId} ("${f.title || 'Sin título'}"): ${f.error}`)
+          .join('\n');
+
+        alert(
+          `📊 Resumen de Programación:\n\n` +
+          `✅ Exitosos: ${totalQueued}\n` +
+          `❌ Fallidos: ${failedPins.length}\n\n` +
+          `Detalle de errores:\n${errorDetails}\n\n` +
+          `Los pines fallidos permanecen en el panel para que puedas corregirlos o eliminarlos.`
+        );
+      }
     } catch (e) { alert('Error: ' + e.message); }
     finally { setIsSubmitting(false); }
   };
