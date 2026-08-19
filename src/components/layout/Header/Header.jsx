@@ -778,7 +778,6 @@ const Header = () => {
                   <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos Esta Semana'}</span>
                 </div>
               </div>
-              )}
               <div className="mega-container">
                 {/* ── Zone 1: Categories with icons ── */}
                 <div className="mega-zone mega-zone-categories">
