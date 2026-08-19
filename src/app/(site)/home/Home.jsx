@@ -340,7 +340,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
   return (
     <div>
       {/* <GlobalLoader /> */}
-      <Hero />
+      <Hero lang={currentLang} />
 
       <FeatureSection
         variantClass="feature-section--latest-glow"
