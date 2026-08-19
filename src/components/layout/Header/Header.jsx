@@ -753,43 +753,31 @@ const Header = () => {
             )}
             <div className="mega-menu" role="menu" aria-label={t('header.explore')}>
               {/* Stats ribbon */}
-              {megaStats.totalAssets > 0 && (
-                <div className="mega-stats-bar">
-                  <div className="mega-stat">
-                    <span className="mega-stat-icon">✨</span>
-                    <span className="mega-stat-value">{(megaStats.totalAssets * 2).toLocaleString()}+</span>
-                    <span className="mega-stat-label">{isEn ? 'Premium Assets' : 'Assets Premium'}</span>
-                  </div>
-                  <div className="mega-stat-divider" />
-                  <div className="mega-stat">
-                    <span className="mega-stat-icon">📦</span>
-                    <span className="mega-stat-value">
-                      {(() => {
-                        const bytes = megaStats.totalSizeBytes * 3;
-                        if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
-                        if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(0)} GB`;
-                        return `${(bytes / 1e6).toFixed(0)} MB`;
-                      })()}
-                    </span>
-                    <span className="mega-stat-label">{isEn ? 'of 3D Models' : 'en Modelos 3D'}</span>
-                  </div>
-                  <div className="mega-stat-divider" />
-                  <div className="mega-stat">
-                    <span className="mega-stat-icon">🎯</span>
-                    <span className="mega-stat-value">{categories.length}+</span>
-                    <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
-                  </div>
-                  {megaStats.totalAssets > 0 && (
-                    <>
-                      <div className="mega-stat-divider" />
-                      <div className="mega-stat">
-                        <span className="mega-stat-icon mega-stat-arrow">↑</span>
-                        <span className="mega-stat-value mega-stat-green">{(Math.max(100, megaStats.weeklyAssets) * 2).toLocaleString()}</span>
-                        <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos Esta Semana'}</span>
-                      </div>
-                    </>
-                  )}
+              <div className="mega-stats-bar">
+                <div className="mega-stat">
+                  <span className="mega-stat-icon">✨</span>
+                  <span className="mega-stat-value">+1.000.000</span>
+                  <span className="mega-stat-label">{isEn ? 'Premium Assets' : 'Assets Premium'}</span>
                 </div>
+                <div className="mega-stat-divider" />
+                <div className="mega-stat">
+                  <span className="mega-stat-icon">📦</span>
+                  <span className="mega-stat-value">+80 TB</span>
+                  <span className="mega-stat-label">{isEn ? 'of 3D Models' : 'en Modelos 3D'}</span>
+                </div>
+                <div className="mega-stat-divider" />
+                <div className="mega-stat">
+                  <span className="mega-stat-icon">🎯</span>
+                  <span className="mega-stat-value">{categories.length > 0 ? categories.length : 50}+</span>
+                  <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
+                </div>
+                <div className="mega-stat-divider" />
+                <div className="mega-stat">
+                  <span className="mega-stat-icon mega-stat-arrow">↑</span>
+                  <span className="mega-stat-value mega-stat-green">+1.000</span>
+                  <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos Esta Semana'}</span>
+                </div>
+              </div>
               )}
               <div className="mega-container">
                 {/* ── Zone 1: Categories with icons ── */}
@@ -1329,40 +1317,31 @@ const Header = () => {
 
       <div className="mobile-drawer-body">
         {/* Stats ribbon */}
-        {megaStats.totalAssets > 0 && (
-          <div className="mega-stats-bar" style={{ marginBottom: 12 }}>
-            <div className="mega-stat">
-              <span className="mega-stat-icon">✨</span>
-              <span className="mega-stat-value">{(megaStats.totalAssets * 2).toLocaleString()}+</span>
-              <span className="mega-stat-label">Assets</span>
-            </div>
-            <div className="mega-stat-divider" />
-            <div className="mega-stat">
-              <span className="mega-stat-icon">📦</span>
-              <span className="mega-stat-value">
-                {(() => {
-                  const bytes = megaStats.totalSizeBytes * 3;
-                  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
-                  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(0)} GB`;
-                  return `${(bytes / 1e6).toFixed(0)} MB`;
-                })()}
-              </span>
-              <span className="mega-stat-label">3D</span>
-            </div>
-            <div className="mega-stat-divider" />
-            <div className="mega-stat">
-              <span className="mega-stat-icon">🎯</span>
-              <span className="mega-stat-value">{categories.length}+</span>
-              <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
-            </div>
-            <div className="mega-stat-divider" />
-            <div className="mega-stat">
-              <span className="mega-stat-icon mega-stat-arrow">↑</span>
-              <span className="mega-stat-value mega-stat-green">{(Math.max(100, megaStats.weeklyAssets) * 2).toLocaleString()}</span>
-              <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos'}</span>
-            </div>
+        <div className="mega-stats-bar" style={{ marginBottom: 12 }}>
+          <div className="mega-stat">
+            <span className="mega-stat-icon">✨</span>
+            <span className="mega-stat-value">+1.000.000</span>
+            <span className="mega-stat-label">Assets</span>
           </div>
-        )}
+          <div className="mega-stat-divider" />
+          <div className="mega-stat">
+            <span className="mega-stat-icon">📦</span>
+            <span className="mega-stat-value">+80 TB</span>
+            <span className="mega-stat-label">3D</span>
+          </div>
+          <div className="mega-stat-divider" />
+          <div className="mega-stat">
+            <span className="mega-stat-icon">🎯</span>
+            <span className="mega-stat-value">{categories.length > 0 ? categories.length : 50}+</span>
+            <span className="mega-stat-label">{isEn ? 'Categories' : 'Categorías'}</span>
+          </div>
+          <div className="mega-stat-divider" />
+          <div className="mega-stat">
+            <span className="mega-stat-icon mega-stat-arrow">↑</span>
+            <span className="mega-stat-value mega-stat-green">+1.000</span>
+            <span className="mega-stat-label">{isEn ? 'New This Week' : 'Nuevos'}</span>
+          </div>
+        </div>
         {/* AI Spotlight Card */}
         <div className="drawer-section">
           <div className="mega-spotlight-card" style={{ margin: '0 0 8px' }}>
