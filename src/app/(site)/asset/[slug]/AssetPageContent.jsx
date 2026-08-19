@@ -82,10 +82,7 @@ function cleanTitlePrefix(rawTitle) {
 export async function generateAssetMetadata(slug, isEn) {
     const asset = await fetchAsset(slug);
     if (!asset || asset.__error || asset?.unpublished) {
-        return {
-            title: isEn ? '404 - Asset Not Found | STLHUB' : '404 - Modelo no encontrado | STLHUB',
-            robots: { index: false, follow: false },
-        };
+        notFound();
     }
     const site = 'https://stl-hub.com';
     if (asset?.__error) {
