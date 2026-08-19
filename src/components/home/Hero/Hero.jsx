@@ -26,64 +26,52 @@ const Hero = ({ lang }) => {
   const badges = isEn
     ? [
         {
-          icon: '🔁',
           title: 'Guaranteed Weekly Updates',
           desc: 'New verified models added every 7 days',
         },
         {
-          icon: '🤖',
           title: 'Unique Multimodal AI',
           desc: 'Found a photo you like? Drag it in and our AI will locate it',
         },
         {
-          icon: '🔍',
           title: 'Smart Search',
           desc: 'Find any STL by describing what you imagine',
         },
         {
-          icon: '📦',
           title: '+1,000,000 Files',
           desc: 'Categorized and ready to print for FDM & Resin',
         },
         {
-          icon: '🛡️',
           title: '100% Virus & Scam Free',
           desc: 'Direct, secure downloads via MEGA with no malicious links',
         },
         {
-          icon: '🎁',
           title: 'Daily Free Gifts',
           desc: 'Free premium 3D models unlocked every 24 hours',
         },
       ]
     : [
         {
-          icon: '🔁',
           title: 'Actualización Semanal Garantizada',
           desc: 'Nuevos modelos probados cada 7 días',
         },
         {
-          icon: '🤖',
           title: 'IA Multimodal Única',
           desc: '¿Viste una foto que te gustó? Arrástrala y nuestra IA la localiza para ti',
         },
         {
-          icon: '🔍',
           title: 'Búsqueda Inteligente',
           desc: 'Encuentra cualquier STL escribiendo lo que imaginas',
         },
         {
-          icon: '📦',
           title: '+1.000.000 de Archivos',
           desc: 'Categorizados y listos para imprimir en FDM y Resina',
         },
         {
-          icon: '🛡️',
           title: '100% Libre de Virus y Estafas',
           desc: 'Descargas directas y seguras vía MEGA sin enlaces maliciosos',
         },
         {
-          icon: '🎁',
           title: 'Regalos Diarios',
           desc: 'Modelos premium liberados 100% gratis cada 24 horas',
         },
@@ -91,14 +79,21 @@ const Hero = ({ lang }) => {
 
   return (
     <section className="hero-static-section">
-      {/* Structural Semantic SEO Headings (accessible to search crawlers & screen readers) */}
-      <header className="sr-only">
+      {/* Structural Semantic SEO Headings & Badges (accessible to search crawlers & screen readers, visually hidden) */}
+      <div className="sr-only">
         <p>{kicker}</p>
         <h1>{h1Title}</h1>
         <h2>{subtitle}</h2>
-      </header>
+        <ul>
+          {badges.map((b, idx) => (
+            <li key={idx}>
+              <strong>{b.title}:</strong> {b.desc}
+            </li>
+          ))}
+        </ul>
+      </div>
 
-      {/* Hero Graphical Banner */}
+      {/* Hero Graphical Banner (visible on screen) */}
       <div className="hero-banner-container">
         <picture className="hero-banner-picture">
           <source media="(max-width: 767px)" srcSet={mobileImg} />
@@ -111,23 +106,6 @@ const Hero = ({ lang }) => {
             decoding="async"
           />
         </picture>
-      </div>
-
-      {/* Badges de Valor Bar / Grid */}
-      <div className="container-narrow">
-        <div className="hero-badges-grid" role="list">
-          {badges.map((b, idx) => (
-            <div key={idx} className="hero-badge-card" role="listitem">
-              <span className="badge-icon" aria-hidden="true">
-                {b.icon}
-              </span>
-              <div className="badge-text">
-                <span className="badge-title">{b.title}</span>
-                <span className="badge-desc">{b.desc}</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
