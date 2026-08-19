@@ -197,15 +197,7 @@ export async function generateAssetMetadata(slug, isEn) {
 
 export default async function AssetPageContent({ slug, isEn }) {
     const asset = await fetchAsset(slug);
-    if (!asset || asset.__error) {
-      if (asset?.status === 404) notFound();
-      return <div style={{padding:'2rem'}}><h1>Error</h1><p>No pudimos cargar el asset.</p></div>;
-    }
-    if (asset?.__nsfw_restricted) {
-        const NsfwAssetGate = (await import('./NsfwAssetGate')).default;
-        return <NsfwAssetGate slug={slug} isEn={isEn} />;
-    }
-    if (asset?.unpublished) {
+    if (!asset || asset.__error || asset?.unpublished) {
         notFound();
     }
     const site = 'https://stl-hub.com';
