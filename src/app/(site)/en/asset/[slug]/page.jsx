@@ -1,9 +1,6 @@
 import React from 'react';
 import AssetPageContent, { generateAssetMetadata } from '../../../asset/[slug]/AssetPageContent';
 
-export const revalidate = 86400; // Revalidación cada 24 horas (ISR)
-export const dynamicParams = true; // Acepta y cachea slugs no pre-generados on-demand
-
 // Pre-genera los 500 modelos más recientes en cada build (para la ruta en inglés).
 export async function generateStaticParams() {
     const base = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');
