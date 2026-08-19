@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -57,7 +57,7 @@ function buildGenericDescriptionEn(title, tags = [], catName = '') {
     return `Download the STL file for "${name}" ready for 3D printing.${catStr}${tagStr} Compatible with FDM and Resin printers. Get it on STLHUB via MEGA.`;
 }
 
-export async function fetchAsset(slug) {
+export const fetchAsset = cache(async (slug) => {
     const base = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');
     const url = `${base}/api/assets/slug/${encodeURIComponent(slug)}`;
     try {
@@ -72,7 +72,7 @@ export async function fetchAsset(slug) {
         if (process.env.NODE_ENV !== 'production') console.error('[asset/[slug]] fetch err', e);
         return { __error: true, status: 0 };
     }
-}
+});
 
 function cleanTitlePrefix(rawTitle) {
     let t = String(rawTitle || '').trim();
@@ -81,8 +81,11 @@ function cleanTitlePrefix(rawTitle) {
 
 export async function generateAssetMetadata(slug, isEn) {
     const asset = await fetchAsset(slug);
-    if (!asset || (asset.__error && asset.status === 404) || asset?.unpublished) {
-        notFound();
+    if (!asset || asset.__error || asset?.unpublished) {
+        return {
+            title: isEn ? '404 - Asset Not Found | STLHUB' : '404 - Modelo no encontrado | STLHUB',
+            robots: { index: false, follow: false },
+        };
     }
     const site = 'https://stl-hub.com';
     if (asset?.__error) {
