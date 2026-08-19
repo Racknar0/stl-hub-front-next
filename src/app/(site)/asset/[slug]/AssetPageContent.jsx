@@ -81,11 +81,8 @@ function cleanTitlePrefix(rawTitle) {
 
 export async function generateAssetMetadata(slug, isEn) {
     const asset = await fetchAsset(slug);
-    if (!asset || (asset.__error && asset.status === 404)) {
-        return { title: 'Modelo no encontrado', robots: { index: false, follow: false } };
-    }
-    if (asset?.unpublished) {
-        return { title: 'Modelo no disponible', robots: { index: false, follow: false } };
+    if (!asset || (asset.__error && asset.status === 404) || asset?.unpublished) {
+        notFound();
     }
     const site = 'https://stl-hub.com';
     if (asset?.__error) {
