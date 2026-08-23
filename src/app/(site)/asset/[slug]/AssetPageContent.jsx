@@ -9,8 +9,6 @@ import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
 import RelatedAssets from './RelatedAssets';
 
-export const revalidate = 86400; // Revalidación cada 24 horas (ISR)
-
 function toSafeDate(value) {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? null : d;
