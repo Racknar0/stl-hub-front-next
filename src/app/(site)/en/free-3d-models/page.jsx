@@ -3,7 +3,7 @@ import FreeModelsClient from '../../modelos-3d-gratis/FreeModelsClient';
 
 export const dynamic = 'force-dynamic';
 
-const SITE = 'https://stl-hub.com';
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
 function getApiBase() {
   return (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');

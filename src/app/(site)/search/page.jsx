@@ -5,7 +5,7 @@ import styles from './searchLoading.module.scss';
 
 export const dynamic = 'force-dynamic'; // Siempre SSR, nunca cache estático
 
-const SITE = 'https://stl-hub.com';
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 const PAGE_SIZE = 48;
 
 async function getRequestLanguage() {

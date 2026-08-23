@@ -1,7 +1,7 @@
 import React from 'react';
 import Home from '../home/Home';
 
-const SITE_URL = 'https://stl-hub.com';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 const PAGE_SIZE = 20;
 
 export const metadata = {

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import type { NextFetchEvent } from 'next/server';
 
 const IGNORE = /^\/(_next|api|favicon\.ico|.*\.[a-z0-9]+)$/i;
-const CANONICAL_HOST = 'stl-hub.com';
+const CANONICAL_HOST = 'stlgratis.com';
 const BLOCKED_IP_HOSTS = new Set(['77.237.239.254']);
 
 function normalizeHost(host: string) {

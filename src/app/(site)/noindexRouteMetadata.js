@@ -1,4 +1,4 @@
-const SITE_URL = 'https://stl-hub.com';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
 function normalizePath(path) {
   const value = String(path || '/').trim();

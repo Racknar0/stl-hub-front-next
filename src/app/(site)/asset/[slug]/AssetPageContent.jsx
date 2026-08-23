@@ -84,7 +84,7 @@ export async function generateAssetMetadata(slug, isEn) {
     if (!asset || asset.__error || asset?.unpublished) {
         notFound();
     }
-    const site = 'https://stl-hub.com';
+    const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
     if (asset?.__error) {
         return {
             title: 'STL HUB',
@@ -200,7 +200,7 @@ export default async function AssetPageContent({ slug, isEn }) {
     if (!asset || asset.__error || asset?.unpublished) {
         notFound();
     }
-    const site = 'https://stl-hub.com';
+    const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
     const heroImage = imgList[0] || '/logo_horizontal.png';

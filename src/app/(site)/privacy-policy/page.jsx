@@ -3,7 +3,7 @@
 import { headers } from 'next/headers';
 import PrivacyPolicyContent from './PrivacyPolicyContent';
 
-const SITE_URL = 'https://stl-hub.com';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
 export async function generateMetadata() {
   let isEn = false;

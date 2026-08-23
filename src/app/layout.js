@@ -41,7 +41,7 @@ const poppins = Poppins({
   display: 'swap',
 });
 
-const SITE_URL = 'https://stl-hub.com';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
 export async function generateMetadata() {
   // Metadata estática en español (Google no envía cookies,
