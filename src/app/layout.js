@@ -96,6 +96,11 @@ export async function generateMetadata() {
       shortcut: '/favicon.ico',
       apple: '/favicon.png',
     },
+    verification: {
+      other: {
+        'facebook-domain-verification': 'f0nte056tsswsv10t4b2mj9x11tr0j',
+      },
+    },
     keywords,
   };
 }
@@ -110,6 +115,7 @@ export default function RootLayout({ children }) {
     <html lang={htmlLang} className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${montserrat.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         <LangSetter />
+        <meta name="facebook-domain-verification" content="f0nte056tsswsv10t4b2mj9x11tr0j" />
         {/* Meta keywords fallback for some crawlers */}
         <meta name="keywords" content="descargar stl gratis, descargar stl por mega gratis, stl mega, free stl download, 3d models" />
         {/* JSON-LD structured data */}
