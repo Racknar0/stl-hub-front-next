@@ -46,10 +46,10 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').r
 export async function generateMetadata() {
   // Metadata estática en español (Google no envía cookies,
   // siempre verá la versión ES — que es la principal para SEO)
-  const title = "Modelos 3D y STL Gratis y Premium para Impresión | Descargar por MEGA – STL HUB";
-  const description = "Descarga STL gratis y premium listos para imprimir: modelos 3D, props y piezas de cosplay. Enlaces directos por MEGA gratis, descargas rápidas, previews y archivos optimizados para FDM y resina.";
+  const title = "Descargar STL Gratis: Modelos 3D y Archivos STL para Imprimir | STL Gratis";
+  const description = "Tu biblioteca #1 de archivos STL gratis listos para impresión 3D (FDM y Resina). Descarga directa por MEGA de figuras de Anime, Funkos, Cosplay y Articulados.";
   const keywords = [
-    'descargar stl gratis','descargar stl por mega gratis','descarga stl','modelos 3d imprimir','stl mega','stl free','archivos stl gratis','modelos 3d cosplay','stl premium','stl resin','stl fdm'
+    'descargar stl gratis','stl gratis','modelos 3d gratis','archivos stl gratis','descargar stl por mega gratis','modelos 3d imprimir','stl mega','stl free','modelos 3d cosplay','stl resin','stl fdm'
   ];
 
   const pathname = "/";
@@ -78,9 +78,9 @@ export async function generateMetadata() {
       },
     },
     openGraph: {
-      title: "Modelos 3D y STL Gratis y Premium — STL HUB",
+      title: "Descargar STL Gratis: Modelos 3D y Archivos STL para Imprimir",
       description,
-      siteName: "STL HUB",
+      siteName: "STL Gratis",
       type: "website",
       locale: "es_ES",
       url: `${SITE_URL}/`,
@@ -88,7 +88,7 @@ export async function generateMetadata() {
     },
     twitter: {
       card: "summary_large_image",
-      title: "Modelos 3D y STL Gratis y Premium — STL HUB",
+      title: "Descargar STL Gratis: Modelos 3D y Archivos STL para Imprimir",
       description,
     },
     keywords,
@@ -121,7 +121,7 @@ export default function RootLayout({ children }) {
                 target: SITE_URL + '/search?q={search_term_string}',
                 'query-input': 'required name=search_term_string'
               },
-              description: 'Descargar STL gratis y premium por MEGA. Modelos 3D listos para imprimir (FDM y resina).'
+              description: 'Tu biblioteca #1 de archivos STL gratis listos para impresión 3D (FDM y Resina). Descarga directa por MEGA.'
             })
           }}
         />

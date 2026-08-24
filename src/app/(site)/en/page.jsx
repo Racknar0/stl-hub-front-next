@@ -5,11 +5,11 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').r
 const PAGE_SIZE = 20;
 
 export const metadata = {
-  title: 'Free & Premium 3D STL Models for Printing | Download via MEGA – STL HUB',
+  title: 'Free STL Downloads: 3D Models & STL Files for 3D Printing | STL Gratis',
   description:
-    'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links, fast downloads, previews and files optimized for FDM & resin printers.',
+    'Your #1 library of free STL files ready for 3D printing (FDM & Resin). Direct MEGA downloads for Anime figures, Funkos, Cosplay, and Articulated models.',
   keywords: [
-    'stl files','free stl download','3d models','mega stl','cosplay stl',
+    'free stl downloads','free stl files','3d models free','mega stl','cosplay stl',
     'resin printable','fdm printable','3d printing files','free 3d models',
     'download stl mega',
   ],
@@ -29,13 +29,14 @@ export const metadata = {
       follow: true,
       'max-image-preview': 'large',
       'max-snippet': -1,
+      'max-video-preview': -1,
     },
   },
   openGraph: {
-    title: 'Free & Premium 3D STL Models — STL HUB',
+    title: 'Free STL Downloads: 3D Models & STL Files for 3D Printing',
     description:
-      'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links, fast downloads.',
-    siteName: 'STL HUB',
+      'Your #1 library of free STL files ready for 3D printing (FDM & Resin). Direct MEGA downloads for Anime figures, Funkos, Cosplay, and Articulated models.',
+    siteName: 'STL Gratis',
     type: 'website',
     locale: 'en_US',
     url: `${SITE_URL}/en`,
@@ -43,9 +44,9 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free & Premium 3D STL Models — STL HUB',
+    title: 'Free STL Downloads: 3D Models & STL Files for 3D Printing',
     description:
-      'Download free & premium STL files: printable 3D models, cosplay props and more. Direct MEGA links.',
+      'Your #1 library of free STL files ready for 3D printing (FDM & Resin). Direct MEGA downloads for Anime figures, Funkos, Cosplay, and Articulated models.',
   },
 };
 

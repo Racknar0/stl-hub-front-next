@@ -12,16 +12,16 @@ const Hero = ({ lang }) => {
   const mobileImg = isEn ? '/hero/hero-mobile-en.png' : '/hero/hero-mobile-es.png';
 
   const h1Title = isEn
-    ? '+1,000,000 Premium 3D & STL Files Ready to Print - STLHUB'
-    : '+1.000.000 de Archivos STL y Modelos 3D Listos para Imprimir - STLHUB';
+    ? '+1,000,000 Free 3D Models & STL Files Ready to Print - STLGratis'
+    : '+1.000.000 de Modelos 3D y Archivos STL Gratis para Imprimir - STLGratis';
 
   const kicker = isEn
-    ? 'THE LARGEST AND MOST AFFORDABLE PREMIUM STL LIBRARY IN THE WORLD'
-    : 'LA BIBLIOTECA STL PREMIUM MÁS GRANDE Y BARATA DEL MUNDO';
+    ? 'THE LARGEST AND MOST COMPLETE STL 3D LIBRARY IN THE WORLD'
+    : 'LA BIBLIOTECA DE MODELOS 3D Y STL MÁS GRANDE Y COMPLETA';
 
   const subtitle = isEn
-    ? 'Scale your 3D printing business. Explore Anime collectibles, Funkos, Cosplay, Articulated figures, Mounts, and more categories. Find any design instantly with our AI Text and AI Image Search.'
-    : 'Multiplica las ventas de tu negocio 3D. Explora coleccionables de Anime, Funkos, Cosplay, Articulados, Soportes y muchas más categorías. Encuentra cualquier diseño al instante con nuestra Búsqueda por IA texto e IA Foto.';
+    ? 'Direct download of thousands of free STL files ready for FDM and Resin 3D printing. Find Anime figures, Funkos, Cosplay, Articulated models, and Decor with fast MEGA downloads.'
+    : 'Descarga directa de miles de archivos STL gratis y listos para imprimir en impresoras 3D FDM y Resina. Encuentra figuras de Anime, Funkos, Cosplay, Articulados y Decoración con descargas rápidas por MEGA.';
 
   const badges = isEn
     ? [
