@@ -119,7 +119,7 @@ export default function RootLayout({ children }) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: 'STL HUB',
+              name: 'STL Gratis',
               url: SITE_URL,
               potentialAction: {
                 '@type': 'SearchAction',
