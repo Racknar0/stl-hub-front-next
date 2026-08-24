@@ -60,7 +60,7 @@ export const fetchAsset = cache(async (slug) => {
     const url = `${base}/api/assets/slug/${encodeURIComponent(slug)}`;
     try {
         if (process.env.NODE_ENV !== 'production') console.log('[asset/[slug]] fetch', url);
-        const res = await fetch(url, { next: { revalidate } });
+        const res = await fetch(url, { next: { revalidate: 86400 } });
         if (!res.ok) {
             if (process.env.NODE_ENV !== 'production') console.warn('[asset/[slug]] fetch status', res.status, 'slug=', slug);
             return { __error: true, status: res.status };
