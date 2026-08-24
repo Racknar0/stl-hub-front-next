@@ -7,6 +7,7 @@ import ImageLightbox from './ImageLightbox';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
 import { isAssetNSFW } from '../../../../helpers/nsfwHelper';
 import NsfwPageWrapper from './NsfwPageWrapper';
+import NsfwAssetGate from './NsfwAssetGate';
 import RelatedAssets from './RelatedAssets';
 
 function toSafeDate(value) {
@@ -83,11 +84,12 @@ export async function generateAssetMetadata(slug, isEn) {
         notFound();
     }
     const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
-    if (asset?.__error) {
+    if (asset?.__error || asset?.__nsfw_restricted) {
         return {
-            title: 'STL HUB',
-            description: 'Catálogo de modelos STL para impresión 3D.',
+            title: isEn ? 'Restricted Content (+18) | STL Gratis' : 'Contenido Restringido (+18) | STL Gratis',
+            description: isEn ? 'This content is age-restricted.' : 'Este contenido está restringido para mayores de 18 años.',
             alternates: { canonical: `${site}/asset/${slug}` },
+            robots: { index: false, follow: false }
         };
     }
 
@@ -197,6 +199,9 @@ export default async function AssetPageContent({ slug, isEn }) {
     const asset = await fetchAsset(slug);
     if (!asset || asset.__error || asset?.unpublished) {
         notFound();
+    }
+    if (asset?.__nsfw_restricted) {
+        return <NsfwAssetGate slug={slug} isEn={isEn} />;
     }
     const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';

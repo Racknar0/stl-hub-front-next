@@ -131,7 +131,7 @@ function NsfwAssetContent({ slug, isEn, token }) {
     }
 
     // Render a simplified asset view client-side
-    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
+    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stlgratis.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
     const title = isEn ? (asset.titleEn || asset.title || 'STL Model') : (asset.title || 'Modelo STL');
     const description = isEn ? (asset.descriptionEn || asset.description || '') : (asset.description || '');
