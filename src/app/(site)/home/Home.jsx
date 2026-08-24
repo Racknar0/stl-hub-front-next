@@ -13,6 +13,7 @@ import { useI18n } from '../../../i18n';
 import Button from '../../../components/layout/Buttons/Button';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 // Categorías fijas
 const CATEGORIES = [
@@ -342,6 +343,75 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
       {/* <GlobalLoader /> */}
       <Hero lang={currentLang} />
 
+      {/* Sección Unificada de Descargas Gratuitas / Minijuego */}
+      <section className="home-freebies-showcase-section">
+        <div className="container-narrow">
+          <div className="freebies-showcase-panel">
+            {/* Cabecera con el banner separador */}
+            <div className="freebies-showcase-header">
+              <img
+                src="/separador.png"
+                alt={isEn ? "Free 3D STL Downloads Every Day" : "Descargas Gratuitas Diferentes Todos Los Días"}
+                className="freebies-header-banner"
+                loading="eager"
+              />
+            </div>
+
+            {/* Minijuego interactivo con dados */}
+            <div className="game-slider-container">
+              <div className="game-skeletons-grid">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="game-skeleton-card">
+                    <div className="skeleton-thumb" />
+                    <div className="skeleton-line title" />
+                    <div className="skeleton-line meta" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="game-overlay-panel">
+                <div className="game-dice-wrapper">
+                  <span className="game-dice-icon" role="img" aria-label="dice">
+                    🎲
+                  </span>
+                  <h4>
+                    {isEn ? 'Your free downloads for today!' : '¡Tus descargas gratuitas de hoy!'}
+                  </h4>
+                  <p>
+                    {isEn 
+                      ? "Roll the dice and get free access to today's premium selection. Designs change every day with new models, so make sure to grab yours!"
+                      : 'Gira el dado y accede gratis a la selección premium de hoy. ¡Cada día cambian por diseños diferentes, así que no te quedes sin los tuyos!'}
+                  </p>
+                  <button 
+                    type="button" 
+                    className="game-roll-btn" 
+                    onClick={handleDiceClick}
+                    disabled={isDicePending}
+                    style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
+                  >
+                    {isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? '🎲 Roll the Dice' : '🎲 Barajar Selección de Hoy')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Enlace al catálogo de modelos gratis */}
+            <div className="freebies-showcase-footer">
+              <Link
+                href={isEn ? "/en/free-3d-models" : "/modelos-3d-gratis"}
+                className="freebies-footer-link"
+              >
+                <span>{isEn ? "Explore all free 3D models in catalog" : "Explorar todos los modelos 3D gratis del catálogo"}</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Recién llegados */}
       <FeatureSection
         variantClass="feature-section--latest-glow"
         title={t('home.latest.title')}
@@ -351,79 +421,6 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
         onItemClick={handleOpen}
         isEn={isEn}
       />
-
-      {/* Sección del Minijuego de Dados / Regalos del Día */}
-      <section className="home-freebies-game-section">
-        <div className="container-narrow">
-          <div className="section-header">
-            <div className="title-wrapper">
-              <h3 className="section-title">
-                {isEn ? 'Daily Gifts' : 'Regalos del Día'}
-              </h3>
-              <p className="section-subtitle">
-                {isEn 
-                  ? 'Unlock free premium models every day by rolling the dice' 
-                  : 'Desbloquea modelos premium gratuitos cada día barajando el dado'}
-              </p>
-            </div>
-            <button 
-              onClick={handleDiceClick} 
-              className="view-all-link"
-              disabled={isDicePending}
-              style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
-            >
-              <span>{isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? 'View Game' : 'Ver juego')}</span>
-              {isDicePending ? (
-                <svg className="button-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ display: 'inline-block' }}>
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5" style={{ opacity: 0.25 }} />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              )}
-            </button>
-          </div>
-
-          <div className="game-slider-container">
-            <div className="game-skeletons-grid">
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <div key={idx} className="game-skeleton-card">
-                  <div className="skeleton-thumb" />
-                  <div className="skeleton-line title" />
-                  <div className="skeleton-line meta" />
-                </div>
-              ))}
-            </div>
-
-            <div className="game-overlay-panel">
-              <div className="game-dice-wrapper">
-                <span className="game-dice-icon" role="img" aria-label="dice">
-                  🎲
-                </span>
-                <h4>
-                  {isEn ? 'Try your luck!' : '¡Prueba tu suerte!'}
-                </h4>
-                <p>
-                  {isEn 
-                    ? "Roll the dice to reveal today's free premium 3D models. You get 3 daily rolls."
-                    : 'Lanza el dado para revelar los modelos 3D premium gratis de hoy. Tienes 3 tiradas diarias.'}
-                </p>
-                <button 
-                  type="button" 
-                  className="game-roll-btn" 
-                  onClick={handleDiceClick}
-                  disabled={isDicePending}
-                  style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
-                >
-                  {isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? 'Shuffle' : 'Barajar')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <SectionRow
         title={t('home.top.title')}
