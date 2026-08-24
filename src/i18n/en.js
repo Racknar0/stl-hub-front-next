@@ -161,7 +161,7 @@ const en = {
     }
   },
   footer: {
-    copyright: '© {year} STL HUB · All rights reserved',
+    copyright: '© {year} STL GRATIS (by STL HUB) · All rights reserved',
     legal: 'Legal Notice: This platform acts as a directory/index of links contributed by users or publicly available. We do not host files nor claim ownership over linked content; we charge for curation and search facilitation services, not for selling third-party works.',
     contact: 'Are you a rights holder and detected a link that affects you? Write to us at {email} with evidence and we will remove or block access promptly (24–72 h).',
     policies: 'Policies'

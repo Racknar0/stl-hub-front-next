@@ -149,7 +149,7 @@ const es = {
     }
   },
   footer: {
-    copyright: '© {year} STL HUB · Todos los derechos reservados',
+    copyright: '© {year} STL GRATIS (by STL HUB) · Todos los derechos reservados',
     legal: 'Aviso legal: Esta plataforma actúa como directorio/índice de enlaces aportados por usuarios o disponibles públicamente. No alojamos archivos ni reclamamos propiedad sobre el contenido enlazado; cobramos por el servicio de curaduría y facilitación de búsqueda, no por la venta de obras de terceros.',
     contact: '¿Eres titular de derechos y detectaste un enlace que te afecta? Escríbenos a {email} con la evidencia y retiraremos o bloquearemos el acceso con prontitud (24–72 h).',
     policies: 'Políticas'

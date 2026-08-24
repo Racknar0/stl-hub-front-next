@@ -25,8 +25,8 @@ const Footer = () => {
   };
 
   const copyright = getTranslation('footer.copyright', 
-    `© ${currentYear} STL HUB · Todos los derechos reservados`,
-    `© ${currentYear} STL HUB · All rights reserved`
+    `© ${currentYear} STL GRATIS (by STL HUB) · Todos los derechos reservados`,
+    `© ${currentYear} STL GRATIS (by STL HUB) · All rights reserved`
   ).replace('{year}', currentYear);
 
   const legalText = getTranslation('footer.legal',
