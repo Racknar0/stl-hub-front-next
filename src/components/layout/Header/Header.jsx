@@ -1308,7 +1308,7 @@ const Header = () => {
     <div className={`mobile-drawer-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
     <aside className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
       <div className="mobile-drawer-header">
-        <img src="/nuevo_horizontal.png" alt="STL HUB" style={{ height: 28 }} />
+        <img src="/nuevo_horizontal.png" alt="STL HUB" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
         <button type="button" className="mobile-drawer-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
         </button>

@@ -137,9 +137,11 @@
     font-weight: 800;
     letter-spacing: 0.2px;
     .brand-logo {
-        height: 35px;
+        height: 80px;
+        max-height: 80px;
         width: auto;
         display: block;
+        object-fit: contain;
     }
     .logo {
         display: none;
@@ -1390,7 +1392,10 @@
     }
 
     .brand .brand-logo {
-        height: 28px;
+        height: 38px;
+        max-height: 42px;
+        width: auto;
+        object-fit: contain;
     }
 
     /* Hamburger button */
