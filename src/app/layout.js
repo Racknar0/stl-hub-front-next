@@ -91,6 +91,11 @@ export async function generateMetadata() {
       title: "Descargar STL Gratis: Modelos 3D y Archivos STL para Imprimir",
       description,
     },
+    icons: {
+      icon: '/favicon.png',
+      shortcut: '/favicon.ico',
+      apple: '/favicon.png',
+    },
     keywords,
   };
 }
