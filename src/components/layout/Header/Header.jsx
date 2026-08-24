@@ -535,8 +535,8 @@ const Header = () => {
   const FLAG_EN_32 = '/united-states-of-america-flag-button-round-icon-32.png'
   const whatsappNumber = '573132588093'
   const whatsappMessage = isEn
-    ? 'Hello, I am contacting you from stl-hub.com and I would like more information.'
-    : 'Hola, te contacto desde stl-hub.com y quiero mas informacion.'
+    ? 'Hello, I am contacting you from stlgratis.com and I would like more information.'
+    : 'Hola, te contacto desde stlgratis.com y quiero mas informacion.'
   const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
 
   const handleImageFile = (file) => {

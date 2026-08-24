@@ -70,7 +70,7 @@ const LegalModal = ({ isOpen, onClose }) => {
                 <ul className="legal-list">
                   <li><strong>Valid government-issued photo identification</strong> (passport, national ID, driver's license) of the rights holder or authorized representative.</li>
                   <li><strong>Copyright registration certificate</strong> or documentary proof of original authorship (screenshots of 3D modeling software with metadata and dates, original source files such as .blend, .zbrush, .stl with creation dates).</li>
-                  <li><strong>Exact URL(s)</strong> within our domain (stl-hub.com) of the specific content in question. <span className="legal-red">Generic or bulk requests such as "all my content" will not be accepted.</span></li>
+                  <li><strong>Exact URL(s)</strong> within our domain (stlgratis.com) of the specific content in question. <span className="legal-red">Generic or bulk requests such as "all my content" will not be accepted.</span></li>
                   <li><strong>Side-by-side visual comparison</strong> of the original work vs. the linked content, demonstrating substantial similarity.</li>
                   <li><strong>Verifiable creation timeline</strong> with dates (original publication on other platforms, creation date in software, social media posts, etc.).</li>
                   <li><strong>Sworn declaration under penalty of perjury</strong>, signed and dated, stating that you are the owner or authorized to act on behalf of the owner, and that the information provided is accurate.</li>
@@ -84,7 +84,7 @@ const LegalModal = ({ isOpen, onClose }) => {
                 <ul className="legal-list">
                   <li><strong>Documento de identidad oficial vigente con fotografía</strong> (pasaporte, cédula, DNI, INE) del titular de derechos o su representante autorizado.</li>
                   <li><strong>Certificado de registro de obra</strong> o prueba documental de autoría original (capturas de pantalla del software de modelado 3D con metadatos y fechas, archivos fuente originales como .blend, .zbrush, .stl con fechas de creación).</li>
-                  <li><strong>URL(s) exacta(s)</strong> dentro de nuestro dominio (stl-hub.com) del contenido específico en cuestión. <span className="legal-red">No se aceptan solicitudes genéricas o masivas del tipo "todo mi contenido".</span></li>
+                  <li><strong>URL(s) exacta(s)</strong> dentro de nuestro dominio (stlgratis.com) del contenido específico en cuestión. <span className="legal-red">No se aceptan solicitudes genéricas o masivas del tipo "todo mi contenido".</span></li>
                   <li><strong>Comparación visual lado a lado</strong> de la obra original vs. el contenido enlazado, demostrando similitud sustancial.</li>
                   <li><strong>Línea de tiempo de creación verificable</strong> con fechas (publicación original en otras plataformas, fecha de creación en software, publicaciones en redes sociales, etc.).</li>
                   <li><strong>Declaración jurada bajo pena de perjurio</strong>, firmada y fechada, indicando que usted es el titular o está autorizado para actuar en nombre del titular, y que la información proporcionada es veraz.</li>

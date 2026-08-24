@@ -4,7 +4,7 @@ import HttpService from '@/services/HttpService';
 import { successAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
 import './GiftCodes.scss';
 
-const DOMAIN = 'https://stl-hub.com';
+const DOMAIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com';
 
 export default function GiftCodes() {
   const http = new HttpService();

@@ -8,6 +8,10 @@ const nextConfig = {
       { protocol: 'https', hostname: 'stl-hub.com', pathname: '/uploads/**' },
       { protocol: 'https', hostname: 'api.stl-hub.com', pathname: '/uploads/**' },
       { protocol: 'https', hostname: 'www.api.stl-hub.com', pathname: '/uploads/**' },
+      { protocol: 'https', hostname: 'stlgratis.com', pathname: '/uploads/**' },
+      { protocol: 'https', hostname: 'www.stlgratis.com', pathname: '/uploads/**' },
+      { protocol: 'https', hostname: 'api.stlgratis.com', pathname: '/uploads/**' },
+      { protocol: 'https', hostname: 'www.api.stlgratis.com', pathname: '/uploads/**' },
     ],
   },
 

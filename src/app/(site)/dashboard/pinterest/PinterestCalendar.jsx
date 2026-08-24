@@ -389,7 +389,7 @@ export default function PinterestCalendar() {
         imageUrl: croppedUrls[key] || imgUrl,
         pinTitle: asset.titleEn || asset.title || '',
         pinDescription: asset.descriptionEn || asset.description || '',
-        pinLink: `https://stl-hub.com/en/asset/${asset.slug || asset.id}`,
+        pinLink: `https://stlgratis.com/en/asset/${asset.slug || asset.id}`,
         pinHashtags: [],
         boardId: resolvedBoardId,
         category: categoryName,
