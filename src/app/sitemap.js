@@ -11,8 +11,8 @@ const SITEMAP_REVALIDATE_SECONDS = 3600;
 const SITEMAP_ASSET_LIMIT = 50;
 
 export default async function sitemap() {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com').replace(/\/$/, '');
-  const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'https://stl-hub.com')
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'https://stlgratis.com')
     .replace(/\/$/, '');
   const now = new Date();
   

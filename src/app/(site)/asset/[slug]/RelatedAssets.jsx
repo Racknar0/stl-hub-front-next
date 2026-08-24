@@ -4,7 +4,7 @@ import styles from './AssetSeoBackground.module.css';
 
 export default async function RelatedAssets({ currentSlug, categories = [], tags = [], isEn = false }) {
     const base = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001').replace(/\/$/, '');
-    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
+    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stlgratis.com/uploads';
     
     const catSlug = categories[0]?.slug || '';
     const tagSlugs = tags.map(t => t.slug).join(',');

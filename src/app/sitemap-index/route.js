@@ -1,7 +1,7 @@
 export const revalidate = 3600;
 
 export async function GET() {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stl-hub.com').replace(/\/$/, '');
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
   // Con el drip-feed, solo necesitamos 1 sitemap
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';

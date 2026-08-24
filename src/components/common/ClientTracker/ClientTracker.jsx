@@ -17,7 +17,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 const TRACK_API_BASE = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stl-hub.com').replace(/\/$/, '')
+  ? (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stlgratis.com').replace(/\/$/, '')
   : '';
 
 const ATTR_MAX_TEXT = 191;
@@ -44,6 +44,7 @@ function setCookie(name, value, maxAgeSec, domain) {
 function getDomain() {
   if (typeof window === 'undefined') return undefined;
   const h = window.location.hostname;
+  if (h === 'stlgratis.com' || h.endsWith('.stlgratis.com')) return 'stlgratis.com';
   if (h === 'stl-hub.com' || h.endsWith('.stl-hub.com')) return 'stl-hub.com';
   return undefined;
 }
@@ -87,6 +88,7 @@ function isExternalReferrer(referrer) {
   const refHost = getReferrerHostname(referrer);
   if (!refHost) return false;
   if (refHost === 'localhost' || refHost === '127.0.0.1') return false;
+  if (refHost === 'stlgratis.com' || refHost.endsWith('.stlgratis.com')) return false;
   if (refHost === 'stl-hub.com' || refHost.endsWith('.stl-hub.com')) return false;
   return true;
 }

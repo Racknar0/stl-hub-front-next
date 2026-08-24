@@ -1,5 +1,5 @@
 export default function robots() {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://stl-hub.com").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://stlgratis.com").replace(/\/$/, "");
   const disallow = [
     '/admin',
     '/admin/',

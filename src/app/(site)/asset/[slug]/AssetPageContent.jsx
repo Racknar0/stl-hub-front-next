@@ -147,7 +147,7 @@ export async function generateAssetMetadata(slug, isEn) {
         };
     }
 
-    const uploadsBase = 'https://api.stl-hub.com/uploads';
+    const uploadsBase = (process.env.NEXT_PUBLIC_UPLOADS_BASE || `${site}/uploads`).replace(/\/$/, '');
     const ogImages = asset.images?.length
         ? asset.images.slice(0, 1).map((i) => ({
               url: i.startsWith('http') ? i : `${uploadsBase}/${i.replace(/^\/+/, '')}`,
@@ -204,7 +204,7 @@ export default async function AssetPageContent({ slug, isEn }) {
         return <NsfwAssetGate slug={slug} isEn={isEn} />;
     }
     const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
-    const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
+    const uploadsBase = (process.env.NEXT_PUBLIC_UPLOADS_BASE || `${site}/uploads`).replace(/\/$/, '');
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
     const heroImage = imgList[0] || '/nuevo_horizontal.png';
     const categories = Array.isArray(asset.categories)

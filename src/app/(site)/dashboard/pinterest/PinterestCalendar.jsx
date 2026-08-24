@@ -10,7 +10,7 @@ function getUploadBase() {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-      return 'https://api.stl-hub.com/uploads';
+      return 'https://api.stlgratis.com/uploads';
     }
   }
   return process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';

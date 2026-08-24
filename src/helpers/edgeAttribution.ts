@@ -6,7 +6,7 @@ const TRACK_SESSION_COOKIE = 'mkt_session_id';
 const TRACK_QUEUED_COOKIE = 'mkt_visit_queued';
 const TRACK_ATTR_FIRST_COOKIE = 'mkt_attr_first';
 const TRACK_ATTR_LAST_COOKIE = 'mkt_attr_last';
-const TRACK_API_BASE = String(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stl-hub.com').replace(/\/$/, '');
+const TRACK_API_BASE = String(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stlgratis.com').replace(/\/$/, '');
 
 const ATTR_MAX_TEXT = 191;
 const ATTR_MAX_URL = 512;
@@ -66,6 +66,7 @@ function getCookieDomain(req: NextRequest) {
     .toLowerCase()
     .replace(/:\d+$/, '');
 
+  if (host === 'stlgratis.com' || host.endsWith('.stlgratis.com')) return 'stlgratis.com';
   if (host === 'stl-hub.com' || host.endsWith('.stl-hub.com')) return 'stl-hub.com';
   return undefined;
 }
@@ -148,6 +149,7 @@ function isExternalReferrer(referrer: string | null | undefined, req: NextReques
   if (refHost === 'localhost' || refHost === '127.0.0.1') return false;
 
   // Exclude our own domain
+  if (refHost === 'stlgratis.com' || refHost.endsWith('.stlgratis.com')) return false;
   if (refHost === 'stl-hub.com' || refHost.endsWith('.stl-hub.com')) return false;
 
   return true;
