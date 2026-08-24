@@ -350,7 +350,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
             {/* Cabecera con el banner separador */}
             <div className="freebies-showcase-header">
               <img
-                src="/separador.png"
+                src={isEn ? "/separador-en.png" : "/separador.png"}
                 alt={isEn ? "Free 3D STL Downloads Every Day" : "Descargas Gratuitas Diferentes Todos Los Días"}
                 className="freebies-header-banner"
                 loading="eager"
