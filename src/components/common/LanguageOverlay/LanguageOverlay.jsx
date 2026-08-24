@@ -38,8 +38,24 @@ export default function LanguageOverlay() {
     setLanguage(lang)
     window.localStorage.setItem('lang_chosen', 'true')
     setShow(false)
-    if (lang === 'en') router.push('/en')
-    // ES: ya está en /, no navega
+
+    const currentPath = window.location.pathname
+    const search = window.location.search || ''
+
+    if (lang === 'en') {
+      // If already on /en/... path, stay where we are
+      if (currentPath.startsWith('/en')) return
+      // Otherwise, prefix current path with /en
+      const enPath = currentPath === '/' ? '/en' : `/en${currentPath}`
+      router.push(enPath + search)
+    } else {
+      // Spanish: strip /en prefix if present
+      if (currentPath.startsWith('/en')) {
+        const esPath = currentPath.replace(/^\/en\/?/, '/') || '/'
+        router.push(esPath + search)
+      }
+      // If already on Spanish path, no navigation needed
+    }
   }
 
   // Bloquear scroll cuando está visible
