@@ -61,215 +61,98 @@
     }
   }
 
-  .freebies-showcase-footer {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-top: 0.25rem;
-
-    .freebies-footer-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      color: #00e7ff;
-      background: rgba(0, 231, 255, 0.08);
-      border: 1px solid rgba(0, 231, 255, 0.3);
-      padding: 0.55rem 1.4rem;
-      border-radius: 999px;
-      transition: all 0.25s ease;
-      text-decoration: none;
-
-      &:hover {
-        background: rgba(0, 231, 255, 0.2);
-        border-color: #00e7ff;
-        box-shadow: 0 0 16px rgba(0, 231, 255, 0.35);
-        transform: translateY(-2px);
-
-        svg {
-          transform: translateX(4px);
-        }
-      }
-
-      svg {
-        transition: transform 0.25s ease;
-      }
-    }
-  }
-  
-  .game-slider-container {
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid rgba(0, 255, 170, 0.15);
-    background: rgba(10, 5, 20, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    padding: 1.5rem 1rem;
-    
-    @media (max-width: 576px) {
-      height: 250px; // Evita que se estire demasiado y se vea gigante en móvil
-      padding: 0;
-    }
-    
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 16px;
-      padding: 1px;
-      background: linear-gradient(135deg, rgba(0, 255, 170, 0.2), transparent 40%, transparent 60%, rgba(0, 231, 255, 0.15));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-  }
-  
-  .game-skeletons-grid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 1rem;
-    opacity: 0.12;
-    pointer-events: none;
-    user-select: none;
-    
-    @media (max-width: 992px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    @media (max-width: 576px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  
-  .game-skeleton-card {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    padding: 0.75rem;
-    height: 310px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    animation: skeleton-pulse 1.8s infinite ease-in-out;
-    
-    @media (max-width: 576px) {
-      height: 230px;
-    }
-    
-    .skeleton-thumb {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 8px;
-    }
-    
-    .skeleton-line {
-      height: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-      
-      &.title {
-        width: 75%;
-        height: 16px;
-      }
-      
-      &.meta {
-        width: 45%;
-      }
-    }
-  }
-  
-  .game-overlay-panel {
-    position: absolute;
-    inset: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: rgba(9, 5, 20, 0.55);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1.5rem;
-  }
-  
-  .game-dice-wrapper {
+  .freebies-game-body {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    max-width: 380px;
-    padding: 2rem 2.5rem;
-    background: rgba(20, 10, 35, 0.75);
-    border: 1px solid rgba(0, 255, 170, 0.2);
-    border-radius: 20px;
-    box-shadow: 0 12px 40px rgba(0, 255, 170, 0.1);
-    
-    @media (max-width: 576px) {
-      padding: 1.25rem 1.5rem;
-      max-width: 290px;
-    }
-    
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.25rem 1rem 1rem 1rem;
+
     .game-dice-icon {
-      font-size: 3.25rem;
-      margin-bottom: 0.75rem;
+      font-size: 3.5rem;
+      margin-bottom: 0.5rem;
       display: inline-block;
       animation: dice-float 4s infinite ease-in-out;
-      filter: drop-shadow(0 0 10px rgba(0, 255, 170, 0.4));
-      
+      filter: drop-shadow(0 0 16px rgba(0, 231, 255, 0.45));
+
       @media (max-width: 576px) {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
+        font-size: 2.8rem;
+        margin-bottom: 0.35rem;
       }
     }
-    
-    h4 {
-      font-size: 1.15rem;
-      font-weight: 700;
+
+    .freebies-game-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+      font-weight: 800;
       color: #fff;
       margin: 0 0 0.5rem 0;
-      letter-spacing: 0.5px;
-      
-      @media (max-width: 576px) {
-        font-size: 1.05rem;
-        margin-bottom: 0.25rem;
-      }
+      letter-spacing: 0.2px;
+      text-shadow: 0 0 14px rgba(0, 231, 255, 0.3);
     }
-    
-    p {
-      font-size: 0.82rem;
-      line-height: 1.45;
-      color: rgba(255, 255, 255, 0.6);
+
+    .freebies-game-desc {
+      font-size: clamp(0.85rem, 1.4vw, 0.96rem);
+      line-height: 1.55;
+      color: rgba(233, 239, 255, 0.75);
       margin: 0 0 1.5rem 0;
-      
+      max-width: 580px;
+
       @media (max-width: 576px) {
-        font-size: 0.78rem;
-        margin-bottom: 1rem;
+        font-size: 0.82rem;
+        margin-bottom: 1.2rem;
       }
     }
-    
+
+    .freebies-actions-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 360px;
+    }
+
     .game-roll-btn {
       width: 100%;
-      padding: 0.75rem 1.5rem;
-      background: linear-gradient(135deg, #00ffaa 0%, #00e7ff 100%);
+      padding: 0.85rem 1.8rem;
+      background: linear-gradient(135deg, #00f0ff 0%, #00ffaa 100%);
       color: #05020a;
       border: none;
-      border-radius: 12px;
-      font-size: 0.88rem;
-      font-weight: 750;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      box-shadow: 0 4px 15px rgba(0, 255, 170, 0.3);
-      
+      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.35);
+
       &:hover {
         transform: scale(1.03) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 255, 170, 0.5);
+        box-shadow: 0 8px 28px rgba(0, 240, 255, 0.55);
       }
-      
+
       &:active {
         transform: scale(0.98) translateY(0);
+      }
+    }
+
+    .freebies-footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: rgba(233, 239, 255, 0.65);
+      text-decoration: none;
+      transition: color 0.2s ease, transform 0.2s ease;
+
+      &:hover {
+        color: #00e7ff;
+        transform: translateX(2px);
       }
     }
   }

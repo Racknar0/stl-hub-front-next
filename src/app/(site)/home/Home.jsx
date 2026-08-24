@@ -345,7 +345,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
 
       {/* Sección Unificada de Descargas Gratuitas / Minijuego */}
       <section className="home-freebies-showcase-section">
-        <div className="container-narrow">
+        <div className="container-narrow" style={{ maxWidth: '97%' }}>
           <div className="freebies-showcase-panel">
             {/* Cabecera con el banner separador */}
             <div className="freebies-showcase-header">
@@ -357,55 +357,39 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
               />
             </div>
 
-            {/* Minijuego interactivo con dados */}
-            <div className="game-slider-container">
-              <div className="game-skeletons-grid">
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <div key={idx} className="game-skeleton-card">
-                    <div className="skeleton-thumb" />
-                    <div className="skeleton-line title" />
-                    <div className="skeleton-line meta" />
-                  </div>
-                ))}
+            {/* Contenido limpio e interactivo del juego de dados */}
+            <div className="freebies-game-body">
+              <span className="game-dice-icon" role="img" aria-label="dice">
+                🎲
+              </span>
+              <h4 className="freebies-game-title">
+                {isEn ? 'Your free downloads for today!' : '¡Tus descargas gratuitas de hoy!'}
+              </h4>
+              <p className="freebies-game-desc">
+                {isEn 
+                  ? "Roll the dice and get free access to today's premium selection. Designs change every day with new models, so make sure to grab yours!"
+                  : 'Gira el dado y accede gratis a la selección premium de hoy. ¡Cada día cambian por diseños diferentes, así que no te quedes sin los tuyos!'}
+              </p>
+              <div className="freebies-actions-wrap">
+                <button 
+                  type="button" 
+                  className="game-roll-btn" 
+                  onClick={handleDiceClick}
+                  disabled={isDicePending}
+                  style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
+                >
+                  {isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? '🎲 Roll the Dice' : '🎲 Barajar Selección de Hoy')}
+                </button>
+                <Link
+                  href={isEn ? "/en/free-3d-models" : "/modelos-3d-gratis"}
+                  className="freebies-footer-link"
+                >
+                  <span>{isEn ? "Explore all free models in catalog" : "Explorar todos los modelos 3D gratis"}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </Link>
               </div>
-
-              <div className="game-overlay-panel">
-                <div className="game-dice-wrapper">
-                  <span className="game-dice-icon" role="img" aria-label="dice">
-                    🎲
-                  </span>
-                  <h4>
-                    {isEn ? 'Your free downloads for today!' : '¡Tus descargas gratuitas de hoy!'}
-                  </h4>
-                  <p>
-                    {isEn 
-                      ? "Roll the dice and get free access to today's premium selection. Designs change every day with new models, so make sure to grab yours!"
-                      : 'Gira el dado y accede gratis a la selección premium de hoy. ¡Cada día cambian por diseños diferentes, así que no te quedes sin los tuyos!'}
-                  </p>
-                  <button 
-                    type="button" 
-                    className="game-roll-btn" 
-                    onClick={handleDiceClick}
-                    disabled={isDicePending}
-                    style={isDicePending ? { pointerEvents: 'none', opacity: 0.8 } : undefined}
-                  >
-                    {isDicePending ? (isEn ? 'Loading...' : 'Cargando...') : (isEn ? '🎲 Roll the Dice' : '🎲 Barajar Selección de Hoy')}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Enlace al catálogo de modelos gratis */}
-            <div className="freebies-showcase-footer">
-              <Link
-                href={isEn ? "/en/free-3d-models" : "/modelos-3d-gratis"}
-                className="freebies-footer-link"
-              >
-                <span>{isEn ? "Explore all free 3D models in catalog" : "Explorar todos los modelos 3D gratis del catálogo"}</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </Link>
             </div>
           </div>
         </div>
