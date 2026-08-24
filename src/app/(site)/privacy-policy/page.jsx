@@ -39,7 +39,7 @@ export async function generateMetadata() {
       description: isEn ? descEn : descEs,
       url: canonicalPath,
       type: 'website',
-      images: [{ url: `${SITE_URL}/logo_horizontal.png` }],
+      images: [{ url: `${SITE_URL}/nuevo_horizontal.png` }],
     },
   };
 }

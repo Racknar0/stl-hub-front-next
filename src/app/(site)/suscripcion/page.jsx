@@ -35,7 +35,7 @@ export async function generateMetadata() {
       description,
       url: canonicalPath,
       type: "website",
-      images: ["/logo_horizontal.png"],
+      images: ["/nuevo_horizontal.png"],
     },
     twitter: {
       card: "summary_large_image",

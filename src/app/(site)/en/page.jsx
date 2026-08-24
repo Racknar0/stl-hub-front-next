@@ -40,7 +40,7 @@ export const metadata = {
     type: 'website',
     locale: 'en_US',
     url: `${SITE_URL}/en`,
-    images: ['/logo_horizontal.png'],
+    images: ['/nuevo_horizontal.png'],
   },
   twitter: {
     card: 'summary_large_image',

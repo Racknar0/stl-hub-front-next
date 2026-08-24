@@ -121,7 +121,7 @@ const FeatureSection = ({
                               touchReleaseOnEdges={true}
                           >
                               {list.map((it, index) => {
-                                  const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/vite.svg';
+                                  const safeThumb = typeof it.thumb === 'string' && it.thumb ? encodeURI(it.thumb) : '/placeholder.svg';
                                   const formatUploadDate = (raw) => {
                                       if (!raw) return null;
                                       const d = new Date(raw);

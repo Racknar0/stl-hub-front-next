@@ -84,7 +84,7 @@ export async function generateMetadata() {
       type: "website",
       locale: "es_ES",
       url: `${SITE_URL}/`,
-      images: ["/logo_horizontal.png"],
+      images: ["/nuevo_horizontal.png"],
     },
     twitter: {
       card: "summary_large_image",

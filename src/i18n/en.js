@@ -55,13 +55,6 @@ const en = {
       more: 'See all'
     }
   },
-  hero: {
-    slides: [
-      { id: 1, title: 'Free & Premium 3D STL Models', subtitle: 'The largest catalog of STL files ready for your printer, updated every week', cta: '', image: '/hero/hero1.jpg' },
-      { id: 2, title: 'Free Daily STL Models', subtitle: 'Premium models unlocked daily. Roll the dice to claim your free gifts today!', cta: '', image: '/hero/hero2.jpg' },
-      { id: 3, title: 'Search with Artificial Intelligence', subtitle: 'Describe what you need or upload an image and our AI finds the perfect model for you', cta: '', image: '/hero/hero3.jpg' },
-    ]
-  },
   home: {
     latest: {
       title: 'New arrivals',

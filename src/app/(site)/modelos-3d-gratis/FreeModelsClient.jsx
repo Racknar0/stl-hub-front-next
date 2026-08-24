@@ -69,7 +69,7 @@ export default function FreeModelsClient({ initialItems = [], totalCount = 100, 
       const tagsEn = Array.isArray(a.tagsEn) ? a.tagsEn : tagsEs;
       const chips = isEn ? tagsEn : tagsEs;
       const images = Array.isArray(a.images) ? a.images : [];
-      const thumb = images[0] ? imgUrl(images[0]) : '/vite.svg';
+      const thumb = images[0] ? imgUrl(images[0]) : '/placeholder.svg';
       return {
         id: a.id,
         slug: a.slug,

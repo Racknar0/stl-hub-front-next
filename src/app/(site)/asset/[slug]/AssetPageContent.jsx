@@ -141,7 +141,7 @@ export async function generateAssetMetadata(slug, isEn) {
                 type: 'article',
                 locale: isEn ? 'en_US' : 'es_ES',
                 url: isEn ? `${site}/en/asset/${slug}` : `${site}/asset/${slug}`,
-                images: [{ url: `${site}/logo_horizontal.png` }],
+                images: [{ url: `${site}/nuevo_horizontal.png` }],
             },
             other: { rating: 'adult', 'nsfw-content': 'true' },
         };
@@ -155,7 +155,7 @@ export async function generateAssetMetadata(slug, isEn) {
               height: 630,
               alt: baseTitle,
           }))
-        : [{ url: `${site}/logo_horizontal.png`, width: 1200, height: 630 }];
+        : [{ url: `${site}/nuevo_horizontal.png`, width: 1200, height: 630 }];
 
     return {
         title: baseTitle,
@@ -206,7 +206,7 @@ export default async function AssetPageContent({ slug, isEn }) {
     const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
     const uploadsBase = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'https://stl-hub.com/uploads';
     const imgList = (asset.images || []).slice(0, 5).map(i => i.startsWith('http') ? i : `${uploadsBase}/${i}`);
-    const heroImage = imgList[0] || '/logo_horizontal.png';
+    const heroImage = imgList[0] || '/nuevo_horizontal.png';
     const categories = Array.isArray(asset.categories)
         ? asset.categories.map((c) => ({
               es: c?.name || c?.slug || '',

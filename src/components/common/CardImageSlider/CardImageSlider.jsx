@@ -22,7 +22,7 @@ const normalizeImages = (images, fallback) => {
 
   if (typeof fallback === 'string' && fallback.trim()) return [fallback.trim()];
 
-  return ['/vite.svg'];
+  return ['/placeholder.svg'];
 };
 
 const usePrefersReducedMotion = () => {
@@ -98,7 +98,7 @@ const CardImageSlider = ({
   }, [isEnabled, list.length]);
 
   const src = list[index] || list[0];
-  const safeSrc = typeof src === 'string' && src ? encodeURI(src) : '/vite.svg';
+  const safeSrc = typeof src === 'string' && src ? encodeURI(src) : '/placeholder.svg';
 
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => {

@@ -1,0 +1,81 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c0e17" />
+      <stop offset="100%" stop-color="#14192b" />
+    </linearGradient>
+    <linearGradient id="cubeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#6a5cff" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="cubeLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6a5cff" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#12162a" stop-opacity="0.6" />
+    </linearGradient>
+    <linearGradient id="cubeRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#0f1322" stop-opacity="0.6" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" rx="16" fill="url(#bgGrad)" />
+  <rect width="398" height="398" x="1" y="1" rx="15" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+
+  <!-- Grid lines -->
+  <g stroke="rgba(0, 240, 255, 0.05)" stroke-width="1">
+    <line x1="50" y1="50" x2="350" y2="50" />
+    <line x1="50" y1="100" x2="350" y2="100" />
+    <line x1="50" y1="150" x2="350" y2="150" />
+    <line x1="50" y1="200" x2="350" y2="200" />
+    <line x1="50" y1="250" x2="350" y2="250" />
+    <line x1="50" y1="300" x2="350" y2="300" />
+    <line x1="50" y1="350" x2="350" y2="350" />
+    <line x1="50" y1="50" x2="50" y2="350" />
+    <line x1="100" y1="50" x2="100" y2="350" />
+    <line x1="150" y1="50" x2="150" y2="350" />
+    <line x1="200" y1="50" x2="200" y2="350" />
+    <line x1="250" y1="50" x2="250" y2="350" />
+    <line x1="300" y1="50" x2="300" y2="350" />
+    <line x1="350" y1="50" x2="350" y2="350" />
+  </g>
+
+  <!-- Isometric 3D STL Mesh Cube -->
+  <g transform="translate(0, -10)">
+    <!-- Top Face -->
+    <polygon points="200,85 285,135 200,185 115,135" fill="url(#cubeTop)" stroke="#00f0ff" stroke-width="2.5" stroke-linejoin="round" />
+    <!-- Left Face -->
+    <polygon points="115,135 200,185 200,285 115,235" fill="url(#cubeLeft)" stroke="#6a5cff" stroke-width="2.5" stroke-linejoin="round" />
+    <!-- Right Face -->
+    <polygon points="200,185 285,135 285,235 200,285" fill="url(#cubeRight)" stroke="#00f0ff" stroke-width="2.5" stroke-linejoin="round" />
+
+    <!-- STL Internal Wireframe Triangles (Top) -->
+    <line x1="200" y1="85" x2="200" y2="185" stroke="rgba(0, 240, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+    <line x1="115" y1="135" x2="285" y2="135" stroke="rgba(0, 240, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+
+    <!-- STL Internal Wireframe Triangles (Left) -->
+    <line x1="115" y1="135" x2="200" y2="285" stroke="rgba(106, 92, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+    <line x1="115" y1="235" x2="200" y2="185" stroke="rgba(106, 92, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+
+    <!-- STL Internal Wireframe Triangles (Right) -->
+    <line x1="200" y1="185" x2="285" y2="235" stroke="rgba(0, 240, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+    <line x1="200" y1="285" x2="285" y2="135" stroke="rgba(0, 240, 255, 0.4)" stroke-width="1.5" stroke-dasharray="3,3" />
+
+    <!-- Glowing Center Vertex -->
+    <circle cx="200" cy="185" r="4.5" fill="#00f0ff" filter="url(#glow)" />
+    <circle cx="200" cy="85" r="3" fill="#00f0ff" />
+    <circle cx="285" cy="135" r="3" fill="#00f0ff" />
+    <circle cx="115" cy="135" r="3" fill="#6a5cff" />
+    <circle cx="200" cy="285" r="3" fill="#6a5cff" />
+    <circle cx="285" cy="235" r="3" fill="#00f0ff" />
+    <circle cx="115" cy="235" r="3" fill="#6a5cff" />
+  </g>
+
+  <!-- Badge Label -->
+  <rect x="130" y="318" width="140" height="30" rx="15" fill="rgba(0, 240, 255, 0.08)" stroke="rgba(0, 240, 255, 0.3)" stroke-width="1" />
+  <text x="200" y="338" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="1.5">MODELO 3D</text>
+</svg>

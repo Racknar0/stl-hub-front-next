@@ -66,7 +66,7 @@ export async function generateMetadata() {
       type: 'website',
       url: canonicalUrl,
       siteName: 'STLHUB',
-      images: [{ url: `${SITE}/logo_horizontal.png`, width: 1200, height: 630 }],
+      images: [{ url: `${SITE}/nuevo_horizontal.png`, width: 1200, height: 630 }],
     },
   };
 }

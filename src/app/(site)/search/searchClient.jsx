@@ -108,7 +108,7 @@ function toDisplayItem(a, lang) {
   const tagsEn = Array.isArray(a.tagsEn) ? a.tagsEn : tagsEs;
   const chips = isEn ? tagsEn : tagsEs;
   const images = Array.isArray(a.images) ? a.images : [];
-  const first = images[0] || '/vite.svg';
+  const first = images[0] || '/placeholder.svg';
   const base = process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
   const makeUrl = (rel) => (rel?.startsWith('http') ? rel : `${base}/${String(rel).replace(/\\/g,'/').replace(/^\/+/, '')}`);
   const title = isEn ? (a.titleEn || a.title) : (a.title || a.titleEn);

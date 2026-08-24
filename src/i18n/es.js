@@ -55,13 +55,6 @@ const es = {
       more: 'Ver todo'
     }
   },
-  hero: {
-    slides: [
-      { id: 1, title: 'Modelos 3D y STL Gratis y Premium', subtitle: 'El mayor catálogo de archivos STL listos para imprimir, actualizados cada semana', cta: '', image: '/hero/hero1.jpg' },
-      { id: 2, title: 'Modelos STL Gratis Cada Día', subtitle: 'Modelos premium liberados gratuitamente cada 24 horas. ¡Lanza el dado y descárgalos ya!', cta: '', image: '/hero/hero2.jpg' },
-      { id: 3, title: 'Busca con Inteligencia Artificial', subtitle: 'Describe lo que necesitas o sube una imagen y nuestra IA encuentra el modelo perfecto para ti', cta: '', image: '/hero/hero3.jpg' },
-    ]
-  },
   home: {
     latest: {
       title: 'Recién llegados',

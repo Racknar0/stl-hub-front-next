@@ -77,7 +77,7 @@ export default function LanguageOverlay() {
   const overlay = (
     <div className="lang-overlay" role="dialog" aria-modal="true" aria-label="Language selector">
       <div className={`lang-card ${promo.active ? 'promo-active' : ''}`}>
-        <img className="brand" src="/nuevo_horizontal.png" alt="STL HUB" />
+        <img className="brand" src="/nuevo_horizontal.png" alt="STL Gratis" />
         
         {promo.active && (
           <div className="lang-promo-banner">
