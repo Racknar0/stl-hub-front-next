@@ -8,9 +8,9 @@ import './PinterestCalendar.scss';
 const MAX_PINS_PER_DAY = 15;
 function getUploadBase() {
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-      return 'https://api.stlgratis.com/uploads';
+    const origin = window.location.origin;
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      return `${origin}/uploads`;
     }
   }
   return process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
@@ -33,6 +33,10 @@ function resolveImgUrl(img) {
     }
   } else {
     pathPart = String(img).replace(/^\\+|^\/+/, '');
+  }
+
+  if (pathPart.startsWith('uploads/')) {
+    pathPart = pathPart.substring(8);
   }
 
   const encodedPath = pathPart.split('/').map(segment => encodeURIComponent(segment)).join('/');

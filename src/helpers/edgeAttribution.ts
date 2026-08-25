@@ -6,7 +6,7 @@ const TRACK_SESSION_COOKIE = 'mkt_session_id';
 const TRACK_QUEUED_COOKIE = 'mkt_visit_queued';
 const TRACK_ATTR_FIRST_COOKIE = 'mkt_attr_first';
 const TRACK_ATTR_LAST_COOKIE = 'mkt_attr_last';
-const TRACK_API_BASE = String(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stlgratis.com').replace(/\/$/, '');
+const TRACK_API_BASE = String(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://stlgratis.com').replace(/\/$/, '');
 
 const ATTR_MAX_TEXT = 191;
 const ATTR_MAX_URL = 512;

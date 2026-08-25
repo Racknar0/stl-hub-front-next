@@ -17,7 +17,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 const TRACK_API_BASE = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.stlgratis.com').replace(/\/$/, '')
+  ? (process.env.NEXT_PUBLIC_API_BASE_URL || window.location.origin || 'https://stlgratis.com').replace(/\/$/, '')
   : '';
 
 const ATTR_MAX_TEXT = 191;
