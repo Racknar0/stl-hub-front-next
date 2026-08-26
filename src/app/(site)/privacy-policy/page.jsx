@@ -12,10 +12,10 @@ export async function generateMetadata() {
     isEn = h.get('x-lang') === 'en';
   } catch {}
 
-  const titleEs = 'Política de Privacidad | STL HUB';
-  const titleEn = 'Privacy Policy | STL HUB';
-  const descEs = 'Política de privacidad de STL HUB. Conoce cómo recopilamos, usamos y protegemos tus datos personales en nuestra plataforma de descarga de modelos STL 3D.';
-  const descEn = 'STL HUB Privacy Policy. Learn how we collect, use, and protect your personal data on our 3D STL model download platform.';
+  const titleEs = 'Política de Privacidad | STL Gratis';
+  const titleEn = 'Privacy Policy | STL Gratis';
+  const descEs = 'Política de privacidad de STL Gratis. Conoce cómo recopilamos, usamos y protegemos tus datos personales en nuestra plataforma de descarga de modelos STL 3D.';
+  const descEn = 'STL Gratis Privacy Policy. Learn how we collect, use, and protect your personal data on our 3D STL model download platform.';
   const canonicalPath = isEn ? `${SITE_URL}/en/privacy-policy` : `${SITE_URL}/privacy-policy`;
 
   return {

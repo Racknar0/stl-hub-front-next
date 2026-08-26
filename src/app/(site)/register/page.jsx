@@ -3,7 +3,7 @@ import Register from './Register';
 import './register.scss';
 import { buildNoindexMetadata } from '../noindexRouteMetadata';
 
-export const metadata = buildNoindexMetadata('/register', 'Registro | STL HUB');
+export const metadata = buildNoindexMetadata('/register', 'Registro | STL Gratis');
 
 export default function Page() {
   return <Register />;

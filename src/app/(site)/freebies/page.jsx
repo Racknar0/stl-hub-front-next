@@ -10,8 +10,8 @@ export async function generateMetadata() {
   } catch {}
 
   const title = isEn
-    ? "Daily Freebies Minigame | Roll the Dice – STL HUB"
-    : "Minijuego de Regalos del Día | Lanza el Dado – STL HUB";
+    ? "Daily Freebies Minigame | Roll the Dice – STL Gratis"
+    : "Minijuego de Regalos del Día | Lanza el Dado – STL Gratis";
 
   return buildNoindexMetadata(isEn ? "/en/freebies" : "/freebies", title);
 }

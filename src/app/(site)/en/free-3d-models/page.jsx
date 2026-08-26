@@ -35,7 +35,7 @@ async function fetchFreeModels() {
 
 export async function generateMetadata() {
   const { total } = await fetchFreeModels();
-  const title = 'Free 3D STL Models — Daily Gifts | STLHUB';
+  const title = 'Free 3D STL Models — Daily Gifts | STL Gratis';
   const description = `Download premium quality free STL files for FDM and Resin 3D printing. ${total} new free models every 24 hours. Explore today's free daily gifts!`;
   const canonicalUrl = `${SITE}/en/free-3d-models`;
 
@@ -65,7 +65,7 @@ export async function generateMetadata() {
       description,
       type: 'website',
       url: canonicalUrl,
-      siteName: 'STLHUB',
+      siteName: 'STL Gratis',
       images: [{ url: `${SITE}/nuevo_horizontal.png`, width: 1200, height: 630 }],
     },
   };

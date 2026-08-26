@@ -6,7 +6,7 @@ function normalizePath(path) {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
-export function buildNoindexMetadata(canonicalPath, title = 'STL HUB') {
+export function buildNoindexMetadata(canonicalPath, title = 'STL Gratis') {
   const path = normalizePath(canonicalPath);
 
   return {

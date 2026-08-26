@@ -58,16 +58,16 @@ function buildTitle(params, isEn) {
   if (params.categories && !params.q && !params.tags) {
     const catLabel = formatLabel(params.categories.split(',')[0]);
     return isEn
-      ? `${catLabel} 3D STL Models - Free & Premium | STLHUB`
-      : `Modelos 3D STL de ${catLabel} Gratis y Premium | STLHUB`;
+      ? `${catLabel} 3D STL Models - Free & Premium | STL Gratis`
+      : `Modelos 3D STL de ${catLabel} Gratis y Premium | STL Gratis`;
   }
 
   // 2. Optimización para Etiquetas (Tags)
   if (params.tags && !params.q && !params.categories) {
     const tagLabel = formatLabel(params.tags.split(',')[0]);
     return isEn
-      ? `${tagLabel} 3D STL Models - Free & Premium | STLHUB`
-      : `Modelos 3D STL de ${tagLabel} Gratis y Premium | STLHUB`;
+      ? `${tagLabel} 3D STL Models - Free & Premium | STL Gratis`
+      : `Modelos 3D STL de ${tagLabel} Gratis y Premium | STL Gratis`;
   }
 
   // Fallback genérico para búsquedas combinadas o de texto
@@ -80,13 +80,13 @@ function buildTitle(params, isEn) {
 
   if (params.plan === 'free') {
     return isEn
-      ? `${label} — Free STL Files for 3D Printing | STLHUB`
-      : `${label} — Archivos STL Gratis para Impresión 3D | STLHUB`;
+      ? `${label} — Free STL Files for 3D Printing | STL Gratis`
+      : `${label} — Archivos STL Gratis para Impresión 3D | STL Gratis`;
   }
 
   return isEn
-    ? `${label} — STL Models Free Download | STLHUB`
-    : `${label} — Modelos STL Descarga Gratis | STLHUB`;
+    ? `${label} — STL Models Free Download | STL Gratis`
+    : `${label} — Modelos STL Descarga Gratis | STL Gratis`;
 }
 
 function buildDescription(params, total, isEn) {
@@ -97,33 +97,33 @@ function buildDescription(params, total, isEn) {
   if (params.categories && !q && !params.tags) {
     const catLabel = formatLabel(params.categories.split(',')[0]);
     return isEn
-      ? `Download the best ${catLabel} 3D STL models and files ready for FDM and Resin 3D printing. Premium and free designs on STLHUB via MEGA.`
-      : `Descarga los mejores archivos y modelos 3D STL de ${catLabel} listos para imprimir en FDM y Resina. Diseños premium y gratuitos en STLHUB por MEGA.`;
+      ? `Download the best ${catLabel} 3D STL models and files ready for FDM and Resin 3D printing. Premium and free designs on STL Gratis via MEGA.`
+      : `Descarga los mejores archivos y modelos 3D STL de ${catLabel} listos para imprimir en FDM y Resina. Diseños premium y gratuitos en STL Gratis por MEGA.`;
   }
 
   // 2. Optimización para Etiquetas (Tags)
   if (params.tags && !q && !params.categories) {
     const tagLabel = formatLabel(params.tags.split(',')[0]);
     return isEn
-      ? `Explore our collection of ${tagLabel} 3D STL models for FDM and Resin 3D printing. Get premium and free files on STLHUB via MEGA.`
-      : `Explora nuestra colección de modelos 3D STL de ${tagLabel} para impresión 3D FDM y Resina. Consigue archivos premium y gratis en STLHUB por MEGA.`;
+      ? `Explore our collection of ${tagLabel} 3D STL models for FDM and Resin 3D printing. Get premium and free files on STL Gratis via MEGA.`
+      : `Explora nuestra colección de modelos 3D STL de ${tagLabel} para impresión 3D FDM y Resina. Consigue archivos premium y gratis en STL Gratis por MEGA.`;
   }
 
   if (q && count > 0) {
     return isEn
-      ? `Download ${count}+ free STL files for "${q}". Ready for FDM and resin 3D printers. Browse and download on STLHUB.`
-      : `Descarga ${count}+ archivos STL gratis de "${q}". Listos para impresoras 3D FDM y resina. Navega y descarga en STLHUB.`;
+      ? `Download ${count}+ free STL files for "${q}". Ready for FDM and resin 3D printers. Browse and download on STL Gratis.`
+      : `Descarga ${count}+ archivos STL gratis de "${q}". Listos para impresoras 3D FDM y resina. Navega y descarga en STL Gratis.`;
   }
 
   if (q) {
     return isEn
-      ? `Search results for "${q}" on STLHUB. Free STL files for 3D printing.`
-      : `Resultados de búsqueda para "${q}" en STLHUB. Archivos STL gratis para impresión 3D.`;
+      ? `Search results for "${q}" on STL Gratis. Free STL files for 3D printing.`
+      : `Resultados de búsqueda para "${q}" en STL Gratis. Archivos STL gratis para impresión 3D.`;
   }
 
   return isEn
-    ? `Browse thousands of free STL files for 3D printing on STLHUB. Download models for FDM and resin printers.`
-    : `Explora miles de archivos STL gratis para impresión 3D en STLHUB. Descarga modelos para impresoras FDM y resina.`;
+    ? `Browse thousands of free STL files for 3D printing on STL Gratis. Download models for FDM and resin printers.`
+    : `Explora miles de archivos STL gratis para impresión 3D en STL Gratis. Descarga modelos para impresoras FDM y resina.`;
 }
 
 function SearchSuspenseFallback({ isEn }) {
@@ -247,7 +247,7 @@ export async function generateMetadata({ searchParams }) {
       description,
       type: 'website',
       url: canonicalUrl,
-      siteName: 'STLHUB',
+      siteName: 'STL Gratis',
     },
   };
 }

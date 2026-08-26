@@ -46,14 +46,14 @@ function buildGenericDescriptionEs(title, tags = [], catName = '') {
     const name = String(title || 'este modelo').trim();
     const tagStr = tags.length > 0 ? ` Temática: ${tags.slice(0, 3).join(', ')}.` : '';
     const catStr = catName ? ` Categoría: ${catName}.` : '';
-    return `Descarga el archivo STL de "${name}" listo para impresión 3D.${catStr}${tagStr} Compatible con impresoras FDM y de Resina. Consíguelo en STLHUB vía MEGA.`;
+    return `Descarga el archivo STL de "${name}" listo para impresión 3D.${catStr}${tagStr} Compatible con impresoras FDM y de Resina. Consíguelo en STL Gratis vía MEGA.`;
 }
 
 function buildGenericDescriptionEn(title, tags = [], catName = '') {
     const name = String(title || 'this model').trim();
     const tagStr = tags.length > 0 ? ` Tags: ${tags.slice(0, 3).join(', ')}.` : '';
     const catStr = catName ? ` Category: ${catName}.` : '';
-    return `Download the STL file for "${name}" ready for 3D printing.${catStr}${tagStr} Compatible with FDM and Resin printers. Get it on STLHUB via MEGA.`;
+    return `Download the STL file for "${name}" ready for 3D printing.${catStr}${tagStr} Compatible with FDM and Resin printers. Get it on STL Gratis via MEGA.`;
 }
 
 export const fetchAsset = cache(async (slug) => {
@@ -95,11 +95,11 @@ export async function generateAssetMetadata(slug, isEn) {
 
     const cleanedEs = cleanTitlePrefix(asset.title || 'modelo 3D');
     const safeTitleEs = cleanedEs.length > 40 ? cleanedEs.substring(0, 40) + '...' : cleanedEs;
-    const titleEs = `Descargar STL: ${safeTitleEs} | STLHUB`;
+    const titleEs = `Descargar STL: ${safeTitleEs} | STL Gratis`;
     
     const cleanedEn = cleanTitlePrefix(asset.titleEn || asset.title || '3D model');
     const safeTitleEn = cleanedEn.length > 40 ? cleanedEn.substring(0, 40) + '...' : cleanedEn;
-    const titleEn = `Download STL: ${safeTitleEn} | STLHUB`;
+    const titleEn = `Download STL: ${safeTitleEn} | STL Gratis`;
     
     const catEs = asset.categories?.[0]?.es || asset.categories?.[0]?.name || '';
     const catEn = asset.categories?.[0]?.en || asset.categories?.[0]?.nameEn || catEs;
@@ -339,7 +339,7 @@ export default async function AssetPageContent({ slug, isEn }) {
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,11,21,0.15) 0%, rgba(7,11,21,0.6) 50%, rgba(7,11,21,0.95) 100%)' }} />
                     </div>
                     <div className={styles.heroInner}>
-                        <p className={styles.kicker}>STL HUB · {isEn ? '3D Model Sheet' : 'Ficha de modelo 3D'}</p>
+                        <p className={styles.kicker}>STL Gratis · {isEn ? '3D Model Sheet' : 'Ficha de modelo 3D'}</p>
                         <h1 className={styles.title}>{displayTitle}</h1>
                         <p className={styles.subtitle}>
                             {displayDesc.length > 200 ? displayDesc.slice(0, 200) + '…' : displayDesc}
