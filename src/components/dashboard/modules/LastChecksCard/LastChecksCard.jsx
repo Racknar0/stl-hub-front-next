@@ -56,8 +56,8 @@ function sortByOldestFirst(list) {
 export default function LastChecksCard({
   refreshMs = 60000,
   maxHeight,
-  // Parametrizable (para pruebas: 50). También se puede setear por env.
-  staleDays = Number(process.env.NEXT_PUBLIC_LASTCHECKS_STALE_DAYS) || 50,
+  // Parametrizable (para pruebas: 60). También se puede setear por env.
+  staleDays = Number(process.env.NEXT_PUBLIC_LASTCHECKS_STALE_DAYS) || 60,
 }) {
   const [tab, setTab] = useState('main')
   const [loading, setLoading] = useState(false)
@@ -106,7 +106,7 @@ export default function LastChecksCard({
   }, [refreshMs])
 
   const staleAccounts = useMemo(() => {
-    const days = Math.max(1, Number(staleDays) || 50)
+    const days = Math.max(1, Number(staleDays) || 60)
     const now = Date.now()
     const dayMs = 24 * 60 * 60 * 1000
 
@@ -125,7 +125,7 @@ export default function LastChecksCard({
   const staleCount = staleAccounts.length
 
   useEffect(() => {
-    const days = Math.max(1, Number(staleDays) || 50)
+    const days = Math.max(1, Number(staleDays) || 60)
     // Dispara la alerta solo cuando pasa de 0 -> >0
     if (staleCount > 0 && prevStaleCountRef.current === 0) {
       void fireAlert({
