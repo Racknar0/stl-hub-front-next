@@ -200,7 +200,15 @@ export default function BatchTable() {
     total: 0,
     processed: 0,
     currentItemId: null,
+    currentTitle: '',
     errors: 0,
+  })
+  const [aiMetadataStatus, setAiMetadataStatus] = useState({
+    running: false,
+    total: 0,
+    processed: 0,
+    currentItemTitle: '',
+    message: '',
   })
   const stableSemanticOrderRef = useRef(new Map())
   const http = useMemo(() => new HttpService(), [])
@@ -1093,13 +1101,14 @@ export default function BatchTable() {
         setPrecalcStatus((prev) => {
           // Si acaba de terminar de correr, refrescamos la tabla con fetchQueue
           if (prev.running && !st.running) {
-            void fetchQueue()
+            void fetchQueue({ forceBackendDraft: true })
           }
           return {
             running: Boolean(st.running),
             total: Number(st.total || 0),
             processed: Number(st.processed || 0),
             currentItemId: st.currentItemId,
+            currentTitle: String(st.currentTitle || ''),
             errors: Number(st.errors || 0),
           }
         })
@@ -1143,12 +1152,57 @@ export default function BatchTable() {
       const res = await http.postData('/batch-imports/precalculate-similars/stop', {})
       if (res?.data?.success) {
         setPrecalcStatus((prev) => ({ ...prev, running: false }))
-        void fetchQueue()
+        void fetchQueue({ forceBackendDraft: true })
       }
     } catch (e) {
       console.error('Error deteniendo pre-cálculo de similares:', e)
     }
   }, [http])
+
+  // ── Estado de Metadatos IA en Segundo Plano ──
+  const pollAiMetadataStatus = useCallback(async () => {
+    try {
+      const res = await http.getData('/batch-imports/ai-metadata/status')
+      if (res?.data?.success && res.data.status) {
+        const st = res.data.status
+        setAiMetadataStatus((prev) => {
+          // Si estaba corriendo y terminó
+          if (prev.running && !st.running) {
+            setIsApplyingAiMetadata(false)
+            setIsRetryingAi(false)
+            void fetchQueue({ forceBackendDraft: true })
+            // Auto-encadenamiento: verificar inicio automático de pre-cálculo de similares
+            setTimeout(() => void pollPrecalcStatus(), 1000)
+            setTimeout(() => void pollPrecalcStatus(), 3000)
+          } else if (!prev.running && st.running) {
+            setIsApplyingAiMetadata(true)
+          }
+          return {
+            running: Boolean(st.running),
+            total: Number(st.total || 0),
+            processed: Number(st.processed || 0),
+            currentItemTitle: String(st.currentItemTitle || ''),
+            message: String(st.message || ''),
+            errors: Number(st.errors || 0),
+          }
+        })
+      }
+    } catch (e) {
+      console.error('Error obteniendo estado de metadatos IA:', e)
+    }
+  }, [http, pollPrecalcStatus])
+
+  useEffect(() => {
+    void pollAiMetadataStatus()
+  }, [pollAiMetadataStatus])
+
+  useEffect(() => {
+    if (!aiMetadataStatus.running && !isApplyingAiMetadata && !isRetryingAi) return
+    const interval = setInterval(() => {
+      void pollAiMetadataStatus()
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [aiMetadataStatus.running, isApplyingAiMetadata, isRetryingAi, pollAiMetadataStatus])
 
   useEffect(() => {
      fetchQueue()
@@ -1402,49 +1456,26 @@ export default function BatchTable() {
 
     try {
       setIsApplyingAiMetadata(true)
-      setToast({ open: true, msg: `Generando metadatos IA para ${uniqueIds.length} item(s)...`, type: 'info' })
+      setAiMetadataStatus({
+        running: true,
+        total: uniqueIds.length,
+        processed: 0,
+        currentItemTitle: '',
+        message: `Iniciando metadatos IA para ${uniqueIds.length} ítem(s)...`,
+      })
+      setToast({ open: true, msg: `Iniciando metadatos IA para ${uniqueIds.length} item(s)...`, type: 'info' })
       const res = await http.postData('/batch-imports/ai-metadata', { itemIds: uniqueIds }, { timeout: 0 })
 
       if (res.data?.success) {
-        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
-        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
-        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
-        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
-          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
-          : []
-
-        if (!res.data?.aiTimedOut) {
-          setAiRetryCandidateIds(aiFailedItemIds)
-        }
-
-        const note = []
-        if (aiRetryAttempts > 0) note.push(`reintentos IA: ${aiRetryAttempts}`)
-        if (aiFailedItems > 0) {
-          note.push(
-            aiRateLimitedItems > 0
-              ? `fallidos: ${aiFailedItems} (${aiRateLimitedItems} por rate limit)`
-              : `fallidos: ${aiFailedItems}`
-          )
-        }
-
-        const baseMsg = res.data?.message || 'Metadatos IA finalizados.'
-        const finalMsg = note.length ? `${baseMsg} ${note.join(' · ')}` : baseMsg
-        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
-        setToast({ open: true, msg: finalMsg, type: finalType })
-
-        fetchQueue({ forceBackendDraft: true })
-        if (res.data?.aiApplyDeferred) {
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 2500)
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 6000)
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 10000)
-        }
+        setToast({ open: true, msg: res.data?.message || 'Metadatos IA iniciados en segundo plano.', type: 'success' })
+        setTimeout(() => void pollAiMetadataStatus(), 1000)
       } else {
+        setIsApplyingAiMetadata(false)
         setToast({ open: true, msg: res.data?.message || 'No se pudo generar metadatos IA.', type: 'error' })
       }
     } catch (e) {
-      setToast({ open: true, msg: `Error generando metadatos IA: ${e.response?.data?.message || e.message}`, type: 'error' })
-    } finally {
       setIsApplyingAiMetadata(false)
+      setToast({ open: true, msg: `Error generando metadatos IA: ${e.response?.data?.message || e.message}`, type: 'error' })
     }
   }
 
@@ -1457,49 +1488,26 @@ export default function BatchTable() {
 
     try {
       setIsRetryingAi(true)
+      setAiMetadataStatus({
+        running: true,
+        total: ids.length,
+        processed: 0,
+        currentItemTitle: '',
+        message: `Reintentando IA para ${ids.length} ítem(s)...`,
+      })
       setToast({ open: true, msg: `Reintentando IA para ${ids.length} item(s) fallidos...`, type: 'info' })
       const res = await http.postData('/batch-imports/retry-ai', { itemIds: ids }, { timeout: 0 })
 
       if (res.data?.success) {
-        const aiFailedItems = Number(res.data?.aiFailedItems || 0)
-        const aiRateLimitedItems = Number(res.data?.aiRateLimitedItems || 0)
-        const aiRetryAttempts = Number(res.data?.aiRetryAttempts || 0)
-        const aiFailedItemIds = Array.isArray(res.data?.aiFailedItemIds)
-          ? Array.from(new Set(res.data.aiFailedItemIds.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)))
-          : []
-
-        if (!res.data?.aiTimedOut) {
-          setAiRetryCandidateIds(aiFailedItemIds)
-        }
-
-        const note = []
-        if (aiRetryAttempts > 0) note.push(`reintentos IA: ${aiRetryAttempts}`)
-        if (aiFailedItems > 0) {
-          note.push(
-            aiRateLimitedItems > 0
-              ? `fallidos: ${aiFailedItems} (${aiRateLimitedItems} por rate limit)`
-              : `fallidos: ${aiFailedItems}`
-          )
-        }
-
-        const baseMsg = res.data?.message || 'Reintento IA finalizado.'
-        const finalMsg = note.length ? `${baseMsg} ${note.join(' · ')}` : baseMsg
-        const finalType = (res.data?.aiTimedOut || aiFailedItems > 0) ? 'warning' : 'success'
-        setToast({ open: true, msg: finalMsg, type: finalType })
-
-        fetchQueue({ forceBackendDraft: true })
-        if (res.data?.aiApplyDeferred) {
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 2500)
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 6000)
-          setTimeout(() => { void fetchQueue({ forceBackendDraft: true }) }, 10000)
-        }
+        setToast({ open: true, msg: res.data?.message || 'Reintento IA iniciado en segundo plano.', type: 'success' })
+        setTimeout(() => void pollAiMetadataStatus(), 1000)
       } else {
+        setIsRetryingAi(false)
         setToast({ open: true, msg: res.data?.message || 'No se pudo reintentar IA.', type: 'error' })
       }
     } catch (e) {
-      setToast({ open: true, msg: `Error reintentando IA: ${e.response?.data?.message || e.message}`, type: 'error' })
-    } finally {
       setIsRetryingAi(false)
+      setToast({ open: true, msg: `Error reintentando IA: ${e.response?.data?.message || e.message}`, type: 'error' })
     }
   }
 
@@ -2497,6 +2505,9 @@ export default function BatchTable() {
         <BatchProgressBars
           isApplyingAiMetadata={isApplyingAiMetadata}
           isRetryingAi={isRetryingAi}
+          aiMetadataStatus={aiMetadataStatus}
+          precalcStatus={precalcStatus}
+          onStopPrecalculate={handleStopPrecalculate}
           isScanning={isScanning}
           scanStatusUi={scanStatusUi}
           mainProgressStats={mainProgressStats}
