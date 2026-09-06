@@ -451,6 +451,8 @@ const BatchRow = React.memo(function BatchRow({
                                                 '&:hover .batch-image-actions': { opacity: 1 },
                                             }}>
                                                 <Box component="img" src={srcUrl} alt={`asset-${idx}-${i + 1}`}
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     onClick={() => onOpenImagePreview?.(srcUrl)}
                                                     sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                                 />

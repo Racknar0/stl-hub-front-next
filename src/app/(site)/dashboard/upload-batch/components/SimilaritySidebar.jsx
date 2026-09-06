@@ -129,17 +129,17 @@ export default function SimilaritySidebar({
             </Box>
           )}
 
-          {/* Render keep-alive pool of active/recent similarity panels (bounded by similarityMap LRU limit of 20 to prevent DOM bloat) */}
-          {Object.keys(similarityMap || {}).map((mapKey) => {
-            const id = Number(mapKey)
-            const itemSimilarity = similarityMap[id]
-            const queueItem = rows.find(r => r.id === id)
-            const isCurrentlySelected = id === Number(similaritySelectedId)
+          {/* Render ONLY the currently selected item to prevent DOM bloat and memory leaks */}
+          {(() => {
+            const currentId = Number(similaritySelectedId)
+            if (!currentId) return null
+            const itemSimilarity = similarityMap?.[currentId]
+            const queueItem = rows.find(r => r.id === currentId)
 
             if (!queueItem || !itemSimilarity) return null
 
             return (
-              <Box key={id} sx={{ display: isCurrentlySelected ? 'block' : 'none' }}>
+              <Box key={currentId}>
                 {/* ── Ítem borrador actual ── */}
                 <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Ítem Borrador</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, wordBreak: 'break-word' }}>
@@ -324,8 +324,8 @@ export default function SimilaritySidebar({
                                   >
                                     <img
                                       src={safeSrc}
-                                      loading="eager"
-                                      fetchpriority="high"
+                                      loading="lazy"
+                                      decoding="async"
                                       style={{
                                         width: 70,
                                         height: 70,
@@ -414,7 +414,7 @@ export default function SimilaritySidebar({
                 )}
               </Box>
             )
-          })}
+          })()}
         </Box>
       )}
     </RightSidebar>
