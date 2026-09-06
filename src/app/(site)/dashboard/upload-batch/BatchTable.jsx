@@ -195,6 +195,13 @@ export default function BatchTable() {
     similarityMapRef.current = similarityMap
   }, [similarityMap])
   const similarityLruRef = React.useRef([])
+  const [precalcStatus, setPrecalcStatus] = useState({
+    running: false,
+    total: 0,
+    processed: 0,
+    currentItemId: null,
+    errors: 0,
+  })
   const stableSemanticOrderRef = useRef(new Map())
   const http = useMemo(() => new HttpService(), [])
 
@@ -552,6 +559,25 @@ export default function BatchTable() {
     const id = Number(row?.id || 0)
     if (!id) return
 
+    // 0. Si ya tiene similarResults pre-calculados en BD, cargar al instante a 0ms sin llamadas de red
+    if (row?.similarResults !== undefined && row?.similarResults !== null) {
+      setSimilarityMap((m) => {
+        if (m?.[id]?.status === 'done') return m
+        return {
+          ...(m || {}),
+          [id]: {
+            status: 'done',
+            items: Array.isArray(row.similarResults) ? row.similarResults : [],
+            error: '',
+            phase: 'Completado',
+            query: String(row?.nombre || ''),
+            imageHashCount: 0,
+          },
+        }
+      })
+      return
+    }
+
     // Cache check: Avoid refetching if already done or loading
     const cached = similarityMapRef.current?.[id]
     if (cached?.status === 'done' || cached?.status === 'loading') {
@@ -574,10 +600,10 @@ export default function BatchTable() {
         },
       }
 
-      // LRU Eviction: track visited IDs in a ref, keeping max 20 entries
+      // LRU Eviction: track visited IDs in a ref, keeping max 500 entries
       let lru = similarityLruRef.current.filter((x) => x !== id)
       lru.push(id)
-      while (lru.length > 20) {
+      while (lru.length > 500) {
         const evictedId = lru.shift()
         if (evictedId !== id && evictedId !== similaritySelectedIdRef.current) {
           delete next[evictedId]
@@ -595,12 +621,15 @@ export default function BatchTable() {
         imagePath: imagePath,
         textContext: titleValue,
         limit: 6,
+        batchItemId: id,
       }
 
       const r = await http.postData('/ai/search-by-local-image', payload)
       const data = r?.data || {}
       const items = Array.isArray(data?.items) ? data.items : []
 
+      // Actualizar fila localmente para que subsiguientes selecciones tengan 0ms
+      setRows((prev) => prev.map((item) => (item.id === id ? { ...item, similarResults: items } : item)))
 
       setSimilarityMap((m) => {
         const next = {
@@ -681,7 +710,7 @@ export default function BatchTable() {
     scrollReviewToVisible(safeIndex)
   }, [visibleEntries, startSimilarityCheck, scrollReviewToVisible])
 
-  // ── Centralized Prefetching: background fetch similarity check for the next 2 elements with 300ms debounce ──
+  // ── Centralized Prefetching: calienta el cache local para los siguientes 2 elementos si ya están pre-calculados ──
   useEffect(() => {
     if (!reviewMode) return
     if (!similaritySelectedId) return
@@ -692,16 +721,19 @@ export default function BatchTable() {
     const safeIndex = visibleEntries.findIndex((entry) => Number(entry?.row?.id || 0) === Number(similaritySelectedId))
     if (safeIndex < 0) return
 
-    // Debounce to prevent flooding the server during rapid navigation
+    // Debounce to prevent flooding during rapid navigation
     const timer = setTimeout(() => {
       for (let i = 1; i <= 2; i++) {
         const nextIdx = safeIndex + i
         if (nextIdx < total) {
           const nextTarget = visibleEntries[nextIdx]?.row
-          if (nextTarget) void startSimilarityCheck(nextTarget)
+          // Calentar cache al instante (0ms) si ya tiene similarResults
+          if (nextTarget && nextTarget.similarResults !== undefined && nextTarget.similarResults !== null) {
+            void startSimilarityCheck(nextTarget)
+          }
         }
       }
-    }, 300)
+    }, 200)
 
     return () => clearTimeout(timer)
   }, [reviewMode, similaritySelectedId, visibleEntries, startSimilarityCheck])
@@ -997,6 +1029,7 @@ export default function BatchTable() {
       mainStatus: item.mainStatus || 'PENDING',
       backupStatus: item.backupStatus || 'PENDING',
       mainProgress: item.mainProgress || 0,
+      similarResults: item.similarResults ?? null,
     }
   }
 
@@ -1036,6 +1069,7 @@ export default function BatchTable() {
                  // Mantener edición local, pero no pisar sugerencias IA si local está vacío.
                  return {
                    ...existing,
+                   similarResults: item.similarResults ?? existing?.similarResults ?? null,
                    categorias: localCats.length > 0 ? localCats : backendCats,
                    tags: localTags.length > 0 ? localTags : backendTags,
                    description: localDescription || backendDescription,
@@ -1049,6 +1083,72 @@ export default function BatchTable() {
        }
      } catch(e) { console.error('Error fetching queue', e) }
   }
+
+  // ── Pre-cálculo de Similares en Segundo Plano ──
+  const pollPrecalcStatus = useCallback(async () => {
+    try {
+      const res = await http.getData('/batch-imports/precalculate-similars/status')
+      if (res?.data?.success && res.data.status) {
+        const st = res.data.status
+        setPrecalcStatus((prev) => {
+          // Si acaba de terminar de correr, refrescamos la tabla con fetchQueue
+          if (prev.running && !st.running) {
+            void fetchQueue()
+          }
+          return {
+            running: Boolean(st.running),
+            total: Number(st.total || 0),
+            processed: Number(st.processed || 0),
+            currentItemId: st.currentItemId,
+            errors: Number(st.errors || 0),
+          }
+        })
+      }
+    } catch (e) {
+      console.error('Error obteniendo estado de pre-cálculo de similares:', e)
+    }
+  }, [http])
+
+  useEffect(() => {
+    void pollPrecalcStatus()
+  }, [pollPrecalcStatus])
+
+  useEffect(() => {
+    if (!precalcStatus.running) return
+    const interval = setInterval(() => {
+      void pollPrecalcStatus()
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [precalcStatus.running, pollPrecalcStatus])
+
+  const handleStartPrecalculate = useCallback(async () => {
+    try {
+      const res = await http.postData('/batch-imports/precalculate-similars', {})
+      if (res?.data?.success) {
+        setPrecalcStatus((prev) => ({
+          ...prev,
+          running: true,
+          total: Number(res.data.total || prev.total || 0),
+          processed: 0,
+        }))
+        setTimeout(() => void pollPrecalcStatus(), 1000)
+      }
+    } catch (e) {
+      console.error('Error iniciando pre-cálculo de similares:', e)
+    }
+  }, [http, pollPrecalcStatus])
+
+  const handleStopPrecalculate = useCallback(async () => {
+    try {
+      const res = await http.postData('/batch-imports/precalculate-similars/stop', {})
+      if (res?.data?.success) {
+        setPrecalcStatus((prev) => ({ ...prev, running: false }))
+        void fetchQueue()
+      }
+    } catch (e) {
+      console.error('Error deteniendo pre-cálculo de similares:', e)
+    }
+  }, [http])
 
   useEffect(() => {
      fetchQueue()
@@ -2516,6 +2616,9 @@ export default function BatchTable() {
         onDeleteAsset={handleDeleteFromSimilar}
         deletingAssetIds={deletingAssetIds}
         onDeleteImageFromSimilar={handleDeleteImageFromSimilar}
+        precalcStatus={precalcStatus}
+        onStartPrecalculate={handleStartPrecalculate}
+        onStopPrecalculate={handleStopPrecalculate}
       />
 
       {/* ═══════════ DELETE SIDEBAR ALERTS ═══════════ */}

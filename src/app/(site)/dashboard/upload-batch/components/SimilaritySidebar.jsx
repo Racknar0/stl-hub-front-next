@@ -15,6 +15,8 @@ import { Box, Button, Stack, Typography, Divider, CircularProgress, IconButton, 
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import TravelExploreIcon from '@mui/icons-material/TravelExplore'
 import RightSidebar from '../../assets/componentes/RightSidebar'
 import { RIGHT_SIDEBAR_WIDTH } from '../constants'
 
@@ -33,6 +35,9 @@ export default function SimilaritySidebar({
   onDeleteAsset,
   deletingAssetIds,
   onDeleteImageFromSimilar,
+  precalcStatus,
+  onStartPrecalculate,
+  onStopPrecalculate,
 }) {
 
   return (
@@ -46,11 +51,63 @@ export default function SimilaritySidebar({
       width={RIGHT_SIDEBAR_WIDTH}
       title="Búsqueda Similares"
       headerAction={
-        <Stack direction="row" spacing={0.5}>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {precalcStatus?.running && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#60a5fa',
+                fontWeight: 700,
+                fontSize: 11,
+                bgcolor: 'rgba(59, 130, 246, 0.15)',
+                px: 0.7,
+                py: 0.2,
+                borderRadius: 1,
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                mr: 0.25,
+              }}
+            >
+              {precalcStatus.processed}/{precalcStatus.total}
+            </Typography>
+          )}
           <Tooltip title={searchSidebarSide === 'right' ? 'Mover a Izquierda' : 'Mover a Derecha'}>
             <IconButton size="small" onClick={toggleSearchSidebarSide} sx={{ border: '1px solid rgba(173,175,184,0.35)', color: '#adafb8', p: 0.5, borderRadius: 2 }}>
               <SwapHorizIcon fontSize="small" />
             </IconButton>
+          </Tooltip>
+          <Tooltip
+            title={
+              precalcStatus?.running
+                ? `Calculando similares (${precalcStatus.processed}/${precalcStatus.total}) • Click para detener`
+                : "Pre-calcular similares del lote en segundo plano"
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={precalcStatus?.running ? onStopPrecalculate : onStartPrecalculate}
+                sx={{
+                  border: precalcStatus?.running
+                    ? '1px solid rgba(59, 130, 246, 0.6)'
+                    : '1px solid rgba(173, 175, 184, 0.35)',
+                  color: precalcStatus?.running ? '#60a5fa' : '#adafb8',
+                  p: 0.5,
+                  borderRadius: 2,
+                  bgcolor: precalcStatus?.running ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                  '&:hover': {
+                    bgcolor: precalcStatus?.running ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                    color: precalcStatus?.running ? '#ef4444' : '#fff',
+                    borderColor: precalcStatus?.running ? '#ef4444' : '#fff',
+                  },
+                }}
+              >
+                {precalcStatus?.running ? (
+                  <CircularProgress size={16} sx={{ color: '#60a5fa' }} />
+                ) : (
+                  <TravelExploreIcon sx={{ fontSize: 18 }} />
+                )}
+              </IconButton>
+            </span>
           </Tooltip>
           <Tooltip title="Cerrar Búsqueda">
             <IconButton size="small" color="error" onClick={() => setSimilaritySelectedId(null)} sx={{ border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', p: 0.5, borderRadius: 2 }}>
@@ -318,9 +375,42 @@ export default function SimilaritySidebar({
                 )}
 
                 {itemSimilarity?.status === 'done' && (itemSimilarity?.items || []).length === 0 && (
-                  <Typography variant="caption" sx={{ opacity: 0.75, display: 'block', mt: 1 }}>
-                    No se encontraron coincidencias.
-                  </Typography>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      borderRadius: 2.5,
+                      border: '1px solid rgba(34, 197, 94, 0.35)',
+                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(34, 197, 94, 0.15)',
+                        border: '1px solid rgba(34, 197, 94, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#4ade80',
+                      }}
+                    >
+                      <CheckCircleOutlineIcon sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#86efac', fontSize: '0.88rem' }}>
+                      Modelo Único / Sin Similares
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', lineHeight: 1.4 }}>
+                      No se encontraron modelos duplicados en la base de datos (coincidencia &lt; 30%). Listo para publicar sin conflicto.
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             )
