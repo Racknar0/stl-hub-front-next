@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, LinearProgress, Stack, TextField, ToggleButton, ToggleButtonGroup, InputAdornment, Tooltip } from '@mui/material';
+import { Box, LinearProgress, Stack, Tabs, Tab, TextField, ToggleButton, ToggleButtonGroup, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
 import AppButton from '@/components/layout/Buttons/Button';
@@ -21,6 +21,13 @@ const API_BASE = '/accounts';
 const FREE_QUOTA_MB =
     Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480;
 
+function getEmailGroup(email) {
+    const normalized = (email || '').trim().toLowerCase();
+    const at = normalized.lastIndexOf('@');
+    if (at <= 0 || at === normalized.length - 1) return 'Sin correo válido';
+    return `${normalized.slice(0, at).split('+')[0]}${normalized.slice(at)}`;
+}
+
 // Nota: StatusChip extraído a componente separado
 
 export default function AccountsOverviewPage() {
@@ -33,6 +40,7 @@ export default function AccountsOverviewPage() {
     const [addingBackup, setAddingBackup] = useState(false);
     const [selectedBackupCandidate, setSelectedBackupCandidate] = useState('');
     const [tab, setTab] = useState('main');
+    const [emailGroup, setEmailGroup] = useState('all');
     const [bulkOpen, setBulkOpen] = useState(false);
 
     // Estado del listado de assets en el modal derecho
@@ -325,10 +333,28 @@ export default function AccountsOverviewPage() {
     const [filterUsage, setFilterUsage] = useState('all');
     const [sortBy, setSortBy] = useState('alias-desc');
 
-    // Totales de almacenamiento de cuentas OK (CONNECTED)
+    const emailGroups = useMemo(() => {
+        const counts = new Map();
+        accounts.forEach((account) => {
+            const group = getEmailGroup(account.email);
+            counts.set(group, (counts.get(group) || 0) + 1);
+        });
+        return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b));
+    }, [accounts]);
+    // Si se elimina la última cuenta del grupo, volver a la vista global.
+    const activeEmailGroup = emailGroups.some(([group]) => group === emailGroup)
+        ? emailGroup : 'all';
+    const groupedAccounts = useMemo(
+        () => activeEmailGroup === 'all' ? accounts : accounts.filter(
+            (account) => getEmailGroup(account.email) === activeEmailGroup,
+        ),
+        [accounts, activeEmailGroup],
+    );
+
+    // Totales de almacenamiento de cuentas OK (CONNECTED) del grupo seleccionado
     const totalStorage = useMemo(() => {
         // Solo cuentas MAIN en estado CONNECTED
-        const ok = (accounts || []).filter(
+        const ok = groupedAccounts.filter(
             (a) => a.status === 'CONNECTED' && a.type === 'main',
         );
         let used = 0;
@@ -344,15 +370,15 @@ export default function AccountsOverviewPage() {
         }
         const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
         return { used, total, pct, okCount: ok.length };
-    }, [accounts]);
+    }, [groupedAccounts]);
 
     const mainAccounts = useMemo(
-        () => accounts.filter((a) => a.type === 'main'),
-        [accounts],
+        () => groupedAccounts.filter((a) => a.type === 'main'),
+        [groupedAccounts],
     );
     const backupAccounts = useMemo(
-        () => accounts.filter((a) => a.type === 'backup'),
-        [accounts],
+        () => groupedAccounts.filter((a) => a.type === 'backup'),
+        [groupedAccounts],
     );
     const tabAccounts = tab === 'main' ? mainAccounts : backupAccounts;
 
@@ -423,7 +449,31 @@ export default function AccountsOverviewPage() {
 
             {loading && <LinearProgress />}
 
-            <StorageSummaryCard totalStorage={totalStorage} />
+            <Box className="glass" sx={{ mb: 2, px: 1, pt: 1, borderRadius: 2 }}>
+                <Box sx={{ px: 1, fontSize: '.75rem', color: '#94a3b8' }}>
+                    Grupo por correo base
+                </Box>
+                <Tabs
+                    value={activeEmailGroup}
+                    onChange={(_, value) => setEmailGroup(value)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    aria-label="Grupos de cuentas por correo base"
+                    sx={{
+                        '& .MuiTab-root': { textTransform: 'none', color: '#94a3b8', minHeight: 44 },
+                        '& .MuiTab-root.Mui-selected': { color: '#38bdf8' },
+                        '& .MuiTabs-indicator': { backgroundColor: '#38bdf8' },
+                    }}
+                >
+                    <Tab value="all" label={`Todas (${accounts.length})`} />
+                    {emailGroups.map(([group, count]) => (
+                        <Tab key={group} value={group} label={`${group} (${count})`} />
+                    ))}
+                </Tabs>
+            </Box>
+
+            <StorageSummaryCard totalStorage={totalStorage} groupLabel={activeEmailGroup === 'all' ? null : activeEmailGroup} />
 
             {/* Tabs para separar cuentas main y backup */}
             <AccountsTabs
