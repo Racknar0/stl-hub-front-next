@@ -49,6 +49,9 @@ export default function PinterestCalendar() {
   const [panelMode, setPanelMode] = useState('list'); // 'list' | 'create'
   const [searchType, setSearchType] = useState('id'); // 'id' | 'semantic'
   const [trendKeyword, setTrendKeyword] = useState('');
+  const [trendChips, setTrendChips] = useState(null); // null = sin cargar
+  const [trendsMeta, setTrendsMeta] = useState(null);
+  const [loadingTrends, setLoadingTrends] = useState(false);
   const [idChips, setIdChips] = useState([]);
   const [idInput, setIdInput] = useState('');
 
@@ -265,6 +268,37 @@ export default function PinterestCalendar() {
 
   const removeIdChip = (idToRemove) => {
     setIdChips(prev => prev.filter(id => id !== idToRemove));
+  };
+
+  // === TENDENCIAS DEL DÍA (Pinterest Trends + Qdrant) ===
+  const fetchTrendChips = async (refresh = false) => {
+    setLoadingTrends(true);
+    try {
+      const http = new HttpService();
+      const res = await http.getData(`/pinterest/trends${refresh ? '?refresh=1' : ''}`);
+      setTrendChips(res.data?.trends || []);
+      setTrendsMeta({ source: res.data?.source, generatedAt: res.data?.generatedAt });
+    } catch (e) {
+      alert('Error cargando tendencias: ' + (e?.response?.data?.error || e.message));
+    } finally {
+      setLoadingTrends(false);
+    }
+  };
+
+  const handleTrendChipClick = async (chip) => {
+    try {
+      const http = new HttpService();
+      const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(chip.assetIds.join(','))}&mode=id`);
+      if (res.data?.found && res.data.assets?.length > 0) {
+        // Mantener el orden de relevancia de Qdrant
+        const order = new Map(chip.assetIds.map((id, i) => [id, i]));
+        setSearchedAssets([...res.data.assets].sort((a, b) => order.get(a.id) - order.get(b.id)));
+        setSearchQuery(chip.keyword);
+        setTrendKeyword(chip.keyword);
+      } else {
+        alert('Los assets de esta tendencia ya no están disponibles.');
+      }
+    } catch (e) { alert('Error: ' + e.message); }
   };
 
   // === BULK SEARCH ===
@@ -1378,6 +1412,43 @@ export default function PinterestCalendar() {
                             <button className="btn-search" onClick={handleBulkSearch}>
                               Buscar con IA
                             </button>
+                          </div>
+                        )}
+
+                        {searchType === 'semantic' && (
+                          <div className="trend-chips-box">
+                            <div className="trend-chips-header">
+                              <button type="button" className="btn-load-trends" onClick={() => fetchTrendChips(false)} disabled={loadingTrends}>
+                                {loadingTrends ? 'Buscando tendencias…' : '🔥 Tendencias de hoy'}
+                              </button>
+                              {trendChips && !loadingTrends && (
+                                <button type="button" className="btn-refresh-trends" onClick={() => fetchTrendChips(true)} title="Volver a calcular">↻</button>
+                              )}
+                            </div>
+                            {trendChips && !loadingTrends && (
+                              trendChips.length === 0 ? (
+                                <p className="trend-chips-empty">No hay tendencias que encajen con tus modelos hoy.</p>
+                              ) : (
+                                <>
+                                  <div className="trend-chips">
+                                    {trendChips.map(chip => (
+                                      <button
+                                        key={chip.keyword}
+                                        type="button"
+                                        className={`trend-chip ${trendKeyword === chip.keyword ? 'active' : ''}`}
+                                        onClick={() => handleTrendChipClick(chip)}
+                                        title={chip.from ? `Tendencia en Pinterest: "${chip.from}"` : 'Tendencia de temporada'}
+                                      >
+                                        {chip.keyword} <span className="trend-chip-count">{chip.count}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <small className="trend-chips-source">
+                                    Fuente: {trendsMeta?.source === 'pinterest' ? 'Pinterest Trends' : 'IA (temporada)'} · se actualiza cada día
+                                  </small>
+                                </>
+                              )
+                            )}
                           </div>
                         )}
                       </div>

@@ -1963,6 +1963,84 @@
   }
 }
 
+.trend-chips-box {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  .trend-chips-header {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-load-trends,
+  .btn-refresh-trends {
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #d8b4fe;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: rgba(168, 85, 247, 0.22);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+  }
+
+  .trend-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .trend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e5e7eb;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+
+    &:hover {
+      border-color: rgba(168, 85, 247, 0.5);
+    }
+
+    &.active {
+      background: rgba(168, 85, 247, 0.2);
+      border-color: #a855f7;
+      color: #fff;
+    }
+  }
+
+  .trend-chip-count {
+    background: rgba(168, 85, 247, 0.25);
+    color: #e9d5ff;
+    border-radius: 999px;
+    padding: 0 0.45rem;
+    font-size: 0.7rem;
+  }
+
+  .trend-chips-empty,
+  .trend-chips-source {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    margin: 0;
+  }
+}
+
 .pin-counter {
   text-align: center;
   margin-bottom: 0.75rem;
