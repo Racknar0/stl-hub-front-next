@@ -1,0 +1,668 @@
+// Rediseño 2026-10: calendario con panel del día + publicador a pantalla completa en 3 columnas.
+// Se carga después de PinterestCalendar.scss y solo usa clases pr-* (o sobrescribe con .pr-* delante).
+
+$pr-line: rgba(255, 255, 255, 0.07);
+$pr-panel: rgba(22, 21, 30, 0.92);
+$pr-panel2: rgba(255, 255, 255, 0.035);
+$pr-muted: #8b869a;
+$pr-accent: #a855f7;
+$pr-accent2: #c084fc;
+$pr-ok: #22c55e;
+$pr-warn: #f59e0b;
+$pr-err: #ef4444;
+
+// ---------- Botones genéricos ----------
+.pr-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e4e4e7;
+  border: 1px solid $pr-line;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); color: #fff; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:focus-visible { outline: 2px solid $pr-accent; outline-offset: 2px; }
+
+  &.primary {
+    background: linear-gradient(135deg, #9333ea, $pr-accent);
+    border-color: transparent;
+    color: #fff;
+    &:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35); }
+  }
+  &.ghost { background: transparent; }
+  &.on { border-color: rgba(168, 85, 247, 0.5); color: $pr-accent2; background: rgba(168, 85, 247, 0.1); }
+}
+
+.pr-icon-btn {
+  background: none;
+  border: none;
+  color: $pr-muted;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  &:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+}
+
+.pr-spacer { flex: 1; }
+.pr-muted { color: $pr-muted; font-size: 0.82rem; margin: 0; }
+.pr-side-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $pr-muted;
+}
+.pr-id {
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: $pr-accent2;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  flex-shrink: 0;
+}
+.pr-ai {
+  font-size: 0.66rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  &.ok { color: $pr-ok; background: rgba(34, 197, 94, 0.12); }
+  &.no { color: $pr-warn; background: rgba(245, 158, 11, 0.12); }
+  &.err { color: #f87171; background: rgba(239, 68, 68, 0.12); }
+}
+
+// ---------- CALENDARIO ----------
+.pr-today-btn { margin-left: 0.5rem; padding: 0.35rem 0.75rem; }
+
+.pr-main-layout {
+  align-items: stretch;
+  margin-top: 0.75rem;
+}
+
+.pr-main-layout .calendar-grid {
+  .pr-cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.72rem;
+    color: $pr-muted;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    i {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      margin-right: 0.35rem;
+      vertical-align: -1px;
+      &.ok { background: $pr-ok; }
+      &.pen { background: $pr-accent; }
+      &.err { background: $pr-err; }
+      &.gap { border: 1px dashed $pr-warn; }
+    }
+  }
+
+  .weekdays span { padding: 0.6rem; font-size: 0.75rem; }
+
+  .days .day {
+    min-height: 112px;
+    gap: 0.35rem;
+
+    &.past {
+      opacity: 0.6;
+      cursor: pointer;
+      &:hover { background: rgba(255, 255, 255, 0.02); }
+    }
+    &.gap { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28); }
+    &.today { box-shadow: inset 0 0 0 2px rgba(168, 85, 247, 0.7); }
+    &.selected { background: rgba(147, 51, 234, 0.16); }
+
+    .day-top { display: flex; justify-content: space-between; align-items: center; }
+  }
+
+  .pr-day-count {
+    font-family: ui-monospace, 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: $pr-muted;
+    font-variant-numeric: tabular-nums;
+    &.full { color: $pr-ok; }
+  }
+
+  .pr-fill-bar {
+    display: flex;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+    b { display: block; height: 100%; }
+    .ok { background: $pr-ok; }
+    .pen { background: $pr-accent; }
+    .err { background: $pr-err; }
+  }
+
+  .pr-day-thumbs {
+    display: flex;
+    gap: 3px;
+    margin-top: auto;
+    align-items: center;
+
+    img {
+      width: 24px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      &.st-failed { border-color: $pr-err; }
+      &.st-pending { border-color: rgba(168, 85, 247, 0.5); }
+    }
+    small { font-size: 0.66rem; color: $pr-muted; margin-left: 2px; }
+  }
+
+  .pr-gap-label { margin-top: auto; font-size: 0.66rem; color: rgba(245, 158, 11, 0.8); }
+}
+
+.pr-cal-side {
+  width: 320px;
+  flex-shrink: 0;
+  background: $pr-panel;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-self: stretch;
+  max-height: calc(100vh - 150px);
+  position: sticky;
+  top: 0.75rem;
+  overflow-y: auto;
+
+  .pr-side-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    h4 { margin: 0.15rem 0 0; font-size: 1.05rem; font-weight: 700; color: #fff; text-transform: capitalize; }
+  }
+
+  .pr-day-goal {
+    font-family: ui-monospace, 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(168, 85, 247, 0.14);
+    color: $pr-accent2;
+    font-variant-numeric: tabular-nums;
+    &.full { background: rgba(34, 197, 94, 0.14); color: $pr-ok; }
+  }
+
+  .pr-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+  }
+  .pr-kpi {
+    background: $pr-panel2;
+    border: 1px solid $pr-line;
+    border-radius: 10px;
+    padding: 0.5rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    b { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+    b.ok { color: $pr-ok; }
+    b.pen { color: $pr-accent2; }
+    b.err { color: #f87171; }
+    span { font-size: 0.66rem; color: $pr-muted; }
+  }
+
+  .pr-side-actions { display: flex; flex-direction: column; gap: 0.45rem; }
+
+  .pr-alerts { display: flex; flex-direction: column; gap: 0.4rem; }
+  .pr-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 9px;
+    padding: 0.5rem 0.6rem;
+    &.err { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+    &.warn { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; }
+    button {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid $pr-line;
+      color: #fff;
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      &:hover { background: rgba(255, 255, 255, 0.14); }
+    }
+  }
+
+  .pr-agenda { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+  .pr-agenda-list { display: flex; flex-direction: column; gap: 0.3rem; }
+  .pr-agenda-item {
+    display: grid;
+    grid-template-columns: 62px 30px 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.3rem;
+    color: #e4e4e7;
+    text-align: left;
+    cursor: pointer;
+    &:hover { background: $pr-panel2; border-color: $pr-line; }
+
+    time { font-family: ui-monospace, 'JetBrains Mono', monospace; font-size: 0.72rem; color: $pr-muted; white-space: nowrap; }
+    img, .pr-noimg { width: 30px; height: 40px; object-fit: cover; border-radius: 5px; background: #000; }
+    .pr-agenda-title { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    &.st-published time { color: $pr-ok; }
+    &.st-failed time { color: #f87171; }
+  }
+}
+
+@media (max-width: 1100px) {
+  .pr-main-layout { flex-direction: column; }
+  .pr-cal-side { width: 100%; position: static; max-height: none; }
+}
+
+// ---------- PUBLICADOR A PANTALLA COMPLETA ----------
+.pinterest-modal-overlay.pr-fullscreen {
+  padding: 0;
+
+  .pinterest-modal-content {
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    animation: none;
+  }
+}
+
+.pr-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid $pr-line;
+  background: rgba(22, 21, 30, 0.95);
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+
+  h3 { margin: 0; font-size: 1rem; font-weight: 800; color: #fff; white-space: nowrap; text-transform: capitalize; }
+
+  .pr-tabs {
+    margin: 0;
+    .tab-button { flex: 0 0 auto; padding: 0.45rem 0.9rem; white-space: nowrap; }
+  }
+
+  .pr-topbar-stats { font-size: 0.75rem; color: $pr-muted; white-space: nowrap; }
+
+  .pr-counter {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: $pr-accent2;
+    background: rgba(168, 85, 247, 0.14);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    &.max { color: #fca5a5; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
+  }
+
+  .close-modal { position: static; }
+}
+
+.pr-create {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr) 380px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  --pr-thumb: 120px;
+  &.thumbs-l { --pr-thumb: 190px; }
+
+  @media (max-width: 1280px) { grid-template-columns: 250px minmax(0, 1fr) 330px; }
+}
+
+// Columna 1
+.pr-create .workspace-left-pane.pr-left {
+  width: auto;
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  gap: 0.75rem;
+
+  .search-group { margin: 0; }
+
+  .pr-shortcuts {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: $pr-muted;
+    padding-top: 0.75rem;
+    border-top: 1px solid $pr-line;
+
+    kbd {
+      font-family: ui-monospace, 'JetBrains Mono', monospace;
+      font-size: 0.66rem;
+      border: 1px solid $pr-line;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 0 0.3rem;
+      color: #d4d4d8;
+    }
+  }
+}
+
+// Columna 2
+.pr-gallery {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid $pr-line;
+}
+
+.pr-gallery-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid $pr-line;
+  font-size: 0.82rem;
+  strong { color: #fff; }
+  .pr-btn { padding: 0.35rem 0.7rem; font-size: 0.74rem; }
+}
+
+.pr-size-toggle {
+  display: flex;
+  border: 1px solid $pr-line;
+  border-radius: 8px;
+  overflow: hidden;
+  button {
+    background: transparent;
+    border: none;
+    color: $pr-muted;
+    padding: 0.3rem 0.55rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    &.on { background: rgba(168, 85, 247, 0.16); color: $pr-accent2; }
+  }
+}
+
+.pr-gallery-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.9rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+}
+
+.pr-asset-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 0.82rem;
+  }
+  .pr-asset-title { font-weight: 600; color: #e4e4e7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .pr-used { font-size: 0.7rem; color: $pr-warn; white-space: nowrap; }
+  .pr-sel-count { font-size: 0.72rem; color: $pr-accent2; white-space: nowrap; }
+}
+
+.pr-thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--pr-thumb), 1fr));
+  gap: 0.5rem;
+}
+
+.pr-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #000;
+  border: 1px solid $pr-line;
+  user-select: none;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  &:hover { border-color: rgba(255, 255, 255, 0.25); }
+  &:hover .pr-thumb-actions { opacity: 1; }
+
+  &.selected {
+    border-color: $pr-accent;
+    box-shadow: 0 0 0 2px $pr-accent;
+    img { opacity: 0.85; }
+  }
+
+  .pr-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: $pr-accent;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+  }
+
+  .pr-thumb-actions {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    button {
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      &:hover { background: rgba(168, 85, 247, 0.8); }
+    }
+  }
+}
+
+.pr-empty {
+  margin: auto;
+  max-width: 320px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: $pr-muted;
+  span { font-size: 2rem; }
+  h3 { margin: 0; color: #e4e4e7; font-size: 1rem; }
+  p { margin: 0; font-size: 0.82rem; line-height: 1.5; }
+}
+
+// Columna 3
+.pr-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(22, 21, 30, 0.6);
+}
+
+.pr-right-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+
+  .missing-boards-warning, .failed-optimizations-warning { margin: 0; }
+}
+
+.pr-editor {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid $pr-line;
+  border-radius: 14px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+
+  .pr-editor-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .pr-editor-body { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 0.7rem; }
+
+  .pr-pin-preview {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  }
+  .pr-pin-preview-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6px;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    button {
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      &:hover { background: rgba(168, 85, 247, 0.8); }
+    }
+  }
+
+  .pr-editor-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+    .form-input { width: 100%; font-size: 0.8rem; }
+    textarea.form-input { resize: vertical; min-height: 90px; }
+    .pin-hashtags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .hashtag { font-size: 0.7rem; color: $pr-accent2; }
+  }
+
+  .pr-link { font-size: 0.68rem; color: $pr-muted; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .pr-editor-asset {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid $pr-line;
+    .btn-ai-optimize { width: 100%; }
+    .board-selector-wrapper { display: flex; flex-direction: column; gap: 0.25rem; label { font-size: 0.68rem; color: $pr-muted; } }
+  }
+}
+
+.pr-queue { display: flex; flex-direction: column; gap: 0.6rem; }
+.pr-queue-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  .pr-queue-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    min-width: 0;
+    .pr-asset-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #d4d4d8; }
+  }
+}
+.pr-queue-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+  background: $pr-panel2;
+  border: 1px solid $pr-line;
+  border-radius: 9px;
+  padding: 0.3rem;
+  text-align: left;
+  color: #e4e4e7;
+  cursor: pointer;
+
+  img { width: 38px; height: 50px; object-fit: cover; border-radius: 6px; }
+  .pr-queue-text { display: flex; flex-direction: column; min-width: 0; }
+  b { font-size: 0.76rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  small { font-size: 0.66rem; color: $pr-muted; }
+  &:hover { border-color: rgba(255, 255, 255, 0.2); }
+  &.active { border-color: rgba(168, 85, 247, 0.6); background: rgba(168, 85, 247, 0.1); }
+}
+
+.workspace-footer-sticky.pr-right-footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+
+  .btn-optimize-all {
+    background: linear-gradient(135deg, $pr-accent 0%, #7c3aed 100%);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    cursor: pointer;
+    &:disabled, &.disabled { background: rgba(255, 255, 255, 0.05); color: $pr-muted; cursor: default; }
+  }
+
+  .global-filters-inline .filters-body { left: 0.9rem; }
+
+  .panel-actions-row {
+    button { padding: 0.6rem 0.8rem; }
+    .btn-primary { flex: 1; }
+  }
+}
+
+// El modal se renderiza en <body> (portal), fuera del contenedor que fijaba el color
+.pinterest-modal-overlay { color: #e4e4e7; }

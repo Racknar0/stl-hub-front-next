@@ -1,9 +1,11 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import HttpService from '@/services/HttpService';
 import './PinterestCalendar.scss';
+import './PinterestRedesign.scss';
 
 const MAX_PINS_PER_DAY = 15;
 function getUploadBase() {
@@ -45,8 +47,13 @@ function resolveImgUrl(img) {
 
 export default function PinterestCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [panelMode, setPanelMode] = useState('list'); // 'list' | 'create'
+  const [activePinKey, setActivePinKey] = useState(null);
+  const [thumbSize, setThumbSize] = useState('m'); // 'm' | 'l'
+  const [hideUsedAssets, setHideUsedAssets] = useState(false);
+  const lastThumbIndexRef = useRef(null);
   const [searchType, setSearchType] = useState('id'); // 'id' | 'semantic'
   const [trendKeyword, setTrendKeyword] = useState('');
   const [trendChips, setTrendChips] = useState(null); // null = sin cargar
@@ -152,15 +159,29 @@ export default function PinterestCalendar() {
 
   // Calendar
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  // Semana empieza en lunes
+  const firstDayOfMonth = (new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() + 6) % 7;
   const days = [];
   for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const weekdayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+  const goToMonth = (offset) => {
+    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
+    const nextDays = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+    setCurrentDate(next);
+    setSelectedDay(d => Math.min(d || 1, nextDays));
+  };
+  const handlePrevMonth = () => goToMonth(-1);
+  const handleNextMonth = () => goToMonth(1);
+  const handleGoToday = () => {
+    const now = new Date();
+    setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDay(now.getDate());
+  };
 
   // Calendar stats
   const [pinsByDay, setPinsByDay] = useState({});
@@ -212,6 +233,22 @@ export default function PinterestCalendar() {
     lastDayRef.current = day;
     setSelectedDay(day);
     setPanelMode(willKeepSelections ? 'create' : 'list');
+  };
+
+  // Abrir / cerrar el espacio de trabajo del día seleccionado
+  const openWorkspace = (mode, pin = null) => {
+    if (pin) {
+      setExpandedPinId(pin.id);
+      setEditPin({ title: pin.title || '', description: pin.description || '', link: pin.link || '' });
+    }
+    setPanelMode(mode);
+    setIsWorkspaceOpen(true);
+  };
+
+  const requestCloseWorkspace = () => {
+    if (selectedPins.length > 0 && !confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir? (Tu selección se conservará si vuelves a abrir el mismo día)')) return;
+    setIsWorkspaceOpen(false);
+    setPanelMode('list');
   };
 
   // Delete pin
@@ -355,38 +392,10 @@ export default function PinterestCalendar() {
         const q = activeChips.join(',');
         const res = await http.getData(`/pinterest/search-assets?q=${encodeURIComponent(q)}&mode=id`);
         if (res.data?.found && res.data.assets?.length > 0) {
+          // Los avisos de duplicado (ya publicado / ya programado) se muestran en la cabecera de cada asset de la galería
           const fetchedAssets = res.data.assets;
-          const filteredAssets = [];
-
-          for (const asset of fetchedAssets) {
-            if (asset.queueEntries && asset.queueEntries.length > 0) {
-              const published = asset.queueEntries.filter(qe => qe.status === 'PUBLISHED');
-              const pending = asset.queueEntries.filter(qe => qe.status === 'PENDING');
-              
-              let msg = '';
-              if (published.length > 0) {
-                const dates = published.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
-                msg += `ya fue publicado el: ${dates}`;
-              }
-              if (pending.length > 0) {
-                const dates = pending.map(p => new Date(p.scheduledAt).toLocaleDateString('es')).join(', ');
-                if (msg) msg += ' y ';
-                msg += `ya está programado para: ${dates}`;
-              }
-
-              const proceed = confirm(`⚠️ Alerta de Duplicación:\nEl Asset #${asset.id} (${asset.title || 'Sin título'}) ${msg}.\n\n¿Deseas continuar agregándolo al espacio de trabajo? (Aceptar para continuar, Cancelar para eliminar)`);
-              if (proceed) {
-                filteredAssets.push(asset);
-              }
-            } else {
-              filteredAssets.push(asset);
-            }
-          }
-
-          setSearchedAssets(filteredAssets);
-          // Actualizar idChips solo con los IDs de los assets válidos y aceptados
-          const acceptedIds = filteredAssets.map(a => a.id);
-          setIdChips(acceptedIds);
+          setSearchedAssets(fetchedAssets);
+          setIdChips(fetchedAssets.map(a => a.id));
           setTrendKeyword(''); // Sin tendencia para búsquedas por ID normales
         } else {
           alert('No se encontraron assets para los IDs especificados.');
@@ -397,6 +406,40 @@ export default function PinterestCalendar() {
     } catch (e) { alert('Error: ' + e.message); }
   };
 
+  const buildPin = (asset, imgUrl) => {
+    const key = `${asset.id}_${imgUrl}`;
+    const categoryName = asset.category || 'General';
+    const matchingBoard = boards.find(b => b.name.toLowerCase() === categoryName.toLowerCase());
+    return {
+      key,
+      assetId: asset.id,
+      imageUrl: croppedUrls[key] || imgUrl,
+      pinTitle: asset.titleEn || asset.title || '',
+      pinDescription: asset.descriptionEn || asset.description || '',
+      pinLink: `https://stlgratis.com/en/asset/${asset.slug || asset.id}`,
+      pinHashtags: [],
+      boardId: matchingBoard ? matchingBoard.id : 'auto',
+      category: categoryName,
+    };
+  };
+
+  // Añadir varias imágenes de golpe (Shift+clic, "1ª de cada asset")
+  const addPins = (items) => {
+    const nextPins = [...selectedPins];
+    const nextAssets = [...selectedAssets];
+    let hitMax = false;
+    for (const { asset, img } of items) {
+      const key = `${asset.id}_${img}`;
+      if (nextPins.some(p => p.key === key)) continue;
+      if (nextPins.length >= MAX_PINS_PER_DAY) { hitMax = true; break; }
+      nextPins.push(buildPin(asset, img));
+      if (!nextAssets.some(a => a.id === asset.id)) nextAssets.push(asset);
+    }
+    setSelectedPins(nextPins);
+    setSelectedAssets(nextAssets);
+    if (hitMax) alert(`Máximo ${MAX_PINS_PER_DAY} pines por día.`);
+  };
+
   // Toggle image selection
   const togglePin = (asset, imgUrl) => {
     const key = `${asset.id}_${imgUrl}`;
@@ -404,7 +447,7 @@ export default function PinterestCalendar() {
     if (exists) {
       const newPins = selectedPins.filter(p => p.key !== key);
       setSelectedPins(newPins);
-      
+
       const hasOtherPins = newPins.some(p => p.assetId === asset.id);
       if (!hasOtherPins) {
         setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
@@ -416,27 +459,21 @@ export default function PinterestCalendar() {
         alert(`Máximo ${MAX_PINS_PER_DAY} pines por día.`);
         return;
       }
-
-      const categoryName = asset.category || 'General';
-      const matchingBoard = boards.find(b => b.name.toLowerCase() === categoryName.toLowerCase());
-      const resolvedBoardId = matchingBoard ? matchingBoard.id : 'auto';
-
-      setSelectedPins(prev => [...prev, {
-        key,
-        assetId: asset.id,
-        imageUrl: croppedUrls[key] || imgUrl,
-        pinTitle: asset.titleEn || asset.title || '',
-        pinDescription: asset.descriptionEn || asset.description || '',
-        pinLink: `https://stlgratis.com/en/asset/${asset.slug || asset.id}`,
-        pinHashtags: [],
-        boardId: resolvedBoardId,
-        category: categoryName,
-      }]);
+      setSelectedPins(prev => [...prev, buildPin(asset, imgUrl)]);
+      setActivePinKey(key);
       setSelectedAssets(prev => {
         if (prev.some(a => a.id === asset.id)) return prev;
         return [...prev, asset];
       });
     }
+  };
+
+  const removeAssetFromWorkspace = (assetId, alsoFromResults = false) => {
+    if (alsoFromResults) setSearchedAssets(prev => prev.filter(a => a.id !== assetId));
+    setSelectedPins(prev => prev.filter(p => p.assetId !== assetId));
+    setSelectedAssets(prev => prev.filter(a => a.id !== assetId));
+    setOptimizedAssets(prev => prev.filter(id => id !== assetId));
+    setFailedAssets(prev => prev.filter(id => id !== assetId));
   };
 
   // AI optimize per asset
@@ -910,6 +947,60 @@ export default function PinterestCalendar() {
     a => failedAssets.includes(a.id) && !optimizedAssets.includes(a.id)
   ).length;
 
+  // === GALERÍA ===
+  const usedAssetsCount = searchedAssets.filter(a => a.queueEntries?.length > 0).length;
+  const visibleAssets = hideUsedAssets ? searchedAssets.filter(a => !(a.queueEntries?.length > 0)) : searchedAssets;
+  const flatImages = visibleAssets.flatMap(asset => (asset.images || []).map(img => ({ asset, img })));
+
+  const handleThumbClick = (e, asset, img, flatIndex) => {
+    if (e.shiftKey && lastThumbIndexRef.current !== null && lastThumbIndexRef.current < flatImages.length) {
+      const from = Math.min(lastThumbIndexRef.current, flatIndex);
+      const to = Math.max(lastThumbIndexRef.current, flatIndex);
+      addPins(flatImages.slice(from, to + 1));
+    } else {
+      togglePin(asset, img);
+    }
+    lastThumbIndexRef.current = flatIndex;
+  };
+
+  const handlePickFirstOfEach = () => {
+    addPins(visibleAssets
+      .filter(a => a.images?.length > 0 && countForAsset(a.id) === 0)
+      .map(a => ({ asset: a, img: a.images[0] })));
+  };
+
+  const describeQueueEntries = (entries = []) => {
+    const fmt = (d) => new Date(d).toLocaleDateString('es', { day: '2-digit', month: '2-digit' });
+    const published = entries.filter(qe => qe.status === 'PUBLISHED').map(qe => fmt(qe.scheduledAt));
+    const pending = entries.filter(qe => qe.status === 'PENDING').map(qe => fmt(qe.scheduledAt));
+    const parts = [];
+    if (published.length) parts.push(`publicado ${published.join(', ')}`);
+    if (pending.length) parts.push(`programado ${pending.join(', ')}`);
+    return parts.join(' · ');
+  };
+
+  const activePin = selectedPins.find(p => p.key === activePinKey) || selectedPins[0] || null;
+  const activePinAsset = activePin ? selectedAssets.find(a => a.id === activePin.assetId) : null;
+  const pendingOptimizationCount = selectedAssets.filter(a => !optimizedAssets.includes(a.id)).length;
+
+  // === CALENDARIO: panel lateral ===
+  const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+  const isPastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const firstFutureDay = isPastMonth ? daysInMonth + 1 : isCurrentMonth ? today.getDate() : 1;
+  const gapDays = [];
+  for (let d = firstFutureDay; d <= daysInMonth; d++) if (!pinsByDay[d]?.total) gapDays.push(d);
+  const failedDays = Object.keys(pinsByDay).map(Number).filter(d => pinsByDay[d]?.failed > 0).sort((a, b) => a - b);
+  const monthFailedCount = failedDays.reduce((sum, d) => sum + pinsByDay[d].failed, 0);
+  const selectedDayStats = pinsByDay[selectedDay] || { total: 0, published: 0, pending: 0, failed: 0 };
+  const selectedDayDate = selectedDay ? new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay) : null;
+  const isSelectedDayToday = isCurrentMonth && selectedDay === today.getDate();
+  const pinsLeftForDay = Math.max(0, MAX_PINS_PER_DAY - selectedDayStats.total);
+  const dayPinImage = (pin) => {
+    const f = typeof pin.filters === 'string' ? (() => { try { return JSON.parse(pin.filters); } catch { return {}; } })() : pin.filters;
+    return resolveImgUrl(f?.imagePath || f?.imageUrl || '');
+  };
+  const statusIcon = { PUBLISHED: '✓', PENDING: '⏳', FAILED: '✕' };
+
   return (
     <div className="pinterest-calendar-container">
       <div className="calendar-header">
@@ -917,6 +1008,7 @@ export default function PinterestCalendar() {
           <button onClick={handlePrevMonth} className="nav-btn">←</button>
           <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
           <button onClick={handleNextMonth} className="nav-btn">→</button>
+          {!isCurrentMonth && <button onClick={handleGoToday} className="pr-btn ghost pr-today-btn">Hoy</button>}
         </div>
         <div className="calendar-stats">
           <span className="stat published">✅ {stats.published} Publicados</span>
@@ -940,111 +1032,159 @@ export default function PinterestCalendar() {
         )}
       </div>
 
-      <div className="main-layout">
+      <div className="main-layout pr-main-layout">
         {/* CALENDAR */}
         <div className="calendar-grid">
+          <div className="pr-cal-legend">
+            <span><i className="ok" />Publicado</span>
+            <span><i className="pen" />Programado</span>
+            <span><i className="err" />Error</span>
+            <span><i className="gap" />Día sin pines</span>
+          </div>
           <div className="weekdays">
-            <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
+            <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span>
           </div>
           <div className="days">
             {days.map((day, index) => {
               if (!day) return <div key={`empty-${index}`} className="day empty"></div>;
-              const today = new Date();
-              const isToday = day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+              const isToday = isCurrentMonth && day === today.getDate();
               const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
               const dayStats = pinsByDay[day];
               const pinsCount = dayStats?.total || 0;
               const isSelected = selectedDay === day;
-              
-              const dayPinsList = dayStats?.pins || [];
-              const publishedPins = dayPinsList.filter(p => p.status === 'PUBLISHED');
-              const pendingPins = dayPinsList.filter(p => p.status === 'PENDING');
-              const failedPins = dayPinsList.filter(p => p.status === 'FAILED');
+              const isGap = !isPast && pinsCount === 0;
+              const scale = Math.max(MAX_PINS_PER_DAY, pinsCount);
+              const dayThumbs = [...(dayStats?.pins || [])].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
 
               return (
-                <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''}`}
-                  onClick={() => handleDayClick(day)}>
+                <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''} ${isGap ? 'gap' : ''}`}
+                  onClick={() => handleDayClick(day)}
+                  onDoubleClick={() => openWorkspace('list')}
+                  title={pinsCount ? `${dayStats.published} publicados · ${dayStats.pending} programados · ${dayStats.failed} errores` : 'Sin pines'}>
                   <div className="day-top">
                     <div className="day-number">{day}</div>
-                    {pinsCount > 0 && <span className="total-chip">{pinsCount} {pinsCount === 1 ? 'Pin' : 'Pins'}</span>}
+                    {pinsCount > 0 && <span className={`pr-day-count ${pinsCount >= MAX_PINS_PER_DAY ? 'full' : ''}`}>{pinsCount}/{MAX_PINS_PER_DAY}</span>}
                   </div>
-                  {pinsCount > 0 && (
-                    <div className="day-status-groups" onClick={(e) => {
-                      // Permite click en la celda normal
-                    }}>
-                      {publishedPins.length > 0 && (
-                        <div className="status-thumbnail-group published" title={`${publishedPins.length} Publicados`}>
-                          <span className="group-label">✓</span>
-                          <div className="thumbnails-list">
-                            {publishedPins.map(pin => (
-                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
-                                <img
-                                  src={resolveImgUrl(pin.imageUrl)}
-                                  alt=""
-                                  className="day-mini-thumbnail"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {pendingPins.length > 0 && (
-                        <div className="status-thumbnail-group pending" title={`${pendingPins.length} Programados`}>
-                          <span className="group-label">⏳</span>
-                          <div className="thumbnails-list">
-                            {pendingPins.map(pin => (
-                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
-                                <img
-                                  src={resolveImgUrl(pin.imageUrl)}
-                                  alt=""
-                                  className="day-mini-thumbnail"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {failedPins.length > 0 && (
-                        <div className="status-thumbnail-group failed" title={`${failedPins.length} Errores`}>
-                          <span className="group-label">✕</span>
-                          <div className="thumbnails-list">
-                            {failedPins.map(pin => (
-                              <div key={pin.id} className="day-mini-thumbnail-wrapper">
-                                <img
-                                  src={resolveImgUrl(pin.imageUrl)}
-                                  alt=""
-                                  className="day-mini-thumbnail"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {pinsCount > 0 ? (
+                    <>
+                      <div className="pr-fill-bar">
+                        <b className="ok" style={{ width: `${(dayStats.published / scale) * 100}%` }} />
+                        <b className="pen" style={{ width: `${(dayStats.pending / scale) * 100}%` }} />
+                        <b className="err" style={{ width: `${(dayStats.failed / scale) * 100}%` }} />
+                      </div>
+                      <div className="pr-day-thumbs">
+                        {dayThumbs.slice(0, 4).map(pin => (
+                          <img key={pin.id} src={resolveImgUrl(pin.imageUrl)} alt="" className={`st-${pin.status?.toLowerCase()}`} loading="lazy" />
+                        ))}
+                        {dayThumbs.length > 4 && <small>+{dayThumbs.length - 4}</small>}
+                      </div>
+                    </>
+                  ) : isGap ? (
+                    <span className="pr-gap-label">Sin pines</span>
+                  ) : null}
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
 
+        {/* PANEL DEL DÍA */}
+        <aside className="pr-cal-side">
+          {selectedDayDate && (
+            <>
+              <div className="pr-side-head">
+                <div>
+                  <span className="pr-side-eyebrow">{isSelectedDayToday ? 'Hoy' : isSelectedDayPast ? 'Día pasado' : 'Día seleccionado'}</span>
+                  <h4>{weekdayNames[selectedDayDate.getDay()]} {selectedDay} de {monthNames[currentDate.getMonth()].toLowerCase()}</h4>
+                </div>
+                <span className={`pr-day-goal ${selectedDayStats.total >= MAX_PINS_PER_DAY ? 'full' : ''}`}>{selectedDayStats.total}/{MAX_PINS_PER_DAY}</span>
+              </div>
+
+              <div className="pr-kpis">
+                <div className="pr-kpi"><b className="ok">{selectedDayStats.published}</b><span>publicados</span></div>
+                <div className="pr-kpi"><b className="pen">{selectedDayStats.pending}</b><span>programados</span></div>
+                <div className="pr-kpi"><b className="err">{selectedDayStats.failed}</b><span>errores</span></div>
+              </div>
+
+              <div className="pr-side-actions">
+                {selectedPins.length > 0 && (
+                  <button type="button" className="pr-btn primary" onClick={() => openWorkspace('create')}>
+                    Seguir creando ({selectedPins.length} en cola)
+                  </button>
+                )}
+                {!isSelectedDayPast && selectedPins.length === 0 && (
+                  <button type="button" className="pr-btn primary" onClick={() => openWorkspace('create')} disabled={pinsLeftForDay === 0}>
+                    {pinsLeftForDay === 0 ? 'Día completo' : `+ Crear pines (quedan ${pinsLeftForDay})`}
+                  </button>
+                )}
+                <button type="button" className="pr-btn" onClick={() => openWorkspace('list')}>Ver y editar pines del día</button>
+              </div>
+
+              {(monthFailedCount > 0 || gapDays.length > 0) && (
+                <div className="pr-alerts">
+                  {monthFailedCount > 0 && (
+                    <div className="pr-alert err">
+                      <span>{monthFailedCount} {monthFailedCount === 1 ? 'pin falló' : 'pines fallaron'} este mes ({failedDays.map(d => d).join(', ')})</span>
+                      <button type="button" onClick={() => { setSelectedDay(failedDays[0]); lastDayRef.current = failedDays[0]; }}>Ver</button>
+                    </div>
+                  )}
+                  {gapDays.length > 0 && (
+                    <div className="pr-alert warn">
+                      <span>{gapDays.length} {gapDays.length === 1 ? 'día sin pines' : 'días sin pines'} por delante (desde el {gapDays[0]})</span>
+                      <button type="button" onClick={() => { setSelectedDay(gapDays[0]); lastDayRef.current = gapDays[0]; }}>Ir</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pr-agenda">
+                <span className="pr-side-eyebrow">Agenda del día</span>
+                {loadingDayPins ? (
+                  <p className="pr-muted">Cargando pines…</p>
+                ) : dayPins.length === 0 ? (
+                  <p className="pr-muted">No hay pines este día.</p>
+                ) : (
+                  <div className="pr-agenda-list">
+                    {dayPins.map(pin => {
+                      const img = dayPinImage(pin);
+                      return (
+                        <button type="button" key={pin.id} className={`pr-agenda-item st-${pin.status?.toLowerCase()}`} onClick={() => openWorkspace('list', pin)}>
+                          <time>{statusIcon[pin.status] || ''} {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</time>
+                          {img ? <img src={img} alt="" loading="lazy" /> : <span className="pr-noimg" />}
+                          <span className="pr-agenda-title">{pin.title || 'Sin título'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
       {/* WORKSPACE MODAL */}
-      {selectedDay && (
-        <div className="pinterest-modal-overlay" onClick={() => {
-          if (selectedPins.length > 0) {
-            if (confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir del calendario? (Tu selección se conservará si vuelves a abrir el mismo día)')) {
-              setSelectedDay(null);
-              setPanelMode('list');
-            }
-          } else {
-            setSelectedDay(null);
-            setPanelMode('list');
-          }
-        }}>
+      {selectedDay && isWorkspaceOpen && createPortal(
+        <div className={`pinterest-modal-overlay ${panelMode === 'create' ? 'pr-fullscreen' : ''}`} onClick={requestCloseWorkspace}>
             <div className="pinterest-modal-content" onClick={(e) => e.stopPropagation()}>
-              
+
               {/* Modal Header */}
+              {panelMode === 'create' ? (
+                <div className="pr-topbar">
+                  <button type="button" className="pr-btn ghost" onClick={() => setPanelMode('list')}>← Pines del día</button>
+                  <h3>{selectedDayDate ? `${weekdayNames[selectedDayDate.getDay()]} ${selectedDay} ${monthNames[currentDate.getMonth()].toLowerCase()} ${currentDate.getFullYear()}` : ''}</h3>
+                  <div className="search-tabs pr-tabs">
+                    <button type="button" className={`tab-button ${searchType === 'id' ? 'active' : ''}`} onClick={() => setSearchType('id')}>Por ID</button>
+                    <button type="button" className={`tab-button ${searchType === 'semantic' ? 'active' : ''}`} onClick={() => setSearchType('semantic')}>Tendencias (IA)</button>
+                    <button type="button" className={`tab-button ${searchType === 'range' ? 'active' : ''}`} onClick={() => setSearchType('range')}>Rango masivo</button>
+                  </div>
+                  <span className="pr-spacer" />
+                  {dayPins.length > 0 && (
+                    <span className="pr-topbar-stats">⏳ {pendingDayPins.length} programados · ✅ {publishedDayPins.length} publicados</span>
+                  )}
+                  <span className={`pr-counter ${selectedPins.length >= MAX_PINS_PER_DAY ? 'max' : ''}`}>{selectedPins.length} / {MAX_PINS_PER_DAY} imágenes</span>
+                  <button className="close-modal" onClick={requestCloseWorkspace}>✕</button>
+                </div>
+              ) : (
               <div className="modal-header">
                 <div className="modal-header-info">
                   <h3>{selectedDay} de {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
@@ -1058,19 +1198,9 @@ export default function PinterestCalendar() {
                     )}
                   </div>
                 </div>
-                <button className="close-modal" onClick={() => {
-                  if (selectedPins.length > 0) {
-                    if (confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir? (Tu selección se conservará si vuelves a abrir el mismo día)')) {
-                      setSelectedDay(null);
-                      setPanelMode('list');
-                    }
-                  } else {
-                    setSelectedDay(null);
-                    setPanelMode('list');
-                  }
-                }}>✕</button>
+                <button className="close-modal" onClick={requestCloseWorkspace}>✕</button>
               </div>
-
+              )}
               {/* Modal Body */}
               <div className="modal-body">
                 
@@ -1270,148 +1400,73 @@ export default function PinterestCalendar() {
 
                 {/* ====== CREATE / BULK MODE ====== */}
                 {panelMode === 'create' && (
-                  <div className="create-workspace-layout">
-                    
-                    {/* Left Column: Picker / Search */}
-                    <div className="workspace-left-pane">
-                      <button className="btn-back-to-list" onClick={() => setPanelMode('list')}>← Volver</button>
+                  <div className={`pr-create thumbs-${thumbSize}`}>
 
-                      {/* Selector de pestañas */}
-                      <div className="search-tabs">
-                        <button 
-                          type="button" 
-                          className={`tab-button ${searchType === 'id' ? 'active' : ''}`}
-                          onClick={() => {
-                            setSearchType('id');
-                            setSearchQuery('');
-                            setSearchedAssets([]);
-                            setTrendKeyword('');
-                          }}
-                        >
-                          Búsqueda por ID
-                        </button>
-                        <button 
-                          type="button" 
-                          className={`tab-button ${searchType === 'semantic' ? 'active' : ''}`}
-                          onClick={() => {
-                            setSearchType('semantic');
-                            setSearchQuery('');
-                            setSearchedAssets([]);
-                            setTrendKeyword('');
-                          }}
-                        >
-                          Buscar Tendencias (IA Qdrant)
-                        </button>
-                        <button 
-                          type="button" 
-                          className={`tab-button ${searchType === 'range' ? 'active' : ''}`}
-                          onClick={() => {
-                            setSearchType('range');
-                            setSearchQuery('');
-                            setSearchedAssets([]);
-                            setTrendKeyword('');
-                          }}
-                        >
-                          Publicación masiva
-                        </button>
-                      </div>
-
-                      {/* Search Form */}
+                    {/* Columna 1: búsqueda según el modo */}
+                    <div className="workspace-left-pane pr-left">
                       <div className="form-group search-group">
                         <label>
-                          {searchType === 'id' 
-                            ? 'IDs de los Pins (escribe y presiona Enter o Coma)' 
+                          {searchType === 'id'
+                            ? 'IDs de los assets (escribe y presiona Enter o coma)'
                             : searchType === 'range'
-                            ? 'Rango de búsqueda de assets por ID'
+                            ? 'Rango de assets por ID'
                             : 'Palabra clave de tendencia o concepto'}
                         </label>
-                        
+
                         {searchType === 'id' ? (
                           <div className="chips-input-container">
-                            <textarea 
+                            <textarea
                               className="chips-textarea"
                               placeholder="Pega o escribe los IDs aquí (Ej: 20, 23, 28) y presiona Enter para agregarlos..."
-                              value={idInput} 
+                              value={idInput}
                               onChange={(e) => setIdInput(e.target.value)}
                               onKeyDown={handleIdInputKeyDown}
                               onBlur={addIdFromInput}
                               rows="3"
                             />
-                            
                             {idChips.length > 0 && (
                               <div className="chips-display-area">
                                 <div className="chips-display-header">
-                                  <span>IDs Agregados ({idChips.length})</span>
-                                  <button 
-                                    type="button" 
-                                    className="btn-clear-all-chips" 
-                                    onClick={() => setIdChips([])}
-                                  >
-                                    Limpiar todos
-                                  </button>
+                                  <span>IDs agregados ({idChips.length})</span>
+                                  <button type="button" className="btn-clear-all-chips" onClick={() => setIdChips([])}>Limpiar todos</button>
                                 </div>
                                 <div className="chips-wrapper">
                                   {idChips.map((chipId) => (
                                     <span key={chipId} className="id-chip">
                                       #{chipId}
-                                      <button 
-                                        type="button" 
-                                        className="btn-remove-chip"
-                                        onClick={() => removeIdChip(chipId)}
-                                      >
-                                        ✕
-                                      </button>
+                                      <button type="button" className="btn-remove-chip" onClick={() => removeIdChip(chipId)}>✕</button>
                                     </span>
                                   ))}
                                 </div>
                               </div>
                             )}
-                            
-                            <button className="btn-search-chips" onClick={handleBulkSearch}>
-                              Buscar IDs
-                            </button>
+                            <button className="btn-search-chips" onClick={handleBulkSearch}>Buscar IDs</button>
                           </div>
                         ) : searchType === 'range' ? (
                           <div className="range-search-container">
                             <div className="range-inputs-row">
                               <div className="range-field">
-                                <label htmlFor="range-start-id">ID inicial (inclusivo)</label>
-                                <input 
-                                  id="range-start-id"
-                                  type="number" 
-                                  className="form-input"
-                                  placeholder="Ej: 3000"
-                                  value={rangeStartId}
-                                  onChange={(e) => setRangeStartId(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()}
-                                />
+                                <label htmlFor="range-start-id">Desde ID (inclusivo)</label>
+                                <input id="range-start-id" type="number" className="form-input" placeholder="Ej: 3000"
+                                  value={rangeStartId} onChange={(e) => setRangeStartId(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
                               </div>
                               <div className="range-field">
-                                <label htmlFor="range-count">Cantidad a buscar</label>
-                                <input 
-                                  id="range-count"
-                                  type="number" 
-                                  className="form-input"
-                                  placeholder="Ej: 10"
-                                  value={rangeCount}
-                                  onChange={(e) => setRangeCount(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()}
-                                />
+                                <label htmlFor="range-count">Cantidad</label>
+                                <input id="range-count" type="number" className="form-input" placeholder="Ej: 10"
+                                  value={rangeCount} onChange={(e) => setRangeCount(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
                               </div>
                             </div>
-                            <button className="btn-search-range" onClick={handleBulkSearch}>
-                              Buscar Rango
-                            </button>
+                            <button className="btn-search-range" onClick={handleBulkSearch}>Buscar rango</button>
                           </div>
                         ) : (
                           <div className="search-bar">
-                            <input type="text" className="form-input" 
+                            <input type="text" className="form-input"
                               placeholder="Ej: Michael Jackson, Halloween..."
                               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && handleBulkSearch()} />
-                            <button className="btn-search" onClick={handleBulkSearch}>
-                              Buscar con IA
-                            </button>
+                            <button className="btn-search" onClick={handleBulkSearch}>Buscar</button>
                           </div>
                         )}
 
@@ -1453,284 +1508,255 @@ export default function PinterestCalendar() {
                         )}
                       </div>
 
-                      {/* Active Trend Badge */}
                       {trendKeyword && (
                         <div className="active-trend-badge">
                           <span>🎯 Tendencia: <strong>{trendKeyword}</strong></span>
-                          <button 
-                            type="button" 
-                            className="btn-clear-trend" 
-                            onClick={() => setTrendKeyword('')}
-                            title="Eliminar tendencia"
-                          >
-                            ✕
-                          </button>
+                          <button type="button" className="btn-clear-trend" onClick={() => setTrendKeyword('')} title="Quitar tendencia">✕</button>
                         </div>
                       )}
 
-                      {/* Counter */}
+                      <div className="pr-shortcuts">
+                        <span className="pr-side-eyebrow">Atajos</span>
+                        <span><kbd>Clic</kbd> marcar o desmarcar imagen</span>
+                        <span><kbd>Shift</kbd> + <kbd>Clic</kbd> marcar todas las del tramo</span>
+                        <span><kbd>👁</kbd> ver en grande · <kbd>✏️</kbd> recortar</span>
+                      </div>
+                    </div>
+
+                    {/* Columna 2: galería */}
+                    <div className="pr-gallery">
                       {searchedAssets.length > 0 && (
-                        <div className="pin-counter">
-                          <span className={`counter ${selectedPins.length >= MAX_PINS_PER_DAY ? 'max' : ''}`}>
-                            {selectedPins.length}/{MAX_PINS_PER_DAY} imágenes seleccionadas
-                          </span>
+                        <div className="pr-gallery-tools">
+                          <strong>{visibleAssets.length} assets</strong>
+                          {trendKeyword && <span className="pr-muted">para “{trendKeyword}”</span>}
+                          <span className="pr-spacer" />
+                          <button type="button" className="pr-btn ghost" onClick={handlePickFirstOfEach}>Elegir la 1ª de cada uno</button>
+                          {usedAssetsCount > 0 && (
+                            <button type="button" className={`pr-btn ghost ${hideUsedAssets ? 'on' : ''}`} onClick={() => setHideUsedAssets(v => !v)}>
+                              {hideUsedAssets ? `Mostrar ya usados (${usedAssetsCount})` : `Ocultar ya usados (${usedAssetsCount})`}
+                            </button>
+                          )}
+                          <div className="pr-size-toggle" role="group" aria-label="Tamaño de miniaturas">
+                            <button type="button" className={thumbSize === 'm' ? 'on' : ''} onClick={() => setThumbSize('m')} title="Miniaturas medianas">▦</button>
+                            <button type="button" className={thumbSize === 'l' ? 'on' : ''} onClick={() => setThumbSize('l')} title="Miniaturas grandes">▣</button>
+                          </div>
                         </div>
                       )}
 
-                      {/* Asset List Scroll */}
-                      <div className="workspace-assets-scroll">
-                        {searchedAssets.map(asset => {
-                          const assetSelected = countForAsset(asset.id);
-                          return (
-                            <div key={asset.id} className="bulk-asset-section">
-                              <div className="bulk-asset-header">
-                                <div className="bulk-asset-info">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSearchedAssets(prev => prev.filter(a => a.id !== asset.id));
-                                      setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
-                                      setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
-                                      setOptimizedAssets(prev => prev.filter(id => id !== asset.id));
-                                      setFailedAssets(prev => prev.filter(id => id !== asset.id));
-                                    }}
-                                    className="btn-remove-asset-search"
-                                    title="Quitar este asset de la lista"
-                                  >
-                                    ✕
-                                  </button>
-                                  <span className="asset-id">#{asset.id}</span>
-                                  <span className="asset-name">{asset.titleEn || asset.title}</span>
-                                  {assetSelected > 0 && <span className="asset-badge">{assetSelected} sel.</span>}
-                                </div>
-                              </div>
-
-                              <div className="bulk-asset-body">
-                                <div className="horizontal-image-scroll">
-                                  {asset.images.map((img, idx) => {
+                      <div className="pr-gallery-scroll">
+                        {searchedAssets.length === 0 ? (
+                          <div className="pr-empty">
+                            <span>🔎</span>
+                            <h3>Busca assets para empezar</h3>
+                            <p>
+                              {searchType === 'id' ? 'Escribe uno o varios IDs a la izquierda.'
+                                : searchType === 'range' ? 'Indica desde qué ID y cuántos assets quieres ver.'
+                                : 'Escribe un concepto o pulsa “🔥 Tendencias de hoy” y elige una.'}
+                            </p>
+                          </div>
+                        ) : (() => {
+                          let flatIndex = 0;
+                          return visibleAssets.map(asset => {
+                            const assetSelected = countForAsset(asset.id);
+                            const usedInfo = describeQueueEntries(asset.queueEntries);
+                            return (
+                              <section key={asset.id} className="pr-asset-group">
+                                <header>
+                                  <span className="pr-id">#{asset.id}</span>
+                                  <span className="pr-asset-title">{asset.titleEn || asset.title}</span>
+                                  {usedInfo && <span className="pr-used">⚠ ya {usedInfo}</span>}
+                                  <span className="pr-spacer" />
+                                  {assetSelected > 0 && <span className="pr-sel-count">{assetSelected} elegida{assetSelected > 1 ? 's' : ''}</span>}
+                                  <button type="button" className="pr-icon-btn" title="Quitar este asset de la lista" onClick={() => removeAssetFromWorkspace(asset.id, true)}>✕</button>
+                                </header>
+                                <div className="pr-thumb-grid">
+                                  {(asset.images || []).map((img, idx) => {
+                                    const myIndex = flatIndex++;
                                     const key = `${asset.id}_${img}`;
                                     const isSelected = selectedPins.some(p => p.key === key);
                                     const url = resolveImgUrl(img);
                                     return (
-                                      <div key={idx} className={`image-card ${isSelected ? 'selected' : ''}`}
-                                        onClick={() => togglePin(asset, img)}>
-                                        <img src={editedImages[key] || url} alt={`Render ${idx}`} />
-                                        {isSelected && <div className="check-overlay">✓</div>}
-                                        <button className="preview-eye" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }}>👁</button>
-                                        <button className="edit-pencil" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }}>✏️</button>
+                                      <div key={idx} className={`pr-thumb ${isSelected ? 'selected' : ''}`}
+                                        onClick={(e) => handleThumbClick(e, asset, img, myIndex)}>
+                                        <img src={editedImages[key] || url} alt={`Render ${idx + 1}`} loading="lazy" draggable={false} />
+                                        {isSelected && <div className="pr-check">✓</div>}
+                                        <div className="pr-thumb-actions">
+                                          <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }} title="Ver en grande">👁</button>
+                                          <button type="button" onClick={(e) => { e.stopPropagation(); setEditingImage({ assetId: asset.id, imageUrl: url, key }); }} title="Recortar / editar">✏️</button>
+                                        </div>
                                       </div>
                                     );
                                   })}
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                              </section>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
 
-                    {/* Right Column: Editor Workspace */}
-                    <div className="workspace-right-pane">
+                    {/* Columna 3: cola de pines + editor */}
+                    <div className="pr-right">
                       {selectedPins.length === 0 ? (
-                        <div className="empty-workspace-right">
-                          <span className="workspace-icon">📌</span>
-                          <h3>Espacio de Trabajo Vacío</h3>
-                          <p>Selecciona una o más imágenes de los assets de la izquierda para comenzar a configurar tus pines.</p>
+                        <div className="pr-empty">
+                          <span>📌</span>
+                          <h3>La cola está vacía</h3>
+                          <p>Haz clic en las imágenes de la galería para añadirlas. Aquí podrás revisar el texto de cada pin y programarlos.</p>
                         </div>
                       ) : (
-                        <div className="workspace-right-content">
-                          <div className="workspace-right-header">
-                            <h3>Configuración de Pines</h3>
+                        <>
+                          <div className="pr-right-scroll">
+                            {missingBoards.length > 0 && (
+                              <div className="missing-boards-warning">
+                                <div className="warning-text">
+                                  <span className="warning-icon">⚠️</span>
+                                  <span><strong>Faltan tableros en Pinterest:</strong> crea los tableros de <strong>{missingBoards.join(', ')}</strong></span>
+                                </div>
+                                <button type="button" className={`btn-sync-boards ${loadingBoards ? 'loading' : ''}`} disabled={loadingBoards} onClick={fetchBoards}>
+                                  {loadingBoards ? '⏳ Sincronizando...' : '🔄 Sincronizar tableros'}
+                                </button>
+                              </div>
+                            )}
+
+                            {failedOptimizationsCount > 0 && (
+                              <div className="failed-optimizations-warning">
+                                <div className="warning-text">
+                                  <span className="warning-icon">❌</span>
+                                  <span><strong>{failedOptimizationsCount}</strong> assets fallaron al generar el texto con IA. No se pueden programar hasta que funcione.</span>
+                                </div>
+                                <button type="button" className="btn-retry-failed-opt" onClick={handleAiOptimizeAll}>🔄 Reintentar fallidos</button>
+                              </div>
+                            )}
+
+                            {/* Editor del pin activo con vista previa tipo Pinterest */}
+                            {activePin && (
+                              <div className="pr-editor">
+                                <div className="pr-editor-head">
+                                  <span className="pr-side-eyebrow">Pin #{activePin.assetId} · vista previa</span>
+                                  {optimizedAssets.includes(activePin.assetId)
+                                    ? <span className="pr-ai ok">✓ texto IA listo</span>
+                                    : <span className="pr-ai no">sin texto IA</span>}
+                                </div>
+                                <div className="pr-editor-body">
+                                  <div className="pr-pin-preview">
+                                    <img src={editedImages[activePin.key] || resolveImgUrl(activePin.imageUrl)} alt="" />
+                                    <div className="pr-pin-preview-actions">
+                                      <button type="button" onClick={() => setPreviewImage(editedImages[activePin.key] || resolveImgUrl(activePin.imageUrl))} title="Ver en grande">👁</button>
+                                      <button type="button" onClick={() => setEditingImage({ assetId: activePin.assetId, imageUrl: resolveImgUrl(activePin.imageUrl), key: activePin.key })} title="Recortar / editar">✏️</button>
+                                      {activePinAsset && <button type="button" onClick={() => togglePin(activePinAsset, activePin.key.slice(String(activePin.assetId).length + 1))} title="Quitar de la cola">✕</button>}
+                                    </div>
+                                  </div>
+                                  <div className="pr-editor-fields">
+                                    <input type="text" className="form-input" value={activePin.pinTitle}
+                                      onChange={(e) => updatePinField(activePin.key, 'pinTitle', e.target.value)} placeholder="Título del pin" />
+                                    <textarea className="form-input" rows="5" value={activePin.pinDescription}
+                                      onChange={(e) => updatePinField(activePin.key, 'pinDescription', e.target.value)} placeholder="Descripción del pin" />
+                                    {activePin.pinHashtags?.length > 0 && (
+                                      <div className="pin-hashtags">
+                                        {activePin.pinHashtags.map((tag, ti) => <span key={ti} className="hashtag">#{tag}</span>)}
+                                      </div>
+                                    )}
+                                    <span className="pr-link" title={activePin.pinLink}>🔗 {activePin.pinLink.replace('https://', '')}</span>
+                                  </div>
+                                </div>
+                                {activePinAsset && (
+                                  <div className="pr-editor-asset">
+                                    <button
+                                      className={`btn-ai-optimize ${isOptimizing === activePinAsset.id ? 'loading' : ''}`}
+                                      disabled={isOptimizing === activePinAsset.id}
+                                      onClick={() => handleAiOptimize(activePinAsset)}
+                                    >
+                                      {isOptimizing === activePinAsset.id ? '⏳ Generando...' : '✨ Sugerencias SEO de este asset'}
+                                    </button>
+                                    <div className="board-selector-wrapper">
+                                      <label>Tablero</label>
+                                      <BoardSelector
+                                        category={activePinAsset.category}
+                                        boards={boards}
+                                        selected={activePin.boardId || 'auto'}
+                                        onSelect={(id) => setSelectedPins(prev => prev.map(p => p.assetId === activePinAsset.id ? { ...p, boardId: id } : p))}
+                                        onCreateBoard={(newBoard) => setBoards(prev => [...prev, newBoard])}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Cola agrupada por asset */}
+                            <div className="pr-queue">
+                              <span className="pr-side-eyebrow">Cola del día ({selectedPins.length})</span>
+                              {selectedAssets.map(asset => {
+                                const assetPins = selectedPins.filter(p => p.assetId === asset.id);
+                                const isOpt = optimizedAssets.includes(asset.id);
+                                return (
+                                  <div key={`q-${asset.id}`} className="pr-queue-group">
+                                    <div className="pr-queue-group-head">
+                                      <span className="pr-id">#{asset.id}</span>
+                                      <span className="pr-asset-title">{asset.titleEn || asset.title}</span>
+                                      <span className={`pr-ai ${isOpt ? 'ok' : failedAssets.includes(asset.id) ? 'err' : 'no'}`}>
+                                        {isOptimizing === asset.id ? '⏳' : isOpt ? 'IA ✓' : failedAssets.includes(asset.id) ? 'IA ✕' : 'sin IA'}
+                                      </span>
+                                      <button type="button" className="pr-icon-btn" title="Quitar este asset y sus pines" onClick={() => removeAssetFromWorkspace(asset.id)}>🗑</button>
+                                    </div>
+                                    {assetPins.map((pin, i) => (
+                                      <button type="button" key={pin.key} className={`pr-queue-item ${activePin?.key === pin.key ? 'active' : ''}`} onClick={() => setActivePinKey(pin.key)}>
+                                        <img src={editedImages[pin.key] || resolveImgUrl(pin.imageUrl)} alt="" loading="lazy" />
+                                        <span className="pr-queue-text">
+                                          <b>{pin.pinTitle || 'Sin título'}</b>
+                                          <small>Pin {i + 1}{pin.pinHashtags?.length ? ` · ${pin.pinHashtags.length} hashtags` : ''}</small>
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Pie fijo con acciones */}
+                          <div className="workspace-footer-sticky pr-right-footer">
                             <button
                               type="button"
                               className={`btn-optimize-all ${isOptimizingAll ? 'disabled' : ''}`}
-                              disabled={isOptimizingAll || selectedAssets.length === 0}
+                              disabled={isOptimizingAll || pendingOptimizationCount === 0}
                               onClick={handleAiOptimizeAll}
                             >
-                              {isOptimizingAll ? '⏳ Optimizando todos...' : '✨ Generar sugerencias de todos'}
+                              {isOptimizingAll ? '⏳ Generando textos...' : pendingOptimizationCount === 0 ? '✓ Todos los textos generados' : `✨ Generar texto IA (${pendingOptimizationCount} pendiente${pendingOptimizationCount > 1 ? 's' : ''})`}
                             </button>
-                          </div>
-
-                          {missingBoards.length > 0 && (
-                            <div className="missing-boards-warning">
-                              <div className="warning-text">
-                                <span className="warning-icon">⚠️</span>
-                                <span>
-                                  <strong>Faltan tableros en Pinterest:</strong> Debes crear manualmente los tableros para las siguientes categorías: <strong>{missingBoards.join(', ')}</strong>
-                                </span>
-                              </div>
-                              <button 
-                                type="button" 
-                                className={`btn-sync-boards ${loadingBoards ? 'loading' : ''}`}
-                                disabled={loadingBoards} 
-                                onClick={fetchBoards}
-                              >
-                                {loadingBoards ? '⏳ Sincronizando...' : '🔄 Sincronizar tableros'}
-                              </button>
-                            </div>
-                          )}
-
-                          {failedOptimizationsCount > 0 && (
-                            <div className="failed-optimizations-warning">
-                              <div className="warning-text">
-                                <span className="warning-icon">❌</span>
-                                <span>
-                                  <strong>Error de Optimización:</strong> Faltan <strong>{failedOptimizationsCount}</strong> assets por optimizar con IA (fallaron tras 3 intentos). No se pueden programar/publicar hasta optimizarse.
-                                </span>
-                              </div>
-                              <button 
-                                type="button" 
-                                className="btn-retry-failed-opt" 
-                                onClick={handleAiOptimizeAll}
-                              >
-                                🔄 Reintentar fallidos
-                              </button>
-                            </div>
-                          )}
-
-                          <div className="selected-pins-list">
-                            {selectedAssets.map(asset => {
-                              const assetPins = selectedPins.filter(p => p.assetId === asset.id);
-                              return (
-                                <div key={`config-${asset.id}`} className="asset-config-card">
-                                  
-                                  <div className="asset-config-header">
-                                    <div className="asset-info">
-                                      <span className="asset-id">#{asset.id}</span>
-                                      <h4 className="asset-title">{asset.titleEn || asset.title}</h4>
-                                      {optimizedAssets.includes(asset.id) && (
-                                        <span className="ai-optimized-badge">
-                                          <span className="dot" />
-                                          sugerencia generada
-                                        </span>
-                                      )}
-                                      <button 
-                                        type="button" 
-                                        className="btn-remove-asset-config"
-                                        title="Quitar este asset y sus pines del espacio de trabajo"
-                                        onClick={() => {
-                                          setSelectedPins(prev => prev.filter(p => p.assetId !== asset.id));
-                                          setSelectedAssets(prev => prev.filter(a => a.id !== asset.id));
-                                          setOptimizedAssets(prev => prev.filter(id => id !== asset.id));
-                                          setFailedAssets(prev => prev.filter(id => id !== asset.id));
-                                        }}
-                                      >
-                                        🗑️ Quitar
-                                      </button>
-                                    </div>
-                                    <div className="asset-meta-actions">
-                                      <button 
-                                        className={`btn-ai-optimize ${isOptimizing === asset.id ? 'loading' : ''}`}
-                                        disabled={isOptimizing === asset.id}
-                                        onClick={() => handleAiOptimize(asset)}
-                                      >
-                                        {isOptimizing === asset.id ? '⏳ Generando...' : '✨ Sugerencias SEO'}
-                                      </button>
-                                      <div className="board-selector-wrapper">
-                                        <label>Tablero Pinterest</label>
-                                        <BoardSelector 
-                                          category={asset.category}
-                                          boards={boards}
-                                          selected={assetPins.length > 0 ? assetPins[0].boardId : 'auto'}
-                                          onSelect={(id) => {
-                                            setSelectedPins(prev => prev.map(p => p.assetId === asset.id ? { ...p, boardId: id } : p));
-                                          }}
-                                          onCreateBoard={(newBoard) => {
-                                            setBoards(prev => [...prev, newBoard]);
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="pin-variations-list">
-                                    {assetPins.map((pin, i) => (
-                                      <div key={pin.key} className="pin-variation-row">
-                                        
-                                        <div className="variation-img-pane">
-                                          <img src={editedImages[pin.key] || resolveImgUrl(pin.imageUrl)} alt="" />
-                                          <div className="variation-actions">
-                                            <button className="preview-eye" onClick={() => setPreviewImage(editedImages[pin.key] || resolveImgUrl(pin.imageUrl))} title="Previsualizar">👁</button>
-                                            <button className="edit-pencil" onClick={() => setEditingImage({ assetId: asset.id, imageUrl: resolveImgUrl(pin.imageUrl), key: pin.key })} title="Recortar/Editar">✏️</button>
-                                            <button className="btn-remove-variation" onClick={() => togglePin(asset, pin.imageUrl)} title="Quitar pin">✕</button>
-                                          </div>
-                                          <span className="variation-badge">Pin #{i + 1}</span>
-                                        </div>
-
-                                        <div className="variation-fields-pane">
-                                          <div className="form-group">
-                                            <input 
-                                              type="text" 
-                                              className="form-input" 
-                                              value={pin.pinTitle}
-                                              onChange={(e) => updatePinField(pin.key, 'pinTitle', e.target.value)}
-                                              placeholder="Título del Pin" 
-                                            />
-                                          </div>
-                                          <div className="form-group">
-                                            <textarea 
-                                              className="form-input" 
-                                              rows="3" 
-                                              value={pin.pinDescription}
-                                              onChange={(e) => updatePinField(pin.key, 'pinDescription', e.target.value)}
-                                              placeholder="Descripción del Pin" 
-                                            />
-                                          </div>
-                                          {pin.pinHashtags?.length > 0 && (
-                                            <div className="pin-hashtags">
-                                              {pin.pinHashtags.map((tag, ti) => (
-                                                <span key={ti} className="hashtag">#{tag}</span>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-
-                                      </div>
-                                    ))}
-                                  </div>
-
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Sticky footer for filters and actions */}
-                          <div className="workspace-footer-sticky">
                             <div className={`global-filters-inline ${showAdvancedFilters ? 'expanded' : ''}`}>
                               <div className="filters-header" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
-                                <span className="filters-label">⚙️ Ajustes Visuales</span>
+                                <span className="filters-label">⚙️ Ajustes visuales</span>
                                 <span className="expand-arrow">{showAdvancedFilters ? '▲' : '▼'}</span>
                               </div>
                               {showAdvancedFilters && (
                                 <div className="filters-body">
                                   <label className="filter-check">
                                     <input type="checkbox" checked={filters.flip} onChange={(e) => setFilters(f => ({...f, flip: e.target.checked}))} />
-                                    <span>🔄 Espejo (Variar imagen)</span>
+                                    <span>🔄 Espejo (variar imagen)</span>
                                   </label>
                                   <label className="filter-check">
                                     <input type="checkbox" checked={filters.zoom} onChange={(e) => setFilters(f => ({...f, zoom: e.target.checked}))} />
-                                    <span>🔍 Auto-Enfoque (Mejorar resolución)</span>
+                                    <span>🔍 Auto-enfoque (mejorar resolución)</span>
                                   </label>
                                 </div>
                               )}
                             </div>
-
                             <div className="panel-actions-row">
-                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); setFailedAssets([]); }}>Limpiar Todo</button>
+                              <button className="btn-secondary" onClick={() => { setSearchedAssets([]); setSelectedPins([]); setSelectedAssets([]); setOptimizedAssets([]); setFailedAssets([]); }}>Limpiar todo</button>
                               {selectedPins.length === 1 && (
                                 <button className={`btn-publish-now ${isPublishingNow ? 'disabled' : ''}`}
                                   disabled={isPublishingNow} onClick={handlePublishNow}>
-                                  {isPublishingNow ? '⏳ Publicando...' : '🚀 Publicar Ahora'}
+                                  {isPublishingNow ? '⏳ Publicando...' : '🚀 Publicar ahora'}
                                 </button>
                               )}
                               <button className={`btn-primary ${isSubmitting ? 'disabled' : ''}`}
                                 disabled={isSubmitting} onClick={handleScheduleAll}>
-                                {isSubmitting ? 'Procesando...' : `📌 Programar ${selectedPins.length} Pines`}
+                                {isSubmitting ? 'Procesando...' : `📌 Programar ${selectedPins.length} pines`}
                               </button>
                             </div>
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
 
@@ -1740,19 +1766,21 @@ export default function PinterestCalendar() {
               </div>
 
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       {/* LIGHTBOX */}
-      {previewImage && (
+      {previewImage && createPortal(
         <div className="lightbox-overlay" onClick={() => setPreviewImage(null)}>
           <button className="lightbox-close" onClick={() => setPreviewImage(null)}>✕</button>
           <img src={previewImage} alt="Preview" onClick={(e) => e.stopPropagation()} />
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* CROPPER EDITOR */}
-      {editingImage && (
+      {editingImage && createPortal(
         <div className="editor-overlay">
           <div className="editor-toolbar">
             <button title="Flip H" onClick={() => cropperInstanceRef.current?.scaleX(-(cropperInstanceRef.current?.getData()?.scaleX || 1))}>↔</button>
@@ -1808,7 +1836,8 @@ export default function PinterestCalendar() {
               onLoad={() => { /* cropper auto-inits via ref */ }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
