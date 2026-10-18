@@ -15,6 +15,12 @@ import {
 } from '../../../helpers/attributionCookie';
 import { sendGTMEvent } from '@next/third-parties/google';
 import { usePromo } from '@/hooks/usePromo';
+import {
+    rememberMercadoPagoAttempt,
+    startPaymentAttempt,
+    trackPaymentAttemptEvent,
+    withTimeout,
+} from '@/helpers/paymentAttempt';
 
 
 // Fallback plans in case API is unreachable
@@ -52,6 +58,26 @@ const PricingSection = ({
     const [notLoggedInModal, setNotLoggedInModal] = React.useState(false);
     const [isMercadoPagoLoading, setIsMercadoPagoLoading] = React.useState(false);
     const httpService = React.useMemo(() => new HttpService(), []);
+
+    // Intento de pago actual (se crea al elegir PayPal o MercadoPago).
+    const [attemptId, setAttemptId] = React.useState(null);
+    const attemptPromiseRef = React.useRef(null);
+
+    const beginPaymentAttempt = React.useCallback((provider, plan) => {
+        setAttemptId(null);
+        const promise = plan?.id ? startPaymentAttempt(provider, plan.id) : Promise.resolve(null);
+        attemptPromiseRef.current = promise;
+        promise.then((id) => {
+            if (attemptPromiseRef.current === promise) setAttemptId(id);
+        });
+    }, []);
+
+    const closePaymentModal = React.useCallback(() => {
+        setPaymentModalOpen(false);
+        const pending = attemptPromiseRef.current;
+        attemptPromiseRef.current = null;
+        if (pending) pending.then((id) => trackPaymentAttemptEvent(id, 'modal_closed'));
+    }, []);
 
     // Dynamic plans from API
     const [plans, setPlans] = React.useState(FALLBACK_PLANS);
@@ -124,6 +150,7 @@ const PricingSection = ({
             setIsMercadoPagoLoading(true);
             const tracking = getTrackingFromMiddlewareCookie('last');
             const { anonId, sessionId } = getVisitIdentityFromMiddlewareCookie();
+            const currentAttemptId = await withTimeout(attemptPromiseRef.current, 2000);
 
             const response = await httpService.postData('payments/mercadopago/preference', {
                 planId: selectedPlan.id,
@@ -131,9 +158,17 @@ const PricingSection = ({
                 tracking,
                 anonId,
                 sessionId,
+                attemptId: currentAttemptId,
             });
 
             const initPoint = response?.data?.initPoint;
+            const trackedAttemptId = response?.data?.attemptId || currentAttemptId;
+            if (initPoint && trackedAttemptId) {
+                // Ya no cuenta como "cerró el modal": se fue a MercadoPago.
+                attemptPromiseRef.current = null;
+                rememberMercadoPagoAttempt(trackedAttemptId, response?.data?.preferenceId || null);
+                await withTimeout(trackPaymentAttemptEvent(trackedAttemptId, 'checkout_redirect'), 800);
+            }
             if (!initPoint) {
                 alert(
                     isEn
@@ -313,6 +348,7 @@ const PricingSection = ({
                         type="button"
                         onClick={() => {
                             if (!selectedPlan) setSelectedPlan(plans[0]);
+                            beginPaymentAttempt('MERCADOPAGO', selectedPlan || plans[0]);
                             setShowModal(false);
                             setPaymentMethod('mercadopago');
                             setPaymentModalOpen(true);
@@ -339,6 +375,7 @@ const PricingSection = ({
                         type="button"
                         onClick={() => {
                             if (!selectedPlan) setSelectedPlan(plans[0]);
+                            beginPaymentAttempt('PAYPAL', selectedPlan || plans[0]);
                             setShowModal(false);
                             setPaymentMethod('paypal');
                             setPaymentModalOpen(true);
@@ -391,7 +428,7 @@ const PricingSection = ({
             {/* Modal específico del método de pago: muestra PayButton para PayPal o placeholder para tarjeta */}
             <SimplyModal
                 open={paymentModalOpen}
-                onClose={() => setPaymentModalOpen(false)}
+                onClose={closePaymentModal}
                 title={
                     paymentMethod === 'mercadopago'
                         ? 'MercadoPago'
@@ -455,6 +492,7 @@ const PricingSection = ({
                             <PayButton 
                                 plan={selectedPlan}
                                 userId={userId}
+                                attemptId={attemptId}
                             />
                         </div>
                     )}

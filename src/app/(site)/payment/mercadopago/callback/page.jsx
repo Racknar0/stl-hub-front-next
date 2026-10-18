@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HttpService from '@/services/HttpService';
+import { readMercadoPagoAttempt, trackPaymentAttemptEvent } from '@/helpers/paymentAttempt';
 
 const STATUS_TEXT = {
   success: {
@@ -25,6 +26,7 @@ export default function MercadoPagoCallbackPage() {
 
   const [state, setState] = React.useState('loading');
   const [message, setMessage] = React.useState('Procesando tu pago...');
+  const returnTrackedRef = React.useRef(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -37,7 +39,26 @@ export default function MercadoPagoCallbackPage() {
       searchParams.get('collection_id') ||
       searchParams.get('id');
 
-    if (!paymentId) {
+    // Seguimiento: el usuario volvió de MercadoPago (con o sin pago).
+    const stored = readMercadoPagoAttempt();
+    const preferenceId = searchParams.get('preference_id') || stored?.preferenceId || null;
+    const returnStatus = searchParams.get('status') || searchParams.get('collection_status') || null;
+    const alreadyTracked = returnTrackedRef.current;
+    returnTrackedRef.current = true;
+    if (!alreadyTracked) trackPaymentAttemptEvent(stored?.attemptId, 'returned', {
+      detail: paymentId && paymentId !== 'null' ? returnStatus : 'sin_pago',
+      data: {
+        status: searchParams.get('status'),
+        collectionStatus: searchParams.get('collection_status'),
+        paymentId: paymentId || null,
+        paymentType: searchParams.get('payment_type'),
+        merchantOrderId: searchParams.get('merchant_order_id'),
+        preferenceId,
+        sameSession: Boolean(stored?.attemptId),
+      },
+    });
+
+    if (!paymentId || paymentId === 'null') {
       setState('error');
       setMessage(isEn ? STATUS_TEXT.error.en : STATUS_TEXT.error.es);
       return () => {
@@ -50,6 +71,7 @@ export default function MercadoPagoCallbackPage() {
         const httpService = new HttpService();
         const response = await httpService.postData('payments/mercadopago/capture', {
           paymentId,
+          preferenceId,
         });
 
         if (cancelled) return;
