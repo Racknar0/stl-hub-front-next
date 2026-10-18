@@ -20,6 +20,7 @@ import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCar
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
 import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic';
 import TrafficCharts from '@/components/dashboard/modules/TrafficCharts/TrafficCharts';
+import PaymentAttempts from '@/components/dashboard/modules/PaymentAttempts/PaymentAttempts';
 import GiftCodes from '@/components/dashboard/modules/GiftCodes/GiftCodes';
 import RecentDownloadsCard from '@/components/dashboard/modules/RecentDownloadsCard/RecentDownloadsCard';
 import RecentSearchesCard from '@/components/dashboard/modules/RecentSearchesCard/RecentSearchesCard';
@@ -71,6 +72,7 @@ export default function Page() {
       if (tab === 'campaigns') setActiveTab('campaigns');
       if (tab === 'traffic') setActiveTab('traffic');
       if (tab === 'gift-codes') setActiveTab('gift-codes');
+      if (tab === 'payments') setActiveTab('payments');
     } catch {
       // noop
     }
@@ -262,6 +264,14 @@ export default function Page() {
             Tráfico
           </button>
           <button
+            className={`dashboard-tab-btn ${activeTab === 'payments' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'payments'}
+            onClick={() => setActiveTab('payments')}
+          >
+            💳 Pagos
+          </button>
+          <button
             className={`dashboard-tab-btn ${activeTab === 'gift-codes' ? 'is-active' : ''}`}
             role="tab"
             aria-selected={activeTab === 'gift-codes'}
@@ -277,6 +287,8 @@ export default function Page() {
             <TrafficCharts />
           </div>
         )}
+
+        {activeTab === 'payments' && <PaymentAttempts />}
 
         {activeTab === 'overview' && (
           <>

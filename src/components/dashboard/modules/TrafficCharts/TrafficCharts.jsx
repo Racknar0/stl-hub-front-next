@@ -265,7 +265,8 @@ const CHART_DESCRIPTIONS = {
           <li><strong style={{ color: '#4facfe' }}>Por Plan (30, 90, 180, 365 días):</strong> Desglose en barras individuales para ver qué oferta les resultó más atractiva visualmente.</li>
         </ul>
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que casi nadie le da clic a "30 días", pero el de "180 días" se lleva el 80% de los clics.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el "cuello de botella" de tu negocio.
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el "cuello de botella" de tu negocio.<br/>
+        <span style={{ color: '#fbbf24' }}>🔎 Qué pasó después del clic:</span> en la pestaña <a href="/dashboard?tab=payments" style={{ color: '#a5b4fc' }}>💳 Pagos</a> ves cada intento (abandonó, rechazado, pendiente, pagado) con su motivo.
       </>
     ),
     'top-searches': (
