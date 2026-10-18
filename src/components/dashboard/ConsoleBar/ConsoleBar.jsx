@@ -76,6 +76,34 @@ const LogArea = styled('div')(({ theme }) => ({
   height: '100%'
 }));
 
+const ConsoleTab = styled('button')(() => ({
+  pointerEvents: 'auto',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '4px 10px',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderBottom: 'none',
+  borderTopLeftRadius: 8,
+  borderTopRightRadius: 8,
+  background: 'rgba(17,17,17,0.92)',
+  color: '#bbb',
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 -2px 8px rgba(0,0,0,0.35)',
+  '&:hover': { color: '#fff', background: '#1b1b1b' },
+}));
+
+const ErrorBadge = styled('span')(() => ({
+  background: '#ef4444',
+  color: '#fff',
+  borderRadius: 999,
+  padding: '0 6px',
+  fontSize: 10,
+  lineHeight: '16px',
+}));
+
 export default function ConsoleBar() {
   const [open, setOpen] = useState(false);
   const [expandedHeight, setExpandedHeight] = useState(320); // altura total cuando está abierto
@@ -95,7 +123,8 @@ export default function ConsoleBar() {
     el.scrollTop = el.scrollHeight;
   }, []);
 
-  const toggle = () => setOpen(o => !o);
+  const [unseenErrors, setUnseenErrors] = useState(0);
+  const toggle = () => { setUnseenErrors(0); setOpen(o => !o); };
 
   // recalcular altura del panel de logs cuando se expande o cambia ventana
   useEffect(() => {
@@ -115,8 +144,12 @@ export default function ConsoleBar() {
     return () => window.removeEventListener('resize', onResize);
   }, [open, expandedHeight]);
 
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
+
   const addLine = useCallback((text, extra={}) => {
     setLines(l => [...l.slice(-9999), { id: Date.now() + Math.random(), text, ...extra }]);
+    if (extra.level === 'error' && !openRef.current) setUnseenErrors(n => n + 1);
   }, []);
 
   const isBatchScanStatusLine = useCallback((raw = '') => {
@@ -251,9 +284,25 @@ export default function ConsoleBar() {
     };
   };
 
+  // Plegada: solo una pestaña pequeña abajo a la derecha (con aviso si llegan errores)
+  if (!open) {
+    return (
+      <Root sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <Tooltip title="Abrir consola del dashboard">
+          <ConsoleTab type="button" onClick={toggle} aria-label="Abrir consola del dashboard">
+            <TerminalIcon sx={{ fontSize: 15 }} />
+            <span>Consola</span>
+            {unseenErrors > 0 && <ErrorBadge>{unseenErrors > 99 ? '99+' : unseenErrors}</ErrorBadge>}
+            <ExpandLessIcon sx={{ fontSize: 16 }} />
+          </ConsoleTab>
+        </Tooltip>
+      </Root>
+    );
+  }
+
   return (
     <Root>
-      <ConsoleContainer style={{ height: open ? expandedHeight : (toolbarRef.current?.getBoundingClientRect().height || 40) }}>
+      <ConsoleContainer style={{ height: expandedHeight }}>
         <Toolbar ref={toolbarRef}>
           <TerminalIcon fontSize="small" />
           <Typography variant="caption" sx={{ flex: 1, userSelect: 'none' }}>
@@ -307,9 +356,9 @@ export default function ConsoleBar() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Limpiar"><IconButton size="small" onClick={clear} color="inherit"><CloseIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title={open ? 'Colapsar' : 'Expandir'}>
+          <Tooltip title="Ocultar consola">
             <IconButton size="small" onClick={toggle} color="inherit">
-              {open ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+              <ExpandMoreIcon />
             </IconButton>
           </Tooltip>
         </Toolbar>
