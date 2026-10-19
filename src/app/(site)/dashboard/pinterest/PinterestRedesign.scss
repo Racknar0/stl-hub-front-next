@@ -715,3 +715,91 @@ $pr-err: #ef4444;
 
 // El modal se renderiza en <body> (portal), fuera del contenedor que fijaba el color
 .pinterest-modal-overlay { color: #e4e4e7; }
+
+// ---------- Piloto automático (tarjeta del panel del calendario) ----------
+.pr-autopilot {
+  background: $pr-panel2;
+  border: 1px solid $pr-line;
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  &.on { border-color: rgba(34, 197, 94, 0.35); }
+
+  .pr-autopilot-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .pr-autopilot-head > div { display: flex; flex-direction: column; gap: 0.1rem; }
+  .pr-autopilot-status { font-size: 0.95rem; color: $pr-muted; &.on { color: $pr-ok; } }
+  .pr-autopilot-line { margin: 0; font-size: 0.76rem; line-height: 1.45; color: #d4d4d8; b { color: #fff; } }
+  .pr-btn-small { padding: 0.4rem 0.7rem; font-size: 0.74rem; }
+  .pr-autopilot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+
+  .pr-autopilot-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    button {
+      background: none; border: none; color: $pr-accent2; font-size: 0.74rem; cursor: pointer; text-align: left; padding: 0.15rem 0;
+      &:hover { color: #fff; }
+    }
+  }
+
+  .pr-autopilot-settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+    label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.68rem; color: $pr-muted; }
+    .form-input {
+      background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;
+      padding: 0.35rem 0.5rem; color: #fff; font-size: 0.8rem; font-family: inherit; outline: none; width: 100%; box-sizing: border-box;
+      &:focus { border-color: $pr-accent; }
+    }
+    select.form-input option { background: #16151d; }
+  }
+  .pr-autopilot-save {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.74rem; color: #d4d4d8;
+    .err { color: #f87171; }
+  }
+
+  .pr-autopilot-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 320px; overflow-y: auto; }
+  .pr-autopilot-preview-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
+  .pr-autopilot-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: center;
+    font-size: 0.74rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 7px;
+    padding: 0.35rem 0.45rem;
+    time { font-family: ui-monospace, 'JetBrains Mono', monospace; font-size: 0.7rem; color: $pr-muted; }
+    button {
+      background: rgba(255, 255, 255, 0.07); border: 1px solid $pr-line; color: #fff; border-radius: 6px;
+      padding: 0.15rem 0.5rem; font-size: 0.7rem; cursor: pointer; white-space: nowrap;
+      &:hover { background: rgba(255, 255, 255, 0.14); }
+    }
+  }
+  .pr-autopilot-item-text { display: flex; flex-direction: column; min-width: 0; b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } small { color: $pr-muted; font-size: 0.68rem; } }
+  .pr-autopilot-error { margin: 0; font-size: 0.74rem; color: #fca5a5; }
+}
+
+.pr-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid $pr-line;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  span {
+    position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; transition: transform 0.15s;
+  }
+  &.on { background: $pr-ok; span { transform: translateX(18px); } }
+  &:disabled { opacity: 0.6; cursor: wait; }
+  &:focus-visible { outline: 2px solid $pr-accent; outline-offset: 2px; }
+}

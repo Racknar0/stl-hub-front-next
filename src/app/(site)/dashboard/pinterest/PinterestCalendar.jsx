@@ -6,6 +6,7 @@ import 'cropperjs/dist/cropper.css';
 import HttpService from '@/services/HttpService';
 import './PinterestCalendar.scss';
 import './PinterestRedesign.scss';
+import AutopilotCard from './AutopilotCard';
 
 const MAX_PINS_PER_DAY = 15;
 function getUploadBase() {
@@ -1090,6 +1091,7 @@ export default function PinterestCalendar() {
 
         {/* PANEL DEL DÍA */}
         <aside className="pr-cal-side">
+          <AutopilotCard onScheduled={() => { fetchPinStats(); fetchDayPins(); }} />
           {selectedDayDate && (
             <>
               <div className="pr-side-head">
