@@ -95,6 +95,14 @@ export default function PinterestCalendar() {
   const cropperInstanceRef = useRef(null);
   const lastDayRef = useRef(null);
 
+  // Esc cierra la imagen en pantalla completa
+  useEffect(() => {
+    if (!previewImage) return;
+    const onKey = (e) => { if (e.key === 'Escape') setPreviewImage(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewImage]);
+
   // Destroy cropper when editor closes
   useEffect(() => {
     if (!editingImage) {
@@ -1171,7 +1179,7 @@ export default function PinterestCalendar() {
       </div>
       {/* WORKSPACE MODAL */}
       {selectedDay && isWorkspaceOpen && createPortal(
-        <div className={`pinterest-modal-overlay ${panelMode === 'create' ? 'pr-fullscreen' : ''}`} onClick={requestCloseWorkspace}>
+        <div className={`pinterest-modal-overlay ${panelMode === 'create' ? 'pr-fullscreen' : 'pr-day-modal'}`} onClick={requestCloseWorkspace}>
             <div className="pinterest-modal-content" onClick={(e) => e.stopPropagation()}>
 
               {/* Modal Header */}
@@ -1285,8 +1293,9 @@ export default function PinterestCalendar() {
                               </div>
                               
                               {imageUrl && (
-                                <div className="pin-detail-preview">
-                                  <img src={imageUrl} alt="Pin preview" />
+                                <div className="pin-detail-preview pr-detail-preview">
+                                  <img src={imageUrl} alt="Pin preview" onClick={() => setPreviewImage(imageUrl)} />
+                                  <button type="button" className="pr-fullscreen-btn" onClick={() => setPreviewImage(imageUrl)} title="Ver en pantalla completa (Esc para salir)" aria-label="Ver imagen en pantalla completa">⛶</button>
                                 </div>
                               )}
 
