@@ -114,18 +114,29 @@ $pr-err: #ef4444;
 
   .weekdays span { padding: 0.6rem; font-size: 0.75rem; }
 
+  // Días como tarjetas separadas y con borde visible
+  .days {
+    gap: 6px;
+    padding: 6px;
+  }
   .days .day {
-    min-height: 112px;
+    min-height: 150px;
     gap: 0.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    &:nth-child(7n) { border-right: 1px solid rgba(255, 255, 255, 0.09); }
+    &:hover:not(.empty) { border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.04); }
+    &.empty { background: transparent; border-color: transparent; }
 
     &.past {
       opacity: 0.6;
       cursor: pointer;
       &:hover { background: rgba(255, 255, 255, 0.02); }
     }
-    &.gap { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28); }
-    &.today { box-shadow: inset 0 0 0 2px rgba(168, 85, 247, 0.7); }
-    &.selected { background: rgba(147, 51, 234, 0.16); }
+    &.gap { border-style: dashed; border-color: rgba(245, 158, 11, 0.35); }
+    &.today { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.8); }
+    &.selected { background: rgba(147, 51, 234, 0.16); border-color: rgba(168, 85, 247, 0.6); }
 
     .day-top { display: flex; justify-content: space-between; align-items: center; }
   }
@@ -150,22 +161,27 @@ $pr-err: #ef4444;
     .err { background: $pr-err; }
   }
 
+  // Todas las miniaturas del día (hasta 15) en una cuadrícula de 5 columnas
   .pr-day-thumbs {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 3px;
-    margin-top: auto;
-    align-items: center;
-
-    img {
-      width: 24px;
-      height: 32px;
-      object-fit: cover;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      &.st-failed { border-color: $pr-err; }
-      &.st-pending { border-color: rgba(168, 85, 247, 0.5); }
+    margin-top: 2px;
+  }
+  .pr-day-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    &.st-pending { border-color: rgba(168, 85, 247, 0.6); }
+    &.st-failed { border-color: $pr-err; box-shadow: 0 0 0 1px $pr-err; }
+    img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    small {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 0.72rem; font-weight: 700;
     }
-    small { font-size: 0.66rem; color: $pr-muted; margin-left: 2px; }
   }
 
   .pr-gap-label { margin-top: auto; font-size: 0.66rem; color: rgba(245, 158, 11, 0.8); }

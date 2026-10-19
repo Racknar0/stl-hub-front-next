@@ -1074,10 +1074,15 @@ export default function PinterestCalendar() {
                         <b className="err" style={{ width: `${(dayStats.failed / scale) * 100}%` }} />
                       </div>
                       <div className="pr-day-thumbs">
-                        {dayThumbs.slice(0, 4).map(pin => (
-                          <img key={pin.id} src={resolveImgUrl(pin.imageUrl)} alt="" className={`st-${pin.status?.toLowerCase()}`} loading="lazy" />
-                        ))}
-                        {dayThumbs.length > 4 && <small>+{dayThumbs.length - 4}</small>}
+                        {dayThumbs.slice(0, MAX_PINS_PER_DAY).map((pin, i) => {
+                          const extra = i === MAX_PINS_PER_DAY - 1 ? dayThumbs.length - MAX_PINS_PER_DAY : 0;
+                          return (
+                            <span key={pin.id} className={`pr-day-thumb st-${pin.status?.toLowerCase()}`}>
+                              <img src={resolveImgUrl(pin.imageUrl)} alt="" loading="lazy" />
+                              {extra > 0 && <small>+{extra}</small>}
+                            </span>
+                          );
+                        })}
                       </div>
                     </>
                   ) : isGap ? (
