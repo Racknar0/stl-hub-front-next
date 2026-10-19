@@ -29,7 +29,12 @@ export default function AutopilotCard({ onScheduled }) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Refrescar cada minuto para ver la ejecución diaria sin recargar la página
+    const id = setInterval(load, 60000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const saveConfig = async (patch, key) => {
     setBusy(key);
