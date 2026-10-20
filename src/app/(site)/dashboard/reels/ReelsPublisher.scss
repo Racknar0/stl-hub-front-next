@@ -1,0 +1,642 @@
+// Publicador de Reels: reutiliza los estilos del publicador de Pinterest (pr-*) y añade lo propio (rl-*).
+// Distribución: bandeja de videos | calendario mensual (1 reel por día) | panel del día. El editor es un modal.
+
+$rl-line: rgba(255, 255, 255, 0.07);
+$rl-panel: rgba(22, 21, 30, 0.92);
+$rl-muted: #8b869a;
+$rl-accent: #a855f7;
+$rl-accent2: #c084fc;
+$rl-ok: #22c55e;
+$rl-warn: #f59e0b;
+$rl-err: #ef4444;
+$rl-review: #38bdf8;
+
+// ---------- Marcas de plataforma y estados ----------
+.rl-pf {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.45rem;
+  height: 1.1rem;
+  padding: 0 0.2rem;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  flex-shrink: 0;
+  &.instagram { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); }
+  &.facebook { background: #1877f2; }
+  &.youtube { background: #ff0033; }
+}
+.rl-platform-badges { display: inline-flex; gap: 3px; align-items: center; }
+
+.rl-sim-badge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: $rl-warn;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
+.rl-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: fit-content;
+  font-size: 0.66rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+  &.st-ai { color: $rl-accent2; background: rgba(168, 85, 247, 0.14); }
+  &.st-review { color: $rl-review; background: rgba(56, 189, 248, 0.12); }
+  &.st-approved { color: $rl-accent2; background: rgba(168, 85, 247, 0.16); }
+  &.st-published { color: $rl-ok; background: rgba(34, 197, 94, 0.12); }
+  &.st-failed, &.st-overdue { color: #f87171; background: rgba(239, 68, 68, 0.12); }
+}
+
+.rl-asset-ok { color: #86efac; font-size: 0.72rem; }
+.rl-asset-none { color: #fcd34d; font-size: 0.72rem; }
+
+// ---------- Cabecera ----------
+.reels-publisher {
+  .rl-stat-review { color: $rl-review; }
+  .rl-stat-cover { color: #e4e4e7; }
+
+  .rl-connections {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    .rl-conn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.74rem;
+      color: #d4d4d8;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid $rl-line;
+      border-radius: 999px;
+      padding: 0.2rem 0.6rem 0.2rem 0.25rem;
+      &.off { opacity: 0.55; }
+      &.on::after { content: '●'; color: $rl-ok; font-size: 0.6rem; }
+    }
+  }
+}
+
+// ---------- Distribución ----------
+.reels-publisher .rl-layout {
+  align-items: stretch;
+}
+
+// ---------- Bandeja ----------
+.rl-tray {
+  width: 290px;
+  flex-shrink: 0;
+  background: $rl-panel;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 150px);
+  position: sticky;
+  top: 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &.drag-over { border-color: rgba(168, 85, 247, 0.7); box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.35); }
+
+  .rl-tray-head h4 { margin: 0.1rem 0 0; font-size: 0.95rem; color: #fff; }
+}
+
+.rl-upload {
+  border: 1.5px dashed rgba(168, 85, 247, 0.45);
+  border-radius: 12px;
+  background: rgba(168, 85, 247, 0.06);
+  padding: 1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: center;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  &:hover:not(:disabled) { background: rgba(168, 85, 247, 0.12); border-color: $rl-accent; }
+  &:disabled { cursor: progress; }
+  b { color: #fff; font-size: 0.85rem; }
+  span { color: $rl-muted; font-size: 0.72rem; }
+}
+
+.rl-autofill { width: 100%; }
+
+.rl-tray-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0 -0.3rem;
+  padding: 0 0.3rem;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+}
+.rl-tray-empty { text-align: center; padding: 1rem 0.5rem; line-height: 1.5; }
+
+.rl-tray-card {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.45rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid $rl-line;
+  cursor: grab;
+  transition: border-color 0.15s, background 0.15s;
+  &:hover { border-color: rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.07); }
+  &:active { cursor: grabbing; }
+  &.st-approved { border-color: rgba(168, 85, 247, 0.35); }
+  &.st-failed { border-color: rgba(239, 68, 68, 0.45); }
+
+  video { width: 42px; height: 74px; object-fit: cover; border-radius: 6px; background: #000; flex-shrink: 0; pointer-events: none; }
+  .rl-tray-info {
+    display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1;
+    b { font-size: 0.78rem; color: #e4e4e7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+  .rl-grip { color: $rl-muted; font-size: 0.8rem; letter-spacing: -2px; }
+}
+
+.rl-progress {
+  position: relative;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #9333ea, $rl-accent); transition: width 0.2s; }
+  small { position: relative; display: block; text-align: center; font-size: 0.68rem; line-height: 20px; color: #fff; }
+}
+
+// ---------- Calendario (1 reel por día) ----------
+.reels-publisher .pr-main-layout .rl-calendar {
+  .pr-cal-legend i.rv { background: $rl-review; }
+
+  // Columnas siempre iguales aunque una miniatura vertical sea más ancha que la celda
+  .weekdays, .days { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+
+  .days .rl-day {
+    min-height: 270px; // el reel es vertical: el día tiene que ser alto para que se vea
+    &.drop-ok { border: 1px solid $rl-accent; background: rgba(168, 85, 247, 0.18); box-shadow: inset 0 0 0 1px $rl-accent; }
+    &.drop-no { border-color: rgba(239, 68, 68, 0.6); }
+    .pr-gap-label { margin: auto; }
+  }
+  .rl-day-time { font-size: 0.68rem; color: $rl-muted; font-variant-numeric: tabular-nums; }
+
+  .rl-day-reel {
+    position: relative;
+    height: 220px;
+    max-width: 100%;
+    aspect-ratio: 9 / 16;
+    align-self: center;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    cursor: grab;
+    border: 2px solid rgba(56, 189, 248, 0.7);
+    &.st-approved { border-color: $rl-accent; }
+    &.st-published { border-color: $rl-ok; cursor: pointer; }
+    &.st-failed, &.st-overdue { border-color: $rl-err; }
+    &.st-ai { border-color: rgba(168, 85, 247, 0.4); border-style: dashed; }
+    video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+    .rl-day-state {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 18px; height: 18px; border-radius: 999px;
+      display: grid; place-items: center;
+      font-size: 0.6rem; font-weight: 800; color: #fff;
+      background: rgba(0, 0, 0, 0.6);
+    }
+  }
+}
+
+// ---------- Panel lateral ----------
+.reels-publisher .rl-side {
+  .rl-tip { display: flex; flex-direction: column; gap: 0.5rem; }
+  .rl-setting {
+    display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    font-size: 0.78rem; color: #d4d4d8;
+    select {
+      background: rgba(0, 0, 0, 0.35); color: #e4e4e7; color-scheme: dark;
+      border: 1px solid $rl-line; border-radius: 6px; padding: 0.3rem 0.45rem; font-size: 0.78rem;
+    }
+  }
+
+  .rl-side-reel {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 0.7rem;
+    .pr-side-actions { grid-column: 1 / -1; }
+  }
+  .rl-side-reel-video {
+    aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: #000; cursor: pointer;
+    border: 1px solid $rl-line;
+    video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  }
+  .rl-side-reel-info {
+    display: flex; flex-direction: column; gap: 0.3rem; min-width: 0;
+    b { font-size: 0.85rem; color: #fff; }
+    small { font-size: 0.72rem; color: #d4d4d8; }
+  }
+  .rl-side-empty {
+    display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+    padding: 1.2rem 0.5rem;
+    border: 1.5px dashed rgba(245, 158, 11, 0.35);
+    border-radius: 12px;
+    text-align: center;
+    span { font-size: 1.6rem; }
+    p { margin: 0; font-weight: 700; color: #e4e4e7; }
+    small { color: $rl-muted; font-size: 0.74rem; }
+  }
+}
+
+@media (max-width: 1200px) {
+  .reels-publisher .rl-layout { flex-direction: column; }
+  .rl-tray, .reels-publisher .rl-side { width: 100%; position: static; max-height: none; }
+}
+
+// ---------- Editor ----------
+.rl-editor-overlay .rl-editor {
+  width: min(1180px, 96vw);
+  max-width: none;
+  height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+
+  .pr-topbar h3 { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; text-transform: none; }
+}
+
+.rl-editor-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  @media (max-width: 900px) { grid-template-columns: 1fr; overflow-y: auto; }
+}
+
+.rl-editor-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-right: 1px solid $rl-line;
+  background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.08), transparent 70%);
+  min-height: 0;
+  overflow-y: auto;
+  .rl-phone { width: min(100%, 320px); }
+  .rl-checks { align-self: stretch; }
+}
+
+.rl-editor-form {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+}
+
+.rl-section {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid $rl-line;
+  border-radius: 12px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  .rl-section-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+}
+
+.rl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  color: #d4d4d8;
+  > span { display: flex; align-items: center; gap: 0.4rem; small { margin-left: auto; color: $rl-muted; } }
+}
+
+.reels-publisher-modal .form-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid $rl-line;
+  border-radius: 8px;
+  color: #e4e4e7;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.45;
+  color-scheme: dark;
+  resize: vertical;
+  &:focus { outline: none; border-color: rgba(168, 85, 247, 0.6); }
+  &:disabled { opacity: 0.6; }
+}
+
+.rl-row { display: flex; gap: 0.7rem; align-items: flex-end; }
+.rl-field-asset { width: 110px; flex-shrink: 0; }
+.rl-asset-info {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; padding-bottom: 0.35rem;
+  b { font-size: 0.8rem; color: #86efac; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  a { font-size: 0.7rem; color: $rl-muted; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+.rl-platform-toggles { display: flex; flex-direction: column; gap: 0.35rem; &.row { flex-direction: row; flex-wrap: wrap; } }
+.rl-platform-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid $rl-line;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  color: $rl-muted;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  .rl-pf { opacity: 0.4; }
+  &:disabled { cursor: default; }
+  &.on {
+    color: #fff;
+    border-color: rgba(168, 85, 247, 0.5);
+    background: rgba(168, 85, 247, 0.1);
+    .rl-pf { opacity: 1; }
+    &::after { content: '✓'; margin-left: 0.2rem; color: $rl-accent2; }
+  }
+}
+
+.rl-chips {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid $rl-line;
+  border-radius: 8px;
+  padding: 0.4rem;
+}
+.rl-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.74rem; color: $rl-accent2;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  button { background: none; border: none; color: $rl-muted; cursor: pointer; font-size: 0.65rem; padding: 0; &:hover { color: #fff; } }
+}
+.rl-chip-input {
+  flex: 1; min-width: 90px;
+  background: transparent; border: none; outline: none;
+  color: #e4e4e7; font-size: 0.78rem;
+}
+
+.rl-regenerate { display: flex; gap: 0.5rem; .form-input { flex: 1; } .pr-btn { flex-shrink: 0; } }
+
+.rl-link-plan, .rl-results {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: #d4d4d8; }
+  code { margin-left: auto; font-size: 0.68rem; color: $rl-muted; }
+}
+
+.rl-checks {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 0.2rem;
+  li { font-size: 0.74rem; }
+  .ok { color: #86efac; }
+  .warn { color: #fcd34d; }
+}
+
+.rl-ai-working {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.82rem; color: $rl-accent2;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+}
+.rl-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(192, 132, 252, 0.3); border-top-color: $rl-accent2;
+  animation: rl-spin 0.8s linear infinite;
+}
+@keyframes rl-spin { to { transform: rotate(360deg); } }
+
+.rl-editor-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.1rem;
+  border-top: 1px solid $rl-line;
+  background: rgba(22, 21, 30, 0.95);
+  .rl-approve { padding: 0.65rem 1.2rem; font-size: 0.85rem; }
+  .rl-danger { color: #fca5a5; }
+  .rl-time {
+    display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #d4d4d8;
+    select, input {
+      background: rgba(0, 0, 0, 0.35); color: #e4e4e7; color-scheme: dark;
+      border: 1px solid $rl-line; border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.8rem;
+    }
+  }
+}
+
+// ---------- Maqueta de móvil (Reels / Shorts) ----------
+.rl-phone {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #000;
+  border: 6px solid #1c1b22;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+
+  > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+  .rl-phone-empty { position: absolute; inset: 0; display: grid; place-items: center; color: $rl-muted; }
+
+  .rl-phone-top {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 0.7rem 0.8rem;
+    font-weight: 800; font-size: 0.95rem;
+    background: linear-gradient(rgba(0, 0, 0, 0.45), transparent);
+    pointer-events: none;
+  }
+  .rl-phone-actions {
+    position: absolute; right: 0.5rem; bottom: 24%;
+    display: flex; flex-direction: column; gap: 0.9rem; align-items: center;
+    font-size: 1.15rem; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    span { display: flex; flex-direction: column; align-items: center; }
+    small { font-size: 0.55rem; margin-top: 0.1rem; }
+  }
+  .rl-phone-bottom {
+    position: absolute; left: 0; right: 3rem; bottom: 0;
+    padding: 2.5rem 0.8rem 1.9rem; // deja sitio a la barra de progreso
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    display: flex; flex-direction: column; gap: 0.3rem;
+    pointer-events: none;
+    p { margin: 0; line-height: 1.3; }
+  }
+  .rl-phone-user {
+    display: flex; align-items: center; gap: 0.4rem; font-weight: 700;
+    em { font-style: normal; font-size: 0.66rem; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 6px; padding: 0.05rem 0.4rem; }
+  }
+  .rl-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(45deg, #9333ea, #22d3ee); display: inline-block; }
+  .rl-phone-caption { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rl-more { color: rgba(255, 255, 255, 0.65); }
+  .rl-phone-tags { color: #c7d2fe; font-size: 0.7rem; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .rl-phone-audio { font-size: 0.66rem; opacity: 0.85; }
+
+  &.pf-youtube .rl-phone-user em { background: #fff; color: #000; border: none; border-radius: 999px; }
+  &.pf-facebook .rl-avatar { background: #1877f2; }
+
+  // Controles del reproductor
+  .rl-sound-btn {
+    position: absolute; top: 0.55rem; right: 0.6rem; z-index: 3;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    width: 32px; height: 32px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: grid; place-items: center;
+    &:hover { background: rgba(0, 0, 0, 0.75); }
+  }
+  .rl-player-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3;
+    display: flex; align-items: center; gap: 0.9rem;
+    opacity: 0; transition: opacity 0.15s;
+    button {
+      position: relative;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff; font-size: 0.9rem; cursor: pointer;
+      display: grid; place-items: center;
+      &:hover { background: rgba(0, 0, 0, 0.8); }
+      &.main { width: 56px; height: 56px; font-size: 1.1rem; }
+      small { position: absolute; bottom: 3px; font-size: 0.5rem; }
+    }
+    &.paused { opacity: 1; }
+  }
+  &:hover .rl-player-center { opacity: 1; }
+
+  .rl-player-bar {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    display: flex; align-items: center; gap: 0.45rem;
+    padding: 0.25rem 0.6rem 0.4rem;
+    span { font-size: 0.6rem; font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0.85; }
+    input[type='range'] {
+      flex: 1; height: 4px; margin: 0; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+      border-radius: 2px;
+      background: linear-gradient(to right, #fff var(--pct, 0%), rgba(255, 255, 255, 0.3) var(--pct, 0%));
+      &::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+      &::-moz-range-thumb { width: 11px; height: 11px; border: none; border-radius: 50%; background: #fff; }
+    }
+  }
+}
+
+// ---------- Integraciones previstas para más adelante (YouTube) ----------
+.rl-soon {
+  filter: grayscale(1);
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  small {
+    margin-left: 0.4rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $rl-muted;
+    border: 1px solid $rl-line;
+    border-radius: 999px;
+    padding: 0.05rem 0.4rem;
+  }
+}
+.rl-soon-block { filter: grayscale(1); opacity: 0.5; }
+.reels-publisher .rl-connections .rl-conn.soon {
+  filter: grayscale(1);
+  opacity: 0.45;
+  small { font-size: 0.6rem; color: $rl-muted; margin-left: 0.15rem; }
+}
+
+// ---------- Avisos ----------
+.rl-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  padding: 0.7rem 1.1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(22, 101, 52, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  &.err { background: rgba(127, 29, 29, 0.95); border-color: rgba(239, 68, 68, 0.5); }
+}
+
+// ---------- Metadata pendiente ----------
+.rl-ai-generate { width: 100%; border-color: rgba(168, 85, 247, 0.5); color: #e9d5ff; }
+.rl-ai-none { justify-content: space-between; color: #e4e4e7; }
+.rl-state.st-nometa { color: #a1a1aa; background: rgba(161, 161, 170, 0.12); }
+.reels-publisher .pr-main-layout .rl-calendar .rl-day-reel.st-nometa { border-color: rgba(161, 161, 170, 0.6); border-style: dashed; }
+
+// ---------- Borrar sin abrir el editor ----------
+.rl-delete-btn {
+  display: grid; place-items: center;
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fca5a5;
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  &:hover { background: rgba(239, 68, 68, 0.85); color: #fff; }
+}
+.rl-tray-card:hover .rl-delete-btn { opacity: 1; }
+.reels-publisher .pr-main-layout .rl-calendar .rl-day-reel {
+  .rl-delete-btn { position: absolute; left: 4px; top: 4px; }
+  &:hover .rl-delete-btn { opacity: 1; }
+}
+
+// ---------- Modo real ----------
+.rl-real-badge {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+.rl-real-text { color: #f87171; }
+.reels-publisher .rl-side .rl-setting select.rl-select-real { border-color: rgba(239, 68, 68, 0.6); color: #fecaca; }
+.rl-publish-real { border-color: rgba(239, 68, 68, 0.55) !important; color: #fecaca !important; }
+.rl-results a { margin-left: auto; font-size: 0.74rem; color: #c084fc; }
+.rl-results small { font-size: 0.66rem; color: #8b869a; }
+.rl-state.st-publishing { color: #fcd34d; background: rgba(245, 158, 11, 0.14); }
+.reels-publisher .pr-main-layout .rl-calendar .rl-day-reel.st-publishing { border-color: #f59e0b; }

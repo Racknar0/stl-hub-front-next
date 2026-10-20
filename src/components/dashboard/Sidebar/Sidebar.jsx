@@ -84,6 +84,11 @@ const Sidebar = () => {
                     Pinterest Publisher
                   </Link>
                 </li>
+                <li>
+                  <Link href="/dashboard/reels" className="item submenu-item" onClick={() => setOpen(false)}>
+                    Reels Publisher
+                  </Link>
+                </li>
               </ul>
             </li>
 
