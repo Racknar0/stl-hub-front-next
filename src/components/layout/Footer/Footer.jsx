@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import './Footer.scss';
 import { useI18n } from '../../../i18n';
-import LegalModal from '../../common/LegalModal/LegalModal';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
 const Footer = () => {
-  const [showLegalModal, setShowLegalModal] = useState(false);
   const { t } = useI18n?.() || { t: () => undefined };
   const resolvedLanguage = useResolvedLanguage();
   const isEn = resolvedLanguage === 'en';
@@ -64,14 +62,14 @@ const Footer = () => {
           <div className="footer-bottom">
             <div className="copyright">{copyright}</div>
             <div className="footer-links">
-              <button 
+              <Link 
+                href={isEn ? "/en/terms" : "/terms"} 
                 className="policies-btn"
-                onClick={() => setShowLegalModal(true)}
               >
                 {policiesText}
-              </button>
+              </Link>
               <Link 
-                href="/privacy-policy" 
+                href={isEn ? "/en/privacy-policy" : "/privacy-policy"} 
                 className="policies-btn"
               >
                 {privacyText}
@@ -86,11 +84,6 @@ const Footer = () => {
           </div>
         </div>
       </footer>
-      
-      <LegalModal 
-        isOpen={showLegalModal} 
-        onClose={() => setShowLegalModal(false)} 
-      />
     </>
   );
 };

@@ -34,8 +34,8 @@ export default function PrivacyPolicyContent() {
 
     ytTitle: isEn ? '3. Use of YouTube API Services' : '3. Uso de los Servicios de la API de YouTube',
     ytText: isEn
-      ? 'STL Hub uses YouTube API Services to publish videos of our own 3D models as YouTube Shorts on our own official YouTube channel. This integration is an internal administration tool used only by the STL Hub team; visitors of our website are never asked to connect their YouTube accounts.'
-      : 'STL Hub utiliza los Servicios de la API de YouTube para publicar videos de nuestros propios modelos 3D como YouTube Shorts en nuestro propio canal oficial de YouTube. Esta integración es una herramienta interna de administración que usa únicamente el equipo de STL Hub; a los visitantes de nuestra web nunca se les pide conectar sus cuentas de YouTube.',
+      ? 'STL Hub uses YouTube API Services to publish short videos of the 3D models in our catalog as YouTube Shorts on our own official YouTube channel. This integration is an internal administration tool used only by the STL Hub team; visitors of our website are never asked to connect their YouTube accounts.'
+      : 'STL Hub utiliza los Servicios de la API de YouTube para publicar videos cortos de los modelos 3D de nuestro catálogo como YouTube Shorts en nuestro propio canal oficial de YouTube. Esta integración es una herramienta interna de administración que usa únicamente el equipo de STL Hub; a los visitantes de nuestra web nunca se les pide conectar sus cuentas de YouTube.',
     ytL1: isEn
       ? 'Terms of Service: by using the features of STL Hub that rely on YouTube, you agree to be bound by the YouTube Terms of Service (https://www.youtube.com/t/terms).'
       : 'Condiciones del Servicio: al utilizar las funciones de STL Hub que dependen de YouTube, usted acepta quedar vinculado por las Condiciones del Servicio de YouTube (https://www.youtube.com/t/terms).',
