@@ -12,22 +12,10 @@ $rl-err: #ef4444;
 $rl-review: #38bdf8;
 
 // ---------- Marcas de plataforma y estados ----------
-.rl-pf {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.45rem;
-  height: 1.1rem;
-  padding: 0 0.2rem;
-  border-radius: 4px;
-  font-style: normal;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #fff;
+.rl-icon {
+  display: inline-block;
   flex-shrink: 0;
-  &.instagram { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); }
-  &.facebook { background: #1877f2; }
-  &.youtube { background: #ff0033; }
+  vertical-align: middle;
 }
 .rl-platform-badges { display: inline-flex; gap: 3px; align-items: center; }
 
@@ -372,13 +360,13 @@ $rl-review: #38bdf8;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  .rl-pf { opacity: 0.4; }
+  .rl-icon { opacity: 0.4; }
   &:disabled { cursor: default; }
   &.on {
     color: #fff;
     border-color: rgba(168, 85, 247, 0.5);
     background: rgba(168, 85, 247, 0.1);
-    .rl-pf { opacity: 1; }
+    .rl-icon { opacity: 1; }
     &::after { content: '✓'; margin-left: 0.2rem; color: $rl-accent2; }
   }
 }
@@ -622,19 +610,6 @@ $rl-review: #38bdf8;
   &:hover .rl-delete-btn { opacity: 1; }
 }
 
-// ---------- Modo real ----------
-.rl-real-badge {
-  font-size: 0.66rem;
-  font-weight: 800;
-  color: #fecaca;
-  background: rgba(239, 68, 68, 0.18);
-  border: 1px solid rgba(239, 68, 68, 0.6);
-  border-radius: 999px;
-  padding: 0.15rem 0.6rem;
-  white-space: nowrap;
-}
-.rl-real-text { color: #f87171; }
-.reels-publisher .rl-side .rl-setting select.rl-select-real { border-color: rgba(239, 68, 68, 0.6); color: #fecaca; }
 .rl-publish-real { border-color: rgba(239, 68, 68, 0.55) !important; color: #fecaca !important; }
 .rl-results a { margin-left: auto; font-size: 0.74rem; color: #c084fc; }
 .rl-results small { font-size: 0.66rem; color: #8b869a; }
@@ -658,4 +633,19 @@ $rl-review: #38bdf8;
     font-size: 0.65rem; padding: 0 0 0 0.15rem;
     &:hover { color: #f87171; }
   }
+}
+
+// ---------- Varios reels en un mismo día ----------
+.reels-publisher .pr-main-layout .rl-calendar .rl-day-reel .rl-day-extra {
+  position: absolute; right: 4px; bottom: 4px;
+  min-width: 22px; height: 18px; padding: 0 5px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  font-size: 0.62rem; font-weight: 800; color: #fff;
+  background: rgba(168, 85, 247, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.reels-publisher .rl-side .rl-side-list {
+  display: flex; flex-direction: column; gap: 0.9rem;
+  .rl-side-reel + .rl-side-reel { padding-top: 0.9rem; border-top: 1px solid rgba(255, 255, 255, 0.07); }
 }

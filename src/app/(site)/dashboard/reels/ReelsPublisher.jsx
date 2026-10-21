@@ -167,9 +167,50 @@ function PhonePreview({ videoUrl, platform, caption, hashtags, title }) {
   );
 }
 
+// Logos de las redes (dibujados en SVG para no depender de archivos externos)
+function PlatformIcon({ platform, size = 16, title }) {
+  const common = { width: size, height: size, viewBox: '0 0 24 24', className: `rl-icon rl-icon-${platform}`, role: 'img', 'aria-label': title || platform };
+  if (platform === 'instagram') {
+    return (
+      <svg {...common}>
+        <defs>
+          <radialGradient id="rl-ig-grad" cx="0.3" cy="1.07" r="1.2">
+            <stop offset="0" stopColor="#fdf497" />
+            <stop offset="0.1" stopColor="#fdf497" />
+            <stop offset="0.5" stopColor="#fd5949" />
+            <stop offset="0.68" stopColor="#d6249f" />
+            <stop offset="1" stopColor="#285AEB" />
+          </radialGradient>
+        </defs>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#rl-ig-grad)" />
+        <rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" strokeWidth="1.8" />
+        <circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" strokeWidth="1.8" />
+        <circle cx="16.3" cy="7.7" r="1.05" fill="#fff" />
+      </svg>
+    );
+  }
+  if (platform === 'facebook') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <circle cx="12" cy="12" r="11" fill="#1877F2" />
+        <path fill="#fff" d="M13.4 23v-8.1h2.7l.4-3.2h-3.1V9.7c0-.9.3-1.6 1.6-1.6h1.7V5.3c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.4H7.6v3.2h2.7V23z" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      {title && <title>{title}</title>}
+      <rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#FF0033" />
+      <path fill="#fff" d="M10 8.6v6.8l5.8-3.4z" />
+    </svg>
+  );
+}
+
 const PlatformBadges = ({ list }) => (
   <span className="rl-platform-badges">
-    {PLATFORMS.filter(p => toList(list).includes(p.key)).map(p => <i key={p.key} className={`rl-pf ${p.key}`} title={p.label}>{p.short}</i>)}
+    {PLATFORMS.filter(p => toList(list).includes(p.key)).map(p => <PlatformIcon key={p.key} platform={p.key} title={p.label} />)}
   </span>
 );
 
@@ -216,7 +257,7 @@ export default function ReelsPublisher() {
   useEffect(() => { fetchMonth(); }, [fetchMonth]);
 
   // Mientras la IA trabaja en algún reel, refrescar cada 3 s
-  const allPosts = [...tray, ...Object.values(postsByDay)];
+  const allPosts = [...tray, ...Object.values(postsByDay).flat()];
   const anyProcessing = allPosts.some(p => p.aiStatus === 'PROCESSING' || p.publishing);
   useEffect(() => {
     if (!anyProcessing) return;
@@ -334,7 +375,6 @@ export default function ReelsPublisher() {
   };
 
   const saveSetting = async (patch) => {
-    if (patch.publishMode === 'real' && !confirm('⚠️ MODO REAL\n\nA partir de ahora los reels aprobados se publicarán DE VERDAD en Instagram y Facebook cuando llegue su hora, y "Publicar ahora" publica al instante.\n\n¿Activar el modo real?')) return;
     try {
       const res = await http.putData('/reels', 'settings', patch);
       setSettings(res.data);
@@ -356,15 +396,15 @@ export default function ReelsPublisher() {
   };
   const goToday = () => { setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); };
 
-  const selectedPost = postsByDay[selectedDay] || null;
+  const selectedPosts = postsByDay[selectedDay] || [];
   const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay);
   const firstFutureDay = isCurrentMonth ? today.getDate() : currentDate > today ? 1 : daysInMonth + 1;
   const emptyDays = [];
-  for (let d = firstFutureDay; d <= daysInMonth; d++) if (!postsByDay[d]) emptyDays.push(d);
+  for (let d = firstFutureDay; d <= daysInMonth; d++) if (!postsByDay[d]?.length) emptyDays.push(d);
   const toReview = allPosts.filter(p => ['review', 'overdue'].includes(reelState(p).key));
 
   // Orden de revisión para "Aprobar y siguiente": calendario por fecha y luego bandeja
-  const reviewOrder = [...Object.values(postsByDay).sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)), ...tray]
+  const reviewOrder = [...Object.values(postsByDay).flat().sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)), ...tray]
     .filter(p => p.status !== 'PUBLISHED');
   const editorPost = allPosts.find(p => p.id === editorId) || null;
 
@@ -393,19 +433,16 @@ export default function ReelsPublisher() {
           <span className="stat rl-stat-cover" title="Días seguidos con reel desde hoy">📆 {stats.coveredDays ?? 0} días cubiertos</span>
         </div>
         <div className="rl-connections">
-          {settings.publishMode === 'real'
-            ? <span className="rl-real-badge" title="Los reels aprobados se publican de verdad en Instagram y Facebook">● Modo real</span>
-            : <span className="rl-sim-badge" title="Al llegar la hora, los reels aprobados se marcan como publicados sin enviar nada a las redes">Modo simulación</span>}
           {PLATFORMS.map(p => (
             p.key === 'youtube' && !ytConnected ? (
               <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
                 title="Autoriza tu canal de YouTube para publicar Shorts">
-                <i className={`rl-pf ${p.key}`}>{p.short}</i>{connectingYt ? 'Esperando autorización…' : 'Conectar YouTube'}
+                <PlatformIcon platform={p.key} title={p.label} />{connectingYt ? 'Esperando autorización…' : 'Conectar YouTube'}
               </button>
             ) : (
               <span key={p.key} className={`rl-conn ${connection?.[p.key]?.configured ? 'on' : 'off'}`}
                 title={p.key === 'youtube' ? `Canal conectado: ${connection.youtube.channel?.title || ''}` : connection?.[p.key]?.configured ? 'Credenciales configuradas' : 'Sin credenciales'}>
-                <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.key === 'youtube' ? (connection.youtube.channel?.title || 'YouTube') : p.label.split(' ')[0]}
+                <PlatformIcon platform={p.key} title={p.label} />{p.key === 'youtube' ? (connection.youtube.channel?.title || 'YouTube') : p.label.split(' ')[0]}
                 {p.key === 'youtube' && <button type="button" className="rl-conn-x" title="Desconectar YouTube" onClick={disconnectYoutube}>✕</button>}
               </span>
             )
@@ -485,10 +522,13 @@ export default function ReelsPublisher() {
           <div className="days">
             {days.map((day, index) => {
               if (!day) return <div key={`empty-${index}`} className="day empty" />;
-              const post = postsByDay[day];
+              const dayPosts = postsByDay[day] || [];
+              // El que se muestra: el pendiente si lo hay (lo que falta por hacer), si no el primero
+              const post = dayPosts.find(p => p.status !== 'PUBLISHED') || dayPosts[0];
+              const extra = dayPosts.length - 1;
               const isPast = isDayPast(day);
               const st = post ? reelState(post) : null;
-              const canDrop = !isPast && post?.status !== 'PUBLISHED';
+              const canDrop = !isPast && !dayPosts.some(p => p.status === 'PUBLISHED');
               return (
                 <div key={`day-${day}`}
                   className={`day rl-day ${isCurrentMonth && day === today.getDate() ? 'today' : ''} ${selectedDay === day ? 'selected' : ''} ${isPast ? 'past' : ''} ${!post && !isPast ? 'gap' : ''} ${dragOver === day ? (canDrop ? 'drop-ok' : 'drop-no') : ''}`}
@@ -506,6 +546,7 @@ export default function ReelsPublisher() {
                       onClick={(e) => { e.stopPropagation(); setSelectedDay(day); setEditorId(post.id); }} title={`${st.label} · ${post.subject || ''}`}>
                       <video src={`${resolveMediaUrl(post.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
                       <span className="rl-day-state">{st.icon}</span>
+                      {extra > 0 && <span className="rl-day-extra" title={`${dayPosts.length} reels este día`}>+{extra}</span>}
                       <button type="button" className="rl-delete-btn" title="Eliminar reel" draggable={false}
                         onClick={(e) => deletePost(e, post)} onMouseDown={(e) => e.stopPropagation()}>🗑</button>
                     </div>
@@ -550,14 +591,7 @@ export default function ReelsPublisher() {
                 <option value="en">English</option>
               </select>
             </label>
-            <label className="rl-setting">
-              Publicación
-              <select className={settings.publishMode === 'real' ? 'rl-select-real' : ''} value={settings.publishMode || 'simulated'} onChange={(e) => saveSetting({ publishMode: e.target.value })}>
-                <option value="simulated">Simulación</option>
-                <option value="real">Real (Instagram + Facebook)</option>
-              </select>
-            </label>
-            <p className="pr-autopilot-line">1 reel al día. Al llegar su hora, se publica solo si está <b>aprobado</b>{settings.publishMode === 'real' ? <> — <b className="rl-real-text">de verdad</b></> : ' (simulado)'}.</p>
+            <p className="pr-autopilot-line">1 reel al día. Al llegar su hora se publica en las redes marcadas, solo si está <b>aprobado</b>.</p>
           </div>
 
           <div className="pr-side-head">
@@ -567,31 +601,36 @@ export default function ReelsPublisher() {
             </div>
           </div>
 
-          {selectedPost ? (() => {
-            const st = reelState(selectedPost);
-            return (
-              <div className="rl-side-reel">
-                <div className="rl-side-reel-video" onClick={() => setEditorId(selectedPost.id)}>
-                  <video src={`${resolveMediaUrl(selectedPost.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
-                </div>
-                <div className="rl-side-reel-info">
-                  <span className={`rl-state st-${st.key}`}>{st.icon} {st.label}</span>
-                  <b>{selectedPost.subject || selectedPost.originalName}</b>
-                  <small>🕒 {fmtTime(selectedPost.scheduledAt)}</small>
-                  <PlatformBadges list={selectedPost.platforms} />
-                  {selectedPost.assetTitle && <small className="rl-asset-ok">🔗 #{selectedPost.assetId} {selectedPost.assetTitle}</small>}
-                </div>
-                <div className="pr-side-actions">
-                  <button type="button" className="pr-btn primary" onClick={() => setEditorId(selectedPost.id)}>
-                    {selectedPost.status === 'PUBLISHED' ? 'Ver detalle' : st.key === 'approved' ? 'Ver / editar' : 'Revisar y aprobar'}
-                  </button>
-                  {selectedPost.status !== 'PUBLISHED' && (
-                    <button type="button" className="pr-btn" onClick={() => assign(selectedPost.id, null)}>↩ Devolver a la bandeja</button>
-                  )}
-                </div>
-              </div>
-            );
-          })() : (
+          {selectedPosts.length > 0 ? (
+            <div className="rl-side-list">
+              {selectedPosts.length > 1 && <span className="pr-side-eyebrow">{selectedPosts.length} reels este día</span>}
+              {selectedPosts.map(selectedPost => {
+                const st = reelState(selectedPost);
+                return (
+                  <div key={selectedPost.id} className="rl-side-reel">
+                    <div className="rl-side-reel-video" onClick={() => setEditorId(selectedPost.id)}>
+                      <video src={`${resolveMediaUrl(selectedPost.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
+                    </div>
+                    <div className="rl-side-reel-info">
+                      <span className={`rl-state st-${st.key}`}>{st.icon} {st.label}</span>
+                      <b>{selectedPost.subject || selectedPost.originalName}</b>
+                      <small>🕒 {fmtTime(selectedPost.scheduledAt)}</small>
+                      <PlatformBadges list={selectedPost.platforms} />
+                      {selectedPost.assetTitle && <small className="rl-asset-ok">🔗 #{selectedPost.assetId} {selectedPost.assetTitle}</small>}
+                    </div>
+                    <div className="pr-side-actions">
+                      <button type="button" className="pr-btn primary" onClick={() => setEditorId(selectedPost.id)}>
+                        {selectedPost.status === 'PUBLISHED' ? 'Ver detalle' : st.key === 'approved' ? 'Ver / editar' : 'Revisar y aprobar'}
+                      </button>
+                      {selectedPost.status !== 'PUBLISHED' && (
+                        <button type="button" className="pr-btn" onClick={() => assign(selectedPost.id, null)}>↩ Devolver a la bandeja</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
             <div className="rl-side-empty">
               {isDayPast(selectedDay) ? <p className="pr-muted">Este día no tuvo reel.</p> : (
                 <>
@@ -623,7 +662,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} realMode={settings.publishMode === 'real'} ytConnected={ytConnected}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -637,7 +676,7 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: por ahora solo YouTube sin el canal conectado
   const unavailable = (p) => p.key === 'youtube' && !ytConnected;
   const [form, setForm] = useState(() => postToForm(post));
@@ -701,13 +740,11 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
   });
   const onPublishNow = () => run('publish', async () => {
     const targets = PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => p.label.split(' ')[0]).join(' y ');
-    if (!confirm(realMode
-      ? `🔴 Se va a publicar DE VERDAD en ${targets}.\nSerá público para todos tus seguidores.\n\n¿Publicar ahora?`
-      : '¿Publicar este reel ahora? (simulación: no se envía nada a las redes)')) return;
+    if (!confirm(`🔴 Se va a publicar DE VERDAD en ${targets}.\nSerá público para todos tus seguidores.\n\n¿Publicar ahora?`)) return;
     if (dirty) await save();
     await http.postData(`/reels/${post.id}/publish`);
     await onChanged();
-    showToast(realMode ? '⏫ Publicando… Instagram puede tardar unos minutos en procesar el video' : '✓ Reel publicado (simulación)');
+    showToast('⏫ Publicando… Instagram y YouTube pueden tardar unos minutos en procesar el video');
   });
   const onDelete = async () => {
     if (!confirm('¿Eliminar este reel y su video?')) return;
@@ -796,7 +833,7 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
                 {PLATFORMS.map(p => (
                   <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? 'Conecta tu canal de YouTube en la cabecera' : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
-                    <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.label}{unavailable(p) && <small>Sin conectar</small>}
+                    <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
                 ))}
               </div>
@@ -809,13 +846,13 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
               </div>
               {form.platforms.includes('instagram') && (
                 <label className="rl-field">
-                  <span><i className="rl-pf instagram">IG</i> Caption de Instagram <small>{form.caption.length}/2200</small></span>
+                  <span><PlatformIcon platform="instagram" /> Caption de Instagram <small>{form.caption.length}/2200</small></span>
                   <textarea className="form-input" rows="5" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
                 </label>
               )}
               {form.platforms.includes('facebook') && (
                 <label className="rl-field">
-                  <span><i className="rl-pf facebook">FB</i> Caption de Facebook <small>{form.facebookCaption.length}/2200</small></span>
+                  <span><PlatformIcon platform="facebook" /> Caption de Facebook <small>{form.facebookCaption.length}/2200</small></span>
                   <textarea className="form-input" rows="3" maxLength={2200} value={form.facebookCaption} placeholder="Vacío = se usa el de Instagram" disabled={readOnly || processing} onChange={(e) => update({ facebookCaption: e.target.value })} />
                 </label>
               )}
@@ -836,14 +873,14 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
               )}
               {!ytConnected && (
                 <div className="rl-field rl-soon-block" title="Conecta tu canal de YouTube en la cabecera">
-                  <span><i className="rl-pf youtube">YT</i> Título y descripción de YouTube Shorts <small>Sin conectar</small></span>
+                  <span><PlatformIcon platform="youtube" /> Título y descripción de YouTube Shorts <small>Sin conectar</small></span>
                   <input type="text" className="form-input" disabled value={form.title} placeholder="Conecta YouTube para publicar también en Shorts" />
                 </div>
               )}
               {form.platforms.includes('youtube') && (
                 <>
                   <label className="rl-field">
-                    <span><i className="rl-pf youtube">YT</i> Título de YouTube Shorts <small>{form.title.length}/100</small></span>
+                    <span><PlatformIcon platform="youtube" /> Título de YouTube Shorts <small>{form.title.length}/100</small></span>
                     <input type="text" className="form-input" maxLength={100} value={form.title} disabled={readOnly || processing} onChange={(e) => update({ title: e.target.value })} />
                   </label>
                   <label className="rl-field">
@@ -865,7 +902,7 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
               <div className="rl-section-head"><span className="pr-side-eyebrow">Enlaces al publicar</span></div>
               <ul className="rl-link-plan">
                 {PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => (
-                  <li key={p.key}><i className={`rl-pf ${p.key}`}>{p.short}</i>{p.linkHint}</li>
+                  <li key={p.key}><PlatformIcon platform={p.key} title={p.label} />{p.linkHint}</li>
                 ))}
               </ul>
             </section>
@@ -881,7 +918,7 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
                     const r = post.results[p.key];
                     return (
                       <li key={p.key}>
-                        <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.label}
+                        <PlatformIcon platform={p.key} title={p.label} />{p.label}
                         {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
                         {p.key === 'facebook' && !r.simulated && <small>{r.commentId ? '💬 link comentado' : '⚠ sin comentario con link'}</small>}
                         ✓
@@ -907,8 +944,8 @@ function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onCh
               </label>
             )}
             <span className="pr-spacer" />
-            <button type="button" className={`pr-btn ${realMode ? 'rl-publish-real' : ''}`} onClick={onPublishNow} disabled={!!busy || processing}>
-              {post.status === 'FAILED' ? '🔄 Reintentar publicación' : realMode ? '🚀 Publicar ahora' : '🚀 Publicar ahora (simulado)'}
+            <button type="button" className="pr-btn rl-publish-real" onClick={onPublishNow} disabled={!!busy || processing}>
+              {post.status === 'FAILED' ? '🔄 Reintentar publicación' : '🚀 Publicar ahora'}
             </button>
             {dirty && <button type="button" className="pr-btn" onClick={onSave} disabled={!!busy}>{busy === 'save' ? 'Guardando…' : '💾 Guardar'}</button>}
             {post.approved
