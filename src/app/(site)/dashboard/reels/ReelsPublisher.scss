@@ -682,3 +682,14 @@ $rl-review: #38bdf8;
   margin: 0; font-size: 0.72rem; color: $rl-muted; line-height: 1.5;
   a { color: #a5b4fc; }
 }
+.rl-tt-mode {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+  label {
+    display: flex; align-items: flex-start; gap: 0.45rem; cursor: pointer;
+    border: 1px solid $rl-line; border-radius: 8px; padding: 0.5rem 0.6rem;
+    span { display: flex; flex-direction: column; b { font-size: 0.8rem; color: #fff; } small { color: $rl-muted; font-size: 0.72rem; } }
+    &.on { border-color: rgba(254, 44, 85, 0.55); background: rgba(254, 44, 85, 0.08); }
+  }
+  input { accent-color: #fe2c55; margin-top: 0.15rem; }
+}
+.rl-tt-inbox { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }

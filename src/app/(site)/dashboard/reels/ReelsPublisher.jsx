@@ -25,11 +25,15 @@ const TIKTOK_PRIVACY = {
   MUTUAL_FOLLOW_FRIENDS: 'Amigos (seguidores mutuos)',
   FOLLOWER_OF_CREATOR: 'Seguidores',
   SELF_ONLY: 'Solo yo',
+  INBOX: 'Enviado a borradores',
 };
-const TIKTOK_DEFAULT_OPTIONS = { privacyLevel: null, allowComment: false, allowDuet: false, allowStitch: false, commercial: false, yourBrand: false, brandedContent: false };
+// Mientras TikTok no apruebe la publicación directa, los reels nuevos van a borradores (se publican desde el móvil)
+const TIKTOK_DEFAULT_MODE = 'inbox';
+const TIKTOK_DEFAULT_OPTIONS = { mode: TIKTOK_DEFAULT_MODE, privacyLevel: null, allowComment: false, allowDuet: false, allowStitch: false, commercial: false, yourBrand: false, brandedContent: false };
 
 // Qué le falta a las opciones de TikTok para poder aprobar (las mismas reglas que el backend)
 function tiktokOptionsProblem(o) {
+  if (o?.mode === 'inbox') return null;
   if (!o?.privacyLevel) return 'Elige quién puede ver el video en TikTok';
   if (o.commercial && !o.yourBrand && !o.brandedContent) return 'Indica si el contenido comercial promociona tu marca o a un tercero';
   if (o.brandedContent && o.privacyLevel === 'SELF_ONLY') return 'El contenido de marca no puede ser privado ("Solo yo")';
@@ -808,6 +812,12 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
   const updateTiktok = (patch) => update({ tiktokOptions: { ...form.tiktokOptions, ...patch } });
   const tiktokProblem = hasTiktok ? tiktokOptionsProblem(form.tiktokOptions) : null;
   const tooLongForTiktok = hasTiktok && creator?.maxVideoDurationSec && post.durationSec > creator.maxVideoDurationSec;
+  const tiktokInbox = form.tiktokOptions.mode === 'inbox';
+  const copyTiktokText = async () => {
+    const text = [(form.tiktokCaption || form.caption).trim(), form.hashtags.map(h => `#${h}`).join(' ')].filter(Boolean).join('\n\n');
+    try { await navigator.clipboard.writeText(text); showToast('📋 Texto copiado: pégalo en TikTok al publicar el borrador'); }
+    catch { showToast('No se pudo copiar el texto', 'err'); }
+  };
 
   // Cuando la IA termina (o se recarga el reel) y no hay cambios sin guardar, refrescar el formulario
   useEffect(() => {
@@ -1051,6 +1061,23 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
                       </div>
                     )}
                     {tooLongForTiktok && <div className="pr-alert err"><span>El video dura más de lo que permite tu cuenta de TikTok ({fmtDuration(creator.maxVideoDurationSec)}).</span></div>}
+                    <div className="rl-tt-mode" role="radiogroup" aria-label="Cómo se publica en TikTok">
+                      <label className={tiktokInbox ? 'on' : ''}>
+                        <input type="radio" name={`tt-mode-${post.id}`} checked={tiktokInbox} disabled={readOnly} onChange={() => updateTiktok({ mode: 'inbox' })} />
+                        <span><b>Enviar a borradores</b><small>Llega a la bandeja de tu app de TikTok y lo publicas desde el móvil.</small></span>
+                      </label>
+                      <label className={!tiktokInbox ? 'on' : ''}>
+                        <input type="radio" name={`tt-mode-${post.id}`} checked={!tiktokInbox} disabled={readOnly} onChange={() => updateTiktok({ mode: 'direct' })} />
+                        <span><b>Publicar directo</b><small>Se publica solo a su hora con las opciones de abajo.</small></span>
+                      </label>
+                    </div>
+                    {tiktokInbox ? (
+                      <div className="rl-tt-inbox">
+                        <p className="rl-tt-note">A su hora el video se envía a tu bandeja de TikTok (te llega una notificación). Ábrelo, pega el texto y publícalo: allí eliges la privacidad. TikTok no permite enviar el texto a borradores.</p>
+                        <button type="button" className="pr-btn" onClick={copyTiktokText}>📋 Copiar texto y hashtags</button>
+                      </div>
+                    ) : (
+                    <>
                     <label className="rl-field">
                       <span>Quién puede ver este video</span>
                       <select className="form-input" value={form.tiktokOptions.privacyLevel || ''} disabled={readOnly}
@@ -1106,6 +1133,8 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
                       <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer">Confirmación de uso de música</a> de TikTok.
                       {' '}Tras publicar, el video puede tardar unos minutos en procesarse y aparecer en tu perfil.
                     </p>
+                    </>
+                    )}
                   </>
                 )}
               </section>
