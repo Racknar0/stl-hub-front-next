@@ -7,11 +7,11 @@ import '../pinterest/PinterestRedesign.scss';
 import './ReelsPublisher.scss';
 
 const PLATFORMS = [
-  { key: 'instagram', label: 'Instagram Reels', short: 'IG', maxSec: 900, linkHint: 'Link en la bio (Instagram no permite links clicables en el caption)' },
+  { key: 'instagram', label: 'Instagram Reels', short: 'IG', maxSec: 900, linkHint: null },
   { key: 'facebook', label: 'Facebook Reels', short: 'FB', maxSec: 90, linkHint: 'Link en el primer comentario (automático, con UTM)' },
   // YouTube queda para más adelante: se muestra en gris y no se puede elegir
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
-  { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: 'Link en la bio (TikTok no permite links clicables en el texto)' },
+  { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: null },
 ];
 // Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
 const VisiblePlatforms = createContext(PLATFORMS);
@@ -1111,14 +1111,17 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
               </section>
             )}
 
+            {/* Solo las redes en las que el link se añade solo (comentario de Facebook, descripción de YouTube) */}
+            {visible.some(p => p.linkHint && form.platforms.includes(p.key)) && (
             <section className="rl-section">
               <div className="rl-section-head"><span className="pr-side-eyebrow">Enlaces al publicar</span></div>
               <ul className="rl-link-plan">
-                {visible.filter(p => form.platforms.includes(p.key)).map(p => (
+                {visible.filter(p => p.linkHint && form.platforms.includes(p.key)).map(p => (
                   <li key={p.key}><PlatformIcon platform={p.key} title={p.label} />{p.linkHint}</li>
                 ))}
               </ul>
             </section>
+            )}
 
             {post.publishing && (
               <div className="rl-ai-working"><span className="rl-spinner" />Publicando… el video puede tardar unos minutos en procesarse.</div>
