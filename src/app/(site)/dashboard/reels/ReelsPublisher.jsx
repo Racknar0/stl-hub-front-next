@@ -14,6 +14,8 @@ const PLATFORMS = [
 ];
 // Botones para preparar los textos automáticamente: ocultos de momento (los textos se pegan a mano)
 const SHOW_TEXT_TOOLS = false;
+// Temporal (video de la auditoría de YouTube): en el editor solo se ve YouTube y las redes ya marcadas en el reel
+const EDITOR_ONLY_YOUTUBE = true;
 const TIME_OPTIONS = ['12:00', '15:00', '18:00', '19:00', '20:00', '21:00'];
 const SPREAD_OPTIONS = [0, 30, 60, 90, 120];
 
@@ -832,7 +834,7 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
                 </div>
               </div>
               <div className="rl-platform-toggles row">
-                {PLATFORMS.map(p => (
+                {PLATFORMS.filter(p => !EDITOR_ONLY_YOUTUBE || p.key === 'youtube' || form.platforms.includes(p.key)).map(p => (
                   <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? 'Conecta tu canal de YouTube en la cabecera' : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
