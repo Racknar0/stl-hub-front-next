@@ -16,8 +16,8 @@ const PLATFORMS = [
 // Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
 const VisiblePlatforms = createContext(PLATFORMS);
 const FOCUS_KEY = 'reels_focus_platform';
-// Temporal (video de la revisión de TikTok): sin ?solo= se muestra solo TikTok. ?solo=all enseña todas las redes
-const DEFAULT_FOCUS = 'tiktok';
+// Sin ?solo= se muestran todas las redes (?solo=tiktok enfoca una sola; ?solo=all vuelve a todas)
+const DEFAULT_FOCUS = null;
 
 // Privacidades de TikTok, con los textos que ve el usuario
 const TIKTOK_PRIVACY = {
@@ -336,7 +336,7 @@ export default function ReelsPublisher() {
       await http.postFormData('/reels/upload', form, {
         onUploadProgress: (e) => e.total && setUploading({ count: files.length, pct: Math.round((e.loaded / e.total) * 100) }),
       });
-      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Revisión profunda" cuando quieras los textos`);
+      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Generar Metadatos" cuando quieras los textos`);
       refreshAll();
     } catch (e) { showToast('Error subiendo: ' + errMsg(e), 'err'); }
     finally { setUploading(null); }
@@ -578,7 +578,7 @@ export default function ReelsPublisher() {
           {(stats.noMetadata > 0 || anyProcessing) && (
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateMetadata} disabled={generating || anyProcessing}
               title="Revisa los reels pendientes y prepara su texto y hashtags">
-              {anyProcessing ? '⏳ Revisión profunda en curso…' : `🔍 Revisión profunda (${stats.noMetadata})`}
+              {anyProcessing ? '⏳ Generando metadatos…' : `🔍 Generar Metadatos (${stats.noMetadata})`}
             </button>
           )}
           {tray.length > 0 && (
@@ -588,7 +588,7 @@ export default function ReelsPublisher() {
           )}
 
           <div className="rl-tray-list">
-            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, haz su revisión profunda y arrástralos a un día del calendario.</p>}
+            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, genera sus metadatos y arrástralos a un día del calendario.</p>}
             {tray.map(post => {
               const st = reelState(post);
               return (
@@ -932,7 +932,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
             ) : post.aiStatus === 'NONE' ? (
               <div className="rl-ai-working rl-ai-none">
                 <span>Este reel aún no tiene revisión.</span>
-                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '🔍 Revisando…' : '🔍 Revisión profunda'}</button>
+                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '🔍 Generando…' : '🔍 Generar Metadatos'}</button>
               </div>
             ) : post.aiStatus === 'ERROR' ? (
               <div className="pr-alert err"><span>La revisión falló: {post.aiError}</span></div>
