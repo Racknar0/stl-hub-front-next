@@ -12,10 +12,6 @@ const PLATFORMS = [
   // YouTube queda para más adelante: se muestra en gris y no se puede elegir
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
 ];
-// Botones para preparar los textos automáticamente: ocultos de momento (los textos se pegan a mano)
-const SHOW_TEXT_TOOLS = false;
-// Temporal (video de la auditoría de YouTube): en el editor solo se ve YouTube y las redes ya marcadas en el reel
-const EDITOR_ONLY_YOUTUBE = true;
 const TIME_OPTIONS = ['12:00', '15:00', '18:00', '19:00', '20:00', '21:00'];
 const SPREAD_OPTIONS = [0, 30, 60, 90, 120];
 
@@ -58,9 +54,9 @@ function reelState(post) {
   if (post.publishing) return { key: 'publishing', label: 'Publicando…', icon: '⏫' };
   if (post.status === 'PUBLISHED') return { key: 'published', label: post.simulated ? 'Publicado (simulado)' : 'Publicado', icon: '✓' };
   if (post.status === 'FAILED') return { key: 'failed', label: 'Error', icon: '✕' };
-  if (post.aiStatus === 'PROCESSING') return { key: 'ai', label: 'Preparando textos…', icon: '⏳' };
-  if (post.aiStatus === 'NONE') return { key: 'nometa', label: 'Sin textos', icon: '○' };
-  if (post.aiStatus === 'ERROR') return { key: 'failed', label: 'Error en textos', icon: '⚠' };
+  if (post.aiStatus === 'PROCESSING') return { key: 'ai', label: 'IA generando…', icon: '⏳' };
+  if (post.aiStatus === 'NONE') return { key: 'nometa', label: 'Sin metadata', icon: '○' };
+  if (post.aiStatus === 'ERROR') return { key: 'failed', label: 'Error de IA', icon: '⚠' };
   if (post.scheduledAt && !post.approved && new Date(post.scheduledAt) < new Date()) return { key: 'overdue', label: 'Vencido sin aprobar', icon: '⚠' };
   if (post.approved) return { key: 'approved', label: post.scheduledAt ? 'Aprobado' : 'Aprobado · sin día', icon: '✔' };
   return { key: 'review', label: 'Por revisar', icon: '●' };
@@ -282,7 +278,7 @@ export default function ReelsPublisher() {
       await http.postFormData('/reels/upload', form, {
         onUploadProgress: (e) => e.total && setUploading({ count: files.length, pct: Math.round((e.loaded / e.total) * 100) }),
       });
-      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}`);
+      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Generar metadata IA" cuando quieras los textos`);
       refreshAll();
     } catch (e) { showToast('Error subiendo: ' + errMsg(e), 'err'); }
     finally { setUploading(null); }
@@ -476,10 +472,10 @@ export default function ReelsPublisher() {
             )}
           </button>
 
-          {SHOW_TEXT_TOOLS && (stats.noMetadata > 0 || anyProcessing) && (
+          {(stats.noMetadata > 0 || anyProcessing) && (
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateMetadata} disabled={generating || anyProcessing}
               title="Genera caption, hashtags y textos de cada red para los reels que aún no los tienen">
-              {anyProcessing ? '⏳ Preparando textos…' : `📝 Preparar textos (${stats.noMetadata})`}
+              {anyProcessing ? '⏳ Generando metadata…' : `✨ Generar metadata IA (${stats.noMetadata})`}
             </button>
           )}
           {tray.length > 0 && (
@@ -489,7 +485,7 @@ export default function ReelsPublisher() {
           )}
 
           <div className="rl-tray-list">
-            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, escribe sus textos y arrástralos a un día del calendario.</p>}
+            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, genera su metadata con IA y arrástralos a un día del calendario.</p>}
             {tray.map(post => {
               const st = reelState(post);
               return (
@@ -588,13 +584,13 @@ export default function ReelsPublisher() {
                 </select>
               </label>
             )}
-            {SHOW_TEXT_TOOLS && <label className="rl-setting">
-              Idioma de los textos
+            <label className="rl-setting">
+              Idioma de la IA
               <select value={settings.language} onChange={(e) => saveSetting({ language: e.target.value })}>
                 <option value="es">Español</option>
                 <option value="en">English</option>
               </select>
-            </label>}
+            </label>
             <p className="pr-autopilot-line">1 reel al día. Al llegar su hora se publica en las redes marcadas, solo si está <b>aprobado</b>.</p>
           </div>
 
@@ -736,7 +732,7 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
   });
   const onUnapprove = () => run('approve', async () => { await save({ approved: false }); showToast('Aprobación retirada'); });
   const onRegenerate = () => run('ai', async () => {
-    if (dirty && !confirm('Se reemplazarán los textos actuales. ¿Continuar?')) return;
+    if (dirty && !confirm('La IA reemplazará los textos actuales. ¿Continuar?')) return;
     await http.postData(`/reels/${post.id}/ai`, { notes: aiNotes, ...(String(post.assetId || '') !== form.assetId && { assetId: form.assetId || null }) });
     setDirty(false);
     await onChanged();
@@ -808,14 +804,14 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
           {/* Formulario */}
           <div className="rl-editor-form">
             {processing ? (
-              <div className="rl-ai-working"><span className="rl-spinner" />Preparando los textos…</div>
-            ) : SHOW_TEXT_TOOLS && post.aiStatus === 'NONE' ? (
+              <div className="rl-ai-working"><span className="rl-spinner" />La IA está generando los textos…</div>
+            ) : post.aiStatus === 'NONE' ? (
               <div className="rl-ai-working rl-ai-none">
                 <span>Este reel aún no tiene metadata.</span>
-                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '⏳ Preparando…' : '📝 Preparar textos'}</button>
+                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '✨ Generando…' : '✨ Generar metadata IA'}</button>
               </div>
             ) : post.aiStatus === 'ERROR' ? (
-              <div className="pr-alert err"><span>No se pudieron preparar los textos: {post.aiError}</span></div>
+              <div className="pr-alert err"><span>La IA falló: {post.aiError}</span></div>
             ) : null}
 
             <section className="rl-section">
@@ -834,7 +830,7 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
                 </div>
               </div>
               <div className="rl-platform-toggles row">
-                {PLATFORMS.filter(p => !EDITOR_ONLY_YOUTUBE || p.key === 'youtube' || form.platforms.includes(p.key)).map(p => (
+                {PLATFORMS.map(p => (
                   <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? 'Conecta tu canal de YouTube en la cabecera' : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
@@ -846,7 +842,7 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
             <section className="rl-section">
               <div className="rl-section-head">
                 <span className="pr-side-eyebrow">Textos</span>
-                {SHOW_TEXT_TOOLS && post.aiGenerated && <span className="pr-ai ok">✓ textos listos</span>}
+                {post.aiGenerated && <span className="pr-ai ok">✨ generado por IA</span>}
               </div>
               {form.platforms.includes('instagram') && (
                 <label className="rl-field">
@@ -894,10 +890,10 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
                 </>
               )}
 
-              {SHOW_TEXT_TOOLS && !readOnly && (
+              {!readOnly && (
                 <div className="rl-regenerate">
-                  <input type="text" className="form-input" placeholder="Notas (opcional): ej. es una figura premium de colección" value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} />
-                  <button type="button" className="pr-btn" onClick={onRegenerate} disabled={!!busy || processing}>{busy === 'ai' ? '⏳ Preparando…' : '↻ Rehacer textos'}</button>
+                  <input type="text" className="form-input" placeholder="Notas para la IA (opcional): ej. es una figura premium de colección" value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} />
+                  <button type="button" className="pr-btn" onClick={onRegenerate} disabled={!!busy || processing}>{busy === 'ai' ? '✨ Generando…' : '✨ Regenerar'}</button>
                 </div>
               )}
             </section>
