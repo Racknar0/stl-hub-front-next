@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import HttpService from '@/services/HttpService';
 import '../pinterest/PinterestCalendar.scss';
@@ -11,7 +11,30 @@ const PLATFORMS = [
   { key: 'facebook', label: 'Facebook Reels', short: 'FB', maxSec: 90, linkHint: 'Link en el primer comentario (automático, con UTM)' },
   // YouTube queda para más adelante: se muestra en gris y no se puede elegir
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
+  { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: 'Link en la bio (TikTok no permite links clicables en el texto)' },
 ];
+// Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
+const VisiblePlatforms = createContext(PLATFORMS);
+const FOCUS_KEY = 'reels_focus_platform';
+// Temporal (video de la revisión de TikTok): sin ?solo= se muestra solo TikTok. ?solo=all enseña todas las redes
+const DEFAULT_FOCUS = 'tiktok';
+
+// Privacidades de TikTok, con los textos que ve el usuario
+const TIKTOK_PRIVACY = {
+  PUBLIC_TO_EVERYONE: 'Todo el mundo',
+  MUTUAL_FOLLOW_FRIENDS: 'Amigos (seguidores mutuos)',
+  FOLLOWER_OF_CREATOR: 'Seguidores',
+  SELF_ONLY: 'Solo yo',
+};
+const TIKTOK_DEFAULT_OPTIONS = { privacyLevel: null, allowComment: false, allowDuet: false, allowStitch: false, commercial: false, yourBrand: false, brandedContent: false };
+
+// Qué le falta a las opciones de TikTok para poder aprobar (las mismas reglas que el backend)
+function tiktokOptionsProblem(o) {
+  if (!o?.privacyLevel) return 'Elige quién puede ver el video en TikTok';
+  if (o.commercial && !o.yourBrand && !o.brandedContent) return 'Indica si el contenido comercial promociona tu marca o a un tercero';
+  if (o.brandedContent && o.privacyLevel === 'SELF_ONLY') return 'El contenido de marca no puede ser privado ("Solo yo")';
+  return null;
+}
 const TIME_OPTIONS = ['12:00', '15:00', '18:00', '19:00', '20:00', '21:00'];
 const SPREAD_OPTIONS = [0, 30, 60, 90, 120];
 
@@ -54,15 +77,15 @@ function reelState(post) {
   if (post.publishing) return { key: 'publishing', label: 'Publicando…', icon: '⏫' };
   if (post.status === 'PUBLISHED') return { key: 'published', label: post.simulated ? 'Publicado (simulado)' : 'Publicado', icon: '✓' };
   if (post.status === 'FAILED') return { key: 'failed', label: 'Error', icon: '✕' };
-  if (post.aiStatus === 'PROCESSING') return { key: 'ai', label: 'IA generando…', icon: '⏳' };
-  if (post.aiStatus === 'NONE') return { key: 'nometa', label: 'Sin metadata', icon: '○' };
-  if (post.aiStatus === 'ERROR') return { key: 'failed', label: 'Error de IA', icon: '⚠' };
+  if (post.aiStatus === 'PROCESSING') return { key: 'ai', label: 'En revisión…', icon: '⏳' };
+  if (post.aiStatus === 'NONE') return { key: 'nometa', label: 'Sin revisar', icon: '○' };
+  if (post.aiStatus === 'ERROR') return { key: 'failed', label: 'Error en la revisión', icon: '⚠' };
   if (post.scheduledAt && !post.approved && new Date(post.scheduledAt) < new Date()) return { key: 'overdue', label: 'Vencido sin aprobar', icon: '⚠' };
   if (post.approved) return { key: 'approved', label: post.scheduledAt ? 'Aprobado' : 'Aprobado · sin día', icon: '✔' };
   return { key: 'review', label: 'Por revisar', icon: '●' };
 }
 
-function videoChecks(post) {
+function videoChecks(post, platforms = PLATFORMS) {
   const checks = [];
   const { durationSec: d, width: w, height: h } = post;
   if (w && h) {
@@ -70,7 +93,7 @@ function videoChecks(post) {
     else checks.push({ ok: false, text: `Proporción ${w}×${h}: lo ideal es 9:16` });
   }
   if (d) {
-    const tooLong = PLATFORMS.filter(p => toList(post.platforms).includes(p.key) && d > p.maxSec);
+    const tooLong = platforms.filter(p => toList(post.platforms).includes(p.key) && d > p.maxSec);
     if (d < 3) checks.push({ ok: false, text: 'Dura menos de 3 s' });
     else if (tooLong.length) checks.push({ ok: false, text: `Demasiado largo para ${tooLong.map(p => p.short).join(', ')}` });
     else checks.push({ ok: true, text: `Duración ${fmtDuration(d)}` });
@@ -140,11 +163,11 @@ function PhoneVideo({ src }) {
 // Maqueta de móvil con el aspecto de Reels / Shorts
 function PhonePreview({ videoUrl, platform, caption, hashtags, title }) {
   const firstLine = (caption || '').split('\n')[0];
-  const handle = platform === 'facebook' ? 'Stlgratis' : platform === 'youtube' ? '@stlhub' : 'stlhub_';
+  const handle = platform === 'facebook' ? 'Stlgratis' : platform === 'youtube' ? '@stlhub' : platform === 'tiktok' ? '@stlhub' : 'stlhub_';
   return (
     <div className={`rl-phone pf-${platform}`}>
       {videoUrl ? <PhoneVideo key={videoUrl} src={videoUrl} /> : <div className="rl-phone-empty">Sin video</div>}
-      <div className="rl-phone-top"><span>{platform === 'youtube' ? 'Shorts' : 'Reels'}</span></div>
+      <div className="rl-phone-top"><span>{platform === 'youtube' ? 'Shorts' : platform === 'tiktok' ? 'Para ti' : 'Reels'}</span></div>
       <div className="rl-phone-actions">
         <span>♥<small>{platform === 'youtube' ? 'Me gusta' : '1,2 mil'}</small></span>
         <span>💬<small>48</small></span>
@@ -199,6 +222,17 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'tiktok') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#000" />
+        <path fill="#25F4EE" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" transform="translate(-.6 -.4)" />
+        <path fill="#FE2C55" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" transform="translate(.6 .4)" />
+        <path fill="#fff" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" />
+      </svg>
+    );
+  }
   return (
     <svg {...common}>
       {title && <title>{title}</title>}
@@ -208,15 +242,19 @@ function PlatformIcon({ platform, size = 16, title }) {
   );
 }
 
-const PlatformBadges = ({ list }) => (
-  <span className="rl-platform-badges">
-    {PLATFORMS.filter(p => toList(list).includes(p.key)).map(p => <PlatformIcon key={p.key} platform={p.key} title={p.label} />)}
-  </span>
-);
+function PlatformBadges({ list }) {
+  const visible = useContext(VisiblePlatforms);
+  return (
+    <span className="rl-platform-badges">
+      {visible.filter(p => toList(list).includes(p.key)).map(p => <PlatformIcon key={p.key} platform={p.key} title={p.label} />)}
+    </span>
+  );
+}
 
 const postToForm = (post) => ({
   caption: post.caption || '', facebookCaption: post.facebookCaption || '', title: post.title || '',
-  youtubeDescription: post.youtubeDescription || '',
+  youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
+  tiktokOptions: { ...TIKTOK_DEFAULT_OPTIONS, ...(post.tiktokOptions && typeof post.tiktokOptions === 'object' ? post.tiktokOptions : {}) },
   hashtags: toList(post.hashtags), platforms: toList(post.platforms),
   time: post.scheduledAt ? fmtTime(post.scheduledAt) : '', assetId: post.assetId ? String(post.assetId) : '',
 });
@@ -232,6 +270,25 @@ export default function ReelsPublisher() {
   const [connection, setConnection] = useState(null);
   const [connectingYt, setConnectingYt] = useState(false);
   const ytConnected = !!connection?.youtube?.connected;
+  const [connectingTt, setConnectingTt] = useState(false);
+  const ttConnected = !!connection?.tiktok?.connected;
+  // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
+  const [focus, setFocus] = useState(DEFAULT_FOCUS);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const solo = params.get('solo');
+      if (solo !== null) {
+        sessionStorage.setItem(FOCUS_KEY, PLATFORMS.some(p => p.key === solo) ? solo : 'all');
+        params.delete('solo');
+        window.history.replaceState(null, '', `${window.location.pathname}${params.toString() ? `?${params}` : ''}`);
+      }
+      const saved = sessionStorage.getItem(FOCUS_KEY) || DEFAULT_FOCUS;
+      setFocus(saved === 'all' ? null : saved);
+    } catch { setFocus(DEFAULT_FOCUS); }
+  }, []);
+  const visible = focus ? PLATFORMS.filter(p => p.key === focus) : PLATFORMS;
+  const isVisible = (key) => visible.some(p => p.key === key);
   const [uploading, setUploading] = useState(null); // null | { count, pct }
   const [dragOver, setDragOver] = useState(null); // 'tray' | dayNumber
   const [toast, setToast] = useState(null);
@@ -275,10 +332,11 @@ export default function ReelsPublisher() {
       const form = new FormData();
       files.forEach(f => form.append('videos', f));
       form.append('meta', JSON.stringify(meta));
+      if (focus) form.append('platforms', JSON.stringify([focus]));
       await http.postFormData('/reels/upload', form, {
         onUploadProgress: (e) => e.total && setUploading({ count: files.length, pct: Math.round((e.loaded / e.total) * 100) }),
       });
-      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Generar metadata IA" cuando quieras los textos`);
+      showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Revisión profunda" cuando quieras los textos`);
       refreshAll();
     } catch (e) { showToast('Error subiendo: ' + errMsg(e), 'err'); }
     finally { setUploading(null); }
@@ -339,7 +397,7 @@ export default function ReelsPublisher() {
     setGenerating(true);
     try {
       const res = await http.postData('/reels/ai-generate', {});
-      showToast(res.data.queued ? `Generando metadata de ${res.data.queued} ${res.data.queued === 1 ? 'reel' : 'reels'}…` : 'Todos los reels ya tienen metadata');
+      showToast(res.data.queued ? `Revisando ${res.data.queued} ${res.data.queued === 1 ? 'reel' : 'reels'}…` : 'Todos los reels ya están revisados');
       await refreshAll();
     } catch (e) { showToast(errMsg(e), 'err'); }
     finally { setGenerating(false); }
@@ -371,6 +429,35 @@ export default function ReelsPublisher() {
       await http.postData('/reels/youtube/disconnect');
       await fetchConnection();
       showToast('YouTube desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
+  // TikTok: igual que YouTube, la autorización se abre en una ventana y se espera a que la cuenta quede conectada
+  const connectTiktok = async () => {
+    try {
+      const res = await http.getData('/reels/tiktok/auth');
+      window.open(res.data.url, 'tiktok-auth', 'width=520,height=760');
+      setConnectingTt(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const status = await fetchConnection();
+        if (status?.tiktok?.connected) {
+          showToast(`✓ TikTok conectado: ${status.tiktok.account?.displayName || ''}`);
+          return;
+        }
+      }
+      showToast('No se completó la conexión con TikTok', 'err');
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingTt(false); }
+  };
+
+  const disconnectTiktok = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar la cuenta de TikTok? Se revocará el acceso y los reels dejarán de publicarse en TikTok.')) return;
+    try {
+      await http.postData('/reels/tiktok/disconnect');
+      await fetchConnection();
+      showToast('TikTok desconectado');
     } catch (err) { showToast(errMsg(err), 'err'); }
   };
 
@@ -417,6 +504,7 @@ export default function ReelsPublisher() {
   };
 
   return (
+    <VisiblePlatforms.Provider value={visible}>
     <div className="pinterest-calendar-container reels-publisher">
       {/* CABECERA */}
       <div className="calendar-header">
@@ -433,8 +521,23 @@ export default function ReelsPublisher() {
           <span className="stat rl-stat-cover" title="Días seguidos con reel desde hoy">📆 {stats.coveredDays ?? 0} días cubiertos</span>
         </div>
         <div className="rl-connections">
-          {PLATFORMS.map(p => (
-            p.key === 'youtube' && !ytConnected ? (
+          {visible.map(p => (
+            p.key === 'tiktok' ? (
+              ttConnected ? (
+                <span key={p.key} className="rl-conn on" title={`Cuenta conectada: ${connection.tiktok.account?.displayName || ''}`}>
+                  {connection.tiktok.account?.avatarUrl
+                    ? <img className="rl-conn-avatar" src={connection.tiktok.account.avatarUrl} alt="" />
+                    : <PlatformIcon platform={p.key} title={p.label} />}
+                  {connection.tiktok.account?.displayName || 'TikTok'}
+                  <button type="button" className="rl-conn-x" title="Desconectar TikTok" onClick={disconnectTiktok}>✕</button>
+                </span>
+              ) : (
+                <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectTiktok} disabled={connectingTt}
+                  title="Autoriza tu cuenta de TikTok para publicar videos">
+                  <PlatformIcon platform={p.key} title={p.label} />{connectingTt ? 'Esperando autorización…' : 'Conectar TikTok'}
+                </button>
+              )
+            ) : p.key === 'youtube' && !ytConnected ? (
               <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
                 title="Autoriza tu canal de YouTube para publicar Shorts">
                 <PlatformIcon platform={p.key} title={p.label} />{connectingYt ? 'Esperando autorización…' : 'Conectar YouTube'}
@@ -474,8 +577,8 @@ export default function ReelsPublisher() {
 
           {(stats.noMetadata > 0 || anyProcessing) && (
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateMetadata} disabled={generating || anyProcessing}
-              title="Genera caption, hashtags y textos de cada red para los reels que aún no los tienen">
-              {anyProcessing ? '⏳ Generando metadata…' : `✨ Generar metadata IA (${stats.noMetadata})`}
+              title="Revisa los reels pendientes y prepara su texto y hashtags">
+              {anyProcessing ? '⏳ Revisión profunda en curso…' : `🔍 Revisión profunda (${stats.noMetadata})`}
             </button>
           )}
           {tray.length > 0 && (
@@ -485,7 +588,7 @@ export default function ReelsPublisher() {
           )}
 
           <div className="rl-tray-list">
-            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, genera su metadata con IA y arrástralos a un día del calendario.</p>}
+            {tray.length === 0 && !uploading && <p className="pr-muted rl-tray-empty">Sube videos, haz su revisión profunda y arrástralos a un día del calendario.</p>}
             {tray.map(post => {
               const st = reelState(post);
               return (
@@ -574,7 +677,7 @@ export default function ReelsPublisher() {
               </select>
             </label>
             {settings.timeSpread > 0 && <p className="pr-autopilot-line">Franja: <b>{spreadRange(settings.defaultTime, settings.timeSpread)}</b>, cada día a una hora distinta.</p>}
-            {ytConnected && (
+            {ytConnected && isVisible('youtube') && (
               <label className="rl-setting" title="Hasta que Google apruebe la auditoría del proyecto, YouTube deja en privado los videos subidos por API">
                 Privacidad YouTube
                 <select value={settings.youtubePrivacy || 'private'} onChange={(e) => saveSetting({ youtubePrivacy: e.target.value })}>
@@ -585,13 +688,13 @@ export default function ReelsPublisher() {
               </label>
             )}
             <label className="rl-setting">
-              Idioma de la IA
+              Idioma de los textos
               <select value={settings.language} onChange={(e) => saveSetting({ language: e.target.value })}>
                 <option value="es">Español</option>
                 <option value="en">English</option>
               </select>
             </label>
-            <p className="pr-autopilot-line">1 reel al día. Al llegar su hora se publica en las redes marcadas, solo si está <b>aprobado</b>.</p>
+            <p className="pr-autopilot-line">1 reel al día. Al llegar su hora se publica{visible.length > 1 ? ' en las redes marcadas' : ''}, solo si está <b>aprobado</b>.</p>
           </div>
 
           <div className="pr-side-head">
@@ -662,7 +765,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} visible={visible}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -672,23 +775,39 @@ export default function ReelsPublisher() {
       )}
       {toast && createPortal(<div className={`rl-toast ${toast.kind}`}>{toast.text}</div>, document.body)}
     </div>
+    </VisiblePlatforms.Provider>
   );
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
-  // Una red no disponible: por ahora solo YouTube sin el canal conectado
-  const unavailable = (p) => p.key === 'youtube' && !ytConnected;
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+  // Una red no disponible: YouTube o TikTok sin la cuenta conectada
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected);
+  const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(null); // 'save' | 'approve' | 'ai' | 'publish'
-  const [previewPlatform, setPreviewPlatform] = useState(toList(post.platforms)[0] || 'instagram');
+  const [previewPlatform, setPreviewPlatform] = useState(toList(post.platforms).find(isVisible) || visible[0]?.key || 'instagram');
   const [hashtagInput, setHashtagInput] = useState('');
   const [aiNotes, setAiNotes] = useState('');
   const [assetTitle, setAssetTitle] = useState(post.assetTitle || '');
   const st = reelState(post);
   const readOnly = post.status === 'PUBLISHED';
   const processing = post.aiStatus === 'PROCESSING';
+  const hasTiktok = form.platforms.includes('tiktok');
+
+  // TikTok exige mostrar la cuenta y las opciones que permite antes de publicar: se piden al abrir el editor
+  const [creator, setCreator] = useState(null);
+  const [creatorError, setCreatorError] = useState(null);
+  useEffect(() => {
+    if (!hasTiktok || !ttConnected || readOnly || creator) return;
+    http.getData('/reels/tiktok/creator-info')
+      .then(r => { setCreator(r.data); setCreatorError(null); })
+      .catch(e => setCreatorError(errMsg(e)));
+  }, [hasTiktok, ttConnected, readOnly, creator, http]);
+  const updateTiktok = (patch) => update({ tiktokOptions: { ...form.tiktokOptions, ...patch } });
+  const tiktokProblem = hasTiktok ? tiktokOptionsProblem(form.tiktokOptions) : null;
+  const tooLongForTiktok = hasTiktok && creator?.maxVideoDurationSec && post.durationSec > creator.maxVideoDurationSec;
 
   // Cuando la IA termina (o se recarga el reel) y no hay cambios sin guardar, refrescar el formulario
   useEffect(() => {
@@ -709,7 +828,9 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
 
   const payload = () => {
     const { time, assetId, ...rest } = form;
-    return { ...rest, ...(post.scheduledAt && time && { time }), ...(String(post.assetId || '') !== assetId && { assetId: assetId || null }) };
+    // En el modo enfocado en una red, las redes ocultas se quitan al guardar: así no se publica en una red que no se ve
+    const platforms = visible.length < PLATFORMS.length ? rest.platforms.filter(isVisible) : rest.platforms;
+    return { ...rest, platforms, ...(post.scheduledAt && time && { time }), ...(String(post.assetId || '') !== assetId && { assetId: assetId || null }) };
   };
 
   const save = async (extra = {}) => {
@@ -726,25 +847,27 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
 
   const onSave = () => run('save', async () => { await save(); showToast('Cambios guardados'); });
   const onApprove = () => run('approve', async () => {
+    if (tiktokProblem) throw new Error(tiktokProblem);
     await save({ approved: true });
     showToast(post.scheduledAt ? `✔ Aprobado: se publicará el ${fmtDayLong(post.scheduledAt)} a las ${form.time}` : '✔ Aprobado (arrástralo a un día para programarlo)');
     onApprovedNext();
   });
   const onUnapprove = () => run('approve', async () => { await save({ approved: false }); showToast('Aprobación retirada'); });
   const onRegenerate = () => run('ai', async () => {
-    if (dirty && !confirm('La IA reemplazará los textos actuales. ¿Continuar?')) return;
+    if (dirty && !confirm('La revisión reemplazará los textos actuales. ¿Continuar?')) return;
     await http.postData(`/reels/${post.id}/ai`, { notes: aiNotes, ...(String(post.assetId || '') !== form.assetId && { assetId: form.assetId || null }) });
     setDirty(false);
     await onChanged();
-    showToast('Textos regenerados');
+    showToast('Revisión completada');
   });
   const onPublishNow = () => run('publish', async () => {
-    const targets = PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => p.label.split(' ')[0]).join(' y ');
-    if (!confirm(`🔴 Se va a publicar DE VERDAD en ${targets}.\nSerá público para todos tus seguidores.\n\n¿Publicar ahora?`)) return;
+    if (tiktokProblem) throw new Error(tiktokProblem);
+    const targets = visible.filter(p => form.platforms.includes(p.key)).map(p => p.label.split(' ')[0]).join(' y ');
+    if (!confirm(`🔴 Se va a publicar DE VERDAD en ${targets}.\n\n¿Publicar ahora?`)) return;
     if (dirty) await save();
     await http.postData(`/reels/${post.id}/publish`);
     await onChanged();
-    showToast('⏫ Publicando… Instagram y YouTube pueden tardar unos minutos en procesar el video');
+    showToast('⏫ Publicando… el video puede tardar unos minutos en procesarse y aparecer en el perfil');
   });
   const onDelete = async () => {
     if (!confirm('¿Eliminar este reel y su video?')) return;
@@ -773,8 +896,9 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
     setHashtagInput('');
   };
 
-  const previewCaption = previewPlatform === 'facebook' ? (form.facebookCaption || form.caption) : form.caption;
-  const checks = videoChecks({ ...post, platforms: form.platforms });
+  const previewCaption = previewPlatform === 'facebook' ? (form.facebookCaption || form.caption)
+    : previewPlatform === 'tiktok' ? (form.tiktokCaption || form.caption) : form.caption;
+  const checks = videoChecks({ ...post, platforms: form.platforms }, visible);
 
   return (
     <div className="pinterest-modal-overlay reels-publisher-modal rl-editor-overlay" onClick={requestClose}>
@@ -791,7 +915,7 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
           {/* Vista previa */}
           <div className="rl-editor-preview">
             <div className="pr-size-toggle" role="group" aria-label="Plataforma de la vista previa">
-              {PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => (
+              {visible.filter(p => form.platforms.includes(p.key)).map(p => (
                 <button key={p.key} type="button" title={p.label}
                   className={previewPlatform === p.key ? 'on' : ''} onClick={() => setPreviewPlatform(p.key)}>{p.short}</button>
               ))}
@@ -804,19 +928,19 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
           {/* Formulario */}
           <div className="rl-editor-form">
             {processing ? (
-              <div className="rl-ai-working"><span className="rl-spinner" />La IA está generando los textos…</div>
+              <div className="rl-ai-working"><span className="rl-spinner" />Revisando el video y preparando los textos…</div>
             ) : post.aiStatus === 'NONE' ? (
               <div className="rl-ai-working rl-ai-none">
-                <span>Este reel aún no tiene metadata.</span>
-                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '✨ Generando…' : '✨ Generar metadata IA'}</button>
+                <span>Este reel aún no tiene revisión.</span>
+                <button type="button" className="pr-btn primary" onClick={onRegenerate} disabled={!!busy}>{busy === 'ai' ? '🔍 Revisando…' : '🔍 Revisión profunda'}</button>
               </div>
             ) : post.aiStatus === 'ERROR' ? (
-              <div className="pr-alert err"><span>La IA falló: {post.aiError}</span></div>
+              <div className="pr-alert err"><span>La revisión falló: {post.aiError}</span></div>
             ) : null}
 
             <section className="rl-section">
               <div className="rl-section-head">
-                <span className="pr-side-eyebrow">Asset y redes</span>
+                <span className="pr-side-eyebrow">{visible.length > 1 ? 'Asset y redes' : 'Asset y red'}</span>
               </div>
               <div className="rl-row">
                 <label className="rl-field rl-field-asset">
@@ -830,8 +954,8 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
                 </div>
               </div>
               <div className="rl-platform-toggles row">
-                {PLATFORMS.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? 'Conecta tu canal de YouTube en la cabecera' : undefined}
+                {visible.map(p => (
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -842,23 +966,31 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
             <section className="rl-section">
               <div className="rl-section-head">
                 <span className="pr-side-eyebrow">Textos</span>
-                {post.aiGenerated && <span className="pr-ai ok">✨ generado por IA</span>}
+                {post.aiGenerated && <span className="pr-ai ok">🔍 revisado</span>}
               </div>
-              {form.platforms.includes('instagram') && (
+              {form.platforms.includes('instagram') && isVisible('instagram') && (
                 <label className="rl-field">
                   <span><PlatformIcon platform="instagram" /> Caption de Instagram <small>{form.caption.length}/2200</small></span>
                   <textarea className="form-input" rows="5" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
                 </label>
               )}
-              {form.platforms.includes('facebook') && (
+              {form.platforms.includes('facebook') && isVisible('facebook') && (
                 <label className="rl-field">
                   <span><PlatformIcon platform="facebook" /> Caption de Facebook <small>{form.facebookCaption.length}/2200</small></span>
                   <textarea className="form-input" rows="3" maxLength={2200} value={form.facebookCaption} placeholder="Vacío = se usa el de Instagram" disabled={readOnly || processing} onChange={(e) => update({ facebookCaption: e.target.value })} />
                 </label>
               )}
-              {form.platforms.some(p => p !== 'youtube') && (
+              {hasTiktok && isVisible('tiktok') && (
+                <label className="rl-field">
+                  <span><PlatformIcon platform="tiktok" /> Texto de TikTok <small>{form.tiktokCaption.length}/2200</small></span>
+                  <textarea className="form-input" rows="4" maxLength={2200} value={form.tiktokCaption}
+                    placeholder={isVisible('instagram') ? 'Vacío = se usa el de Instagram' : 'Descripción del video'} disabled={readOnly || processing}
+                    onChange={(e) => update({ tiktokCaption: e.target.value })} />
+                </label>
+              )}
+              {form.platforms.some(p => p !== 'youtube' && isVisible(p)) && (
                 <div className="rl-field">
-                  <span>Hashtags <small>{form.hashtags.length}/5 (límite de Instagram)</small></span>
+                  <span>Hashtags <small>{form.hashtags.length}/5</small></span>
                   <div className="rl-chips">
                     {form.hashtags.map(h => (
                       <span key={h} className="rl-chip">#{h}{!readOnly && <button type="button" onClick={() => update({ hashtags: form.hashtags.filter(x => x !== h) })}>✕</button>}</span>
@@ -871,13 +1003,13 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
                   </div>
                 </div>
               )}
-              {!ytConnected && (
+              {!ytConnected && isVisible('youtube') && (
                 <div className="rl-field rl-soon-block" title="Conecta tu canal de YouTube en la cabecera">
                   <span><PlatformIcon platform="youtube" /> Título y descripción de YouTube Shorts <small>Sin conectar</small></span>
                   <input type="text" className="form-input" disabled value={form.title} placeholder="Conecta YouTube para publicar también en Shorts" />
                 </div>
               )}
-              {form.platforms.includes('youtube') && (
+              {form.platforms.includes('youtube') && isVisible('youtube') && (
                 <>
                   <label className="rl-field">
                     <span><PlatformIcon platform="youtube" /> Título de YouTube Shorts <small>{form.title.length}/100</small></span>
@@ -892,35 +1024,117 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
 
               {!readOnly && (
                 <div className="rl-regenerate">
-                  <input type="text" className="form-input" placeholder="Notas para la IA (opcional): ej. es una figura premium de colección" value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} />
-                  <button type="button" className="pr-btn" onClick={onRegenerate} disabled={!!busy || processing}>{busy === 'ai' ? '✨ Generando…' : '✨ Regenerar'}</button>
+                  <input type="text" className="form-input" placeholder="Notas para la revisión (opcional): ej. es una figura premium de colección" value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} />
+                  <button type="button" className="pr-btn" onClick={onRegenerate} disabled={!!busy || processing}>{busy === 'ai' ? '🔍 Revisando…' : '🔍 Re-revisar'}</button>
                 </div>
               )}
             </section>
 
+            {hasTiktok && isVisible('tiktok') && (
+              <section className="rl-section rl-tt">
+                <div className="rl-section-head">
+                  <span className="pr-side-eyebrow"><PlatformIcon platform="tiktok" /> Publicación en TikTok</span>
+                </div>
+                {!ttConnected ? (
+                  <p className="pr-muted">Conecta tu cuenta de TikTok en la cabecera para elegir las opciones de publicación.</p>
+                ) : creatorError ? (
+                  <div className="pr-alert err"><span>No se pudo leer la cuenta de TikTok: {creatorError}</span></div>
+                ) : !creator && !readOnly ? (
+                  <p className="pr-muted"><span className="rl-spinner" /> Leyendo tu cuenta de TikTok…</p>
+                ) : (
+                  <>
+                    {creator && (
+                      <div className="rl-tt-creator">
+                        {creator.avatarUrl && <img src={creator.avatarUrl} alt="" />}
+                        <div><b>{creator.nickname}</b>{creator.username && <small>@{creator.username}</small>}</div>
+                        <span className="pr-muted">Se publicará en esta cuenta</span>
+                      </div>
+                    )}
+                    {tooLongForTiktok && <div className="pr-alert err"><span>El video dura más de lo que permite tu cuenta de TikTok ({fmtDuration(creator.maxVideoDurationSec)}).</span></div>}
+                    <label className="rl-field">
+                      <span>Quién puede ver este video</span>
+                      <select className="form-input" value={form.tiktokOptions.privacyLevel || ''} disabled={readOnly}
+                        onChange={(e) => updateTiktok({ privacyLevel: e.target.value || null })}>
+                        <option value="" disabled>Elige una opción…</option>
+                        {(creator?.privacyLevelOptions || (form.tiktokOptions.privacyLevel ? [form.tiktokOptions.privacyLevel] : [])).map(level => (
+                          <option key={level} value={level} disabled={level === 'SELF_ONLY' && form.tiktokOptions.brandedContent}>
+                            {TIKTOK_PRIVACY[level] || level}{level === 'SELF_ONLY' && form.tiktokOptions.brandedContent ? ' (no disponible con contenido de marca)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="rl-field">
+                      <span>Permitir a los usuarios</span>
+                      <div className="rl-tt-checks">
+                        {[['allowComment', 'Comentar', 'commentDisabled'], ['allowDuet', 'Dúo', 'duetDisabled'], ['allowStitch', 'Stitch', 'stitchDisabled']].map(([key, label, off]) => (
+                          <label key={key} className={creator?.[off] ? 'off' : ''} title={creator?.[off] ? 'Desactivado en la configuración de tu cuenta de TikTok' : undefined}>
+                            <input type="checkbox" checked={!creator?.[off] && !!form.tiktokOptions[key]} disabled={readOnly || !!creator?.[off]}
+                              onChange={(e) => updateTiktok({ [key]: e.target.checked })} />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rl-field rl-tt-commercial">
+                      <label className="rl-tt-switch">
+                        <input type="checkbox" checked={form.tiktokOptions.commercial} disabled={readOnly}
+                          onChange={(e) => updateTiktok({ commercial: e.target.checked, ...(!e.target.checked && { yourBrand: false, brandedContent: false }) })} />
+                        <span><b>Divulgar contenido del video</b><small>Activa esto si el video promociona productos, servicios o marcas a cambio de algo de valor.</small></span>
+                      </label>
+                      {form.tiktokOptions.commercial && (
+                        <div className="rl-tt-checks column">
+                          <label>
+                            <input type="checkbox" checked={form.tiktokOptions.yourBrand} disabled={readOnly} onChange={(e) => updateTiktok({ yourBrand: e.target.checked })} />
+                            <span><b>Tu marca</b><small>Promocionas tu propio negocio o marca.</small></span>
+                          </label>
+                          <label>
+                            <input type="checkbox" checked={form.tiktokOptions.brandedContent} disabled={readOnly}
+                              onChange={(e) => updateTiktok({ brandedContent: e.target.checked, ...(e.target.checked && form.tiktokOptions.privacyLevel === 'SELF_ONLY' && { privacyLevel: null }) })} />
+                            <span><b>Contenido de marca</b><small>Promocionas a otra marca o a un tercero.</small></span>
+                          </label>
+                          {form.tiktokOptions.brandedContent
+                            ? <p className="rl-tt-note">El video se etiquetará como <b>"Colaboración pagada"</b>.</p>
+                            : form.tiktokOptions.yourBrand ? <p className="rl-tt-note">El video se etiquetará como <b>"Contenido promocional"</b>.</p>
+                              : <p className="rl-tt-note warn">Elige al menos una opción.</p>}
+                        </div>
+                      )}
+                    </div>
+                    {tiktokProblem && !readOnly && <p className="rl-tt-note warn">⚠ {tiktokProblem}</p>}
+                    <p className="rl-tt-consent">
+                      Al publicar, aceptas la{' '}
+                      {form.tiktokOptions.brandedContent && <><a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noreferrer">Política de contenido de marca</a> y la{' '}</>}
+                      <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer">Confirmación de uso de música</a> de TikTok.
+                      {' '}Tras publicar, el video puede tardar unos minutos en procesarse y aparecer en tu perfil.
+                    </p>
+                  </>
+                )}
+              </section>
+            )}
+
             <section className="rl-section">
               <div className="rl-section-head"><span className="pr-side-eyebrow">Enlaces al publicar</span></div>
               <ul className="rl-link-plan">
-                {PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => (
+                {visible.filter(p => form.platforms.includes(p.key)).map(p => (
                   <li key={p.key}><PlatformIcon platform={p.key} title={p.label} />{p.linkHint}</li>
                 ))}
               </ul>
             </section>
 
             {post.publishing && (
-              <div className="rl-ai-working"><span className="rl-spinner" />Publicando en las redes… Instagram puede tardar unos minutos en procesar el video.</div>
+              <div className="rl-ai-working"><span className="rl-spinner" />Publicando… el video puede tardar unos minutos en procesarse.</div>
             )}
             {post.results && Object.keys(post.results).length > 0 && (
               <section className="rl-section">
                 <div className="rl-section-head"><span className="pr-side-eyebrow">Resultado</span>{post.simulated && <span className="rl-sim-badge">simulado</span>}</div>
                 <ul className="rl-results">
-                  {PLATFORMS.filter(p => post.results[p.key]).map(p => {
+                  {visible.filter(p => post.results[p.key]).map(p => {
                     const r = post.results[p.key];
                     return (
                       <li key={p.key}>
                         <PlatformIcon platform={p.key} title={p.label} />{p.label}
                         {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
                         {p.key === 'facebook' && !r.simulated && <small>{r.commentId ? '💬 link comentado' : '⚠ sin comentario con link'}</small>}
+                        {p.key === 'tiktok' && r.privacy && <small>{TIKTOK_PRIVACY[r.privacy] || r.privacy}</small>}
                         ✓
                       </li>
                     );
@@ -944,13 +1158,13 @@ function ReelEditor({ post, http, settings, ytConnected, onClose, onChanged, onA
               </label>
             )}
             <span className="pr-spacer" />
-            <button type="button" className="pr-btn rl-publish-real" onClick={onPublishNow} disabled={!!busy || processing}>
+            <button type="button" className="pr-btn rl-publish-real" onClick={onPublishNow} disabled={!!busy || processing || !!tiktokProblem} title={tiktokProblem || undefined}>
               {post.status === 'FAILED' ? '🔄 Reintentar publicación' : '🚀 Publicar ahora'}
             </button>
             {dirty && <button type="button" className="pr-btn" onClick={onSave} disabled={!!busy}>{busy === 'save' ? 'Guardando…' : '💾 Guardar'}</button>}
             {post.approved
               ? <button type="button" className="pr-btn on" onClick={onUnapprove} disabled={!!busy}>✔ Aprobado · quitar</button>
-              : <button type="button" className="pr-btn primary rl-approve" onClick={onApprove} disabled={!!busy || processing}>{busy === 'approve' ? 'Aprobando…' : '✔ Aprobar y siguiente'}</button>}
+              : <button type="button" className="pr-btn primary rl-approve" onClick={onApprove} disabled={!!busy || processing || !!tiktokProblem} title={tiktokProblem || undefined}>{busy === 'approve' ? 'Aprobando…' : '✔ Aprobar y siguiente'}</button>}
           </div>
         )}
       </div>

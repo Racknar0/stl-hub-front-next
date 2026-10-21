@@ -649,3 +649,36 @@ $rl-review: #38bdf8;
   display: flex; flex-direction: column; gap: 0.9rem;
   .rl-side-reel + .rl-side-reel { padding-top: 0.9rem; border-top: 1px solid rgba(255, 255, 255, 0.07); }
 }
+
+// ---------- TikTok ----------
+.reels-publisher .rl-connections .rl-conn-avatar { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+.rl-tt {
+  .pr-side-eyebrow { display: inline-flex; align-items: center; gap: 0.35rem; }
+  select.form-input { cursor: pointer; }
+}
+.rl-tt-creator {
+  display: flex; align-items: center; gap: 0.6rem;
+  img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+  div { display: flex; flex-direction: column; b { font-size: 0.85rem; color: #fff; } small { font-size: 0.72rem; color: $rl-muted; } }
+  > span { margin-left: auto; font-size: 0.72rem; }
+}
+.rl-tt-checks {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
+  &.column { flex-direction: column; padding-left: 1.6rem; }
+  label {
+    display: flex; align-items: flex-start; gap: 0.45rem; font-size: 0.8rem; color: #e4e4e7; cursor: pointer;
+    &.off { opacity: 0.45; cursor: not-allowed; }
+    span { display: flex; flex-direction: column; small { color: $rl-muted; font-size: 0.72rem; } }
+  }
+  input { accent-color: #fe2c55; margin-top: 0.15rem; }
+}
+.rl-tt-switch {
+  display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;
+  input { accent-color: #fe2c55; margin-top: 0.2rem; }
+  span { display: flex; flex-direction: column; b { font-size: 0.8rem; color: #fff; } small { color: $rl-muted; font-size: 0.72rem; } }
+}
+.rl-tt-note { margin: 0; font-size: 0.74rem; color: #d4d4d8; &.warn { color: #fbbf24; } }
+.rl-tt-consent {
+  margin: 0; font-size: 0.72rem; color: $rl-muted; line-height: 1.5;
+  a { color: #a5b4fc; }
+}

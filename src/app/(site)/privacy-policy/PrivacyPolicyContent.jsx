@@ -52,7 +52,24 @@ export default function PrivacyPolicyContent() {
       ? 'Revoking access and deleting data: access can be revoked at any time from the Google security settings page (https://myaccount.google.com/connections). When the channel is disconnected from our dashboard, the token is revoked with Google and deleted from our servers immediately; any remaining associated data can be deleted upon request through our support contact, within 7 days.'
       : 'Revocar el acceso y eliminar los datos: el acceso puede revocarse en cualquier momento desde la página de configuración de seguridad de Google (https://myaccount.google.com/connections). Al desconectar el canal desde nuestro panel, el token se revoca ante Google y se elimina de nuestros servidores de inmediato; cualquier dato asociado restante puede eliminarse a petición a través de nuestro contacto de soporte, en un plazo de 7 días.',
 
-    s3Title: isEn ? '4. User Data Collection' : '4. Recopilación de Datos del Usuario',
+    ttTitle: isEn ? '4. Use of TikTok for Developers APIs' : '4. Uso de las APIs de TikTok for Developers',
+    ttText: isEn
+      ? 'STL Hub uses the TikTok Login Kit and Content Posting API to publish short videos of the 3D models in our catalog on our own official TikTok account. This integration is an internal administration tool used only by the STL Hub team; visitors of our website are never asked to connect their TikTok accounts.'
+      : 'STL Hub utiliza Login Kit y la Content Posting API de TikTok para publicar videos cortos de los modelos 3D de nuestro catálogo en nuestra propia cuenta oficial de TikTok. Esta integración es una herramienta interna de administración que usa únicamente el equipo de STL Hub; a los visitantes de nuestra web nunca se les pide conectar sus cuentas de TikTok.',
+    ttL1: isEn
+      ? 'TikTok terms: the use of these features is also subject to the TikTok Terms of Service (https://www.tiktok.com/legal/terms-of-service) and the TikTok Privacy Policy (https://www.tiktok.com/legal/privacy-policy).'
+      : 'Condiciones de TikTok: el uso de estas funciones también está sujeto a las Condiciones del Servicio de TikTok (https://www.tiktok.com/legal/terms-of-service) y a la Política de Privacidad de TikTok (https://www.tiktok.com/legal/privacy-policy).',
+    ttL2: isEn
+      ? 'Data accessed: with the authorization of the account owner (OAuth 2.0, scopes user.info.basic and video.publish), we read the basic profile of our account (display name, avatar and posting settings) to show where the video will be posted, and we publish the videos the owner approves. We do not access, collect or store data of other TikTok users.'
+      : 'Datos a los que accedemos: con la autorización del propietario de la cuenta (OAuth 2.0, permisos user.info.basic y video.publish), leemos el perfil básico de nuestra cuenta (nombre, avatar y ajustes de publicación) para mostrar dónde se publicará el video, y publicamos los videos que el propietario aprueba. No accedemos, recopilamos ni almacenamos datos de otros usuarios de TikTok.',
+    ttL3: isEn
+      ? 'Use, storage and sharing: the OAuth refresh token and the account name/avatar are stored on our servers solely to publish our videos. This data is never sold, shared with or transferred to third parties.'
+      : 'Uso, almacenamiento y compartición: el token de actualización de OAuth y el nombre/avatar de la cuenta se guardan en nuestros servidores con el único fin de publicar nuestros videos. Estos datos nunca se venden, comparten ni transfieren a terceros.',
+    ttL4: isEn
+      ? 'Revoking access and deleting data: access can be revoked at any time from the TikTok app (Settings and privacy > Security > Apps and services). When the account is disconnected from our dashboard, the token is revoked with TikTok and deleted from our servers immediately; any remaining associated data can be deleted upon request through our support contact, within 7 days.'
+      : 'Revocar el acceso y eliminar los datos: el acceso puede revocarse en cualquier momento desde la app de TikTok (Ajustes y privacidad > Seguridad > Apps y servicios). Al desconectar la cuenta desde nuestro panel, el token se revoca ante TikTok y se elimina de nuestros servidores de inmediato; cualquier dato asociado restante puede eliminarse a petición a través de nuestro contacto de soporte, en un plazo de 7 días.',
+
+    s3Title: isEn ? '5. User Data Collection' : '5. Recopilación de Datos del Usuario',
     s3Text: isEn
       ? 'To provide our STL file and 3D model download services, we collect the following strictly necessary information:'
       : 'Para brindar nuestros servicios de descarga de archivos STL y modelos 3D, recopilamos la siguiente información estrictamente necesaria:',
@@ -63,12 +80,12 @@ export default function PrivacyPolicyContent() {
       : 'Cookies: utilizamos cookies propias para recordar su idioma y sesión y para medir qué campañas o redes sociales traen visitantes a nuestro sitio. No usamos cookies para acceder a datos de YouTube ni de otras plataformas de terceros.',
     s3L3: isEn ? 'Technical Data: Anonymized IP address, browser type, and time zone for fraud prevention and basic statistical analysis.' : 'Datos Técnicos: Dirección IP anonimizada, tipo de navegador y zona horaria para prevención de fraudes y análisis estadístico básico.',
 
-    s4Title: isEn ? '5. Security and Data Retention' : '5. Seguridad y Retención de Datos',
+    s4Title: isEn ? '6. Security and Data Retention' : '6. Seguridad y Retención de Datos',
     s4Text: isEn
       ? 'The security of your information is our priority. We employ robust encryption protocols (SSL/TLS) for data transmission and strong hashing algorithms (such as bcrypt) for password storage. We retain your personal information only for as long as necessary to fulfill the purposes outlined in this policy or to comply with legal obligations.'
       : 'La seguridad de su información es nuestra prioridad. Empleamos protocolos de cifrado robustos (SSL/TLS) para la transmisión de datos y algoritmos de hashing fuertes (como bcrypt) para el almacenamiento de contraseñas. Retenemos su información personal únicamente durante el tiempo necesario para cumplir con los fines descritos en esta política o para cumplir con obligaciones legales.',
 
-    s5Title: isEn ? '6. Your Rights' : '6. Sus Derechos',
+    s5Title: isEn ? '7. Your Rights' : '7. Sus Derechos',
     s5Text: isEn
       ? 'You have full control over your information. At any time you have the right to:'
       : 'Usted tiene control total sobre su información. En cualquier momento tiene derecho a:',
@@ -76,15 +93,15 @@ export default function PrivacyPolicyContent() {
     s5L2: isEn ? 'Request the total rectification or deletion of your account and associated data.' : 'Solicitar la rectificación o eliminación total de su cuenta y sus datos asociados.',
     s5L3: isEn ? 'Opt-out of any promotional communications.' : 'Darse de baja de cualquier comunicación promocional.',
 
-    s6Title: isEn ? '7. Policy Changes' : '7. Modificaciones a esta Política',
+    s6Title: isEn ? '8. Policy Changes' : '8. Modificaciones a esta Política',
     s6Text: isEn
       ? 'We reserve the right to update this Privacy Policy to reflect changes in our practices or legal and third-party API requirements. Any significant changes will be visibly notified through our platform.'
       : 'Nos reservamos el derecho de actualizar esta Política de Privacidad para reflejar cambios en nuestras prácticas o requisitos legales y de las APIs de terceros. Cualquier cambio significativo será notificado a través de nuestra plataforma de forma visible.',
 
     contactTitle: isEn ? 'Legal Contact and Support' : 'Contacto y Soporte Legal',
     contactText: isEn
-      ? 'If you represent a third-party platform (Pinterest, Meta, Google/YouTube, etc.) reviewing our application, or if you are a user with questions about the handling of your data, you can contact us directly at our official administrative support email.'
-      : 'Si representa a una plataforma de terceros (Pinterest, Meta, Google/YouTube, etc.) revisando nuestra aplicación, o si es un usuario con dudas sobre el manejo de sus datos, puede contactarnos directamente en nuestro correo oficial de soporte administrativo.',
+      ? 'If you represent a third-party platform (Pinterest, Meta, Google/YouTube, TikTok, etc.) reviewing our application, or if you are a user with questions about the handling of your data, you can contact us directly at our official administrative support email.'
+      : 'Si representa a una plataforma de terceros (Pinterest, Meta, Google/YouTube, TikTok, etc.) revisando nuestra aplicación, o si es un usuario con dudas sobre el manejo de sus datos, puede contactarnos directamente en nuestro correo oficial de soporte administrativo.',
   };
 
   return (
@@ -126,6 +143,17 @@ export default function PrivacyPolicyContent() {
               <li>{linkify(t.ytL3)}</li>
               <li>{linkify(t.ytL4)}</li>
               <li>{linkify(t.ytL5)}</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '1rem' }}>{t.ttTitle}</h2>
+            <p style={{ lineHeight: '1.7', color: '#a1a1aa', fontSize: '0.95rem', marginBottom: '1rem' }}>{t.ttText}</p>
+            <ul style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#a1a1aa', fontSize: '0.95rem', lineHeight: '1.6' }}>
+              <li>{linkify(t.ttL1)}</li>
+              <li>{linkify(t.ttL2)}</li>
+              <li>{linkify(t.ttL3)}</li>
+              <li>{linkify(t.ttL4)}</li>
             </ul>
           </section>
 

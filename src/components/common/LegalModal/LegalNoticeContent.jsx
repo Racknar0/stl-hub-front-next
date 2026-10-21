@@ -173,6 +173,16 @@ export default function LegalNoticeContent({ isEn, officialEmail, effectiveDate 
           <p>STL HUB utiliza los <strong>Servicios de la API de YouTube</strong> para publicar videos de nuestro catálogo en nuestro propio canal oficial de YouTube mediante una herramienta interna de administración. Al usar cualquier función de STL HUB que dependa de YouTube, usted acepta quedar vinculado por las <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer"><strong>Condiciones del Servicio de YouTube</strong></a>. La información tratada a través de estos servicios también está sujeta a la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad de Google</a> y a nuestra <a href="/privacy-policy">Política de Privacidad</a>, que explica qué datos tratamos y cómo revocar el acceso y eliminarlos.</p>
         )}
       </div>
+
+      {/* 15. TikTok */}
+      <div className="legal-section">
+        <h3>{isEn ? '15. TikTok for Developers' : '15. TikTok for Developers'}</h3>
+        {isEn ? (
+          <p>STL HUB uses the <strong>TikTok Login Kit and Content Posting API</strong> to publish videos of our catalog on our own official TikTok account through an internal administration tool. By using any STL HUB feature that relies on TikTok, you agree to the <a href="https://www.tiktok.com/legal/terms-of-service" target="_blank" rel="noopener noreferrer"><strong>TikTok Terms of Service</strong></a>. Information processed through these services is also subject to the <a href="https://www.tiktok.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">TikTok Privacy Policy</a> and to our <a href="/privacy-policy">Privacy Policy</a>.</p>
+        ) : (
+          <p>STL HUB utiliza <strong>Login Kit y la Content Posting API de TikTok</strong> para publicar videos de nuestro catálogo en nuestra propia cuenta oficial de TikTok mediante una herramienta interna de administración. Al usar cualquier función de STL HUB que dependa de TikTok, usted acepta las <a href="https://www.tiktok.com/legal/terms-of-service" target="_blank" rel="noopener noreferrer"><strong>Condiciones del Servicio de TikTok</strong></a>. La información tratada a través de estos servicios también está sujeta a la <a href="https://www.tiktok.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Política de Privacidad de TikTok</a> y a nuestra <a href="/privacy-policy">Política de Privacidad</a>.</p>
+        )}
+      </div>
     </>
   );
 }
