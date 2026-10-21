@@ -10,7 +10,7 @@ const PLATFORMS = [
   { key: 'instagram', label: 'Instagram Reels', short: 'IG', maxSec: 900, linkHint: 'Link en la bio (Instagram no permite links clicables en el caption)' },
   { key: 'facebook', label: 'Facebook Reels', short: 'FB', maxSec: 90, linkHint: 'Link en el primer comentario (automático, con UTM)' },
   // YouTube queda para más adelante: se muestra en gris y no se puede elegir
-  { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)', soon: true },
+  { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
 ];
 const TIME_OPTIONS = ['12:00', '15:00', '18:00', '19:00', '20:00', '21:00'];
 const SPREAD_OPTIONS = [0, 30, 60, 90, 120];
@@ -189,6 +189,8 @@ export default function ReelsPublisher() {
   const [stats, setStats] = useState({});
   const [settings, setSettings] = useState({ defaultTime: '18:00', language: 'es' });
   const [connection, setConnection] = useState(null);
+  const [connectingYt, setConnectingYt] = useState(false);
+  const ytConnected = !!connection?.youtube?.connected;
   const [uploading, setUploading] = useState(null); // null | { count, pct }
   const [dragOver, setDragOver] = useState(null); // 'tray' | dayNumber
   const [toast, setToast] = useState(null);
@@ -202,14 +204,15 @@ export default function ReelsPublisher() {
   const fetchTray = useCallback(() => http.getData('/reels/tray').then(r => setTray(r.data?.posts || [])).catch(() => {}), [http]);
   const fetchMonth = useCallback(() => http.getData(`/reels/month?year=${currentDate.getFullYear()}&month=${currentDate.getMonth()}`)
     .then(r => setPostsByDay(r.data?.postsByDay || {})).catch(() => setPostsByDay({})), [currentDate, http]);
+  const fetchConnection = useCallback(() => http.getData('/reels/connection-status').then(r => { setConnection(r.data); return r.data; }).catch(() => null), [http]);
   const fetchStats = useCallback(() => http.getData('/reels/stats').then(r => r.data && setStats(r.data)).catch(() => {}), [http]);
   const refreshAll = useCallback(() => Promise.all([fetchTray(), fetchMonth(), fetchStats()]), [fetchTray, fetchMonth, fetchStats]);
 
   useEffect(() => {
     fetchTray(); fetchStats();
     http.getData('/reels/settings').then(r => r.data && setSettings(r.data)).catch(() => {});
-    http.getData('/reels/connection-status').then(r => setConnection(r.data)).catch(() => {});
-  }, [fetchTray, fetchStats, http]);
+    fetchConnection();
+  }, [fetchTray, fetchStats, fetchConnection, http]);
   useEffect(() => { fetchMonth(); }, [fetchMonth]);
 
   // Mientras la IA trabaja en algún reel, refrescar cada 3 s
@@ -301,6 +304,35 @@ export default function ReelsPublisher() {
     finally { setGenerating(false); }
   };
 
+  // Abre la autorización de Google en una ventana y espera (hasta 3 min) a que el canal quede conectado
+  const connectYoutube = async () => {
+    try {
+      const res = await http.getData('/reels/youtube/auth');
+      window.open(res.data.url, 'youtube-auth', 'width=520,height=720');
+      setConnectingYt(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const status = await fetchConnection();
+        if (status?.youtube?.connected) {
+          showToast(`✓ YouTube conectado: ${status.youtube.channel?.title || ''}`);
+          return;
+        }
+      }
+      showToast('No se completó la conexión con YouTube', 'err');
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingYt(false); }
+  };
+
+  const disconnectYoutube = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar el canal de YouTube? Los reels dejarán de subirse a YouTube.')) return;
+    try {
+      await http.postData('/reels/youtube/disconnect');
+      await fetchConnection();
+      showToast('YouTube desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
   const saveSetting = async (patch) => {
     if (patch.publishMode === 'real' && !confirm('⚠️ MODO REAL\n\nA partir de ahora los reels aprobados se publicarán DE VERDAD en Instagram y Facebook cuando llegue su hora, y "Publicar ahora" publica al instante.\n\n¿Activar el modo real?')) return;
     try {
@@ -365,10 +397,18 @@ export default function ReelsPublisher() {
             ? <span className="rl-real-badge" title="Los reels aprobados se publican de verdad en Instagram y Facebook">● Modo real</span>
             : <span className="rl-sim-badge" title="Al llegar la hora, los reels aprobados se marcan como publicados sin enviar nada a las redes">Modo simulación</span>}
           {PLATFORMS.map(p => (
-            <span key={p.key} className={`rl-conn ${p.soon ? 'soon' : connection?.[p.key]?.configured ? 'on' : 'off'}`}
-              title={p.soon ? 'Integración prevista para más adelante' : connection?.[p.key]?.configured ? 'Credenciales configuradas' : 'Sin credenciales'}>
-              <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.label.split(' ')[0]}{p.soon && <small>próximamente</small>}
-            </span>
+            p.key === 'youtube' && !ytConnected ? (
+              <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
+                title="Autoriza tu canal de YouTube para publicar Shorts">
+                <i className={`rl-pf ${p.key}`}>{p.short}</i>{connectingYt ? 'Esperando autorización…' : 'Conectar YouTube'}
+              </button>
+            ) : (
+              <span key={p.key} className={`rl-conn ${connection?.[p.key]?.configured ? 'on' : 'off'}`}
+                title={p.key === 'youtube' ? `Canal conectado: ${connection.youtube.channel?.title || ''}` : connection?.[p.key]?.configured ? 'Credenciales configuradas' : 'Sin credenciales'}>
+                <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.key === 'youtube' ? (connection.youtube.channel?.title || 'YouTube') : p.label.split(' ')[0]}
+                {p.key === 'youtube' && <button type="button" className="rl-conn-x" title="Desconectar YouTube" onClick={disconnectYoutube}>✕</button>}
+              </span>
+            )
           ))}
         </div>
       </div>
@@ -493,6 +533,16 @@ export default function ReelsPublisher() {
               </select>
             </label>
             {settings.timeSpread > 0 && <p className="pr-autopilot-line">Franja: <b>{spreadRange(settings.defaultTime, settings.timeSpread)}</b>, cada día a una hora distinta.</p>}
+            {ytConnected && (
+              <label className="rl-setting" title="Hasta que Google apruebe la auditoría del proyecto, YouTube deja en privado los videos subidos por API">
+                Privacidad YouTube
+                <select value={settings.youtubePrivacy || 'private'} onChange={(e) => saveSetting({ youtubePrivacy: e.target.value })}>
+                  <option value="private">Privado</option>
+                  <option value="unlisted">No listado</option>
+                  <option value="public">Público</option>
+                </select>
+              </label>
+            )}
             <label className="rl-setting">
               Idioma de la IA
               <select value={settings.language} onChange={(e) => saveSetting({ language: e.target.value })}>
@@ -573,7 +623,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} realMode={settings.publishMode === 'real'}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} realMode={settings.publishMode === 'real'} ytConnected={ytConnected}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -587,7 +637,9 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, realMode, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, realMode, ytConnected, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+  // Una red no disponible: por ahora solo YouTube sin el canal conectado
+  const unavailable = (p) => p.key === 'youtube' && !ytConnected;
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(null); // 'save' | 'approve' | 'ai' | 'publish'
@@ -702,9 +754,9 @@ function ReelEditor({ post, http, settings, realMode, onClose, onChanged, onAppr
           {/* Vista previa */}
           <div className="rl-editor-preview">
             <div className="pr-size-toggle" role="group" aria-label="Plataforma de la vista previa">
-              {PLATFORMS.filter(p => p.soon || form.platforms.includes(p.key)).map(p => (
-                <button key={p.key} type="button" disabled={p.soon} title={p.soon ? `${p.label}: próximamente` : p.label}
-                  className={`${previewPlatform === p.key ? 'on' : ''} ${p.soon ? 'rl-soon' : ''}`} onClick={() => setPreviewPlatform(p.key)}>{p.short}</button>
+              {PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => (
+                <button key={p.key} type="button" title={p.label}
+                  className={previewPlatform === p.key ? 'on' : ''} onClick={() => setPreviewPlatform(p.key)}>{p.short}</button>
               ))}
             </div>
             <PhonePreview videoUrl={resolveMediaUrl(post.videoPath)} platform={previewPlatform} caption={previewCaption}
@@ -742,9 +794,9 @@ function ReelEditor({ post, http, settings, realMode, onClose, onChanged, onAppr
               </div>
               <div className="rl-platform-toggles row">
                 {PLATFORMS.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || p.soon} title={p.soon ? 'Integración prevista para más adelante' : undefined}
-                    className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${p.soon ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
-                    <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.label}{p.soon && <small>Próximamente</small>}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? 'Conecta tu canal de YouTube en la cabecera' : undefined}
+                    className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
+                    <i className={`rl-pf ${p.key}`}>{p.short}</i>{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
                 ))}
               </div>
@@ -782,10 +834,10 @@ function ReelEditor({ post, http, settings, realMode, onClose, onChanged, onAppr
                   </div>
                 </div>
               )}
-              {!form.platforms.includes('youtube') && (
-                <div className="rl-field rl-soon-block" title="Integración prevista para más adelante">
-                  <span><i className="rl-pf youtube">YT</i> Título y descripción de YouTube Shorts <small>Próximamente</small></span>
-                  <input type="text" className="form-input" disabled value={form.title} placeholder="Disponible cuando se active YouTube" />
+              {!ytConnected && (
+                <div className="rl-field rl-soon-block" title="Conecta tu canal de YouTube en la cabecera">
+                  <span><i className="rl-pf youtube">YT</i> Título y descripción de YouTube Shorts <small>Sin conectar</small></span>
+                  <input type="text" className="form-input" disabled value={form.title} placeholder="Conecta YouTube para publicar también en Shorts" />
                 </div>
               )}
               {form.platforms.includes('youtube') && (
@@ -812,8 +864,8 @@ function ReelEditor({ post, http, settings, realMode, onClose, onChanged, onAppr
             <section className="rl-section">
               <div className="rl-section-head"><span className="pr-side-eyebrow">Enlaces al publicar</span></div>
               <ul className="rl-link-plan">
-                {PLATFORMS.filter(p => p.soon || form.platforms.includes(p.key)).map(p => (
-                  <li key={p.key} className={p.soon ? 'rl-soon' : ''}><i className={`rl-pf ${p.key}`}>{p.short}</i>{p.linkHint}{p.soon && <small>Próximamente</small>}</li>
+                {PLATFORMS.filter(p => form.platforms.includes(p.key)).map(p => (
+                  <li key={p.key}><i className={`rl-pf ${p.key}`}>{p.short}</i>{p.linkHint}</li>
                 ))}
               </ul>
             </section>

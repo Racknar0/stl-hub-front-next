@@ -640,3 +640,22 @@ $rl-review: #38bdf8;
 .rl-results small { font-size: 0.66rem; color: #8b869a; }
 .rl-state.st-publishing { color: #fcd34d; background: rgba(245, 158, 11, 0.14); }
 .reels-publisher .pr-main-layout .rl-calendar .rl-day-reel.st-publishing { border-color: #f59e0b; }
+
+// ---------- Conexión de YouTube ----------
+.reels-publisher .rl-connections {
+  .rl-conn-btn {
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.74rem;
+    color: #fecaca;
+    border-color: rgba(255, 0, 51, 0.5);
+    background: rgba(255, 0, 51, 0.1);
+    &:hover:not(:disabled) { background: rgba(255, 0, 51, 0.2); }
+    &:disabled { cursor: progress; opacity: 0.7; }
+  }
+  .rl-conn-x {
+    background: none; border: none; color: #8b869a; cursor: pointer;
+    font-size: 0.65rem; padding: 0 0 0 0.15rem;
+    &:hover { color: #f87171; }
+  }
+}
