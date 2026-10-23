@@ -45,6 +45,7 @@ export default function BrushPanel({
   onBrushTagsChange = () => {},
   brushedCount = 0,
   reviewMode = false,
+  rightOffset = 0,
 }) {
   const [minimized, setMinimized] = useState(false)
   const isEmpty = brushCategories.length === 0 && brushTags.length === 0
@@ -52,8 +53,9 @@ export default function BrushPanel({
 
   const containerSx = {
     position: 'fixed',
-    left: 24,
+    right: rightOffset + 24,
     bottom: 24,
+    transition: 'right 180ms ease',
     zIndex: 1400,
     bgcolor: 'rgba(15, 10, 30, 0.94)',
     border: `1px solid ${BRUSH_COLOR}`,

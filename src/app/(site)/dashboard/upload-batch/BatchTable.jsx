@@ -2544,6 +2544,7 @@ export default function BatchTable() {
         onBrushTagsChange={setBrushTags}
         brushedCount={brushedCount}
         reviewMode={reviewMode}
+        rightOffset={searchSidebarSide === 'right' ? (searchSidebarOpen ? RIGHT_SIDEBAR_WIDTH : 52) : 0}
       />
 
       {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}
