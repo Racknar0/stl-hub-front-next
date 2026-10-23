@@ -40,35 +40,15 @@ export default function TelegramOrganizer() {
   const undoBusyRef = useRef(false);
   const packingRef = useRef(false); // evita doble envío (p. ej. Espacio dos veces) mientras se empaqueta
   
-  // Interceptador premium de status para alertas flotantes
-  const [status, setStatusState] = useState('');
+  // Avisos flotantes con tipo explícito: 'success' | 'error' | 'warning' | 'info'.
+  // 'silent' no muestra nada (estados transitorios como "Empaquetando...").
   const [organizerAlerts, setOrganizerAlerts] = useState([]);
 
-  const setStatus = useCallback((msg) => {
-    setStatusState(msg || '');
-    if (!msg) return;
-
-    const msgLower = msg.toLowerCase();
-    
-    // Omitir alertas de cargados o estados de carga transitorios (empaquetando, borrando, purgando)
-    if (msgLower.includes('cargados') || msgLower.includes('empaquetando') || msgLower.includes('borrando') || msgLower.includes('purgando')) {
-      return;
-    }
-
-    let type = 'info';
-    if (msg.includes('✅') || msg.includes('⚡') || msgLower.includes('correctamente') || msgLower.includes('borrados') || msgLower.includes('deshecha')) {
-      type = 'success';
-    } else if (msgLower.includes('error') || msg.includes('⚠️')) {
-      type = 'error';
-    }
-
+  const notify = useCallback((msg, type = 'info') => {
+    if (!msg || type === 'silent') return;
     const alertId = `org-${Date.now()}-${Math.random()}`;
-    
-    // Mostrar ÚNICAMENTE la última alerta de acción real (evita apilamientos e invasión de la UI)
-    setOrganizerAlerts([
-      { id: alertId, msg, type }
-    ]);
-    
+    // Solo la última alerta (evita apilamientos que tapen la grilla)
+    setOrganizerAlerts([{ id: alertId, msg, type }]);
     setTimeout(() => {
       setOrganizerAlerts(prev => prev.filter(a => a.id !== alertId));
     }, 4000);
@@ -173,16 +153,16 @@ export default function TelegramOrganizer() {
       setServerTotal(d.total || 0);
       setTotalAssets(d.totalAssets || 0);
       setTotalImages(d.totalImages || 0);
-      setStatus(`${(reset ? 0 : files.length) + newFiles.length} de ${d.total} cargados.`);
+      notify(`${(reset ? 0 : files.length) + newFiles.length} de ${d.total} cargados.`, 'silent');
     } catch (e) {
-      setStatus('Error cargando archivos');
+      notify('Error cargando archivos', 'error');
     }
     setLoading(false);
   };
 
   const handleCardClick = (fileName, type) => {
     if (isFiltering) {
-      setStatus('⚠️ Quita el filtro o la búsqueda para empaquetar');
+      notify('Quita el filtro o la búsqueda para empaquetar', 'warning');
       return;
     }
     if (!selectedAnchor && type === 'anchor') {
@@ -204,7 +184,7 @@ export default function TelegramOrganizer() {
       }
       setSelectedFiles(newSelected);
     } else {
-      setStatus('⚠️ Primero selecciona un Archivo Principal (Caja Naranja)');
+      notify('Primero selecciona un asset (tarjeta naranja)', 'warning');
     }
   };
 
@@ -213,7 +193,7 @@ export default function TelegramOrganizer() {
     packingRef.current = true;
     const toMove = [selectedAnchor, ...Array.from(selectedFiles)];
     const items = files.filter(f => toMove.includes(f.name));
-    setStatus('Empaquetando...');
+    notify('Empaquetando...', 'silent');
     try {
       const res = await http.postData('/organizer/package', { anchorName: selectedAnchor, filesToMove: toMove });
       const d = res.data || res;
@@ -224,9 +204,9 @@ export default function TelegramOrganizer() {
       adjustTotals(items, -1);
       setSelectedAnchor(null);
       setSelectedFiles(new Set());
-      setStatus(`✅ ${d.moved} archivos → "${d.folder}"`);
+      notify(`${d.moved} archivos → "${d.folder}"`, 'success');
     } catch (e) {
-      setStatus('Error empaquetando: ' + e.message);
+      notify('Error empaquetando: ' + e.message, 'error');
     } finally {
       packingRef.current = false;
     }
@@ -253,7 +233,7 @@ export default function TelegramOrganizer() {
 
     const items = files.filter(f => toMove.includes(f.name));
     packingRef.current = true;
-    setStatus(`Empaquetando exprés (${side})...`);
+    notify(`Empaquetando exprés (${side})...`, 'silent');
     try {
       const res = await http.postData('/organizer/package', { anchorName, filesToMove: toMove });
       const d = res.data || res;
@@ -263,9 +243,9 @@ export default function TelegramOrganizer() {
       setFiles(prev => prev.filter(f => !toMove.includes(f.name)));
       adjustTotals(items, -1);
       if (selectedAnchor === anchorName) { setSelectedAnchor(null); setSelectedFiles(new Set()); }
-      setStatus(`⚡ ${d.moved} archivos → "${d.folder}"`);
+      notify(`${d.moved} archivos → "${d.folder}"`, 'success');
     } catch (e) {
-      setStatus('Error exprés: ' + e.message);
+      notify('Error exprés: ' + e.message, 'error');
     } finally {
       packingRef.current = false;
     }
@@ -316,7 +296,7 @@ export default function TelegramOrganizer() {
       names.forEach(n => next.delete(n));
       return next;
     });
-    setStatus(names.length === 1 ? `✅ Archivo "${names[0]}" borrado.` : `✅ ${names.length} archivos borrados correctamente.`);
+    notify(names.length === 1 ? `Archivo "${names[0]}" borrado.` : `${names.length} archivos borrados.`, 'success');
 
     const ready = http.postData('/organizer/delete-files', { fileNames: names })
       .then(res => {
@@ -331,7 +311,7 @@ export default function TelegramOrganizer() {
         if (failed.length > 0) {
           const failedSet = new Set(failed);
           restoreToGrid(removed.filter(f => failedSet.has(f.name)));
-          setStatus(`⚠️ No se pudieron borrar ${failed.length} archivo(s); han vuelto a la grilla.`);
+          notify(`No se pudieron borrar ${failed.length} archivo(s); han vuelto a la grilla.`, 'error');
         }
         return deleted;
       });
@@ -357,7 +337,7 @@ export default function TelegramOrganizer() {
   const confirmPurge = async () => {
     if (purgeText !== 'PURGAR') return;
     setPurgeOpen(false);
-    setStatus('Purgando carpeta...');
+    notify('Purgando carpeta...', 'silent');
     try {
       const res = await http.deleteRaw('/organizer/purge?confirm=PURGAR');
       const d = res.data || res;
@@ -370,9 +350,9 @@ export default function TelegramOrganizer() {
       setSelectedFiles(new Set());
       setFilesToDelete(new Set());
       setUndoStack([]);
-      setStatus('Carpeta purgada correctamente.');
+      notify('Carpeta purgada correctamente.', 'success');
     } catch (e) {
-      setStatus('Error al purgar: ' + e.message);
+      notify('Error al purgar: ' + e.message, 'error');
     }
   };
 
@@ -386,7 +366,7 @@ export default function TelegramOrganizer() {
         action.files = await ready;
         if (action.files.length === 0) {
           setUndoStack(prev => prev.slice(0, -1));
-          setStatus('⚠️ Nada que deshacer: ese borrado no llegó a hacerse.');
+          notify('Nada que deshacer: ese borrado no llegó a hacerse.', 'warning');
           return;
         }
       }
@@ -396,9 +376,9 @@ export default function TelegramOrganizer() {
       // Sin recargar: devolver a la grilla solo lo restaurado (se conserva scroll, lo cargado y la selección)
       const restored = new Set(d.restored || []);
       restoreToGrid(items.filter(f => restored.has(f.name)));
-      setStatus(`✅ Acción deshecha (${restored.size} archivos restaurados).`);
+      notify(`Acción deshecha (${restored.size} archivos restaurados).`, 'success');
     } catch (e) {
-      setStatus('Error al deshacer');
+      notify('Error al deshacer', 'error');
     } finally {
       undoBusyRef.current = false;
     }
@@ -447,38 +427,24 @@ export default function TelegramOrganizer() {
   const selectOnlyImages = () => {
     const images = visibleFiles.filter(f => f.type === 'image');
     if (images.length === 0) {
-      setStatus('⚠️ No hay imágenes en la lista actual');
+      notify('No hay imágenes en la lista actual', 'warning');
       return;
     }
     setFilesToDelete(new Set(images.map(f => f.name)));
-    setStatus(`✅ Seleccionadas ${images.length} imágenes para borrar.`);
+    notify(`Seleccionadas ${images.length} imágenes para borrar.`, 'info');
   };
 
   const selectOnlyNonAnchors = () => {
     const nonAnchors = visibleFiles.filter(f => f.type !== 'anchor');
     if (nonAnchors.length === 0) {
-      setStatus('⚠️ No hay archivos sueltos en la lista actual');
+      notify('No hay archivos sueltos en la lista actual', 'warning');
       return;
     }
     setFilesToDelete(new Set(nonAnchors.map(f => f.name)));
-    setStatus(`✅ Seleccionados ${nonAnchors.length} archivos sueltos para borrar.`);
+    notify(`Seleccionados ${nonAnchors.length} archivos sueltos para borrar.`, 'info');
   };
 
 
-  const getStatusClass = () => {
-    if (!status) return '';
-    const stLower = status.toLowerCase();
-    if (status.includes('✅') || status.includes('⚡') || stLower.includes('correctamente') || stLower.includes('borrados')) {
-      return 'status-success';
-    }
-    if (stLower.includes('error') || status.includes('⚠️')) {
-      return 'status-error';
-    }
-    if (stLower.includes('empaquetando') || stLower.includes('borrando') || stLower.includes('purgando')) {
-      return 'status-loading';
-    }
-    return 'status-info';
-  };
 
   // ── Grilla virtualizada ──
   // Las tarjetas reciben un objeto de acciones estable que delega en los handlers del render actual,
@@ -545,7 +511,7 @@ export default function TelegramOrganizer() {
         setSelectedAnchor(null);
         setSelectedFiles(new Set());
         setFilesToDelete(new Set());
-        setStatus('Selección limpiada');
+        notify('Selección limpiada', 'info');
       }
     } else if (key === 'x' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const name = hoveredRef.current;
@@ -616,26 +582,15 @@ export default function TelegramOrganizer() {
             <h1>📦 Telegram Organizer</h1>
             <p>Organiza los archivos descargados en carpetas para el Batch Upload.</p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Button
-              variant="outlined"
-              color="info"
-              onClick={() => setIsReviewMode(true)}
-              startIcon={<FullscreenIcon />}
-            >
-              Modo Revisión
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setShowExplorer(true)}
-              startIcon={<FolderIcon />}
-              sx={{ ml: 1, textTransform: 'none', fontWeight: 600 }}
-            >
-              Explorador de Archivos
-            </Button>
-            <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading} style={{ marginLeft: '8px' }}>
-              {loading ? 'Cargando...' : 'Recargar'}
+          <div className="header-actions">
+            <button className="btn btn-secondary" onClick={() => setIsReviewMode(true)}>
+              <FullscreenIcon fontSize="small" /> Modo revisión
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowExplorer(true)}>
+              <FolderIcon fontSize="small" /> Explorador de archivos
+            </button>
+            <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading}>
+              {loading ? 'Cargando...' : '⟳ Recargar'}
             </button>
             {serverTotal > 0 && (
               <button className="btn btn-purge" onClick={purgeFolder} title="Borra TODOS los archivos sueltos de la carpeta, sin vuelta atrás">
@@ -650,116 +605,57 @@ export default function TelegramOrganizer() {
         <FileExplorer initialPath="/telegram_downloads_organized" isModal onClose={() => setShowExplorer(false)} />
       </Dialog>
 
-      {isReviewMode ? (
-        <div className="header-review">
-          <div className="stats-bar">
-            <div className="stat">Assets:<span>{totalAssets}</span></div>
-            <div className="stat">Imágenes:<span>{totalImages}</span></div>
-            <div className="stat">Total:<span>{serverTotal}</span></div>
-            <div className="stat">{isFiltering ? 'Mostrando:' : 'Cargados:'}<span>{visibleFiles.length}</span></div>
-          </div>
-          
-          <div className="actions-bar">
-            <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
-              ▶ Empaquetar
-            </button>
-            {files.length > 0 && (
-              <>
-                <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                  {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
-                </button>
-                <button className="btn btn-secondary" onClick={selectOnlyImages} title="Seleccionar solo imágenes para borrar">
-                  🖼️ Sel. Imágenes
-                </button>
-                <button className="btn btn-secondary" onClick={selectOnlyNonAnchors} title="Seleccionar todo excepto archivos base (ASSETS)">
-                  🍃 Sel. Sueltos
-                </button>
-              </>
-            )}
-            {filesToDelete.size > 0 && (
-              <button className="btn btn-delete" onClick={deleteSelected}>
-                🗑️ Borrar ({filesToDelete.size})
-              </button>
-            )}
-            {undoStack.length > 0 && (
-              <button className="btn btn-undo" onClick={undoLast}>
-                ↩️ Deshacer ({undoStack.length})
-              </button>
-            )}
-          </div>
+      {/* Una sola barra (estadísticas + acciones) para los dos modos; el modo revisión añade Purgar y Salir */}
+      <div className={isReviewMode ? 'header-review' : 'toolbar'}>
+        <div className="stats-bar">
+          <div className="stat">Assets:<span>{totalAssets}</span></div>
+          <div className="stat">Imágenes:<span>{totalImages}</span></div>
+          <div className="stat">Total:<span>{serverTotal}</span></div>
+          <div className="stat">{isFiltering ? 'Mostrando:' : 'Cargados:'}<span>{visibleFiles.length}</span></div>
+        </div>
 
-          {serverTotal > 0 && (
-            <button className="btn btn-purge purge-review" onClick={purgeFolder} title="Borra TODOS los archivos sueltos de la carpeta, sin vuelta atrás">
-              ☠️ Purgar
+        <div className="actions-bar">
+          <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
+            ▶ Empaquetar
+          </button>
+          {files.length > 0 && (
+            <>
+              <button className="btn btn-secondary" onClick={toggleSelectAll}>
+                {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
+              </button>
+              <button className="btn btn-secondary" onClick={selectOnlyImages} title="Seleccionar solo imágenes para borrar">
+                🖼️ Sel. Imágenes
+              </button>
+              <button className="btn btn-secondary" onClick={selectOnlyNonAnchors} title="Seleccionar todo excepto archivos base (ASSETS)">
+                🍃 Sel. Sueltos
+              </button>
+            </>
+          )}
+          {filesToDelete.size > 0 && (
+            <button className="btn btn-delete" onClick={deleteSelected}>
+              🗑️ Borrar ({filesToDelete.size})
             </button>
           )}
-
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => setIsReviewMode(false)}
-            startIcon={<FullscreenExitIcon />}
-            sx={{
-              position: 'fixed',
-              top: 12,
-              right: 16,
-              zIndex: 9999,
-              bgcolor: 'rgba(239, 68, 68, 0.85)',
-              color: '#fff',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              fontWeight: 'bold',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
-              textTransform: 'none',
-              '&:hover': {
-                bgcolor: 'rgba(220, 38, 38, 0.95)',
-              },
-            }}
-          >
-            Salir
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="stats-bar">
-            <div className="stat">Assets:<span>{totalAssets}</span></div>
-            <div className="stat">Imágenes:<span>{totalImages}</span></div>
-            <div className="stat">Total:<span>{serverTotal}</span></div>
-            <div className="stat">{isFiltering ? 'Mostrando:' : 'Cargados:'}<span>{visibleFiles.length}</span></div>
-          </div>
-
-          <div className="actions-bar">
-            <button className="btn btn-package" onClick={packageSelection} disabled={!selectedAnchor}>
-              ▶ Empaquetar
+          {undoStack.length > 0 && (
+            <button className="btn btn-undo" onClick={undoLast}>
+              ↩️ Deshacer ({undoStack.length})
             </button>
-            
-            {files.length > 0 && (
-              <>
-                <button className="btn btn-secondary" onClick={toggleSelectAll}>
-                  {filesToDelete.size > 0 ? '🚫 Desmarcar' : '✅ Sel. Todo'}
-                </button>
-                <button className="btn btn-secondary" onClick={selectOnlyImages} title="Seleccionar solo imágenes para borrar">
-                  🖼️ Sel. Imágenes
-                </button>
-                <button className="btn btn-secondary" onClick={selectOnlyNonAnchors} title="Seleccionar todo excepto archivos base (ASSETS)">
-                  🍃 Sel. Sueltos
-                </button>
-              </>
-            )}
+          )}
+        </div>
 
-            {filesToDelete.size > 0 && (
-              <button className="btn btn-delete" onClick={deleteSelected}>
-                🗑️ Borrar ({filesToDelete.size})
+        {isReviewMode && (
+          <>
+            {serverTotal > 0 && (
+              <button className="btn btn-purge purge-review" onClick={purgeFolder} title="Borra TODOS los archivos sueltos de la carpeta, sin vuelta atrás">
+                ☠️ Purgar
               </button>
             )}
-
-            {undoStack.length > 0 && (
-              <button className="btn btn-undo" onClick={undoLast}>
-                ↩️ Deshacer ({undoStack.length})
-              </button>
-            )}
-          </div>
-        </>
-      )}
+            <button className="btn btn-exit" onClick={() => setIsReviewMode(false)}>
+              <FullscreenExitIcon fontSize="small" /> Salir
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="filter-bar">
         {FILTERS.map(f => (
@@ -781,6 +677,11 @@ export default function TelegramOrganizer() {
           onKeyDown={(e) => { if (e.key === 'Escape') { setSearch(''); e.currentTarget.blur(); } }}
         />
         {isFiltering && <span className="filter-note">Filtro activo: empaquetar desactivado</span>}
+        <span className="legend">
+          <span><i className="l-anchor" />Asset elegido</span>
+          <span><i className="l-pack" />Se empaqueta</span>
+          <span><i className="l-delete" />Para borrar</span>
+        </span>
         <span className="shortcuts-hint" title="Atajos de teclado">
           ⌨️ <b>Espacio</b> empaquetar · <b>X</b> borrar (ratón encima) · <b>Ctrl+Z</b> deshacer · <b>Esc</b> limpiar
         </span>
@@ -906,15 +807,12 @@ export default function TelegramOrganizer() {
           width: '90vw',
         }}>
           {organizerAlerts.map((alert) => {
-            const isSuccess = alert.type === 'success';
-            const isError = alert.type === 'error';
-
-            // Tono oscuro premium con bordes de color sutiles
-            const borderClr = isSuccess
-              ? 'rgba(34, 197, 94, 0.45)'
-              : isError
-              ? 'rgba(239, 68, 68, 0.45)'
-              : 'rgba(255, 255, 255, 0.2)';
+            const borderClr = {
+              success: 'rgba(34, 197, 94, 0.55)',
+              error: 'rgba(239, 68, 68, 0.6)',
+              warning: 'rgba(245, 158, 11, 0.6)',
+            }[alert.type] || 'rgba(255, 255, 255, 0.2)';
+            const icon = { success: '✅', error: '⛔', warning: '⚠️' }[alert.type] || 'ℹ️';
 
             return (
               <Box
@@ -937,6 +835,7 @@ export default function TelegramOrganizer() {
                   animation: 'fadeIn 0.2s ease',
                 }}
               >
+                <span>{icon}</span>
                 <Box sx={{ flex: 1, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>
                   {alert.msg}
                 </Box>

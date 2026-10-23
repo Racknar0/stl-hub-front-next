@@ -9,8 +9,15 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 // Fotos: la imagen ocupa toda la tarjeta y el nombre aparece en hover sobre un degradado. Ese degradado
 // y el nombre tienen pointer-events: none para que el ratón siga "encima" del <img> (la extensión de zoom
 // del navegador detecta la imagen bajo el cursor).
+// Telegram nombra los archivos "<canal>_<mensaje>_<nombre real>": se muestra el nombre real y el nº de mensaje aparte
+const splitTelegramName = (name) => {
+  const m = name.match(/^\d+_(\d+)_(.+)$/);
+  return m ? { msgId: m[1], displayName: m[2] } : { msgId: null, displayName: name };
+};
+
 function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, imageSrc, canPack, actions }) {
   const isAnchor = file.type === 'anchor';
+  const { msgId, displayName } = isAnchor ? splitTelegramName(file.name) : {};
   return (
     <div
       className={`card ${isAnchor ? 'anchor' : 'image-card'} ${isSelectedAnchor ? 'selected-anchor' : ''} ${isSelectedFile ? 'selected-file' : ''} ${isToDelete ? 'to-delete' : ''}`}
@@ -48,7 +55,8 @@ function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, ima
       {isAnchor ? (
         <>
           <div className="card-img">{file.isCompressed ? '📚' : '🗿'}</div>
-          <div className="card-name">{file.name}</div>
+          <div className="card-name asset-name" title={file.name}>{displayName}</div>
+          {msgId && <div className="card-msg-id">#{msgId}</div>}
         </>
       ) : (
         <>
