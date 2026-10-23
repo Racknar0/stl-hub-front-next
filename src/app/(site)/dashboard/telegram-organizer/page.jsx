@@ -12,7 +12,7 @@ import useStore from '@/store/useStore';
 import './TelegramOrganizer.scss';
 
 const PAGE_SIZE = 400;
-const MAX_UNDO = 5;
+const MAX_UNDO = 50;
 
 export default function TelegramOrganizer() {
   const [files, setFiles] = useState([]);
