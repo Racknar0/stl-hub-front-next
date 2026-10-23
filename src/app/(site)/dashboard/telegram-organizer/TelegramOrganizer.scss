@@ -138,6 +138,35 @@
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
+  // Filtros, buscador y recordatorio de atajos (encima de la grilla, en ambos modos)
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+
+    .chip {
+      height: 26px; padding: 0 10px; border-radius: 13px;
+      background: rgba(255, 255, 255, 0.06); color: #cbd5e0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      span { color: #94a3b8; margin-left: 3px; font-weight: 700; }
+      &:hover { background: rgba(255, 255, 255, 0.12); }
+      &.active { background: rgba(255, 152, 0, 0.18); border-color: #ff9800; color: #fff; span { color: #ff9800; } }
+    }
+    .search {
+      height: 26px; width: 220px; padding: 0 10px; border-radius: 13px;
+      background: rgba(0, 0, 0, 0.3); color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 0.78rem; outline: none;
+      &:focus { border-color: #ff9800; }
+    }
+    .filter-note { font-size: 0.72rem; color: #fbbf24; font-weight: 600; }
+    .shortcuts-hint {
+      margin-left: auto; font-size: 0.7rem; color: #64748b;
+      b { color: #94a3b8; font-weight: 700; }
+    }
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -326,6 +355,11 @@
         border-radius: 6px;
         white-space: nowrap;
       }
+    }
+
+    .filter-bar {
+      margin: 0;
+      padding: 10px 24px 0;
     }
 
     .scroll-area {

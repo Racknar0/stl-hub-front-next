@@ -78,6 +78,9 @@ export default function TelegramOrganizer() {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const hoveredRef = useRef(null); // tarjeta bajo el ratón (atajo X)
   const [purgeText, setPurgeText] = useState('');
 
   const http = new HttpService();
@@ -104,17 +107,49 @@ export default function TelegramOrganizer() {
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
-  // Keyboard: Space = package
+  // Teclado: Espacio = empaquetar, X = borrar la tarjeta bajo el ratón, Ctrl+Z = deshacer, Esc = limpiar selección.
+  // El listener se registra una vez y llama a keyHandlerRef.current (siempre con el estado del último render).
+  const keyHandlerRef = useRef(() => {});
   useEffect(() => {
-    const handler = (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && selectedAnchor) {
-        e.preventDefault();
-        packageSelection();
-      }
-    };
+    const handler = (e) => keyHandlerRef.current(e);
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedAnchor, selectedFiles, files]);
+  }, []);
+
+  // Filtros y búsqueda. Con un filtro activo no se puede empaquetar: el rango y las flechas trabajan
+  // sobre la lista completa y se llevarían archivos que no se ven.
+  const FILTERS = [
+    { id: 'all', label: 'Todo' },
+    { id: 'anchors', label: 'Assets' },
+    { id: 'images', label: 'Imágenes' },
+    { id: 'lonelyAssets', label: 'Assets sin foto', title: 'Assets sin ninguna imagen justo antes ni justo después' },
+  ];
+  const isLonelyAsset = (list, i) =>
+    list[i].type === 'anchor' && list[i - 1]?.type !== 'image' && list[i + 1]?.type !== 'image';
+  const filterCounts = useMemo(() => {
+    let anchors = 0, lonelyAssets = 0;
+    files.forEach((f, i) => {
+      if (f.type === 'anchor') anchors++;
+      if (isLonelyAsset(files, i)) lonelyAssets++;
+    });
+    return { all: files.length, anchors, images: files.length - anchors, lonelyAssets };
+  }, [files]);
+  const searchTerm = search.trim().toLowerCase();
+  const isFiltering = filter !== 'all' || searchTerm !== '';
+  const visibleFiles = useMemo(() => files.filter((f, i) => {
+    if (filter === 'anchors' && f.type !== 'anchor') return false;
+    if (filter === 'images' && f.type !== 'image') return false;
+    if (filter === 'lonelyAssets' && !isLonelyAsset(files, i)) return false;
+    return !searchTerm || f.name.toLowerCase().includes(searchTerm);
+  }), [files, filter, searchTerm]);
+
+  // Al activar un filtro se suelta la selección de empaquetado (no se puede empaquetar filtrando)
+  useEffect(() => {
+    if (isFiltering) {
+      setSelectedAnchor(null);
+      setSelectedFiles(new Set());
+    }
+  }, [isFiltering]);
 
   const loadFiles = async (reset = true) => {
     setLoading(true);
@@ -146,6 +181,10 @@ export default function TelegramOrganizer() {
   };
 
   const handleCardClick = (fileName, type) => {
+    if (isFiltering) {
+      setStatus('⚠️ Quita el filtro o la búsqueda para empaquetar');
+      return;
+    }
     if (!selectedAnchor && type === 'anchor') {
       setSelectedAnchor(fileName);
       setSelectedFiles(new Set());
@@ -170,7 +209,7 @@ export default function TelegramOrganizer() {
   };
 
   const packageSelection = async () => {
-    if (!selectedAnchor || packingRef.current) return;
+    if (!selectedAnchor || packingRef.current || isFiltering) return;
     packingRef.current = true;
     const toMove = [selectedAnchor, ...Array.from(selectedFiles)];
     const items = files.filter(f => toMove.includes(f.name));
@@ -195,7 +234,7 @@ export default function TelegramOrganizer() {
 
   const quickPackage = async (anchorName, side, e) => {
     e.stopPropagation();
-    if (packingRef.current) return;
+    if (packingRef.current || isFiltering) return;
     const anchorIdx = files.findIndex(f => f.name === anchorName);
     if (anchorIdx === -1) return;
 
@@ -368,8 +407,8 @@ export default function TelegramOrganizer() {
   const toggleDelete = (fileName, checked, e) => {
     // Si se presiona Shift y existe un elemento previamente seleccionado/deseleccionado
     if (e && e.nativeEvent && e.nativeEvent.shiftKey && lastCheckedName) {
-      const startIdx = files.findIndex(f => f.name === lastCheckedName);
-      const endIdx = files.findIndex(f => f.name === fileName);
+      const startIdx = visibleFiles.findIndex(f => f.name === lastCheckedName);
+      const endIdx = visibleFiles.findIndex(f => f.name === fileName);
       
       if (startIdx !== -1 && endIdx !== -1) {
         const [minIdx, maxIdx] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
@@ -377,7 +416,7 @@ export default function TelegramOrganizer() {
         setFilesToDelete(prev => {
           const next = new Set(prev);
           for (let i = minIdx; i <= maxIdx; i++) {
-            const fName = files[i].name;
+            const fName = visibleFiles[i].name;
             if (checked) {
               next.add(fName);
             } else {
@@ -402,11 +441,11 @@ export default function TelegramOrganizer() {
 
   const toggleSelectAll = () => {
     if (filesToDelete.size > 0) setFilesToDelete(new Set());
-    else setFilesToDelete(new Set(files.map(f => f.name)));
+    else setFilesToDelete(new Set(visibleFiles.map(f => f.name)));
   };
 
   const selectOnlyImages = () => {
-    const images = files.filter(f => f.type === 'image');
+    const images = visibleFiles.filter(f => f.type === 'image');
     if (images.length === 0) {
       setStatus('⚠️ No hay imágenes en la lista actual');
       return;
@@ -416,7 +455,7 @@ export default function TelegramOrganizer() {
   };
 
   const selectOnlyNonAnchors = () => {
-    const nonAnchors = files.filter(f => f.type !== 'anchor');
+    const nonAnchors = visibleFiles.filter(f => f.type !== 'anchor');
     if (nonAnchors.length === 0) {
       setStatus('⚠️ No hay archivos sueltos en la lista actual');
       return;
@@ -464,6 +503,7 @@ export default function TelegramOrganizer() {
       setLastCheckedName(file.name);
     },
     onCardMouseEnter: (file) => {
+      hoveredRef.current = file.name;
       if (!isShiftDraggingRef.current) return;
       const mode = dragSelectModeRef.current;
       setFilesToDelete(prev => {
@@ -482,7 +522,39 @@ export default function TelegramOrganizer() {
       e.stopPropagation();
       setPreviewImage(imageUrl(file.name));
     },
+    onCardMouseLeave: (file) => {
+      if (hoveredRef.current === file.name) hoveredRef.current = null;
+    },
     onQuickPack: (file, side, e) => quickPackage(file.name, side, e),
+  };
+
+  keyHandlerRef.current = (e) => {
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+    if (purgeOpen || previewImage || showExplorer) return; // con un diálogo abierto, los atajos no actúan
+    const key = e.key.toLowerCase();
+
+    if (e.code === 'Space' && selectedAnchor) {
+      e.preventDefault();
+      packageSelection();
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key === 'z') {
+      e.preventDefault();
+      undoLast();
+    } else if (e.key === 'Escape') {
+      if (selectedAnchor || filesToDelete.size > 0) {
+        setSelectedAnchor(null);
+        setSelectedFiles(new Set());
+        setFilesToDelete(new Set());
+        setStatus('Selección limpiada');
+      }
+    } else if (key === 'x' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const name = hoveredRef.current;
+      if (name && files.some(f => f.name === name)) {
+        e.preventDefault();
+        hoveredRef.current = null;
+        deleteOptimistic([name]);
+      }
+    }
   };
   const cardActions = useMemo(() => {
     const call = (name) => (...args) => handlersRef.current[name](...args);
@@ -490,6 +562,7 @@ export default function TelegramOrganizer() {
       onCardClick: call('onCardClick'),
       onCardMouseDown: call('onCardMouseDown'),
       onCardMouseEnter: call('onCardMouseEnter'),
+      onCardMouseLeave: call('onCardMouseLeave'),
       onToggleDelete: call('onToggleDelete'),
       onQuickDelete: call('onQuickDelete'),
       onPreview: call('onPreview'),
@@ -506,6 +579,7 @@ export default function TelegramOrganizer() {
   useLayoutEffect(() => {
     const el = gridRef.current;
     if (!el) return;
+    setGridWidth(el.clientWidth); // medida inicial directa, sin esperar al primer aviso del observer
     const ro = new ResizeObserver(([entry]) => setGridWidth(entry.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
@@ -526,7 +600,7 @@ export default function TelegramOrganizer() {
   }, [isReviewMode]);
 
   const columns = Math.max(1, Math.floor((gridWidth + GRID_GAP) / (CARD_MIN_WIDTH + GRID_GAP)));
-  const rowCount = Math.ceil(files.length / columns);
+  const rowCount = Math.ceil(visibleFiles.length / columns);
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollRef.current,
@@ -582,7 +656,7 @@ export default function TelegramOrganizer() {
             <div className="stat">Assets:<span>{totalAssets}</span></div>
             <div className="stat">Imágenes:<span>{totalImages}</span></div>
             <div className="stat">Total:<span>{serverTotal}</span></div>
-            <div className="stat">Cargados:<span>{files.length}</span></div>
+            <div className="stat">{isFiltering ? 'Mostrando:' : 'Cargados:'}<span>{visibleFiles.length}</span></div>
           </div>
           
           <div className="actions-bar">
@@ -650,7 +724,7 @@ export default function TelegramOrganizer() {
             <div className="stat">Assets:<span>{totalAssets}</span></div>
             <div className="stat">Imágenes:<span>{totalImages}</span></div>
             <div className="stat">Total:<span>{serverTotal}</span></div>
-            <div className="stat">Cargados:<span>{files.length}</span></div>
+            <div className="stat">{isFiltering ? 'Mostrando:' : 'Cargados:'}<span>{visibleFiles.length}</span></div>
           </div>
 
           <div className="actions-bar">
@@ -687,6 +761,31 @@ export default function TelegramOrganizer() {
         </>
       )}
 
+      <div className="filter-bar">
+        {FILTERS.map(f => (
+          <button
+            key={f.id}
+            className={`chip ${filter === f.id ? 'active' : ''}`}
+            onClick={() => setFilter(f.id)}
+            title={f.title}
+          >
+            {f.label} <span>{filterCounts[f.id]}</span>
+          </button>
+        ))}
+        <input
+          className="search"
+          type="search"
+          placeholder="Buscar por nombre…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') { setSearch(''); e.currentTarget.blur(); } }}
+        />
+        {isFiltering && <span className="filter-note">Filtro activo: empaquetar desactivado</span>}
+        <span className="shortcuts-hint" title="Atajos de teclado">
+          ⌨️ <b>Espacio</b> empaquetar · <b>X</b> borrar (ratón encima) · <b>Ctrl+Z</b> deshacer · <b>Esc</b> limpiar
+        </span>
+      </div>
+
       <div className="scroll-area" ref={scrollRef} style={scrollHeight ? { height: scrollHeight, overflowY: 'auto' } : undefined}>
         <div ref={gridRef} style={{ position: 'relative', height: rowVirtualizer.getTotalSize() }}>
           {rowVirtualizer.getVirtualItems().map(row => (
@@ -699,7 +798,7 @@ export default function TelegramOrganizer() {
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
               }}
             >
-              {files.slice(row.index * columns, row.index * columns + columns).map(file => (
+              {visibleFiles.slice(row.index * columns, row.index * columns + columns).map(file => (
                 <OrganizerCard
                   key={file.name}
                   file={file}
@@ -707,6 +806,7 @@ export default function TelegramOrganizer() {
                   isSelectedFile={selectedFiles.has(file.name)}
                   isToDelete={filesToDelete.has(file.name)}
                   imageSrc={file.type === 'image' ? imageUrl(file.name) : undefined}
+                  canPack={!isFiltering}
                   actions={cardActions}
                 />
               ))}

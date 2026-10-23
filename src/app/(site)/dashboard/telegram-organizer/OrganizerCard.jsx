@@ -9,7 +9,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 // Fotos: la imagen ocupa toda la tarjeta y el nombre aparece en hover sobre un degradado. Ese degradado
 // y el nombre tienen pointer-events: none para que el ratón siga "encima" del <img> (la extensión de zoom
 // del navegador detecta la imagen bajo el cursor).
-function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, imageSrc, actions }) {
+function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, imageSrc, canPack, actions }) {
   const isAnchor = file.type === 'anchor';
   return (
     <div
@@ -17,6 +17,7 @@ function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, ima
       onClick={(e) => actions.onCardClick(file, e)}
       onMouseDown={(e) => actions.onCardMouseDown(file, e)}
       onMouseEnter={() => actions.onCardMouseEnter(file)}
+      onMouseLeave={() => actions.onCardMouseLeave(file)}
     >
       <input
         type="checkbox"
@@ -34,8 +35,12 @@ function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, ima
 
       {isAnchor && (
         <>
-          <button className="quick-pack left" title="Pack ←" onClick={(e) => actions.onQuickPack(file, 'left', e)}>⬅️</button>
-          <button className="quick-pack right" title="Pack →" onClick={(e) => actions.onQuickPack(file, 'right', e)}>➡️</button>
+          {canPack && (
+            <>
+              <button className="quick-pack left" title="Pack ←" onClick={(e) => actions.onQuickPack(file, 'left', e)}>⬅️</button>
+              <button className="quick-pack right" title="Pack →" onClick={(e) => actions.onQuickPack(file, 'right', e)}>➡️</button>
+            </>
+          )}
           <div className="badge">ASSET</div>
         </>
       )}
