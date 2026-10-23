@@ -31,6 +31,7 @@ export default function TelegramOrganizer() {
 
   const isShiftDraggingRef = useRef(false);
   const dragSelectModeRef = useRef('select');
+  const undoBusyRef = useRef(false);
   
   // Interceptador premium de status para alertas flotantes
   const [status, setStatusState] = useState('');
@@ -206,58 +207,65 @@ export default function TelegramOrganizer() {
     }
   };
 
-  const quickDelete = async (fileName, e) => {
-    e.stopPropagation();
-    
-    // 1. Optimistic UI updates
-    setFiles(prev => prev.filter(f => f.name !== fileName));
-    setServerTotal(prev => prev - 1);
-    if (selectedAnchor === fileName) {
+  // Mismo orden que el backend (organizer.routes.js) para devolver archivos a su sitio
+  const compareNames = (a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }) || (a < b ? -1 : a > b ? 1 : 0);
+
+  // Borrado optimista: se quita de la grilla al instante y el servidor borra en segundo plano
+  // (una sola petición). Lo que falle vuelve a la grilla con aviso. La entrada de Deshacer lleva
+  // `ready`, que resuelve con lo realmente borrado, para que Deshacer espere al servidor.
+  const deleteOptimistic = (names) => {
+    if (names.length === 0) return;
+    const nameSet = new Set(names);
+    const removed = files.filter(f => nameSet.has(f.name));
+
+    setFiles(prev => prev.filter(f => !nameSet.has(f.name)));
+    setServerTotal(prev => prev - removed.length);
+    if (nameSet.has(selectedAnchor)) {
       setSelectedAnchor(null);
       setSelectedFiles(new Set());
     }
+    setFilesToDelete(prev => {
+      const next = new Set(prev);
+      names.forEach(n => next.delete(n));
+      return next;
+    });
+    setStatus(names.length === 1 ? `✅ Archivo "${names[0]}" borrado.` : `✅ ${names.length} archivos borrados correctamente.`);
 
-    // 2. Add to undo stack and status immediately
-    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: [fileName] }]);
-    setStatus(`✅ Archivo "${fileName}" borrado.`);
+    const ready = http.postData('/organizer/delete-files', { fileNames: names })
+      .then(res => {
+        const d = res.data || res;
+        return { deleted: d.deleted || [], failed: (d.failed || []).map(f => f.name) };
+      })
+      .catch(err => {
+        console.error('Error en borrado:', err);
+        return { deleted: [], failed: names };
+      })
+      .then(({ deleted, failed }) => {
+        if (failed.length > 0) {
+          const failedSet = new Set(failed);
+          const back = removed.filter(f => failedSet.has(f.name));
+          setFiles(prev => {
+            const present = new Set(prev.map(f => f.name));
+            const toAdd = back.filter(f => !present.has(f.name));
+            return [...prev, ...toAdd].sort((x, y) => compareNames(x.name, y.name));
+          });
+          setServerTotal(prev => prev + back.length);
+          setStatus(`⚠️ No se pudieron borrar ${failed.length} archivo(s); han vuelto a la grilla.`);
+        }
+        return deleted;
+      });
 
-    try {
-      // 3. Process backend deletion in background
-      await http.postData('/organizer/delete-file', { fileName });
-    } catch (err) {
-      console.error(err);
-      setStatus(`⚠️ No se pudo borrar "${fileName}".`);
-    }
+    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: names, ready }]);
   };
 
-  const deleteSelected = async () => {
-    const toDelete = Array.from(filesToDelete);
+  const quickDelete = (fileName, e) => {
+    e.stopPropagation();
+    deleteOptimistic([fileName]);
+  };
 
-    // 1. Optimistic UI updates
-    setFiles(prev => prev.filter(f => !filesToDelete.has(f.name)));
-    setServerTotal(prev => prev - filesToDelete.size);
-    if (filesToDelete.has(selectedAnchor)) {
-      setSelectedAnchor(null);
-      setSelectedFiles(new Set());
-    }
-    setFilesToDelete(new Set());
-
-    // 2. Add to undo stack and status immediately
-    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: toDelete }]);
-    setStatus(`✅ ${toDelete.length} archivos borrados correctamente.`);
-
-    try {
-      // 3. Parallel backend requests in background
-      await Promise.all(toDelete.map(async (fileName) => {
-        try {
-          await http.postData('/organizer/delete-file', { fileName });
-        } catch (err) {
-          console.error(`Error al borrar ${fileName}:`, err);
-        }
-      }));
-    } catch (e) {
-      console.error('Error en borrado masivo:', e);
-    }
+  const deleteSelected = () => {
+    deleteOptimistic(Array.from(filesToDelete));
   };
 
   const purgeFolder = async () => {
@@ -280,15 +288,27 @@ export default function TelegramOrganizer() {
   };
 
   const undoLast = async () => {
-    if (undoStack.length === 0) return;
-    const action = undoStack[undoStack.length - 1];
+    if (undoStack.length === 0 || undoBusyRef.current) return;
+    undoBusyRef.current = true;
+    const { ready, ...action } = undoStack[undoStack.length - 1];
     try {
+      if (ready) {
+        // Esperar a que termine el borrado y deshacer solo lo que de verdad se borró
+        action.files = await ready;
+        if (action.files.length === 0) {
+          setUndoStack(prev => prev.slice(0, -1));
+          setStatus('⚠️ Nada que deshacer: ese borrado no llegó a hacerse.');
+          return;
+        }
+      }
       await http.postData('/organizer/undo', action);
       setUndoStack(prev => prev.slice(0, -1));
       setStatus('✅ Acción deshecha.');
       loadFiles();
     } catch (e) {
       setStatus('Error al deshacer');
+    } finally {
+      undoBusyRef.current = false;
     }
   };
 
