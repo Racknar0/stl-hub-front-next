@@ -129,6 +129,12 @@
     &.btn-delete { background: rgba(229, 62, 62, 0.8); color: #fff; &:hover { background: rgba(229, 62, 62, 1); } }
     &.btn-load { background: linear-gradient(135deg, #7b61ff, #b388ff); color: #fff; padding: 0.8rem 2rem; border-radius: 30px; font-size: 1rem; &:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(123, 97, 255, 0.4); } }
     &.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.1); &:hover { background: rgba(255,255,255,0.15); } }
+    // Purgar: solo borde rojo (no relleno) para que no se confunda con los botones de uso diario
+    &.btn-purge {
+      background: transparent; color: #f87171; border: 1px solid rgba(239, 68, 68, 0.6);
+      margin-left: 24px;
+      &:hover { background: rgba(239, 68, 68, 0.15); color: #fff; }
+    }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
@@ -289,6 +295,18 @@
       .stats-bar, .actions-bar {
         margin-bottom: 0;
         flex-wrap: wrap;
+      }
+
+      // Apartado a la derecha, lejos de Borrar/Deshacer, dejando sitio al botón fijo "Salir"
+      .purge-review {
+        margin-left: auto;
+        margin-right: 110px;
+        flex-shrink: 0;
+        height: 28px;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        white-space: nowrap;
       }
     }
 

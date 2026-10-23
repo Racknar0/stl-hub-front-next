@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HttpService from '@/services/HttpService';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
-import { Button, Dialog, Box } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
@@ -71,6 +71,8 @@ export default function TelegramOrganizer() {
   const [loading, setLoading] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+  const [purgeText, setPurgeText] = useState('');
 
   const http = new HttpService();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
@@ -167,7 +169,7 @@ export default function TelegramOrganizer() {
 
       setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings, items }]);
       setFiles(prev => prev.filter(f => !toMove.includes(f.name)));
-      setServerTotal(prev => prev - toMove.length);
+      adjustTotals(items, -1);
       setSelectedAnchor(null);
       setSelectedFiles(new Set());
       setStatus(`✅ ${d.moved} archivos → "${d.folder}"`);
@@ -207,7 +209,7 @@ export default function TelegramOrganizer() {
 
       setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings, items }]);
       setFiles(prev => prev.filter(f => !toMove.includes(f.name)));
-      setServerTotal(prev => prev - toMove.length);
+      adjustTotals(items, -1);
       if (selectedAnchor === anchorName) { setSelectedAnchor(null); setSelectedFiles(new Set()); }
       setStatus(`⚡ ${d.moved} archivos → "${d.folder}"`);
     } catch (e) {
@@ -221,6 +223,14 @@ export default function TelegramOrganizer() {
   const compareNames = (a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }) || (a < b ? -1 : a > b ? 1 : 0);
 
+  // Mantiene al día los contadores (Total, Assets, Imágenes) al quitar (-1) o devolver (+1) archivos
+  const adjustTotals = (items, sign) => {
+    const assets = items.filter(f => f.type === 'anchor').length;
+    setServerTotal(prev => prev + sign * items.length);
+    setTotalAssets(prev => prev + sign * assets);
+    setTotalImages(prev => prev + sign * (items.length - assets));
+  };
+
   // Devuelve archivos a la grilla en su posición. Los que caen después del último cargado (con más
   // páginas pendientes) no se insertan: llegarán con "Cargar más" y así el cursor `after` no salta nada.
   const restoreToGrid = (items) => {
@@ -232,7 +242,7 @@ export default function TelegramOrganizer() {
       const toAdd = items.filter(f => !present.has(f.name) && (!morePages || !last || compareNames(f.name, last) < 0));
       return [...prev, ...toAdd].sort((x, y) => compareNames(x.name, y.name));
     });
-    setServerTotal(prev => prev + items.length);
+    adjustTotals(items, +1);
   };
 
   // Borrado optimista: se quita de la grilla al instante y el servidor borra en segundo plano
@@ -244,7 +254,7 @@ export default function TelegramOrganizer() {
     const removed = files.filter(f => nameSet.has(f.name));
 
     setFiles(prev => prev.filter(f => !nameSet.has(f.name)));
-    setServerTotal(prev => prev - removed.length);
+    adjustTotals(removed, -1);
     if (nameSet.has(selectedAnchor)) {
       setSelectedAnchor(null);
       setSelectedFiles(new Set());
@@ -286,15 +296,24 @@ export default function TelegramOrganizer() {
     deleteOptimistic(Array.from(filesToDelete));
   };
 
-  const purgeFolder = async () => {
-    if (!confirm('🚨 ¿Estás seguro? Esto eliminará TODOS los archivos sueltos en la carpeta de Telegram Downloads que no han sido empaquetados. Esta acción no se puede deshacer.')) return;
+  // Purgar abre una ventana propia: hay que escribir PURGAR (antes bastaba un confirm() con Enter)
+  const purgeFolder = () => {
+    setPurgeText('');
+    setPurgeOpen(true);
+  };
+
+  const confirmPurge = async () => {
+    if (purgeText !== 'PURGAR') return;
+    setPurgeOpen(false);
     setStatus('Purgando carpeta...');
     try {
-      const res = await http.deleteRaw('/organizer/purge');
+      const res = await http.deleteRaw('/organizer/purge?confirm=PURGAR');
       const d = res.data || res;
       if (d.error) throw new Error(d.error);
       setFiles([]);
       setServerTotal(0);
+      setTotalAssets(0);
+      setTotalImages(0);
       setSelectedAnchor(null);
       setSelectedFiles(new Set());
       setFilesToDelete(new Set());
@@ -420,15 +439,6 @@ export default function TelegramOrganizer() {
             <p>Organiza los archivos descargados en carpetas para el Batch Upload.</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            {files.length > 0 && (
-              <Button
-                variant="contained"
-                color="error"
-                onClick={purgeFolder}
-              >
-                ☠️ Purgar Carpeta
-              </Button>
-            )}
             <Button
               variant="outlined"
               color="info"
@@ -449,6 +459,11 @@ export default function TelegramOrganizer() {
             <button className="btn btn-secondary" onClick={() => loadFiles(true)} disabled={loading} style={{ marginLeft: '8px' }}>
               {loading ? 'Cargando...' : 'Recargar'}
             </button>
+            {serverTotal > 0 && (
+              <button className="btn btn-purge" onClick={purgeFolder} title="Borra TODOS los archivos sueltos de la carpeta, sin vuelta atrás">
+                ☠️ Purgar carpeta
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -493,12 +508,13 @@ export default function TelegramOrganizer() {
                 ↩️ Deshacer ({undoStack.length})
               </button>
             )}
-            {files.length > 0 && (
-              <button className="btn btn-delete" style={{ marginLeft: 'auto', backgroundColor: '#dc2626' }} onClick={purgeFolder}>
-                ☠️ Purgar
-              </button>
-            )}
           </div>
+
+          {serverTotal > 0 && (
+            <button className="btn btn-purge purge-review" onClick={purgeFolder} title="Borra TODOS los archivos sueltos de la carpeta, sin vuelta atrás">
+              ☠️ Purgar
+            </button>
+          )}
 
           <Button
             size="small"
@@ -716,6 +732,35 @@ export default function TelegramOrganizer() {
             />
           </Box>
         )}
+      </Dialog>
+
+      <Dialog open={purgeOpen} onClose={() => setPurgeOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#1a1020', color: '#fff', border: '1px solid rgba(239, 68, 68, 0.5)' } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: '#f87171' }}>☠️ Purgar carpeta de Telegram</DialogTitle>
+        <DialogContent>
+          <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
+            Vas a borrar <b>{serverTotal.toLocaleString('es')} archivos</b> ({totalAssets.toLocaleString('es')} assets y {totalImages.toLocaleString('es')} imágenes),
+            también los que no tienes cargados en pantalla.
+          </p>
+          <p style={{ margin: '0 0 14px', lineHeight: 1.5, color: '#fca5a5' }}>
+            También se vacía la papelera: <b>no se podrá deshacer</b>.
+          </p>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            placeholder="Escribe PURGAR para confirmar"
+            value={purgeText}
+            onChange={(e) => setPurgeText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') confirmPurge(); }}
+            sx={{ input: { color: '#fff' }, '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.25)' } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPurgeOpen(false)} sx={{ color: '#cbd5e0', textTransform: 'none' }}>Cancelar</Button>
+          <Button variant="contained" color="error" disabled={purgeText !== 'PURGAR'} onClick={confirmPurge} sx={{ textTransform: 'none', fontWeight: 700 }}>
+            Purgar {serverTotal.toLocaleString('es')} archivos
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* ═══════════ ORGANIZER FLOATING ALERTS ═══════════ */}
