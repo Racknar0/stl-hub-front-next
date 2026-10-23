@@ -175,6 +175,7 @@
           background: rgba(33, 150, 243, 0.22);
           mix-blend-mode: multiply;
           transition: all 0.2s;
+          pointer-events: none; // que el ratón siga sobre el <img> (extensión de zoom)
         }
       }
     }
@@ -206,6 +207,23 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+
+    // Fotos: la imagen ocupa toda la tarjeta; el nombre sale en hover sobre un degradado.
+    // pointer-events: none en el nombre para no tapar el <img> a la extensión de zoom del navegador.
+    &.image-card {
+      .card-img { position: absolute; inset: 0; }
+    }
+    .card-photo-name {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+      padding: 36px 38px 10px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.6) 45%, transparent);
+      color: #fff; font-size: 11px; line-height: 1.3; font-weight: 600;
+      text-align: center; word-break: break-all;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      opacity: 0; transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    &.image-card:hover .card-photo-name { opacity: 1; }
 
     .del-check {
       position: absolute; top: 8px; left: 8px; z-index: 10;

@@ -84,9 +84,9 @@ export default function TelegramOrganizer() {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
   const token = useStore(s => s.token);
   // <img> no manda cabeceras: el token va por query
+  // La grilla usa la imagen original (no miniatura): la extensión de zoom al pasar el ratón amplía el <img>
+  // y con una miniatura se veía borrosa
   const imageUrl = (name) => `${apiBase}/api/organizer/image?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
-  // Miniatura webp ligera para la grilla; imageUrl (original) solo para "Ver en grande"
-  const thumbUrl = (name) => `${apiBase}/api/organizer/thumb?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
 
   useEffect(() => { loadFiles(); }, []);
 
@@ -526,7 +526,7 @@ export default function TelegramOrganizer() {
     count: rowCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => CARD_HEIGHT + GRID_GAP,
-    overscan: 3,
+    overscan: 6, // filas extra montadas arriba/abajo: las fotos ya están cargadas al llegar con el scroll
   });
 
   return (
@@ -701,7 +701,7 @@ export default function TelegramOrganizer() {
                   isSelectedAnchor={selectedAnchor === file.name}
                   isSelectedFile={selectedFiles.has(file.name)}
                   isToDelete={filesToDelete.has(file.name)}
-                  thumbUrl={file.type === 'image' ? thumbUrl(file.name) : undefined}
+                  imageSrc={file.type === 'image' ? imageUrl(file.name) : undefined}
                   actions={cardActions}
                 />
               ))}
