@@ -221,7 +221,9 @@ export default function ConsoleBar() {
     if (!live) return;
     let cancelled = false;
     const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-    const endpoint = base ? `${base}/api/logs/stream` : '/api/logs/stream';
+    // EventSource no permite cabeceras: el token va por query
+    const token = encodeURIComponent(useStore.getState().token || '');
+    const endpoint = `${base || ''}/api/logs/stream?token=${token}`;
     const evtSource = new EventSource(endpoint);
     evtSource.addEventListener('log', (ev) => {
       if (cancelled) return;

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import CloseIcon from '@mui/icons-material/Close';
-import axios from 'axios';
+import axiosInstance from '@/services/AxiosInterceptor';
 
 const StickyNote = () => {
     const [isOpen, setIsOpen] = useState(true);
@@ -61,10 +61,7 @@ const StickyNote = () => {
         
         const fetchNote = async () => {
             try {
-                const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-                const { data } = await axios.get(apiBase + '/api/admin/notes', {
-                    withCredentials: true
-                });
+                const { data } = await axiosInstance.get('/admin/notes');
                 if (data && data.content) {
                     setContent(data.content);
                 }
@@ -91,10 +88,7 @@ const StickyNote = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(async () => {
             try {
-                const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-                await axios.put(apiBase + '/api/admin/notes', { content: newContent }, {
-                    withCredentials: true
-                });
+                await axiosInstance.put('/admin/notes', { content: newContent });
             } catch (error) {
                 console.error("Error saving sticky note", error);
             }

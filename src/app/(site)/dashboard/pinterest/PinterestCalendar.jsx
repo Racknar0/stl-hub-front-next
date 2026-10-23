@@ -154,6 +154,20 @@ export default function PinterestCalendar() {
     }
   }, [boards]);
 
+  // Pide la URL OAuth al backend (ruta admin) y la abre en una pestaña nueva
+  const connectPinterest = async () => {
+    const win = window.open('', '_blank'); // abrir antes del await para que no lo bloquee el navegador
+    try {
+      const http = new HttpService();
+      const res = await http.getData('/pinterest/auth');
+      const url = (res.data || res).url;
+      if (win) win.location.href = url; else window.open(url, '_blank');
+    } catch (err) {
+      if (win) win.close();
+      console.error('Error obteniendo URL de Pinterest', err);
+    }
+  };
+
   const handleDisconnect = async (e) => {
     e.stopPropagation();
     if (!confirm('¿Desconectar tu cuenta de Pinterest?')) return;
@@ -1027,14 +1041,14 @@ export default function PinterestCalendar() {
         {pinterestStatus.connected ? (
           <div className="btn-connect-pinterest connected">
             <span className="status-dot" />
-            <span className="username-link" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/pinterest/auth-test`, '_blank')} title="Re-conectar / Cambiar cuenta">
+            <span className="username-link" onClick={connectPinterest} title="Re-conectar / Cambiar cuenta">
               @{pinterestStatus.username}
             </span>
             <button className="btn-disconnect" onClick={handleDisconnect} title="Desconectar cuenta">✕</button>
           </div>
         ) : (
           <button className="btn-connect-pinterest disconnected"
-            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/pinterest/auth-test`, '_blank')}>
+            onClick={connectPinterest}>
             <span className="status-dot" />
             Conectar Pinterest
           </button>
