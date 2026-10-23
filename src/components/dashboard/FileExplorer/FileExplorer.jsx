@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import HttpService from '@/services/HttpService';
+import useStore from '@/store/useStore';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
     Box, Typography, Breadcrumbs, Link, Button, IconButton,
@@ -218,7 +219,9 @@ export default function FileExplorer({ initialPath = '/', isModal = false, onClo
         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(ext);
         
         if (isImage) {
-            const previewUrl = `${apiBase}/api/file-explorer/preview?path=${encodeURIComponent(file.id)}`;
+            // <img> no manda cabeceras: el token va por query
+            const token = useStore.getState().token || '';
+            const previewUrl = `${apiBase}/api/file-explorer/preview?path=${encodeURIComponent(file.id)}&token=${encodeURIComponent(token)}`;
             return <Box component="img" src={previewUrl} alt={file.name} sx={{ width: size, height: size, objectFit: 'cover', borderRadius: '4px' }} />;
         }
 
