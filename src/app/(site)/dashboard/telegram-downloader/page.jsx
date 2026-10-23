@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import HttpService from '@/services/HttpService';
 import { Dialog, Box } from '@mui/material';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
+import useStore from '@/store/useStore';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 import './TelegramDownloader.scss';
 
@@ -640,7 +641,9 @@ export default function TelegramDownloader() {
       eventSourceRef.current = null;
     }
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-    const eventSource = new EventSource(`${baseUrl}/api/telegram/stream`);
+    // EventSource no permite cabeceras: el token va por query
+    const token = useStore.getState().token || '';
+    const eventSource = new EventSource(`${baseUrl}/api/telegram/stream?token=${encodeURIComponent(token)}`);
     eventSourceRef.current = eventSource;
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);

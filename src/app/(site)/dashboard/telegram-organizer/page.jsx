@@ -8,6 +8,7 @@ import { Button, Dialog, Box } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
+import useStore from '@/store/useStore';
 import './TelegramOrganizer.scss';
 
 const PAGE_SIZE = 400;
@@ -72,6 +73,9 @@ export default function TelegramOrganizer() {
 
   const http = new HttpService();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const token = useStore(s => s.token);
+  // <img> no manda cabeceras: el token va por query
+  const imageUrl = (name) => `${apiBase}/api/organizer/image?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
 
   useEffect(() => { loadFiles(); }, []);
 
@@ -583,7 +587,7 @@ export default function TelegramOrganizer() {
                   title="Ver en grande" 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPreviewImage(`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`);
+                    setPreviewImage(imageUrl(file.name));
                   }}
                 >
                   <VisibilityIcon fontSize="small" />
@@ -601,7 +605,7 @@ export default function TelegramOrganizer() {
               <div className="card-img">
                 {file.type === 'image' ? (
                   <img 
-                    src={`${apiBase}/api/organizer/image?name=${encodeURIComponent(file.name)}`} 
+                    src={imageUrl(file.name)}
                     loading="lazy" 
                     alt={file.name} 
                     draggable="false" 
