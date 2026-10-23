@@ -22,7 +22,6 @@ export default function TelegramOrganizer() {
   // Stats
   const [totalAssets, setTotalAssets] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
-  const [offset, setOffset] = useState(0);
 
   const [selectedAnchor, setSelectedAnchor] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState(new Set());
@@ -103,24 +102,26 @@ export default function TelegramOrganizer() {
   const loadFiles = async (reset = true) => {
     setLoading(true);
     try {
-      const newOffset = reset ? 0 : offset;
-      const res = await http.getData(`/organizer/files?offset=${newOffset}&limit=${PAGE_SIZE}`);
+      // Cursor por nombre: pedir lo que va después del último archivo cargado. Con un offset numérico
+      // se saltaban archivos al empaquetar/borrar (la lista del servidor se acorta y el offset no).
+      const lastName = !reset && files.length ? files[files.length - 1].name : null;
+      const cursor = lastName ? `after=${encodeURIComponent(lastName)}` : 'offset=0';
+      const res = await http.getData(`/organizer/files?${cursor}&limit=${PAGE_SIZE}`);
       const d = res.data || res;
+      const newFiles = d.files || [];
 
       if (reset) {
-        setFiles(d.files || []);
-        setOffset(d.files?.length || 0);
+        setFiles(newFiles);
         setSelectedAnchor(null);
         setSelectedFiles(new Set());
         setFilesToDelete(new Set());
       } else {
-        setFiles(prev => [...prev, ...(d.files || [])]);
-        setOffset(prev => prev + (d.files?.length || 0));
+        setFiles(prev => [...prev, ...newFiles]);
       }
       setServerTotal(d.total || 0);
       setTotalAssets(d.totalAssets || 0);
       setTotalImages(d.totalImages || 0);
-      setStatus(`${reset ? d.files?.length : offset + d.files?.length} de ${d.total} cargados.`);
+      setStatus(`${(reset ? 0 : files.length) + newFiles.length} de ${d.total} cargados.`);
     } catch (e) {
       setStatus('Error cargando archivos');
     }
@@ -351,7 +352,8 @@ export default function TelegramOrganizer() {
     setStatus(`✅ Seleccionados ${nonAnchors.length} archivos sueltos para borrar.`);
   };
 
-  const remaining = serverTotal - offset;
+  // serverTotal ya se descuenta al empaquetar/borrar, igual que files
+  const remaining = serverTotal - files.length;
 
   const getStatusClass = () => {
     if (!status) return '';
