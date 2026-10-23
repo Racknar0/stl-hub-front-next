@@ -1,17 +1,23 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import HttpService from '@/services/HttpService';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import useStore from '@/store/useStore';
+import OrganizerCard from './OrganizerCard';
 import './TelegramOrganizer.scss';
 
-const PAGE_SIZE = 400;
+// Se carga la lista entera (son solo nombres) y la grilla está virtualizada: solo se pintan las filas visibles
+const LOAD_LIMIT = 100000;
+// Deben coincidir con .card / .grid de TelegramOrganizer.scss
+const CARD_MIN_WIDTH = 160;
+const CARD_HEIGHT = 208;
+const GRID_GAP = 15;
 const MAX_UNDO = 50;
 
 export default function TelegramOrganizer() {
@@ -79,6 +85,8 @@ export default function TelegramOrganizer() {
   const token = useStore(s => s.token);
   // <img> no manda cabeceras: el token va por query
   const imageUrl = (name) => `${apiBase}/api/organizer/image?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
+  // Miniatura webp ligera para la grilla; imageUrl (original) solo para "Ver en grande"
+  const thumbUrl = (name) => `${apiBase}/api/organizer/thumb?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
 
   useEffect(() => { loadFiles(); }, []);
 
@@ -106,11 +114,11 @@ export default function TelegramOrganizer() {
   const loadFiles = async (reset = true) => {
     setLoading(true);
     try {
-      // Cursor por nombre: pedir lo que va después del último archivo cargado. Con un offset numérico
-      // se saltaban archivos al empaquetar/borrar (la lista del servidor se acorta y el offset no).
+      // Lista entera de una vez (la grilla virtualizada aguanta miles de tarjetas); ya no hay "Cargar más".
+      // El backend sigue aceptando el cursor `after` (pedir lo que va después del último nombre).
       const lastName = !reset && files.length ? files[files.length - 1].name : null;
       const cursor = lastName ? `after=${encodeURIComponent(lastName)}` : 'offset=0';
-      const res = await http.getData(`/organizer/files?${cursor}&limit=${PAGE_SIZE}`);
+      const res = await http.getData(`/organizer/files?${cursor}&limit=${LOAD_LIMIT}`);
       const d = res.data || res;
       const newFiles = d.files || [];
 
@@ -412,8 +420,6 @@ export default function TelegramOrganizer() {
     setStatus(`✅ Seleccionados ${nonAnchors.length} archivos sueltos para borrar.`);
   };
 
-  // serverTotal ya se descuenta al empaquetar/borrar, igual que files
-  const remaining = serverTotal - files.length;
 
   const getStatusClass = () => {
     if (!status) return '';
@@ -429,6 +435,99 @@ export default function TelegramOrganizer() {
     }
     return 'status-info';
   };
+
+  // ── Grilla virtualizada ──
+  // Las tarjetas reciben un objeto de acciones estable que delega en los handlers del render actual,
+  // así OrganizerCard (memo) solo se repinta cuando cambian sus propias props.
+  const handlersRef = useRef({});
+  handlersRef.current = {
+    onCardClick: (file, e) => {
+      if (e.shiftKey) return;
+      handleCardClick(file.name, file.type);
+    },
+    onCardMouseDown: (file, e) => {
+      if (!e.shiftKey) return;
+      e.preventDefault(); // prevent native ghost drag & text selection
+      const mode = filesToDelete.has(file.name) ? 'deselect' : 'select';
+      dragSelectModeRef.current = mode;
+      isShiftDraggingRef.current = true;
+      setFilesToDelete(prev => {
+        const next = new Set(prev);
+        mode === 'select' ? next.add(file.name) : next.delete(file.name);
+        return next;
+      });
+      setLastCheckedName(file.name);
+    },
+    onCardMouseEnter: (file) => {
+      if (!isShiftDraggingRef.current) return;
+      const mode = dragSelectModeRef.current;
+      setFilesToDelete(prev => {
+        const next = new Set(prev);
+        mode === 'select' ? next.add(file.name) : next.delete(file.name);
+        return next;
+      });
+      setLastCheckedName(file.name);
+    },
+    onToggleDelete: (file, e) => {
+      e.stopPropagation();
+      toggleDelete(file.name, !filesToDelete.has(file.name), e);
+    },
+    onQuickDelete: (file, e) => quickDelete(file.name, e),
+    onPreview: (file, e) => {
+      e.stopPropagation();
+      setPreviewImage(imageUrl(file.name));
+    },
+    onQuickPack: (file, side, e) => quickPackage(file.name, side, e),
+  };
+  const cardActions = useMemo(() => {
+    const call = (name) => (...args) => handlersRef.current[name](...args);
+    return {
+      onCardClick: call('onCardClick'),
+      onCardMouseDown: call('onCardMouseDown'),
+      onCardMouseEnter: call('onCardMouseEnter'),
+      onToggleDelete: call('onToggleDelete'),
+      onQuickDelete: call('onQuickDelete'),
+      onPreview: call('onPreview'),
+      onQuickPack: call('onQuickPack'),
+    };
+  }, []);
+
+  const scrollRef = useRef(null);
+  const gridRef = useRef(null);
+  const [gridWidth, setGridWidth] = useState(0);
+  const [scrollHeight, setScrollHeight] = useState(null);
+
+  // Ancho disponible -> número de columnas (mismo criterio que auto-fill minmax(160px, 1fr))
+  useLayoutEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setGridWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Fuera del modo revisión la grilla necesita su propio scroll: ocupa lo que queda de pantalla
+  useLayoutEffect(() => {
+    if (isReviewMode) { setScrollHeight(null); return; }
+    const measure = () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setScrollHeight(Math.max(400, window.innerHeight - top - 16));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isReviewMode]);
+
+  const columns = Math.max(1, Math.floor((gridWidth + GRID_GAP) / (CARD_MIN_WIDTH + GRID_GAP)));
+  const rowCount = Math.ceil(files.length / columns);
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => CARD_HEIGHT + GRID_GAP,
+    overscan: 3,
+  });
 
   return (
     <div className={`telegram-organizer ${isReviewMode ? 'review-mode' : ''}`}>
@@ -583,108 +682,32 @@ export default function TelegramOrganizer() {
         </>
       )}
 
-      <div className="scroll-area">
-        <div className="grid">
-          {files.map(file => (
+      <div className="scroll-area" ref={scrollRef} style={scrollHeight ? { height: scrollHeight, overflowY: 'auto' } : undefined}>
+        <div ref={gridRef} style={{ position: 'relative', height: rowVirtualizer.getTotalSize() }}>
+          {rowVirtualizer.getVirtualItems().map(row => (
             <div
-              key={file.name}
-              className={`card ${file.type === 'anchor' ? 'anchor' : ''} ${selectedAnchor === file.name ? 'selected-anchor' : ''} ${selectedFiles.has(file.name) ? 'selected-file' : ''} ${filesToDelete.has(file.name) ? 'to-delete' : ''}`}
-              onClick={(e) => {
-                if (e.shiftKey) return;
-                handleCardClick(file.name, file.type);
-              }}
-              onMouseDown={(e) => {
-                if (e.shiftKey) {
-                  e.preventDefault(); // prevent native ghost drag & text selection
-                  const isChecked = filesToDelete.has(file.name);
-                  const mode = isChecked ? 'deselect' : 'select';
-                  dragSelectModeRef.current = mode;
-                  isShiftDraggingRef.current = true;
-
-                  setFilesToDelete(prev => {
-                    const next = new Set(prev);
-                    if (mode === 'select') {
-                      next.add(file.name);
-                    } else {
-                      next.delete(file.name);
-                    }
-                    return next;
-                  });
-                  setLastCheckedName(file.name);
-                }
-              }}
-              onMouseEnter={() => {
-                if (isShiftDraggingRef.current) {
-                  const mode = dragSelectModeRef.current;
-                  setFilesToDelete(prev => {
-                    const next = new Set(prev);
-                    if (mode === 'select') {
-                      next.add(file.name);
-                    } else {
-                      next.delete(file.name);
-                    }
-                    return next;
-                  });
-                  setLastCheckedName(file.name);
-                }
+              key={row.key}
+              className="grid"
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0,
+                transform: `translateY(${row.start}px)`,
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
               }}
             >
-              <input
-                type="checkbox"
-                className="del-check"
-                checked={filesToDelete.has(file.name)}
-                onChange={() => {}}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleDelete(file.name, !filesToDelete.has(file.name), e);
-                }}
-              />
-              <button className="delete-btn-quick" title="Eliminar" onClick={(e) => quickDelete(file.name, e)}>🗑️</button>
-              {file.type === 'image' && (
-                <button 
-                  className="preview-btn-quick" 
-                  title="Ver en grande" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPreviewImage(imageUrl(file.name));
-                  }}
-                >
-                  <VisibilityIcon fontSize="small" />
-                </button>
-              )}
-
-              {file.type === 'anchor' && (
-                <>
-                  <button className="quick-pack left" title="Pack ←" onClick={(e) => quickPackage(file.name, 'left', e)}>⬅️</button>
-                  <button className="quick-pack right" title="Pack →" onClick={(e) => quickPackage(file.name, 'right', e)}>➡️</button>
-                  <div className="badge">ASSET</div>
-                </>
-              )}
-
-              <div className="card-img">
-                {file.type === 'image' ? (
-                  <img 
-                    src={imageUrl(file.name)}
-                    loading="lazy" 
-                    alt={file.name} 
-                    draggable="false" 
-                  />
-                ) : (
-                  file.isCompressed ? '📚' : '🗿'
-                )}
-              </div>
-              <div className="card-name">{file.name}</div>
+              {files.slice(row.index * columns, row.index * columns + columns).map(file => (
+                <OrganizerCard
+                  key={file.name}
+                  file={file}
+                  isSelectedAnchor={selectedAnchor === file.name}
+                  isSelectedFile={selectedFiles.has(file.name)}
+                  isToDelete={filesToDelete.has(file.name)}
+                  thumbUrl={file.type === 'image' ? thumbUrl(file.name) : undefined}
+                  actions={cardActions}
+                />
+              ))}
             </div>
           ))}
         </div>
-
-        {remaining > 0 && (
-          <div className="load-more">
-            <button className="btn btn-load" onClick={() => loadFiles(false)} disabled={loading}>
-              📦 Cargar {Math.min(remaining, PAGE_SIZE)} Más ({remaining} restantes)
-            </button>
-          </div>
-        )}
       </div>
 
       <Dialog 
