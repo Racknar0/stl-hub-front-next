@@ -30,6 +30,11 @@ import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import SaveIcon from '@mui/icons-material/Save';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExplicitIcon from '@mui/icons-material/Explicit';
+import LabelIcon from '@mui/icons-material/Label';
+import { BRUSH_COLOR } from './components/BrushPanel';
+import { brushKey, rowHasBrush } from './brush';
+
+const EMPTY_SET = new Set();
 
 const BatchRow = React.memo(function BatchRow({
     row,
@@ -50,6 +55,9 @@ const BatchRow = React.memo(function BatchRow({
     onCuentaChange = () => {},
     onSaveRow = () => {},
     onQuickAdultos = () => {},
+    brushCatKeys = EMPTY_SET,
+    brushTagKeys = EMPTY_SET,
+    onToggleBrush = () => {},
     onGenerateSingleDescription = () => {},
     onOpenCreateModal = () => {},
     onOpenProfiles = () => {},
@@ -128,6 +136,32 @@ const BatchRow = React.memo(function BatchRow({
               ? 'rgba(234, 179, 8, 0.22)'
               : 'rgba(15, 23, 42, 0.38)';
     const focusedBg = 'rgba(8, 145, 178, 0.26)';
+    const isBrushed = rowHasBrush(row, brushCatKeys, brushTagKeys);
+    const actionsCellBg = isBrushed ? 'rgba(168, 85, 247, 0.32)' : undefined;
+    const pesoLabel = `${(Number(row.pesoMB || 0) / 1024).toFixed(2)} GB`;
+
+    const brushButton = (
+        <Tooltip title={isBrushed ? 'Quitar pincel de esta fila' : 'Aplicar pincel a esta fila'} placement="right">
+            <span>
+                <IconButton
+                    size="small"
+                    onClick={() => onToggleBrush(row.id, { toggle: true })}
+                    disabled={isOk || isProcesso}
+                    sx={{
+                        border: '1px solid',
+                        borderColor: isBrushed ? BRUSH_COLOR : 'divider',
+                        borderRadius: 1.5,
+                        color: isBrushed ? '#fff' : BRUSH_COLOR,
+                        bgcolor: isBrushed ? BRUSH_COLOR : 'transparent',
+                        my: 0.1,
+                        '&:hover': { bgcolor: isBrushed ? '#9333ea' : 'rgba(168,85,247,0.15)' },
+                    }}
+                >
+                    <LabelIcon fontSize="small" />
+                </IconButton>
+            </span>
+        </Tooltip>
+    );
 
     if (reviewMode) {
         return (
@@ -158,6 +192,7 @@ const BatchRow = React.memo(function BatchRow({
                         borderBottom: cellBorder,
                         color: primaryText,
                         borderLeft: hasAdultos ? '6px solid #ff0000' : '6px solid transparent',
+                        backgroundColor: actionsCellBg,
                     }}
                 >
                     <Stack direction="column" spacing={1} alignItems="center">
@@ -173,6 +208,21 @@ const BatchRow = React.memo(function BatchRow({
                                 border: '1px solid rgba(56,189,248,0.65)',
                             }}
                         />
+                        <Typography
+                            sx={{
+                                fontSize: 15,
+                                fontWeight: 800,
+                                whiteSpace: 'nowrap',
+                                color: '#1c1917',
+                                bgcolor: '#fde047',
+                                borderRadius: 1.5,
+                                px: 1,
+                                py: 0.1,
+                                lineHeight: 1.4,
+                            }}
+                        >
+                            {pesoLabel}
+                        </Typography>
                         {Array.isArray(row.imagenes) && row.imagenes.length > 6 && (
                             <Stack alignItems="center" spacing={0.2} sx={{ my: 0.25 }}>
                                 <Tooltip title={reviewExpanded ? 'Mostrar solo 6' : `Mostrar todas (${row.imagenes.length})`}>
@@ -318,6 +368,9 @@ const BatchRow = React.memo(function BatchRow({
                             </span>
                         </Tooltip>
 
+                        {brushButton}
+
+
                         <Tooltip title="Eliminar borrador">
                             <IconButton
                                 color="error"
@@ -391,22 +444,6 @@ const BatchRow = React.memo(function BatchRow({
                                     },
                                 }}
                             />
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{
-                                    fontWeight: 800,
-                                    whiteSpace: 'nowrap',
-                                    px: 1.2,
-                                    py: 0.6,
-                                    borderRadius: 1,
-                                    bgcolor: 'rgba(30, 41, 59, 0.6)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                                    fontSize: '11px',
-                                }}
-                            >
-                                Peso: {(row.pesoMB / 1024).toFixed(2)} GB
-                            </Typography>
                         </Box>
 
                         {/* Images */}
@@ -532,8 +569,8 @@ const BatchRow = React.memo(function BatchRow({
                                                         size="small"
                                                         {...tagProps}
                                                         sx={{
-                                                            color: '#111827',
-                                                            backgroundColor: '#d8bb00',
+                                                            color: brushCatKeys.has(brushKey(option)) ? '#fff' : '#111827',
+                                                            backgroundColor: brushCatKeys.has(brushKey(option)) ? BRUSH_COLOR : '#d8bb00',
                                                             border: '1px solid rgba(148,163,184,0.52)',
                                                             fontWeight: 400,
                                                             m: '2px',
@@ -646,9 +683,10 @@ const BatchRow = React.memo(function BatchRow({
                                                         }
                                                         {...tagProps}
                                                         sx={{
-                                                            color: '#111827',
-                                                            backgroundColor:
-                                                                option.iaSuggested
+                                                            color: brushTagKeys.has(brushKey(option)) ? '#fff' : '#111827',
+                                                            backgroundColor: brushTagKeys.has(brushKey(option))
+                                                                ? BRUSH_COLOR
+                                                                : option.iaSuggested
                                                                     ? 'rgba(187,247,208,0.95)'
                                                                     : 'rgba(220,252,231,0.95)',
                                                             border: '1px solid rgba(134,239,172,0.9)',
@@ -839,6 +877,7 @@ const BatchRow = React.memo(function BatchRow({
                     borderBottom: cellBorder,
                     color: primaryText,
                     borderLeft: hasAdultos ? '6px solid #ff0000' : '6px solid transparent',
+                        backgroundColor: actionsCellBg,
                 }}
             >
                 <Stack direction="column" spacing={1} alignItems="center">
@@ -952,6 +991,9 @@ const BatchRow = React.memo(function BatchRow({
                             </IconButton>
                         </span>
                     </Tooltip>
+
+                    {brushButton}
+
 
                     <Tooltip title="Eliminar borrador">
                         <IconButton
@@ -1138,7 +1180,7 @@ const BatchRow = React.memo(function BatchRow({
                                                 {...tagProps}
                                                 sx={{
                                                     height: 22,
-                                                    bgcolor: 'rgba(234, 179, 8, 0.16)',
+                                                    bgcolor: brushCatKeys.has(brushKey(option)) ? BRUSH_COLOR : 'rgba(234, 179, 8, 0.16)',
                                                     border: '1px solid rgba(234, 179, 8, 0.35)',
                                                     color: '#fef08a',
                                                     '& .MuiChip-label': {
@@ -1260,9 +1302,10 @@ const BatchRow = React.memo(function BatchRow({
                                                 }
                                                 {...tagProps}
                                                 sx={{
-                                                    color: '#111827',
-                                                    backgroundColor:
-                                                        option.iaSuggested
+                                                    color: brushTagKeys.has(brushKey(option)) ? '#fff' : '#111827',
+                                                    backgroundColor: brushTagKeys.has(brushKey(option))
+                                                        ? BRUSH_COLOR
+                                                        : option.iaSuggested
                                                             ? 'rgba(187,247,208,0.95)'
                                                             : 'rgba(220,252,231,0.95)',
                                                     border: '1px solid rgba(134,239,172,0.9)',

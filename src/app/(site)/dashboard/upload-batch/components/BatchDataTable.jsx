@@ -37,6 +37,9 @@ export default function BatchDataTable({
   handleCuentaChange,
   handleSaveRow,
   handleQuickAdultos,
+  brushCatKeys,
+  brushTagKeys,
+  applyBrushToRow,
   handleGenerateSingleDescription,
   openCreateModal,
   handleOpenPerfilModal,
@@ -132,6 +135,9 @@ export default function BatchDataTable({
                 onCuentaChange={handleCuentaChange}
                 onSaveRow={handleSaveRow}
                 onQuickAdultos={handleQuickAdultos}
+                brushCatKeys={brushCatKeys}
+                brushTagKeys={brushTagKeys}
+                onToggleBrush={applyBrushToRow}
                 onGenerateSingleDescription={handleGenerateSingleDescription}
                 onOpenCreateModal={openCreateModal}
                 onOpenProfiles={handleOpenPerfilModal}

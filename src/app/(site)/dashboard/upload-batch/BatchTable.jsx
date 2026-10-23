@@ -21,6 +21,18 @@ import BatchDataTable from './components/BatchDataTable'
 import BatchFooter from './components/BatchFooter'
 import ScpUploadDialog from './components/ScpUploadDialog'
 import SimilaritySidebar from './components/SimilaritySidebar'
+import BrushPanel from './components/BrushPanel'
+import { brushKey, rowHasBrush } from './brush'
+
+const BRUSH_STORAGE_KEY = 'uploadBatch.brush'
+const readBrushStorage = (field) => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(BRUSH_STORAGE_KEY) || '{}')
+    return Array.isArray(parsed?.[field]) ? parsed[field] : []
+  } catch {
+    return []
+  }
+}
 
 // ─── Constantes ───
 import {
@@ -1707,6 +1719,70 @@ export default function BatchTable() {
     }
   }, [http])
 
+  // ── Pincel: categorías/tags extra que se suman a lo que puso la IA ──
+  const [brushCategories, setBrushCategories] = useState([])
+  const [brushTags, setBrushTags] = useState([])
+  const brushLoadedRef = useRef(false)
+
+  useEffect(() => {
+    setBrushCategories(readBrushStorage('categories'))
+    setBrushTags(readBrushStorage('tags'))
+  }, [])
+
+  useEffect(() => {
+    if (!brushLoadedRef.current) {
+      brushLoadedRef.current = true
+      return
+    }
+    try {
+      window.localStorage.setItem(BRUSH_STORAGE_KEY, JSON.stringify({ categories: brushCategories, tags: brushTags }))
+    } catch { /* storage no disponible */ }
+  }, [brushCategories, brushTags])
+
+  const brushCatKeys = useMemo(() => new Set(brushCategories.map(brushKey).filter(Boolean)), [brushCategories])
+  const brushTagKeys = useMemo(() => new Set(brushTags.map(brushKey).filter(Boolean)), [brushTags])
+
+  const brushedCount = useMemo(
+    () => rows.filter(r => rowHasBrush(r, brushCatKeys, brushTagKeys)).length,
+    [rows, brushCatKeys, brushTagKeys]
+  )
+
+  // toggle=true: si la fila ya tiene el pincel, se lo quita. Shift+D usa toggle=false (solo añade).
+  const applyBrushToRow = useCallback(async (rowId, { toggle = false } = {}) => {
+    const row = rowsRef.current.find(r => Number(r?.id || 0) === Number(rowId))
+    if (!row || !row.id) return
+    if (row.estado === 'completado' || row.estado === 'procesando') return
+    if (!brushCatKeys.size && !brushTagKeys.size) {
+      setToast({ open: true, msg: 'El pincel está vacío: elige categorías o tags en el panel morado.', type: 'warning' })
+      return
+    }
+
+    const currentCats = Array.isArray(row.categorias) ? row.categorias : []
+    const currentTags = Array.isArray(row.tags) ? row.tags : []
+    const removing = toggle && rowHasBrush(row, brushCatKeys, brushTagKeys)
+
+    let nextCats
+    let nextTags
+    if (removing) {
+      nextCats = currentCats.filter(c => !brushCatKeys.has(brushKey(c)))
+      nextTags = currentTags.filter(t => !brushTagKeys.has(brushKey(t)))
+    } else {
+      const catKeys = new Set(currentCats.map(brushKey))
+      const tagKeys = new Set(currentTags.map(brushKey))
+      nextCats = [...currentCats, ...brushCategories.filter(c => !catKeys.has(brushKey(c)))]
+      nextTags = [...currentTags, ...brushTags.filter(t => !tagKeys.has(brushKey(t)))]
+    }
+
+    setRows(prev => prev.map(r => Number(r?.id || 0) === Number(rowId) ? { ...r, categorias: nextCats, tags: nextTags } : r))
+
+    try {
+      await http.patchData('/batch-imports/items', row.id, { categories: nextCats, tags: nextTags })
+    } catch (e) {
+      console.error('Error applying brush:', e)
+      setToast({ open: true, msg: 'Error al guardar el pincel en la BD.', type: 'error' })
+    }
+  }, [http, brushCategories, brushTags, brushCatKeys, brushTagKeys])
+
   const handleSetPrimaryImage = useCallback((rowId, imageIdx) => {
     const targetImageIdx = Number(imageIdx)
     if (!Number.isInteger(targetImageIdx)) return
@@ -1841,7 +1917,12 @@ export default function BatchTable() {
       if (isEditable) return
 
       const key = String(ev?.key || '').toLowerCase()
-      if (key === 'd') {
+      if (key === 'd' && ev.shiftKey) {
+        ev.preventDefault()
+        const currentId = similaritySelectedIdRef.current
+        if (currentId) void applyBrushToRow(currentId)
+        moveReviewFocus(1)
+      } else if (key === 'd') {
         ev.preventDefault()
         moveReviewFocus(1)
       } else if (key === 'a') {
@@ -1855,7 +1936,7 @@ export default function BatchTable() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [reviewMode, moveReviewFocus, deleteFocusedReviewItem])
+  }, [reviewMode, moveReviewFocus, deleteFocusedReviewItem, applyBrushToRow])
 
   const handleRetryWithOtherProxy = async (row) => {
     const id = Number(row?.id || 0)
@@ -2453,6 +2534,18 @@ export default function BatchTable() {
         </Tooltip>
       )}
 
+      {/* ═══════════ PINCEL FLOTANTE ═══════════ */}
+      <BrushPanel
+        categoriesCatalog={categoriesCatalog}
+        tagsCatalog={tagsCatalog}
+        brushCategories={brushCategories}
+        brushTags={brushTags}
+        onBrushCategoriesChange={setBrushCategories}
+        onBrushTagsChange={setBrushTags}
+        brushedCount={brushedCount}
+        reviewMode={reviewMode}
+      />
+
       {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}
       {!reviewMode && (
         <BatchControlPanel
@@ -2554,6 +2647,9 @@ export default function BatchTable() {
         handleCuentaChange={handleCuentaChange}
         handleSaveRow={handleSaveRow}
         handleQuickAdultos={handleQuickAdultos}
+        brushCatKeys={brushCatKeys}
+        brushTagKeys={brushTagKeys}
+        applyBrushToRow={applyBrushToRow}
         handleGenerateSingleDescription={handleGenerateSingleDescription}
         openCreateModal={openCreateModal}
         handleOpenPerfilModal={handleOpenPerfilModal}
