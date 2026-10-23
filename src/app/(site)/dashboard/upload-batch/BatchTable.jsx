@@ -786,7 +786,7 @@ export default function BatchTable() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return
-    if (searchSidebarSide === 'left') {
+    if (searchSidebarSide === 'left' && searchSidebarOpen) {
       document.documentElement.style.setProperty('--dash-sidebar-width', `${RIGHT_SIDEBAR_WIDTH}px`)
     } else {
       document.documentElement.style.setProperty('--dash-sidebar-width', '240px')
@@ -795,7 +795,7 @@ export default function BatchTable() {
     return () => {
       try { document.documentElement.style.setProperty('--dash-sidebar-width', '240px') } catch {}
     }
-  }, [searchSidebarSide])
+  }, [searchSidebarSide, searchSidebarOpen])
 
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createModalType, setCreateModalType] = useState('')
@@ -2508,8 +2508,8 @@ export default function BatchTable() {
     <Box
       sx={{
         pb: reviewMode ? 1 : 10,
-        pr: searchSidebarSide === 'right' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
-        pl: reviewMode && searchSidebarSide === 'left' ? (searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : '52px') : 0,
+        pr: searchSidebarSide === 'right' && searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : 0,
+        pl: reviewMode && searchSidebarSide === 'left' && searchSidebarOpen ? `${RIGHT_SIDEBAR_WIDTH}px` : 0,
         transition: 'padding 180ms ease'
       }}
     >
@@ -2544,7 +2544,7 @@ export default function BatchTable() {
         onBrushTagsChange={setBrushTags}
         brushedCount={brushedCount}
         reviewMode={reviewMode}
-        rightOffset={searchSidebarSide === 'right' ? (searchSidebarOpen ? RIGHT_SIDEBAR_WIDTH : 52) : 0}
+        rightOffset={searchSidebarSide === 'right' && searchSidebarOpen ? RIGHT_SIDEBAR_WIDTH : 0}
       />
 
       {/* ═══════════ PANEL DE CONTROL SUPERIOR ═══════════ */}

@@ -40,6 +40,47 @@ export default function SimilaritySidebar({
   onStopPrecalculate,
 }) {
 
+  // Contraído: botón flotante pequeño arriba (expandir + cambiar de lado), sin robar espacio.
+  if (!searchSidebarOpen) {
+    const isLeft = searchSidebarSide === 'left'
+    const pillBtnSx = { color: '#e2e8f0', p: 0.6, borderRadius: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.10)' } }
+    return (
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={0.25}
+        sx={{
+          position: 'fixed',
+          top: 12,
+          // A la derecha deja sitio al botón rojo de salir del modo revisión.
+          ...(isLeft ? { left: 12 } : { right: 72 }),
+          zIndex: 9998,
+          bgcolor: 'rgba(29, 30, 38, 0.95)',
+          border: '1px solid rgba(0,180,216,0.55)',
+          borderRadius: 3,
+          boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+          p: 0.4,
+        }}
+      >
+        <Tooltip title="Abrir búsqueda de similares">
+          <Button
+            size="small"
+            onClick={() => setSearchSidebarOpen(true)}
+            startIcon={precalcStatus?.running ? <CircularProgress size={14} sx={{ color: '#60a5fa' }} /> : <TravelExploreIcon sx={{ fontSize: 18 }} />}
+            sx={{ color: '#e2e8f0', textTransform: 'none', fontWeight: 700, fontSize: 12, px: 1, borderRadius: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.10)' } }}
+          >
+            {precalcStatus?.running ? `Similares ${precalcStatus.processed}/${precalcStatus.total}` : 'Similares'}
+          </Button>
+        </Tooltip>
+        <Tooltip title={isLeft ? 'Mover a Derecha' : 'Mover a Izquierda'}>
+          <IconButton size="small" onClick={toggleSearchSidebarSide} sx={pillBtnSx}>
+            <SwapHorizIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    )
+  }
+
   return (
     <RightSidebar
       side={searchSidebarSide}
