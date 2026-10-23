@@ -32,6 +32,7 @@ export default function TelegramOrganizer() {
   const isShiftDraggingRef = useRef(false);
   const dragSelectModeRef = useRef('select');
   const undoBusyRef = useRef(false);
+  const packingRef = useRef(false); // evita doble envío (p. ej. Espacio dos veces) mientras se empaqueta
   
   // Interceptador premium de status para alertas flotantes
   const [status, setStatusState] = useState('');
@@ -154,15 +155,17 @@ export default function TelegramOrganizer() {
   };
 
   const packageSelection = async () => {
-    if (!selectedAnchor) return;
+    if (!selectedAnchor || packingRef.current) return;
+    packingRef.current = true;
     const toMove = [selectedAnchor, ...Array.from(selectedFiles)];
+    const items = files.filter(f => toMove.includes(f.name));
     setStatus('Empaquetando...');
     try {
       const res = await http.postData('/organizer/package', { anchorName: selectedAnchor, filesToMove: toMove });
       const d = res.data || res;
       if (d.error) throw new Error(d.error);
 
-      setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings }]);
+      setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings, items }]);
       setFiles(prev => prev.filter(f => !toMove.includes(f.name)));
       setServerTotal(prev => prev - toMove.length);
       setSelectedAnchor(null);
@@ -170,11 +173,14 @@ export default function TelegramOrganizer() {
       setStatus(`✅ ${d.moved} archivos → "${d.folder}"`);
     } catch (e) {
       setStatus('Error empaquetando: ' + e.message);
+    } finally {
+      packingRef.current = false;
     }
   };
 
   const quickPackage = async (anchorName, side, e) => {
     e.stopPropagation();
+    if (packingRef.current) return;
     const anchorIdx = files.findIndex(f => f.name === anchorName);
     if (anchorIdx === -1) return;
 
@@ -191,25 +197,43 @@ export default function TelegramOrganizer() {
       }
     }
 
+    const items = files.filter(f => toMove.includes(f.name));
+    packingRef.current = true;
     setStatus(`Empaquetando exprés (${side})...`);
     try {
       const res = await http.postData('/organizer/package', { anchorName, filesToMove: toMove });
       const d = res.data || res;
       if (d.error) throw new Error(d.error);
 
-      setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings }]);
+      setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'package', destFolder: d.destFolder, mappings: d.mappings, items }]);
       setFiles(prev => prev.filter(f => !toMove.includes(f.name)));
       setServerTotal(prev => prev - toMove.length);
       if (selectedAnchor === anchorName) { setSelectedAnchor(null); setSelectedFiles(new Set()); }
       setStatus(`⚡ ${d.moved} archivos → "${d.folder}"`);
     } catch (e) {
       setStatus('Error exprés: ' + e.message);
+    } finally {
+      packingRef.current = false;
     }
   };
 
   // Mismo orden que el backend (organizer.routes.js) para devolver archivos a su sitio
   const compareNames = (a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }) || (a < b ? -1 : a > b ? 1 : 0);
+
+  // Devuelve archivos a la grilla en su posición. Los que caen después del último cargado (con más
+  // páginas pendientes) no se insertan: llegarán con "Cargar más" y así el cursor `after` no salta nada.
+  const restoreToGrid = (items) => {
+    if (items.length === 0) return;
+    const morePages = serverTotal > files.length;
+    setFiles(prev => {
+      const present = new Set(prev.map(f => f.name));
+      const last = prev.length ? prev[prev.length - 1].name : null;
+      const toAdd = items.filter(f => !present.has(f.name) && (!morePages || !last || compareNames(f.name, last) < 0));
+      return [...prev, ...toAdd].sort((x, y) => compareNames(x.name, y.name));
+    });
+    setServerTotal(prev => prev + items.length);
+  };
 
   // Borrado optimista: se quita de la grilla al instante y el servidor borra en segundo plano
   // (una sola petición). Lo que falle vuelve a la grilla con aviso. La entrada de Deshacer lleva
@@ -244,19 +268,13 @@ export default function TelegramOrganizer() {
       .then(({ deleted, failed }) => {
         if (failed.length > 0) {
           const failedSet = new Set(failed);
-          const back = removed.filter(f => failedSet.has(f.name));
-          setFiles(prev => {
-            const present = new Set(prev.map(f => f.name));
-            const toAdd = back.filter(f => !present.has(f.name));
-            return [...prev, ...toAdd].sort((x, y) => compareNames(x.name, y.name));
-          });
-          setServerTotal(prev => prev + back.length);
+          restoreToGrid(removed.filter(f => failedSet.has(f.name)));
           setStatus(`⚠️ No se pudieron borrar ${failed.length} archivo(s); han vuelto a la grilla.`);
         }
         return deleted;
       });
 
-    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: names, ready }]);
+    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), { type: 'delete', files: names, ready, items: removed }]);
   };
 
   const quickDelete = (fileName, e) => {
@@ -290,7 +308,7 @@ export default function TelegramOrganizer() {
   const undoLast = async () => {
     if (undoStack.length === 0 || undoBusyRef.current) return;
     undoBusyRef.current = true;
-    const { ready, ...action } = undoStack[undoStack.length - 1];
+    const { ready, items = [], ...action } = undoStack[undoStack.length - 1];
     try {
       if (ready) {
         // Esperar a que termine el borrado y deshacer solo lo que de verdad se borró
@@ -301,10 +319,13 @@ export default function TelegramOrganizer() {
           return;
         }
       }
-      await http.postData('/organizer/undo', action);
+      const res = await http.postData('/organizer/undo', action);
+      const d = res.data || res;
       setUndoStack(prev => prev.slice(0, -1));
-      setStatus('✅ Acción deshecha.');
-      loadFiles();
+      // Sin recargar: devolver a la grilla solo lo restaurado (se conserva scroll, lo cargado y la selección)
+      const restored = new Set(d.restored || []);
+      restoreToGrid(items.filter(f => restored.has(f.name)));
+      setStatus(`✅ Acción deshecha (${restored.size} archivos restaurados).`);
     } catch (e) {
       setStatus('Error al deshacer');
     } finally {
