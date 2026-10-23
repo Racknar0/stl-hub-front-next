@@ -85,8 +85,13 @@ export default function TelegramOrganizer() {
   const token = useStore(s => s.token);
   // <img> no manda cabeceras: el token va por query
   // La grilla usa la imagen original (no miniatura): la extensión de zoom al pasar el ratón amplía el <img>
-  // y con una miniatura se veía borrosa
-  const imageUrl = (name) => `${apiBase}/api/organizer/image?name=${encodeURIComponent(name)}&token=${encodeURIComponent(token || '')}`;
+  // y con una miniatura se veía borrosa.
+  // Hover Zoom+ solo amplía un <img> si su src termina en ".jpg": el nombre va el último y, si no es .jpg,
+  // se añade un fragmento "#.jpg" (no se envía al servidor).
+  const imageUrl = (name) => {
+    const url = `${apiBase}/api/organizer/image?token=${encodeURIComponent(token || '')}&name=${encodeURIComponent(name)}`;
+    return /\.jpg$/i.test(name) ? url : `${url}#.jpg`;
+  };
 
   useEffect(() => { loadFiles(); }, []);
 
