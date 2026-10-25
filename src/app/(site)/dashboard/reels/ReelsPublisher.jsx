@@ -12,7 +12,12 @@ const PLATFORMS = [
   // YouTube queda para más adelante: se muestra en gris y no se puede elegir
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
   { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: null },
+  { key: 'threads', label: 'Threads', short: 'TH', maxSec: 300, linkHint: 'Link clicable al final del texto (automático, con UTM)' },
 ];
+// Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
+const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
+const CAPTION_FOOTERS = ['📦 +1MM Premium STL · 🔗 link in bio', '📦 +1MM Premium STL · 🔗 link 👇'];
+const captionBody = (caption) => CAPTION_FOOTERS.reduce((t, f) => t.replace(f, ''), String(caption || '').replace(CAPTION_HEADER, '')).trim();
 // Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
 const VisiblePlatforms = createContext(PLATFORMS);
 const FOCUS_KEY = 'reels_focus_platform';
@@ -226,6 +231,16 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'threads') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#000" />
+        <path fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round"
+          d="M15.6 11.3c-.4-2.1-1.9-3.1-3.8-3.1-2.3 0-3.9 1.7-3.9 3.9 0 2.4 1.5 4.1 4 4.1 2.1 0 3.6-1.3 3.6-3.1 0-1.6-1.2-2.4-2.6-2.4-1.5 0-2.4.9-2.4 1.9 0 .9.7 1.5 1.6 1.5 1.6 0 2.4-1.3 2.4-3.3 0-2.9-1.8-4.8-4.6-4.8" />
+      </svg>
+    );
+  }
   if (platform === 'tiktok') {
     return (
       <svg {...common}>
@@ -276,6 +291,8 @@ export default function ReelsPublisher() {
   const ytConnected = !!connection?.youtube?.connected;
   const [connectingTt, setConnectingTt] = useState(false);
   const ttConnected = !!connection?.tiktok?.connected;
+  const [connectingTh, setConnectingTh] = useState(false);
+  const thConnected = !!connection?.threads?.connected;
   // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
   const [focus, setFocus] = useState(DEFAULT_FOCUS);
   useEffect(() => {
@@ -465,6 +482,35 @@ export default function ReelsPublisher() {
     } catch (err) { showToast(errMsg(err), 'err'); }
   };
 
+  // Threads: igual que TikTok, la autorización se abre en una ventana y se espera a que la cuenta quede conectada
+  const connectThreads = async () => {
+    try {
+      const res = await http.getData('/reels/threads/auth');
+      window.open(res.data.url, 'threads-auth', 'width=520,height=760');
+      setConnectingTh(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const status = await fetchConnection();
+        if (status?.threads?.connected) {
+          showToast(`✓ Threads conectado: @${status.threads.account?.username || ''}`);
+          return;
+        }
+      }
+      showToast('No se completó la conexión con Threads', 'err');
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingTh(false); }
+  };
+
+  const disconnectThreads = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar la cuenta de Threads? Los reels dejarán de publicarse en Threads.')) return;
+    try {
+      await http.postData('/reels/threads/disconnect');
+      await fetchConnection();
+      showToast('Threads desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
   const saveSetting = async (patch) => {
     try {
       const res = await http.putData('/reels', 'settings', patch);
@@ -526,7 +572,22 @@ export default function ReelsPublisher() {
         </div>
         <div className="rl-connections">
           {visible.map(p => (
-            p.key === 'tiktok' ? (
+            p.key === 'threads' ? (
+              thConnected ? (
+                <span key={p.key} className="rl-conn on" title={`Cuenta conectada: @${connection.threads.account?.username || ''}`}>
+                  {connection.threads.account?.avatarUrl
+                    ? <img className="rl-conn-avatar" src={connection.threads.account.avatarUrl} alt="" />
+                    : <PlatformIcon platform={p.key} title={p.label} />}
+                  @{connection.threads.account?.username || 'threads'}
+                  <button type="button" className="rl-conn-x" title="Desconectar Threads" onClick={disconnectThreads}>✕</button>
+                </span>
+              ) : (
+                <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectThreads} disabled={connectingTh}
+                  title="Autoriza tu cuenta de Threads para publicar videos">
+                  <PlatformIcon platform={p.key} title={p.label} />{connectingTh ? 'Esperando autorización…' : 'Conectar Threads'}
+                </button>
+              )
+            ) : p.key === 'tiktok' ? (
               ttConnected ? (
                 <span key={p.key} className="rl-conn on" title={`Cuenta conectada: ${connection.tiktok.account?.displayName || ''}`}>
                   {connection.tiktok.account?.avatarUrl
@@ -769,7 +830,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} visible={visible}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} visible={visible}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -784,9 +845,9 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
-  // Una red no disponible: YouTube o TikTok sin la cuenta conectada
-  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected);
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, visible, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+  // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
@@ -906,7 +967,8 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
     setHashtagInput('');
   };
 
-  const previewCaption = previewPlatform === 'facebook' ? (form.facebookCaption || form.caption)
+  const previewCaption = previewPlatform === 'threads' ? captionBody(form.caption)
+    : previewPlatform === 'facebook' ? (form.facebookCaption || form.caption)
     : previewPlatform === 'tiktok' ? (form.tiktokCaption || form.caption) : form.caption;
   const checks = videoChecks({ ...post, platforms: form.platforms }, visible);
 
@@ -965,7 +1027,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
               </div>
               <div className="rl-platform-toggles row">
                 {visible.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : 'tu canal de YouTube'} en la cabecera` : undefined}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -997,6 +1059,13 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, visible, o
                     placeholder={isVisible('instagram') ? 'Vacío = se usa el de Instagram' : 'Descripción del video'} disabled={readOnly || processing}
                     onChange={(e) => update({ tiktokCaption: e.target.value })} />
                 </label>
+              )}
+              {form.platforms.includes('threads') && isVisible('threads') && (
+                <div className="rl-field">
+                  <span><PlatformIcon platform="threads" /> Texto de Threads <small>automático</small></span>
+                  <p className="rl-tt-note">Se usa el caption sin la cabecera ni el pie, y al final el link del modelo (clicable en Threads, con UTM).</p>
+                  <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Threads'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
+                </div>
               )}
               {form.platforms.some(p => p !== 'youtube' && isVisible(p)) && (
                 <div className="rl-field">

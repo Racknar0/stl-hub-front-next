@@ -693,3 +693,10 @@ $rl-review: #38bdf8;
   input { accent-color: #fe2c55; margin-top: 0.15rem; }
 }
 .rl-tt-inbox { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+
+// ---------- Threads ----------
+.rl-threads-preview {
+  margin: 0; white-space: pre-wrap; word-break: break-word;
+  font-family: inherit; font-size: 0.8rem; line-height: 1.45; color: #e4e4e7;
+  background: rgba(0, 0, 0, 0.35); border: 1px solid $rl-line; border-radius: 8px; padding: 0.5rem 0.65rem;
+}
