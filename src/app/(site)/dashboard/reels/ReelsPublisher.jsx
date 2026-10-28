@@ -32,9 +32,9 @@ const TIKTOK_PRIVACY = {
   SELF_ONLY: 'Solo yo',
   INBOX: 'Enviado a borradores',
 };
-// Mientras TikTok no apruebe la publicación directa, los reels nuevos van a borradores (se publican desde el móvil)
-const TIKTOK_DEFAULT_MODE = 'inbox';
-const TIKTOK_DEFAULT_OPTIONS = { mode: TIKTOK_DEFAULT_MODE, privacyLevel: null, allowComment: false, allowDuet: false, allowStitch: false, commercial: false, yourBrand: false, brandedContent: false };
+// Por defecto: publicación directa, visible para todo el mundo y con comentarios, dúo y stitch permitidos
+const TIKTOK_DEFAULT_MODE = 'direct';
+const TIKTOK_DEFAULT_OPTIONS = { mode: TIKTOK_DEFAULT_MODE, privacyLevel: 'PUBLIC_TO_EVERYONE', allowComment: true, allowDuet: true, allowStitch: true, commercial: false, yourBrand: false, brandedContent: false };
 
 // Qué le falta a las opciones de TikTok para poder aprobar (las mismas reglas que el backend)
 function tiktokOptionsProblem(o) {
