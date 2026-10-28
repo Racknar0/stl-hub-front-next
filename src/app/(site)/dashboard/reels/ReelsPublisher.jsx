@@ -344,19 +344,43 @@ export default function ReelsPublisher() {
   }, [anyProcessing, fetchTray, fetchMonth, fetchStats]);
 
   // ---------- Subida ----------
+  // Se sube en tandas de pocos videos (máx. ~80 MB por petición: Cloudflare corta las subidas de más de 100 MB)
+  const MAX_UPLOAD_FILES = 200;
+  const BATCH_BYTES = 80 * 1024 * 1024;
+  const BATCH_FILES = 10;
   const uploadFiles = async (fileList) => {
     const files = [...(fileList || [])].filter(f => /^video\/(mp4|quicktime)$/.test(f.type));
     if (!files.length) return showToast('Solo se aceptan videos MP4 o MOV', 'err');
+    if (files.length > MAX_UPLOAD_FILES) return showToast(`Máximo ${MAX_UPLOAD_FILES} videos por subida`, 'err');
+    const batches = [];
+    for (const f of files) {
+      const last = batches[batches.length - 1];
+      if (last && last.files.length < BATCH_FILES && last.bytes + f.size <= BATCH_BYTES) { last.files.push(f); last.bytes += f.size; }
+      else batches.push({ files: [f], bytes: f.size });
+    }
+    const totalBytes = files.reduce((n, f) => n + f.size, 0) || 1;
+    let sentBytes = 0;
+    let uploaded = 0;
     setUploading({ count: files.length, pct: 0 });
     try {
-      const meta = await Promise.all(files.map(readVideoMeta));
-      const form = new FormData();
-      files.forEach(f => form.append('videos', f));
-      form.append('meta', JSON.stringify(meta));
-      if (focus) form.append('platforms', JSON.stringify([focus]));
-      await http.postFormData('/reels/upload', form, {
-        onUploadProgress: (e) => e.total && setUploading({ count: files.length, pct: Math.round((e.loaded / e.total) * 100) }),
-      });
+      for (const batch of batches) {
+        const meta = await Promise.all(batch.files.map(readVideoMeta));
+        const form = new FormData();
+        batch.files.forEach(f => form.append('videos', f));
+        form.append('meta', JSON.stringify(meta));
+        if (focus) form.append('platforms', JSON.stringify([focus]));
+        try {
+          await http.postFormData('/reels/upload', form, {
+            timeout: 0,
+            onUploadProgress: (e) => setUploading({ count: files.length, pct: Math.min(99, Math.round(((sentBytes + (e.loaded || 0)) / totalBytes) * 100)) }),
+          });
+        } catch (e) {
+          throw new Error(`${uploaded} de ${files.length} subidos; falló la tanda siguiente: ${errMsg(e)}`);
+        }
+        sentBytes += batch.bytes;
+        uploaded += batch.files.length;
+        refreshAll();
+      }
       showToast(`${files.length} ${files.length === 1 ? 'video subido' : 'videos subidos'}. Pulsa "Generar Metadatos" cuando quieras los textos`);
       refreshAll();
     } catch (e) { showToast('Error subiendo: ' + errMsg(e), 'err'); }
