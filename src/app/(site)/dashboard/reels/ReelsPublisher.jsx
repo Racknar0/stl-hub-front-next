@@ -769,7 +769,7 @@ export default function ReelsPublisher() {
             {ytConnected && isVisible('youtube') && (
               <label className="rl-setting" title="Hasta que Google apruebe la auditoría del proyecto, YouTube deja en privado los videos subidos por API">
                 Privacidad YouTube
-                <select value={settings.youtubePrivacy || 'private'} onChange={(e) => saveSetting({ youtubePrivacy: e.target.value })}>
+                <select value={settings.youtubePrivacy || 'public'} onChange={(e) => saveSetting({ youtubePrivacy: e.target.value })}>
                   <option value="private">Privado</option>
                   <option value="unlisted">No listado</option>
                   <option value="public">Público</option>
@@ -854,7 +854,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} visible={visible}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -869,7 +869,7 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, visible, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
   const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
@@ -1121,6 +1121,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <label className="rl-field">
                     <span>Descripción de YouTube</span>
                     <textarea className="form-input" rows="3" value={form.youtubeDescription} disabled={readOnly || processing} onChange={(e) => update({ youtubeDescription: e.target.value })} />
+                  </label>
+                  <label className="rl-field">
+                    <span>Privacidad en YouTube <small>se aplica a todos los Shorts</small></span>
+                    <select className="form-input" value={settings.youtubePrivacy || 'public'} disabled={readOnly} onChange={(e) => onSaveSetting({ youtubePrivacy: e.target.value })}>
+                      <option value="public">Público</option>
+                      <option value="unlisted">No listado</option>
+                      <option value="private">Privado</option>
+                    </select>
                   </label>
                 </>
               )}
