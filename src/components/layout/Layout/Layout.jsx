@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import Header from '../Header/Header'
 import Footer from '../Footer/Footer'
 import SubscribeBar from '../BottomBar/SubscribeBar'
@@ -12,6 +12,26 @@ import VantaBackground from '../VantaBackground/VantaBackground'
 import SplashCursor from '../SplashCursor/SplashCursor'
 import GlobalLoader from '../../common/GlobalLoader/GlobalLoader'
 
+/**
+ * Apaga el loader global cuando la ruta termina de cambiar.
+ * Vive en su propio componente porque useSearchParams() saca del render en
+ * servidor a todo lo que comparta su Suspense: si se llama en Layout, las
+ * páginas prerenderizadas salen con el <body> vacío.
+ */
+function RouteChangeLoaderReset() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const setGlobalLoading = useStore((s) => s.setGlobalLoading)
+  const search = searchParams?.toString()
+
+  useEffect(() => {
+    const doneTimer = setTimeout(() => setGlobalLoading(false), 120)
+    return () => clearTimeout(doneTimer)
+  }, [pathname, search, setGlobalLoading])
+
+  return null
+}
+
 const Layout = ({ children }) => {
   const [hydrated, setHydrated] = useState(false)
   const token = useStore((s) => s.token)
@@ -20,7 +40,6 @@ const Layout = ({ children }) => {
   const globalLoading = useStore((s) => s.globalLoading)
   const setGlobalLoading = useStore((s) => s.setGlobalLoading)
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const isDashboard = pathname?.includes('/dashboard') || pathname?.includes('/admin')
 
   const [isMobile, setIsMobile] = useState(false)
@@ -41,12 +60,6 @@ const Layout = ({ children }) => {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Cuando la ruta termina de cambiar, apagamos el loader global.
-  useEffect(() => {
-    const doneTimer = setTimeout(() => setGlobalLoading(false), 120)
-    return () => clearTimeout(doneTimer)
-  }, [pathname, searchParams?.toString(), setGlobalLoading])
-
   // Failsafe para evitar overlay "pegado" si una navegación no completa.
   useEffect(() => {
     if (!globalLoading) return
@@ -62,6 +75,9 @@ const Layout = ({ children }) => {
   return (
     <div className="app-layout">
       <GlobalLoader />
+      <Suspense fallback={null}>
+        <RouteChangeLoaderReset />
+      </Suspense>
 
       {/* Ambient Background */}
       {!isDashboard && !isMobile && (
