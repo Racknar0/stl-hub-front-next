@@ -1,5 +1,5 @@
 'use client';
-import React, { Suspense, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Layout from '../../components/layout/Layout/Layout';
 import { usePathname } from 'next/navigation';
 import HttpService from '@/services/HttpService';
@@ -71,11 +71,12 @@ export default function SiteLayoutClient({ children }) {
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
       <PromoProvider>
         <ClientTracker />
-        <Suspense fallback={null}>
-          <Layout>
-            {children}
-          </Layout>
-        </Suspense>
+        {/* Sin <Suspense> aquí: con uno, un notFound() de la página se queda
+            dentro y la respuesta sale 200 con el body vacío en vez de 404.
+            Quien use useSearchParams() debe llevar su propio Suspense. */}
+        <Layout>
+          {children}
+        </Layout>
       </PromoProvider>
     </GoogleOAuthProvider>
   );

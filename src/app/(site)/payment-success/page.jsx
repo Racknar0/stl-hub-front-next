@@ -1,11 +1,20 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { sendGTMEvent } from '@next/third-parties/google';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
 
+// useSearchParams() necesita su propio Suspense (el layout ya no pone uno).
 export default function PaymentSuccessPage() {
+    return (
+        <Suspense fallback={null}>
+            <PaymentSuccessContent />
+        </Suspense>
+    );
+}
+
+function PaymentSuccessContent() {
     const resolvedLanguage = useResolvedLanguage();
     const searchParams = useSearchParams();
     const isEn = resolvedLanguage === 'en';

@@ -20,7 +20,16 @@ const STATUS_TEXT = {
   },
 };
 
+// useSearchParams() necesita su propio Suspense (el layout ya no pone uno).
 export default function MercadoPagoCallbackPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <MercadoPagoCallbackContent />
+    </React.Suspense>
+  );
+}
+
+function MercadoPagoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
