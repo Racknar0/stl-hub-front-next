@@ -35,7 +35,7 @@ const groups = [
   ] },
   { label: 'Gestión', items: [
     { label: 'Usuarios', href: '/dashboard/users', icon: PeopleOutline },
-    ...(process.env.NODE_ENV !== 'production' ? [{ label: 'Marketing', href: '/dashboard/marketing', icon: MailOutline }] : []),
+    { label: 'Marketing', href: '/dashboard/marketing', icon: MailOutline },
     { label: 'Publicidad', href: '/dashboard?tab=campaigns', tab: 'campaigns', icon: CampaignOutlined },
     { label: 'Códigos regalo', href: '/dashboard?tab=gift-codes', tab: 'gift-codes', icon: CardGiftcardOutlined },
   ] },
