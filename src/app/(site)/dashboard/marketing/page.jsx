@@ -76,6 +76,18 @@ export default function MarketingResumen() {
 
         <article className="mk-stat">
           <span className="label">
+            En cola
+            <Ayuda texto="Correos del embudo ya programados que aún no salen. Se envían a la hora que les toca, sin pasar del tope diario." />
+          </span>
+          <span className="value">{data.queue?.queued ?? 0}</span>
+          <span className="hint">
+            {data.queue?.engineEnabled ? 'Motor encendido' : 'Motor apagado'}
+            {data.queue?.nextAt && ` · próximo ${new Date(data.queue.nextAt).toLocaleString()}`}
+          </span>
+        </article>
+
+        <article className="mk-stat">
+          <span className="label">
             Premium
             <Ayuda texto="Usuarios con una suscripción activa. No reciben los correos de venta de Premium." />
           </span>

@@ -30,6 +30,18 @@ export class EmailMarketingService extends HttpService {
     return resp.data
   }
 
+  // Ajustes y estado del motor de envíos propio.
+  async engine() {
+    const resp = await this.getData('/admin/email-marketing/engine')
+    return resp.data
+  }
+
+  // changes: { enabled?, start?, dailyLimit?, dailyReserve? }
+  async saveEngine(changes) {
+    const resp = await this.putData('/admin/email-marketing', 'engine', changes)
+    return resp.data
+  }
+
   // Recalcula las etapas de todos los contactos.
   async sync() {
     const resp = await this.postData('/admin/email-marketing/sync', {})

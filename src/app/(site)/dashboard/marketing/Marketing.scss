@@ -352,6 +352,38 @@ $mk-text-dim: #a0aec0;
     &:disabled { opacity: 0.45; cursor: not-allowed; }
   }
 
+  // ---------- Ajustes del motor ----------
+  .mk-engine {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: #a0aec0;
+    }
+
+    input {
+      padding: 0.5rem 0.7rem;
+      border: 1px solid $mk-border;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+      font-size: 0.9rem;
+    }
+  }
+
+  .mk-engine-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
   // ---------- Avisos ----------
   .mk-note {
     display: flex;

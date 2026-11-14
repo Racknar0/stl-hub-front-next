@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import MotorAjustes from './MotorAjustes'
 import emailMarketingService from '../../../../../services/EmailMarketingService'
 import useMarketingData from '../useMarketingData'
 import MarketingStatus from '../MarketingStatus'
@@ -9,12 +10,15 @@ import { ASUNTOS_EMBUDO } from '../demoData'
 
 export default function MarketingEmbudos() {
   const { data, error, loading, reload } = useMarketingData(() => emailMarketingService.flows(), [])
+  const [motorOn, setMotorOn] = useState(false)
 
   if (!data) return <MarketingStatus loading={loading} error={error} onRetry={reload} />
 
   return (
     <>
       <MarketingStatus loading={loading} error={error} onRetry={reload} />
+
+      <MotorAjustes onChange={(m) => setMotorOn(m.enabled)} />
 
       <section className="mk-card">
         <div className="mk-card-title">
@@ -23,11 +27,17 @@ export default function MarketingEmbudos() {
             <Ayuda texto="Serie de 4 correos que recibe cada persona que se registra. Sale al terminar el último o en cuanto compra Premium. Nadie entra dos veces, y los contactos que ya existían no entran: a ellos les llega el reenganche." />
           </h2>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span className="mk-tag t-on">Activo</span>
-            <span className="mk-tag t-off">
-              Corre en Brevo
-              <Ayuda texto="Hoy Brevo ejecuta este embudo, así que los contadores de enviados, aperturas y clics aparecen en cero. Se llenarán cuando nuestro servidor tome el control del envío." />
-            </span>
+            {motorOn ? (
+              <span className="mk-tag t-on">
+                Motor propio
+                <Ayuda texto="Nuestro servidor envía este embudo. Los contadores salen de los envíos reales." />
+              </span>
+            ) : (
+              <span className="mk-tag t-off">
+                Corre en Brevo
+                <Ayuda texto="Mientras el motor propio esté apagado, el embudo lo ejecuta Brevo y los contadores de enviados, aperturas y clics aparecen en cero. Se llenarán cuando enciendas el motor." />
+              </span>
+            )}
           </div>
         </div>
 

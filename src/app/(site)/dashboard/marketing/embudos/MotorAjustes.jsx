@@ -1,0 +1,128 @@
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import emailMarketingService from '../../../../../services/EmailMarketingService'
+import Ayuda from '../Ayuda'
+
+// ISO -> valor de <input type="datetime-local"> en hora del navegador
+const toLocalInput = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+export default function MotorAjustes({ onChange }) {
+  const [motor, setMotor] = useState(null)
+  const [form, setForm] = useState({ start: '', dailyLimit: '', dailyReserve: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  const aplicar = (data) => {
+    setMotor(data)
+    setForm({
+      start: toLocalInput(data.start),
+      dailyLimit: String(data.dailyLimit),
+      dailyReserve: String(data.dailyReserve),
+    })
+    onChange?.(data)
+  }
+
+  useEffect(() => {
+    emailMarketingService
+      .engine()
+      .then(aplicar)
+      .catch((e) => setError(e?.response?.data?.error || 'No se pudo cargar el motor'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const guardar = async (cambios) => {
+    setSaving(true)
+    setError(null)
+    try {
+      aplicar(await emailMarketingService.saveEngine(cambios))
+    } catch (e) {
+      setError(e?.response?.data?.error || 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const guardarAjustes = () =>
+    guardar({
+      start: form.start ? new Date(form.start).toISOString() : null,
+      dailyLimit: Number(form.dailyLimit),
+      dailyReserve: Number(form.dailyReserve),
+    })
+
+  const alternar = () => {
+    const encender = !motor.enabled
+    if (encender && !window.confirm('Se empezarán a enviar correos reales a los usuarios. ¿Encender el motor?')) return
+    guardar({ enabled: encender })
+  }
+
+  if (!motor) {
+    return error ? <div className="mk-note is-warn" style={{ marginBottom: '1.5rem' }}>{error}</div> : null
+  }
+
+  const proximo = motor.queue.nextAt ? new Date(motor.queue.nextAt).toLocaleString() : '—'
+
+  return (
+    <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
+      <div className="mk-card-title">
+        <h2>
+          Motor de envíos
+          <Ayuda texto="El servidor que envía los correos del embudo por su cuenta, usando Brevo solo para entregarlos. Apagado, solo prepara la cola y no envía nada." />
+        </h2>
+        <span className={`mk-tag ${motor.enabled ? 't-on' : 't-off'}`}>{motor.enabled ? 'Encendido' : 'Apagado'}</span>
+      </div>
+
+      {(!motor.ready.secret || !motor.ready.brevo) && (
+        <div className="mk-note is-warn" style={{ marginBottom: '1rem' }}>
+          <span>
+            {!motor.ready.secret && <>Falta <b>EMAIL_UNSUBSCRIBE_SECRET</b> en el servidor: sin él no se puede encender. </>}
+            {!motor.ready.brevo && <>Falta <b>BREVO_API_KEY</b> en el servidor.</>}
+          </span>
+        </div>
+      )}
+
+      <div className="mk-engine">
+        <label>
+          <span>
+            Fecha de corte
+            <Ayuda texto="Desde cuándo envía el motor. Lo que debía salir antes de esta fecha se descarta, porque ya lo cubrió Brevo. Ponla en el momento en que apagues el embudo de Brevo." />
+          </span>
+          <input type="datetime-local" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} />
+        </label>
+        <label>
+          <span>
+            Límite diario
+            <Ayuda texto="Máximo de correos por día. El plan gratis de Brevo permite 300 y cuenta todos los correos, también los de activación y contraseña." />
+          </span>
+          <input type="number" min="1" value={form.dailyLimit} onChange={(e) => setForm({ ...form, dailyLimit: e.target.value })} />
+        </label>
+        <label>
+          <span>
+            Reserva
+            <Ayuda texto="Cupo diario que el embudo no toca, para que siempre salgan los correos de activación y de contraseña." />
+          </span>
+          <input type="number" min="0" value={form.dailyReserve} onChange={(e) => setForm({ ...form, dailyReserve: e.target.value })} />
+        </label>
+      </div>
+
+      <div className="mk-engine-actions">
+        <button className="mk-btn" onClick={guardarAjustes} disabled={saving}>Guardar ajustes</button>
+        <button className="mk-btn is-primary" onClick={alternar} disabled={saving}>
+          {motor.enabled ? 'Apagar motor' : 'Encender motor'}
+        </button>
+        <span style={{ color: '#a0aec0', fontSize: '0.8rem' }}>
+          En cola: {motor.queue.queued} · próximo envío: {proximo}
+          {motor.queue.failed > 0 && ` · fallidos: ${motor.queue.failed}`}
+        </span>
+      </div>
+
+      {error && <div className="mk-note is-warn" style={{ marginTop: '1rem' }}>{error}</div>}
+    </section>
+  )
+}
