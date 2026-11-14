@@ -42,6 +42,12 @@ export class EmailMarketingService extends HttpService {
     return resp.data
   }
 
+  // Envía un paso del embudo al correo del admin que lo pide (kind: WELCOME_1..4).
+  async sendTest(kind) {
+    const resp = await this.postData('/admin/email-marketing/engine/test', { kind })
+    return resp.data
+  }
+
   // Recalcula las etapas de todos los contactos.
   async sync() {
     const resp = await this.postData('/admin/email-marketing/sync', {})

@@ -18,6 +18,7 @@ export default function MotorAjustes({ onChange }) {
   const [form, setForm] = useState({ start: '', dailyLimit: '', dailyReserve: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [prueba, setPrueba] = useState({ kind: 'WELCOME_1', sending: false, msg: '' })
 
   const aplicar = (data) => {
     setMotor(data)
@@ -46,6 +47,16 @@ export default function MotorAjustes({ onChange }) {
       setError(e?.response?.data?.error || 'No se pudo guardar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const enviarPrueba = async () => {
+    setPrueba((p) => ({ ...p, sending: true, msg: '' }))
+    try {
+      const r = await emailMarketingService.sendTest(prueba.kind)
+      setPrueba((p) => ({ ...p, sending: false, msg: `Enviado a ${r.to}` }))
+    } catch (e) {
+      setPrueba((p) => ({ ...p, sending: false, msg: e?.response?.data?.error || 'No se pudo enviar' }))
     }
   }
 
@@ -120,6 +131,20 @@ export default function MotorAjustes({ onChange }) {
           En cola: {motor.queue.queued} · próximo envío: {proximo}
           {motor.queue.failed > 0 && ` · fallidos: ${motor.queue.failed}`}
         </span>
+      </div>
+
+      <div className="mk-engine-actions" style={{ marginTop: '1rem' }}>
+        <select className="mk-btn" value={prueba.kind} onChange={(e) => setPrueba({ ...prueba, kind: e.target.value })}>
+          <option value="WELCOME_1">1 · Bienvenida</option>
+          <option value="WELCOME_2">2 · Premium</option>
+          <option value="WELCOME_3">3 · Top descargas</option>
+          <option value="WELCOME_4">4 · Planes</option>
+        </select>
+        <button className="mk-btn" onClick={enviarPrueba} disabled={saving || prueba.sending}>
+          {prueba.sending ? 'Enviando…' : 'Enviarme una prueba'}
+        </button>
+        <Ayuda texto="Manda ese correo a tu propio correo de administrador, con el idioma y el enlace de baja reales, para ver cómo llega. No usa la cola ni cuenta como envío del embudo, pero sí gasta uno del cupo diario." />
+        {prueba.msg && <span style={{ color: '#a0aec0', fontSize: '0.8rem' }}>{prueba.msg}</span>}
       </div>
 
       {error && <div className="mk-note is-warn" style={{ marginTop: '1rem' }}>{error}</div>}
