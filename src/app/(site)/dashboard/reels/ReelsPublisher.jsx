@@ -450,6 +450,23 @@ export default function ReelsPublisher() {
     finally { setGenerating(false); }
   };
 
+  // Textos propios de los canales de YouTube extra para los reels que aún no los tienen
+  const [variantsPending, setVariantsPending] = useState(0);
+  const fetchVariantsPending = useCallback(() => http.getData('/reels/youtube-variants').then(r => setVariantsPending(r.data?.pending || 0)).catch(() => {}), [http]);
+  useEffect(() => { if ((connection?.youtube?.channels?.length || 0) > 1) fetchVariantsPending(); }, [connection, tray, postsByDay, fetchVariantsPending]);
+  const [generatingVariants, setGeneratingVariants] = useState(false);
+  const generateVariants = async () => {
+    setGeneratingVariants(true);
+    try {
+      const res = await http.postData('/reels/youtube-variants', {});
+      showToast(res.data.running ? 'Ya se están generando, espera un momento'
+        : res.data.queued ? `Generando textos de los otros canales para ${res.data.queued} ${res.data.queued === 1 ? 'reel' : 'reels'}… tardará unos minutos`
+          : 'Todos los reels ya tienen sus textos por canal');
+      setVariantsPending(0);
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setGeneratingVariants(false); }
+  };
+
   // Abre la autorización de Google en una ventana y espera (hasta 3 min) a que el canal quede conectado
   const connectYoutube = async () => {
     try {
@@ -601,9 +618,7 @@ export default function ReelsPublisher() {
             p.key === 'threads' ? (
               thConnected ? (
                 <span key={p.key} className="rl-conn on" title={`Cuenta conectada: @${connection.threads.account?.username || ''}`}>
-                  {connection.threads.account?.avatarUrl
-                    ? <img className="rl-conn-avatar" src={connection.threads.account.avatarUrl} alt="" />
-                    : <PlatformIcon platform={p.key} title={p.label} />}
+                  <PlatformIcon platform={p.key} title={p.label} />
                   @{connection.threads.account?.username || 'threads'}
                   <button type="button" className="rl-conn-x" title="Desconectar Threads" onClick={disconnectThreads}>✕</button>
                 </span>
@@ -616,9 +631,7 @@ export default function ReelsPublisher() {
             ) : p.key === 'tiktok' ? (
               ttConnected ? (
                 <span key={p.key} className="rl-conn on" title={`Cuenta conectada: ${connection.tiktok.account?.displayName || ''}`}>
-                  {connection.tiktok.account?.avatarUrl
-                    ? <img className="rl-conn-avatar" src={connection.tiktok.account.avatarUrl} alt="" />
-                    : <PlatformIcon platform={p.key} title={p.label} />}
+                  <PlatformIcon platform={p.key} title={p.label} />
                   {connection.tiktok.account?.displayName || 'TikTok'}
                   <button type="button" className="rl-conn-x" title="Desconectar TikTok" onClick={disconnectTiktok}>✕</button>
                 </span>
@@ -683,6 +696,12 @@ export default function ReelsPublisher() {
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateMetadata} disabled={generating || anyProcessing}
               title="Revisa los reels pendientes y prepara su texto y hashtags">
               {anyProcessing ? '⏳ Generando metadatos…' : `🔍 Generar Metadatos (${stats.noMetadata})`}
+            </button>
+          )}
+          {variantsPending > 0 && isVisible('youtube') && (
+            <button type="button" className="pr-btn rl-ai-generate" onClick={generateVariants} disabled={generatingVariants}
+              title="Genera el título y la descripción propios de cada canal de YouTube extra, sin tocar los demás textos">
+              {generatingVariants ? '⏳ Generando…' : `🔍 Textos para los otros canales (${variantsPending})`}
             </button>
           )}
           {tray.length > 0 && (
