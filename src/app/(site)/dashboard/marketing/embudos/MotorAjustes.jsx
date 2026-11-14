@@ -147,6 +147,37 @@ export default function MotorAjustes({ onChange }) {
         {prueba.msg && <span style={{ color: '#a0aec0', fontSize: '0.8rem' }}>{prueba.msg}</span>}
       </div>
 
+      {motor.failures?.length > 0 && (
+        <div style={{ marginTop: '1rem' }}>
+          <div className="mk-note is-warn" style={{ marginBottom: '0.6rem' }}>
+            <span>
+              <b>{motor.queue.failed} correo(s) fallido(s).</b> Brevo los rechazó 3 veces y el motor dejó de reintentarlos.
+              {motor.queue.failed > motor.failures.length && ` Se muestran los ${motor.failures.length} más recientes.`}
+            </span>
+          </div>
+          <table className="mk-table">
+            <thead>
+              <tr>
+                <th>Correo</th>
+                <th>Paso</th>
+                <th>Intentos</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {motor.failures.map((f) => (
+                <tr key={f.id}>
+                  <td>{f.email || '—'}</td>
+                  <td>{f.kind}</td>
+                  <td>{f.attempts}</td>
+                  <td>{f.error || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {error && <div className="mk-note is-warn" style={{ marginTop: '1rem' }}>{error}</div>}
     </section>
   )

@@ -52,6 +52,14 @@ export default function MarketingResumen() {
     <>
       <MarketingStatus loading={loading} error={error} onRetry={reload} />
 
+      {data.queue?.failed > 0 && (
+        <div className="mk-note is-warn" style={{ marginBottom: '1.5rem' }}>
+          <span>
+            <b>{data.queue.failed} correo(s) fallido(s).</b> Brevo los rechazó 3 veces. Mira el motivo en la pestaña Embudos.
+          </span>
+        </div>
+      )}
+
       {/* ---------- Métricas ---------- */}
       <section className="mk-stats">
         <article className="mk-stat">
