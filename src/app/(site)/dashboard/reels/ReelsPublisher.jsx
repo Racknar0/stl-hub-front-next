@@ -273,6 +273,8 @@ function PlatformBadges({ list }) {
 const postToForm = (post) => ({
   caption: post.caption || '', facebookCaption: post.facebookCaption || '', title: post.title || '',
   youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
+  youtubeChannels: Array.isArray(post.youtubeChannels) ? post.youtubeChannels : null, // null = todos los canales conectados
+  youtubeVariants: post.youtubeVariants && typeof post.youtubeVariants === 'object' ? post.youtubeVariants : {},
   tiktokOptions: { ...TIKTOK_DEFAULT_OPTIONS, ...(post.tiktokOptions && typeof post.tiktokOptions === 'object' ? post.tiktokOptions : {}) },
   hashtags: toList(post.hashtags), platforms: toList(post.platforms),
   time: post.scheduledAt ? fmtTime(post.scheduledAt) : '', assetId: post.assetId ? String(post.assetId) : '',
@@ -457,7 +459,7 @@ export default function ReelsPublisher() {
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 3000));
         const status = await fetchConnection();
-        if (status?.youtube?.connected) {
+        if ((status?.youtube?.channels?.length || 0) > (connection?.youtube?.channels?.length || 0)) {
           showToast(`✓ YouTube conectado: ${status.youtube.channel?.title || ''}`);
           return;
         }
@@ -467,13 +469,13 @@ export default function ReelsPublisher() {
     finally { setConnectingYt(false); }
   };
 
-  const disconnectYoutube = async (e) => {
+  const disconnectYoutube = async (e, channel) => {
     e.stopPropagation();
-    if (!confirm('¿Desconectar el canal de YouTube? Los reels dejarán de subirse a YouTube.')) return;
+    if (!confirm(`¿Desconectar el canal de YouTube "${channel?.title || ''}"? Los reels dejarán de subirse a ese canal.`)) return;
     try {
-      await http.postData('/reels/youtube/disconnect');
+      await http.postData('/reels/youtube/disconnect', { channelId: channel?.id });
       await fetchConnection();
-      showToast('YouTube desconectado');
+      showToast(`${channel?.title || 'Canal'} desconectado`);
     } catch (err) { showToast(errMsg(err), 'err'); }
   };
 
@@ -626,6 +628,19 @@ export default function ReelsPublisher() {
                   <PlatformIcon platform={p.key} title={p.label} />{connectingTt ? 'Esperando autorización…' : 'Conectar TikTok'}
                 </button>
               )
+            ) : p.key === 'youtube' && ytConnected ? (
+              <React.Fragment key={p.key}>
+                {(connection.youtube.channels || []).map(ch => (
+                  <span key={ch.id} className="rl-conn on" title={`Canal conectado: ${ch.title || ''}`}>
+                    <PlatformIcon platform="youtube" title={p.label} />{ch.title || 'YouTube'}
+                    <button type="button" className="rl-conn-x" title={`Desconectar ${ch.title || 'el canal'}`} onClick={(e) => disconnectYoutube(e, ch)}>✕</button>
+                  </span>
+                ))}
+                <button type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
+                  title="Conecta otro canal de YouTube (elígelo en la pantalla de Google)">
+                  <PlatformIcon platform="youtube" title={p.label} />{connectingYt ? 'Esperando autorización…' : '+ Canal'}
+                </button>
+              </React.Fragment>
             ) : p.key === 'youtube' && !ytConnected ? (
               <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
                 title="Autoriza tu canal de YouTube para publicar Shorts">
@@ -854,7 +869,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -869,7 +884,7 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
   const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
@@ -1114,14 +1129,48 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               )}
               {form.platforms.includes('youtube') && isVisible('youtube') && (
                 <>
+                  {ytChannels.length > 1 && (
+                    <div className="rl-field">
+                      <span><PlatformIcon platform="youtube" /> Canales de YouTube</span>
+                      <div className="rl-tt-checks">
+                        {ytChannels.map(ch => {
+                          const chosen = form.youtubeChannels ?? ytChannels.map(c => c.id);
+                          return (
+                            <label key={ch.id}>
+                              <input type="checkbox" checked={chosen.includes(ch.id)} disabled={readOnly}
+                                onChange={(e) => update({ youtubeChannels: e.target.checked ? [...chosen, ch.id] : chosen.filter(id => id !== ch.id) })} />
+                              {ch.title}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <label className="rl-field">
-                    <span><PlatformIcon platform="youtube" /> Título de YouTube Shorts <small>{form.title.length}/100</small></span>
+                    <span><PlatformIcon platform="youtube" /> Título de YouTube Shorts{ytChannels.length > 1 ? ` · ${ytChannels[0].title}` : ''} <small>{form.title.length}/100</small></span>
                     <input type="text" className="form-input" maxLength={100} value={form.title} disabled={readOnly || processing} onChange={(e) => update({ title: e.target.value })} />
                   </label>
                   <label className="rl-field">
                     <span>Descripción de YouTube</span>
                     <textarea className="form-input" rows="3" value={form.youtubeDescription} disabled={readOnly || processing} onChange={(e) => update({ youtubeDescription: e.target.value })} />
                   </label>
+                  {/* Los demás canales llevan su propio título y descripción (salen unas horas después del principal) */}
+                  {ytChannels.slice(1).filter(ch => (form.youtubeChannels ?? ytChannels.map(c => c.id)).includes(ch.id)).map(ch => {
+                    const v = form.youtubeVariants[ch.id] || {};
+                    const setV = (patch) => update({ youtubeVariants: { ...form.youtubeVariants, [ch.id]: { ...v, ...patch } } });
+                    return (
+                      <React.Fragment key={ch.id}>
+                        <label className="rl-field">
+                          <span><PlatformIcon platform="youtube" /> Título · {ch.title} <small>{(v.title || '').length}/100</small></span>
+                          <input type="text" className="form-input" maxLength={100} value={v.title || ''} placeholder={form.title} disabled={readOnly || processing} onChange={(e) => setV({ title: e.target.value })} />
+                        </label>
+                        <label className="rl-field">
+                          <span>Descripción · {ch.title}</span>
+                          <textarea className="form-input" rows="3" value={v.description || ''} placeholder={form.youtubeDescription} disabled={readOnly || processing} onChange={(e) => setV({ description: e.target.value })} />
+                        </label>
+                      </React.Fragment>
+                    );
+                  })}
                   <label className="rl-field">
                     <span>Privacidad en YouTube <small>se aplica a todos los Shorts</small></span>
                     <select className="form-input" value={settings.youtubePrivacy || 'public'} disabled={readOnly} onChange={(e) => onSaveSetting({ youtubePrivacy: e.target.value })}>
@@ -1272,6 +1321,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                       </li>
                     );
                   })}
+                  {Object.entries(post.results).filter(([key]) => key.startsWith('youtube:')).map(([key, r]) => (
+                    <li key={key}>
+                      <PlatformIcon platform="youtube" title="YouTube" />YouTube · {r.channelTitle || 'canal'}
+                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
+                      {r.publishAt && <small>público a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
+                      ✓
+                    </li>
+                  ))}
                 </ul>
                 {post.publishedAt && <p className="pr-muted">Publicado el {new Date(post.publishedAt).toLocaleString('es')}</p>}
               </section>
