@@ -1,152 +1,32 @@
 .taxonomy-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-
-  .header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 1rem;
+  gap: 16px;
+  color: #e2e8f0;
+  .header-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .header-actions > .MuiStack-root { flex-wrap: wrap; gap: 8px; }
+  .taxonomy-count { font-size: 14px; font-weight: 600; color: #cbd5e1; span { font-weight: 400; color: #94a3b8; margin-left: 4px; } }
+  .taxonomy-layout { align-items: flex-start; }
+  .tax-card { background: #101b2a; border: 1px solid rgba(148,163,184,.23); border-radius: 10px; overflow: hidden; min-width: 0; }
+  .tax-list { list-style: none; margin: 0; padding: 4px 0; max-height: calc(100dvh - 235px); min-height: 240px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+  .tax-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(148,163,184,.12); border-left: 2px solid transparent; min-height: 58px;
+    &:last-child { border-bottom: 0; }
+    &:hover { background: rgba(56,189,248,.04); }
+    &.selected { background: rgba(56,189,248,.09); border-left-color: #38bdf8; }
   }
-
-  .tax-card {
-    background: rgba(23, 29, 42, 0.7); /* $dark */
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    height: calc(100vh - 180px);
-    display: flex;
-    flex-direction: column;
+  .tax-info { flex: 1; min-width: 0; cursor: pointer; text-align: left; border: 0; background: transparent; padding: 2px 0; font: inherit;
+    &:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 3px; }
   }
-
-  .dark-mode .tax-card {
-    background: rgba(23, 29, 42, 0.8);
-    border-color: rgba(255, 255, 255, 0.05);
+  .tax-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 10px; font-size: 13px; line-height: 1.5; font-weight: 600; color: #e2e8f0; overflow-wrap: anywhere; }
+  .tax-name-en { font-size: 12px; color: #7dd3fc; font-weight: 400; }
+  .tax-slug { font-size: 11px; color: #94a3b8; margin-top: 1px; overflow-wrap: anywhere; }
+  .tax-panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px;
+    .panel-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; margin: 0; }
+    .MuiButton-root { text-transform: none; box-shadow: none; }
+    .MuiStack-root { min-width: 0; }
   }
-
-  .tax-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    flex: 1;
-    overflow-y: auto;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-    }
-  }
-
-  .tax-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-    gap: 12px;
-
-    &:hover {
-      background: rgba(108, 92, 231, 0.05); /* $primary */
-    }
-
-    &.selected {
-      background: rgba(108, 92, 231, 0.1);
-      border-left: 4px solid #6c5ce7;
-    }
-
-    .tax-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-      user-select: none;
-
-      .tax-name {
-        font-weight: 600;
-        color: #f7f7fb; /* $text */
-        font-size: 0.95rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .tax-name-en {
-        font-size: 0.75rem;
-        background: rgba(108, 92, 231, 0.2);
-        color: #a29bfe;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-weight: 500;
-      }
-      .tax-slug {
-        font-size: 0.8rem;
-        color: #6b7280;
-        margin-top: 2px;
-      }
-    }
-  }
-
-  .dark-mode .tax-item {
-    border-color: rgba(255, 255, 255, 0.05);
-    .tax-info {
-      .tax-name { color: #f7f7fb; }
-      .tax-slug { color: #a29bfe; }
-      .tax-name-en { background: rgba(108, 92, 231, 0.2); color: #a29bfe; }
-    }
-    &:hover { background: rgba(255, 255, 255, 0.03); }
-    &.selected { background: rgba(108, 92, 231, 0.15); }
-  }
-
-  .tax-panel {
-    padding: 24px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-
-    .panel-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #f7f7fb;
-      margin: 0 0 16px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .merge-alert {
-      background: rgba(108, 92, 231, 0.1);
-      border: 1px solid rgba(108, 92, 231, 0.3);
-      color: #a29bfe;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-    }
-
-    .selected-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 12px;
-      background: rgba(255,255,255,0.02);
-      border-radius: 8px;
-      border: 1px dashed rgba(255,255,255,0.1);
-    }
-  }
-
-  .dark-mode .tax-panel {
-    .panel-title { color: #f9fafb; }
-    .merge-alert { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
-    .selected-chips { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.1); }
-  }
+  .MuiButton-root { text-transform: none; }
+  .merge-alert { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border: 1px solid rgba(251,191,36,.25); background: rgba(251,191,36,.06); border-radius: 6px; font-size: 12px; line-height: 1.6; color: #fcd34d; }
+  .selected-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  @media (max-width: 899px) { .tax-list { max-height: 45dvh; } .tax-panel { position: static; } .header-actions { align-items: flex-start; } }
 }

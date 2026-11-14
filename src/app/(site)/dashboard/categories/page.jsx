@@ -34,7 +34,7 @@ export default function CategoriesPage() {
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase()
-    return (items || []).filter(it => !qq || it.name.toLowerCase().includes(qq) || it.slug.toLowerCase().includes(qq))
+    return (items || []).filter(it => !qq || [it.name, it.nameEn, it.slug].some(value => String(value || '').toLowerCase().includes(qq)))
   }, [items, q])
 
   const fetchItems = async () => {
@@ -153,9 +153,9 @@ export default function CategoriesPage() {
   const mode = selectedItems.length === 0 ? 'create' : (selectedItems.length === 1 ? 'edit' : 'merge')
 
   return (
-    <div className="dashboard-content p-3 taxonomy-container">
+    <div className="taxonomy-container">
       <div className="header-actions">
-        <Typography variant="h5" fontWeight={700} sx={{ color: '#f7f7fb' }}>Gestión de Categorías</Typography>
+        <Typography className="taxonomy-count">{filtered.length} categorías <span>de {items.length}</span></Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <TextField size="small" placeholder="Buscar categoría..." value={q} onChange={(e)=>setQ(e.target.value)} sx={{ background: 'rgba(255,255,255,0.05)', borderRadius: 1, input: { color: '#f7f7fb' } }} />
           <Tooltip title="Recargar">
@@ -163,18 +163,18 @@ export default function CategoriesPage() {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={clearSelection} sx={{ borderRadius: 8, px: 3 }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { clearSelection(); document.querySelector('.tax-panel input')?.focus() }} sx={{ borderRadius: 1.5, px: 3 }}>
             Nueva Categoría
           </Button>
         </Stack>
       </div>
 
-      <Grid container spacing={3} sx={{ flex: 1, minHeight: 0 }}>
+      <Grid container spacing={2} className="taxonomy-layout">
         {/* Lado Izquierdo: Lista Moderna */}
-        <Grid item xs={12} md={5} lg={4}>
+        <Grid size={{ xs: 12, md: 7, lg: 8 }}>
           <div className="tax-card glass">
             {loading && <div style={{ height: 4, width: '100%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: '30%', background: '#6c5ce7', animation: 'progress 1s infinite' }} />
+              <div style={{ height: '100%', width: '30%', background: '#38bdf8', animation: 'progress 1s infinite' }} />
             </div>}
             
             <ul className="tax-list">
@@ -183,12 +183,13 @@ export default function CategoriesPage() {
                 return (
                   <li key={it.id} className={`tax-item ${isSelected ? 'selected' : ''}`}>
                     <Checkbox 
+                      inputProps={{ 'aria-label': `Seleccionar ${it.name}` }}
                       checked={isSelected} 
                       onChange={() => toggleSelect(it)}
                       size="small"
-                      sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#6c5ce7' } }}
+                      sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#38bdf8' } }}
                     />
-                    <div className="tax-info" onClick={() => selectOnly(it)}>
+                    <button type="button" className="tax-info" onClick={() => selectOnly(it)}>
                       <div className="tax-name">
                         <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginRight: 4, fontWeight: 'normal' }}>ES:</span>
                         {it.name || 'Sin nombre'}
@@ -203,7 +204,7 @@ export default function CategoriesPage() {
                         <span style={{ fontSize: '0.75rem', color: '#6b7280', marginRight: 4 }}>Slug:</span>
                         {it.slug || '-'}
                       </div>
-                    </div>
+                    </button>
                   </li>
                 )
               })}
@@ -213,31 +214,31 @@ export default function CategoriesPage() {
         </Grid>
 
         {/* Lado Derecho: Panel Dinámico */}
-        <Grid item xs={12} md={7} lg={8}>
+        <Grid size={{ xs: 12, md: 5, lg: 4 }}>
           <div className="tax-card glass tax-panel">
             
             {mode === 'create' && (
               <>
                 <h3 className="panel-title"><AddIcon color="primary"/> Crear Nueva Categoría</h3>
-                <Stack spacing={3}>
+                <Stack spacing={2}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField label="Nombre (ES)" value={form.name} onChange={(e)=>{
                         const name = e.target.value
                         setForm(f=>({ ...f, name, slug: slugify(name) }))
-                      }} fullWidth required variant="filled" />
+                      }} fullWidth required variant="outlined" size="small" />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField label="Nombre (EN)" value={form.nameEn} onChange={(e)=>{
                         const nameEn = e.target.value
                         setForm(f=>({ ...f, nameEn, slugEn: slugify(nameEn) }))
-                      }} fullWidth required variant="filled" />
+                      }} fullWidth required variant="outlined" size="small" />
                     </Grid>
                   </Grid>
-                  <TextField label="Descripción (Opcional)" value={form.description} onChange={(e)=>setForm(f=>({...f, description: e.target.value}))} fullWidth multiline minRows={3} variant="filled" />
+                  <TextField label="Descripción (Opcional)" value={form.description} onChange={(e)=>setForm(f=>({...f, description: e.target.value}))} fullWidth multiline minRows={3} variant="outlined" size="small" />
                   
                   <div>
-                    <Button variant="contained" size="large" startIcon={<SaveIcon />} onClick={save} disabled={saving || !form.name.trim() || !form.nameEn.trim()} sx={{ borderRadius: 8, px: 4 }}>
+                    <Button variant="contained" size="medium" startIcon={<SaveIcon />} onClick={save} disabled={saving || !form.name.trim() || !form.nameEn.trim()} sx={{ borderRadius: 1.5, px: 4 }}>
                       Guardar Categoría
                     </Button>
                   </div>
@@ -247,29 +248,29 @@ export default function CategoriesPage() {
 
             {mode === 'edit' && (
               <>
-                <h3 className="panel-title" style={{ color: '#a29bfe' }}>Editar Categoría</h3>
-                <Stack spacing={3}>
+                <h3 className="panel-title" style={{ color: '#7dd3fc' }}>Editar Categoría</h3>
+                <Stack spacing={2}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField label="Nombre (ES)" value={form.name} onChange={(e)=>{
                         const name = e.target.value
                         setForm(f=>({ ...f, name, slug: slugify(name) }))
-                      }} fullWidth required variant="filled" />
+                      }} fullWidth required variant="outlined" size="small" />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField label="Nombre (EN)" value={form.nameEn} onChange={(e)=>{
                         const nameEn = e.target.value
                         setForm(f=>({ ...f, nameEn, slugEn: slugify(nameEn) }))
-                      }} fullWidth required variant="filled" />
+                      }} fullWidth required variant="outlined" size="small" />
                     </Grid>
                   </Grid>
-                  <TextField label="Descripción (Opcional)" value={form.description} onChange={(e)=>setForm(f=>({...f, description: e.target.value}))} fullWidth multiline minRows={3} variant="filled" />
+                  <TextField label="Descripción (Opcional)" value={form.description} onChange={(e)=>setForm(f=>({...f, description: e.target.value}))} fullWidth multiline minRows={3} variant="outlined" size="small" />
                   
                   <Stack direction="row" spacing={2}>
-                    <Button variant="contained" size="large" startIcon={<SaveIcon />} onClick={save} disabled={saving || !form.name.trim() || !form.nameEn.trim()} sx={{ borderRadius: 8, px: 4 }}>
+                    <Button variant="contained" size="medium" startIcon={<SaveIcon />} onClick={save} disabled={saving || !form.name.trim() || !form.nameEn.trim()} sx={{ borderRadius: 1.5, px: 4 }}>
                       Actualizar
                     </Button>
-                    <Button color="error" variant="outlined" size="large" startIcon={<DeleteIcon />} onClick={remove} disabled={saving} sx={{ borderRadius: 8 }}>
+                    <Button color="error" variant="outlined" size="medium" startIcon={<DeleteIcon />} onClick={remove} disabled={saving} sx={{ borderRadius: 1.5 }}>
                       Eliminar
                     </Button>
                   </Stack>
@@ -279,7 +280,7 @@ export default function CategoriesPage() {
 
             {mode === 'merge' && (
               <>
-                <h3 className="panel-title" style={{ color: '#a29bfe' }}><CallMergeIcon /> Fusionar {selectedItems.length} Categorías</h3>
+                <h3 className="panel-title" style={{ color: '#7dd3fc' }}><CallMergeIcon /> Fusionar {selectedItems.length} Categorías</h3>
                 
                 <div className="merge-alert">
                   <WarningAmberIcon fontSize="small" />
@@ -290,7 +291,7 @@ export default function CategoriesPage() {
 
                 <div className="selected-chips">
                   {selectedItems.map(it => (
-                    <div key={it.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(108, 92, 231, 0.2)', border: '1px solid rgba(108, 92, 231, 0.4)', borderRadius: 16, padding: '4px 10px', fontSize: '0.85rem', color: '#f7f7fb' }}>
+                    <div key={it.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: 16, padding: '4px 10px', fontSize: '0.85rem', color: '#f7f7fb' }}>
                       <span>{it.name}</span>
                       <IconButton size="small" onClick={() => toggleSelect(it)} sx={{ ml: 0.5, p: 0.25, color: '#f7f7fb' }}>
                         <CloseIcon fontSize="small" />
@@ -300,31 +301,31 @@ export default function CategoriesPage() {
                 </div>
 
                 <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                  <Button variant={mergeDestType === 'new' ? 'contained' : 'outlined'} color="primary" onClick={() => setMergeDestType('new')} sx={{ borderRadius: 8 }}>
+                  <Button variant={mergeDestType === 'new' ? 'contained' : 'outlined'} color="primary" onClick={() => setMergeDestType('new')} sx={{ borderRadius: 1.5 }}>
                     Fusionar en una NUEVA
                   </Button>
-                  <Button variant={mergeDestType === 'existing' ? 'contained' : 'outlined'} color="primary" onClick={() => setMergeDestType('existing')} sx={{ borderRadius: 8 }}>
+                  <Button variant={mergeDestType === 'existing' ? 'contained' : 'outlined'} color="primary" onClick={() => setMergeDestType('existing')} sx={{ borderRadius: 1.5 }}>
                     Fusionar en EXISTENTE
                   </Button>
                 </Stack>
 
-                <div style={{ padding: '20px', border: '1px solid rgba(108, 92, 231, 0.2)', borderRadius: 12, marginTop: 16, background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ padding: '20px', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: 12, marginTop: 16, background: 'rgba(255,255,255,0.02)' }}>
                   {mergeDestType === 'new' ? (
                     <Stack spacing={2}>
                       <Typography variant="body2" color="text.secondary">Define el nombre de la nueva categoría que agrupará a todas las seleccionadas:</Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <TextField label="Nombre Nueva (ES)" value={mergeForm.name} onChange={(e) => setMergeForm({...mergeForm, name: e.target.value, slug: slugify(e.target.value)})} fullWidth variant="filled" />
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField label="Nombre Nueva (ES)" value={mergeForm.name} onChange={(e) => setMergeForm({...mergeForm, name: e.target.value, slug: slugify(e.target.value)})} fullWidth variant="outlined" size="small" />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField label="Nombre Nueva (EN)" value={mergeForm.nameEn} onChange={(e) => setMergeForm({...mergeForm, nameEn: e.target.value, slugEn: slugify(e.target.value)})} fullWidth variant="filled" />
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField label="Nombre Nueva (EN)" value={mergeForm.nameEn} onChange={(e) => setMergeForm({...mergeForm, nameEn: e.target.value, slugEn: slugify(e.target.value)})} fullWidth variant="outlined" size="small" />
                         </Grid>
                       </Grid>
                     </Stack>
                   ) : (
                     <Stack spacing={2}>
                       <Typography variant="body2" color="text.secondary">Selecciona una categoría existente de la lista para que absorba a las seleccionadas:</Typography>
-                      <FormControl fullWidth variant="filled">
+                      <FormControl fullWidth variant="outlined" size="small">
                         <InputLabel>Categoría Destino</InputLabel>
                         <Select
                           value={mergeForm.targetId}
@@ -340,7 +341,7 @@ export default function CategoriesPage() {
                 </div>
 
                 <div style={{ marginTop: 'auto', paddingTop: 20 }}>
-                  <Button variant="contained" color="primary" size="large" startIcon={<CallMergeIcon />} onClick={simulateMerge} sx={{ borderRadius: 8, px: 4, py: 1.5, fontWeight: 'bold' }}>
+                  <Button variant="contained" color="primary" size="medium" startIcon={<CallMergeIcon />} onClick={simulateMerge} sx={{ borderRadius: 1.5, px: 4, py: 1.5, fontWeight: 'bold' }}>
                     Confirmar Fusión
                   </Button>
                 </div>

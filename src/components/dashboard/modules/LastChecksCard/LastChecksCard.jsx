@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import './LastChecksCard.scss'
 import HttpService from '@/services/HttpService'
 import { fireAlert } from '@/helpers/alerts'
+import { summarizeAccountFailures } from '@/helpers/accountHealth'
 
 function formatDateTime(value) {
   if (!value) return 'Nunca'
@@ -58,6 +59,7 @@ export default function LastChecksCard({
   maxHeight,
   // Parametrizable (para pruebas: 60). También se puede setear por env.
   staleDays = Number(process.env.NEXT_PUBLIC_LASTCHECKS_STALE_DAYS) || 60,
+  onAccountsChange,
 }) {
   const [tab, setTab] = useState('main')
   const [loading, setLoading] = useState(false)
@@ -70,7 +72,9 @@ export default function LastChecksCard({
     setLoading(true)
     try {
       const res = await http.getData('/accounts')
-      setAccounts(res?.data || [])
+      const list = Array.isArray(res?.data) ? res.data : []
+      setAccounts(list)
+      onAccountsChange?.(list)
     } catch (e) {
       console.error('LastChecksCard fetch error', e)
     } finally {
@@ -123,21 +127,34 @@ export default function LastChecksCard({
   }, [accounts, staleDays])
 
   const staleCount = staleAccounts.length
+  const failureSummary = summarizeAccountFailures(accounts)
+  const failedCount = failureSummary.total
 
   useEffect(() => {
     const days = Math.max(1, Number(staleDays) || 60)
+    // Keep the automatic warning in production, without interrupting local previews.
+    const localPreview = process.env.NODE_ENV !== 'production' ||
+      ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname)
     // Dispara la alerta solo cuando pasa de 0 -> >0
-    if (staleCount > 0 && prevStaleCountRef.current === 0) {
+    const alertCount = staleCount + failedCount
+    if (!localPreview && alertCount > 0 && prevStaleCountRef.current === 0) {
       void fireAlert({
-        title: 'Alerta!',
-        text: `hay cuentas con mas de ${days} dias sin verificarse`,
-        icon: 'warning',
-        confirmButtonText: 'Ok',
+        title: failedCount ? `${failedCount} cuentas fallidas` : 'Cuentas pendientes de revisión',
+        text: [
+          failedCount ? `Main: ${failureSummary.main}. Backup: ${failureSummary.backup}. ${failureSummary.errors} con error y ${failureSummary.expired} con sesión vencida.` : '',
+          staleCount ? `${staleCount} cuentas llevan más de ${days} días sin verificarse.` : '',
+        ].filter(Boolean).join(' '),
+        icon: failedCount ? 'error' : 'warning',
+        confirmButtonText: failedCount ? 'Revisar cuentas fallidas' : 'Entendido',
+        showCancelButton: failedCount > 0,
+        cancelButtonText: 'Cerrar',
         zIndex: 2000,
+      }).then(result => {
+        if (failedCount && result.isConfirmed) window.location.assign('/dashboard/accounts?status=failed')
       })
     }
-    prevStaleCountRef.current = staleCount
-  }, [staleCount, staleDays])
+    prevStaleCountRef.current = alertCount
+  }, [staleCount, staleDays, failedCount, failureSummary.main, failureSummary.backup, failureSummary.errors, failureSummary.expired])
 
   const filtered = useMemo(() => {
     if (tab === 'alert') return staleAccounts
@@ -210,14 +227,14 @@ export default function LastChecksCard({
         ) : (
           filtered.map((a) => (
             <li key={a.id} className="lc-item">
-              <div className="lc-alias">{a.alias || `Cuenta #${a.id}`}</div>
+              <div className="lc-summary">
+                <div className="lc-alias" title={a.alias || `Cuenta #${a.id}`}>{a.alias || `Cuenta #${a.id}`}</div>
+                <span className="lc-meta-rel">{a.lastCheckAt ? formatRelativeFromNow(a.lastCheckAt) : 'Sin revisar'}</span>
+              </div>
               <div className="lc-meta">
-                <div className="lc-meta-date">Última validación: {formatDateTime(a.lastCheckAt)}</div>
-                {a.lastCheckAt ? (
-                  <div className="lc-meta-rel">{formatRelativeFromNow(a.lastCheckAt)}</div>
-                ) : null}
+                <span className="lc-meta-date">Revisada: {formatDateTime(a.lastCheckAt)}</span>
                 {tab === 'alert' ? (
-                  <div className="lc-meta-type">tipo: {String(a?.type || '—').toUpperCase()}</div>
+                  <span className="lc-meta-type">{String(a?.type || '—').toUpperCase()}</span>
                 ) : null}
               </div>
             </li>

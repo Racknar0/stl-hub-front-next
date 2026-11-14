@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HttpService from '@/services/HttpService';
+import { confirmAlert } from '@/helpers/alerts';
 
 export default function ModalSyncMultimodalVectors({ open, onClose }) {
     const [status, setStatus] = useState(null);
@@ -52,7 +53,17 @@ export default function ModalSyncMultimodalVectors({ open, onClose }) {
         }
     };
 
-    const handleSync = () => {
+    const handleSync = async () => {
+        if (syncing || loadingInfo || !status?.estimatedMissing) return;
+        const safeLimit = Math.min(1000, Math.max(1, Math.floor(Number(limit) || 10)));
+        const confirmed = await confirmAlert(
+            'Sincronizar vectores multimodales',
+            `Se procesarán hasta ${safeLimit} modelos pendientes con IA y se guardarán sus vectores en Qdrant. Esto puede generar consumo y costes de IA. ¿Quieres continuar?`,
+            'Sí, sincronizar',
+            'Cancelar',
+            'warning',
+        );
+        if (!confirmed) return;
         const configuredBaseUrl =
             process.env.NEXT_PUBLIC_API_BASE_URL ||
             process.env.NEXT_PUBLIC_API_BASE ||
@@ -66,7 +77,6 @@ export default function ModalSyncMultimodalVectors({ open, onClose }) {
             .replace(/\/api\/?$/, '')
             .replace(/\/$/, '');
         const url = `${apiUrl}/api/ai/sync-multimodal-missing`;
-        const safeLimit = Math.min(1000, Math.max(1, Math.floor(Number(limit) || 10)));
         
         try {
             fetch(url, {

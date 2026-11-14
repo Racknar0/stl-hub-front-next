@@ -38,7 +38,7 @@ function toGB(value) {
   return (n / (1024 ** 3)).toFixed(1)
 }
 
-export default function VpsMemoryWidget() {
+export default function VpsMemoryWidget({ compact = false }) {
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(false)
   const runningOnWindowsClient = typeof window !== 'undefined' && /win/i.test(String(window.navigator?.platform || ''))
@@ -103,7 +103,7 @@ export default function VpsMemoryWidget() {
   const ramUsedText = toGB(memory?.ramUsedBytes)
 
   return (
-    <div className={styles.widget} role="status" aria-label="Recursos del VPS">
+    <div className={[styles.widget, compact ? styles.compact : ''].filter(Boolean).join(' ')} aria-label="Recursos del VPS">
       <div className={styles.header}>Servidor VPS</div>
       
       <div className={styles.metricBlock}>

@@ -341,7 +341,7 @@ const Home = ({ lang, initialLatest, initialTop, initialFree, initialCategories,
   return (
     <div>
       {/* <GlobalLoader /> */}
-      <Hero lang={currentLang} />
+      <Hero lang={lang} />
 
       {/* Sección Unificada de Descargas Gratuitas / Minijuego */}
       <section className="home-freebies-showcase-section">

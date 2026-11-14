@@ -8,6 +8,9 @@ import { useI18n } from '../../../i18n';
 import useStore from '../../../store/useStore';
 import Button from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import ArrowOutwardRoundedIcon from '@mui/icons-material/ArrowOutwardRounded';
+import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import useResolvedLanguage from '@/hooks/useResolvedLanguage';
 import {
     getTrackingFromMiddlewareCookie,
@@ -81,7 +84,7 @@ const PricingSection = ({
 
     // Dynamic plans from API
     const [plans, setPlans] = React.useState(FALLBACK_PLANS);
-    const [totalAssets, setTotalAssets] = React.useState(5000); // Fallback base amount
+    const [totalAssets, setTotalAssets] = React.useState(null);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -90,9 +93,8 @@ const PricingSection = ({
                 const res = await httpService.getData('/admin/settings/public/plans');
                 if (!cancelled && res?.data?.plans?.length > 0) {
                     setPlans(res.data.plans);
-                    if (res?.data?.totalAssets) {
-                        setTotalAssets(res.data.totalAssets);
-                    }
+                    const count = Number(res.data.totalAssets);
+                    if (Number.isFinite(count) && count > 0) setTotalAssets(count);
                 }
             } catch (err) {
                 console.warn('[PricingSection] Could not fetch dynamic plans, using fallback:', err?.message);
@@ -142,6 +144,28 @@ const PricingSection = ({
     const chooseTpl =
         (typeof t === 'function' && t('pricing.buttons.choose')) ||
         (isEn ? 'Choose {name}' : 'Elegir {name}');
+    const planBadge = (plan) => ({
+        '1m': isEn ? 'Get started' : 'Para empezar',
+        '3m': isEn ? 'More flexibility' : 'Más flexible',
+        '6m': isEn ? 'Recommended' : 'Recomendado',
+        '12m': isEn ? 'Best value' : 'Mejor precio',
+    }[plan.id]);
+    const planNote = (plan) => ({
+        '1m': isEn ? 'Ideal for urgent short-term projects' : 'Ideal para proyectos urgentes',
+        '3m': isEn ? 'A full quarter of non-stop creativity' : 'Un trimestre de creatividad sin pausas',
+        '6m': isEn ? 'Half a year of guaranteed models' : 'Medio año de modelos garantizados',
+        '12m': isEn ? 'Annual license with maximum savings' : 'Licencia anual con el mayor ahorro',
+    }[plan.id]);
+    const benefits = [
+        totalAssets
+            ? (isEn ? `Access to ${totalAssets.toLocaleString(locale)} 3D models` : `Acceso a ${totalAssets.toLocaleString(locale)} modelos 3D`)
+            : (isEn ? 'Full access to the premium catalog' : 'Acceso completo al catálogo premium'),
+        isEn ? 'AI-powered smart search' : 'Búsqueda inteligente impulsada por IA',
+        isEn ? 'Unlimited downloads' : 'Descargas ilimitadas sin restricciones',
+        isEn ? 'Detailed gallery and asset previews' : 'Galería y vista previa de cada modelo',
+        isEn ? 'High-speed servers (via MEGA)' : 'Descargas rápidas vía MEGA',
+        isEn ? 'Guaranteed weekly updates' : 'Actualización semanal garantizada',
+    ];
 
     const handleMercadoPagoCheckout = React.useCallback(async () => {
         if (!selectedPlan || !userId || isMercadoPagoLoading) return;
@@ -195,7 +219,7 @@ const PricingSection = ({
         <section className={`pricing ${containerClass} px-4 p-xl-0`}>
             {showHeader && (
                 <header className="pricing-header">
-                    <h1 className="pricing-title">{title}</h1>
+                    <h1 className="pricing-title">{title.split(/(plan)/i).map((part, index) => /^plan$/i.test(part) ? <span key={index}>{part}</span> : part)}</h1>
                     <p>{subtitle}</p>
                 </header>
             )}
@@ -206,27 +230,19 @@ const PricingSection = ({
                         key={p.id}
                         className={`plan-card ${
                             p.highlight ? 'highlight' : ''
-                        }`}
+                        } ${p.id === '12m' ? 'best-value' : ''}`}
                     >
-                        {p.tag && (
-                            <span className="plan-badge">
-                                {typeof t === 'function'
-                                    ? t(`pricing.tags.${p.tag}`)
-                                    : p.tag === 'recommended'
-                                    ? isEn
-                                        ? 'Recommended'
-                                        : 'Recomendado'
-                                    : isEn
-                                    ? 'Best value'
-                                    : 'Mejor precio'}
-                            </span>
-                        )}
+                        <div className="plan-topline">
+                            <span className="plan-eyebrow">{isEn ? 'Access plan' : 'Plan de acceso'}</span>
+                            <span className="plan-badge">{planBadge(p)}</span>
+                        </div>
                         <h3 className="plan-name">{dayWord(p.name)}</h3>
 
                         <div className="price-row">
                             <div className="price">
+                                <span className="price-currency">US$</span>
                                 <span className="amount">
-                                    {currency(p.monthly, locale)}
+                                    {Number(p.monthly).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                                 <span className="per">{perMonth}</span>
                             </div>
@@ -243,51 +259,18 @@ const PricingSection = ({
                                           )
                                           .replace('{period}', dayWord(p.name))}
                             </div>
-                            {p.save && (
-                                <div className="save">
-                                    {saveTpl.replace('{amount}', p.save.amount)}
-                                </div>
-                            )}
+                            <div className={`save ${p.save ? '' : 'save-neutral'}`}>
+                                {p.save ? saveTpl.replace('{amount}', p.save.amount) : (isEn ? 'No annual commitment' : 'Sin compromiso anual')}
+                            </div>
                         </div>
 
+                        <div className="features-heading">{isEn ? 'Includes' : 'Incluye'}</div>
                         <ul className="features">
-                            <li className="glow-feature">
-                                <span className="icon">✨</span>
-                                <span>
-                                    {isEn ? 'Access to' : 'Acceso a'}{' '}
-                                    <strong className="glow-text">+1.000.000</strong>{' '}
-                                    {isEn ? 'Premium Assets' : 'Assets Premium'}
-                                </span>
-                            </li>
-                            <li>
-                                <span className="icon">🤖</span>
-                                {isEn ? 'AI-powered smart search' : 'Búsqueda Inteligente impulsada por IA'}
-                            </li>
-                            <li>
-                                <span className="icon">🚀</span>
-                                {isEn ? 'Unlimited downloads' : 'Descargas ilimitadas sin restricciones'}
-                            </li>
-                            <li>
-                                <span className="icon">🖼️</span>
-                                {isEn ? 'Detailed gallery and asset previews' : 'Galería detallada y vista previa de cada asset'}
-                            </li>
-                            <li>
-                                <span className="icon">⚡</span>
-                                {isEn ? 'High-speed servers (via Mega)' : 'Servidores de alta velocidad (vía Mega)'}
-                            </li>
-                            <li>
-                                <span className="icon">🔄</span>
-                                {isEn ? 'Guaranteed weekly updates' : 'Actualización semanal garantizada'}
-                            </li>
-                            <li>
-                                <span className="icon">🎯</span>
-                                {p.id === '1m' && (isEn ? 'Ideal for urgent short-term projects' : 'Ideal para proyectos urgentes')}
-                                {p.id === '3m' && (isEn ? 'A full quarter of non-stop creativity' : 'Un trimestre de creatividad sin pausas')}
-                                {p.id === '6m' && (isEn ? 'Half a year of guaranteed models' : 'Medio año de modelos garantizados')}
-                                {p.id === '12m' && (isEn ? 'Annual license with maximum savings' : 'Licencia anual con el mayor ahorro')}
-                            </li>
+                            {benefits.map((benefit, index) => <li key={index}><CheckRoundedIcon className="feature-check" aria-hidden="true" /><span>{benefit}</span></li>)}
                         </ul>
 
+                        <div className="plan-footer">
+                        <p className="plan-note"><AutoAwesomeRoundedIcon aria-hidden="true" /><span>{planNote(p)}</span></p>
                         <button
                             type="button"
                             className={`btn-pill ${
@@ -327,8 +310,10 @@ const PricingSection = ({
                                 setShowModal(true);
                             }}
                         >
-                            {chooseTpl.replace('{name}', dayWord(p.name))}
+                            <span>{chooseTpl.replace('{name}', dayWord(p.name))}</span>
+                            <ArrowOutwardRoundedIcon aria-hidden="true" />
                         </button>
+                        </div>
                     </article>
                 ))}
             </div>

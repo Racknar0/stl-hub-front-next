@@ -33,10 +33,14 @@ import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import AddOutlined from '@mui/icons-material/AddOutlined';
+import UserRowActions from './UserRowActions';
+import UserLocation, { countryName } from '@/components/dashboard/UserLocation';
+import { MRT_Localization_ES } from 'material-react-table/locales/es';
 import UserDetailModal from '../../../../components/dashboard/modules/UserDetailModal/UserDetailModal';
 
 export default function UsersPage() {
-    const http = new HttpService();
+    const http = useMemo(() => new HttpService(), []);
 
     const [data, setData] = useState([]);
     const [rowCount, setRowCount] = useState(0);
@@ -118,7 +122,7 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
-    }, [pagination, searchTerm]);
+    }, [http, pagination, searchTerm]);
 
     useEffect(() => {
         fetchUsers();
@@ -263,138 +267,68 @@ export default function UsersPage() {
         setDetailOpen(true);
     };
 
-    // Helper: ISO 2-letter code -> Spanish country name
-    const getCountryName = (code) => {
-        if (!code) return '';
-        try {
-            const regionNames = new Intl.DisplayNames(['es'], { type: 'region' });
-            return regionNames.of(code.toUpperCase()) || code;
-        } catch (e) {
-            return code;
-        }
-    };
-
-    // Helper: render flag image + country name
-    const renderFlag = (code) => {
-        if (!code) return null;
-        const lowerCode = code.toLowerCase();
-        const countryName = getCountryName(code);
-        return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <img
-                    src={`https://flagcdn.com/${lowerCode}.svg`}
-                    alt={countryName}
-                    style={{ width: '18px', height: '13px', borderRadius: '1px', objectFit: 'cover' }}
-                />
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{countryName}</span>
-            </Box>
-        );
-    };
-
-    const columns = useMemo(
-        () => [
-            { accessorKey: 'id', header: 'ID', size: 70 },
-            { accessorKey: 'email', header: 'Email', size: 260 },
-            {
-                accessorKey: 'isActive',
-                header: 'Activo',
-                size: 90,
-                Cell: ({ cell }) => (
-                    <Chip
-                        label={cell.getValue() ? '✓' : '✗'}
-                        size="small"
-                        sx={{
-                            backgroundColor: cell.getValue() ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                            color: cell.getValue() ? '#22c55e' : '#ef4444',
-                            fontWeight: 700,
-                            fontSize: '.75rem',
-                            height: 24,
-                        }}
-                    />
-                ),
+    const columns = useMemo(() => [
+        {
+            accessorKey: 'email', header: 'Usuario', size: 330,
+            Cell: ({ row }) => <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ fontSize: 12, fontWeight: 500, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis' }} title={row.original.email}>{row.original.email}</Box>
+                <Box sx={{ fontSize: 10, color: '#7b91aa', mt: .3 }}>#{row.original.id} · {row.original.roleId === 2 ? 'Administrador' : 'Usuario'}{row.original.createdAt ? ` · Alta ${new Date(row.original.createdAt).toLocaleDateString('es-CO')}` : ''}</Box>
+            </Box>,
+        },
+        {
+            accessorKey: 'isActive', header: 'Estado', size: 115, filterVariant: 'select',
+            filterSelectOptions: [{ label: 'Activo', value: 'true' }, { label: 'Inactivo', value: 'false' }],
+            Cell: ({ cell }) => <Box component="span" sx={{ display: 'inline-flex', gap: .7, alignItems: 'center', fontSize: 11, color: cell.getValue() ? '#6ee7b7' : '#fda4af' }}><Box component="span" sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'currentColor' }} />{cell.getValue() ? 'Activo' : 'Inactivo'}</Box>,
+        },
+        {
+            id: 'subscription', header: 'Suscripción', size: 210,
+            accessorFn: user => user.subDaysLeft > 0 ? 'Premium' : user.subDaysLeft === null ? 'Gratis' : 'Vencida',
+            filterVariant: 'select', filterSelectOptions: ['Premium', 'Gratis', 'Vencida'],
+            Cell: ({ row, cell }) => {
+                const days = row.original.subDaysLeft;
+                const color = days !== null && days <= 7 ? days === 0 ? '#fb7185' : '#fbbf24' : '#cbd5e1';
+                return <Box><Box sx={{ color, fontSize: 12 }}>{cell.getValue()}{days > 0 ? ` · ${days} días` : ''}</Box>
+                    {days !== null && <Box sx={{ color: '#7b91aa', fontSize: 10, mt: .3 }}>{days === 0 ? 'Venció' : 'Vence'} {row.original.subEnds}</Box>}
+                </Box>;
             },
-            {
-                accessorKey: 'rollsUsed',
-                header: 'Tiradas rest.',
-                size: 130,
-                Cell: ({ row }) => {
-                    const rollsUsed = Number(row.original.rollsUsed ?? 0);
-                    const remaining = Math.max(0, maxRolls - rollsUsed);
-                    const ratio = remaining / maxRolls;
-
-                    let color = '#ef4444'; // rojo
-                    if (ratio === 1) {
-                        color = '#22c55e'; // verde
-                    } else if (ratio >= 0.5) {
-                        color = '#eab308'; // amarillo/naranja
-                    } else if (ratio > 0) {
-                        color = '#f97316'; // naranja
-                    }
-
-                    return (
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                                sx={{
-                                    display: 'inline-block',
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    backgroundColor: color,
-                                    marginRight: 1,
-                                    boxShadow: `0 0 6px ${color}`,
-                                }}
-                            />
-                            <span>{remaining} / {maxRolls}</span>
-                        </Box>
-                    );
-                }
+        },
+        {
+            accessorKey: 'downloadCount', header: 'Descargas', size: 110,
+            Cell: ({ cell }) => <Box sx={{ fontSize: 12, color: '#cbd5e1' }}>{Number(cell.getValue() || 0).toLocaleString('es-CO')}</Box>,
+        },
+        {
+            id: 'rollsRemaining', header: 'Tiradas rest.', size: 130,
+            accessorFn: user => Math.max(0, maxRolls - Number(user.rollsUsed || 0)),
+            Cell: ({ row, cell }) => {
+                const used = Number(row.original.rollsUsed || 0);
+                const remaining = cell.getValue();
+                const color = remaining === 0 ? '#fb7185' : used > 0 ? '#fbbf24' : '#4ade80';
+                return <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: .7, fontSize: 12, color }}><Box component="span" sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: color }} />{remaining} / {maxRolls}</Box>;
             },
-            { accessorKey: 'downloadCount', header: 'Descargas', size: 100 },
-            {
-                id: 'registerIpCountry',
-                header: 'IP Registro',
-                size: 160,
-                Cell: ({ row }) => {
-                    const ip = row.original.registerIp;
-                    const code = row.original.registerCountry;
-                    if (!ip && !code) return <span style={{ color: '#64748b' }}>—</span>;
-                    return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#cbd5e1' }}>
-                                {ip || '—'}
-                            </span>
-                            {code ? renderFlag(code) : null}
-                        </Box>
-                    );
-                },
-            },
-            {
-                id: 'lastLoginIpCountry',
-                header: 'Último Login',
-                size: 160,
-                Cell: ({ row }) => {
-                    const ip = row.original.lastLoginIp;
-                    const code = row.original.lastLoginCountry;
-                    if (!ip && !code) return <span style={{ color: '#64748b' }}>—</span>;
-                    return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#cbd5e1' }}>
-                                {ip || '—'}
-                            </span>
-                            {code ? renderFlag(code) : null}
-                        </Box>
-                    );
-                },
-            },
-            { accessorKey: 'subEnds', header: 'Termina', size: 120 },
-            { accessorKey: 'subDaysLeft', header: 'Días rest.', size: 100 },
-        ],
-        [maxRolls]
-    );
+        },
+        {
+            id: 'registerIpCountry', header: 'IP Registro', size: 170,
+            accessorFn: user => `${user.registerCountry ? countryName(user.registerCountry) : ''} ${user.registerIp || ''}`.trim(),
+            sortingFn: 'alphanumeric',
+            Cell: ({ row }) => <UserLocation ip={row.original.registerIp} country={row.original.registerCountry} />,
+        },
+        {
+            id: 'lastLoginIpCountry', header: 'Último Login', size: 170,
+            accessorFn: user => `${user.lastLoginCountry ? countryName(user.lastLoginCountry) : ''} ${user.lastLoginIp || ''}`.trim(),
+            sortingFn: 'alphanumeric',
+            Cell: ({ row }) => <UserLocation ip={row.original.lastLoginIp} country={row.original.lastLoginCountry} />,
+        },
+    ], [maxRolls]);
 
     const table = useMaterialReactTable({
         columns,
         data,
+        localization: MRT_Localization_ES,
+        enableColumnActions: false,
+        enableColumnOrdering: true,
+        enableDensityToggle: false,
+        enableFullScreenToggle: false,
+        enableGlobalFilter: false,
         rowCount,
         state: { isLoading: loading, pagination },
         manualPagination: true,
@@ -407,7 +341,7 @@ export default function UsersPage() {
         muiTopToolbarProps: { sx: { backgroundColor: 'rgba(0, 0, 0, 0)' } },
         muiBottomToolbarProps: { sx: { backgroundColor: 'rgba(0, 0, 0, 0)' } },
         renderTopToolbarCustomActions: () => (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
                 <TextField
                     size="small"
                     placeholder="Buscar email..."
@@ -421,13 +355,13 @@ export default function UsersPage() {
                             </InputAdornment>
                         ),
                     }}
-                    sx={{ minWidth: 260 }}
+                    sx={{ width: { xs: '100%', sm: 300 }, '& .MuiInputBase-root': { fontSize: 12 } }}
                 />
-                <MUIButton variant="outlined" onClick={() => { setPagination(p => ({ ...p, pageIndex: 0 })); setSearchTerm(q); }}>
+                <MUIButton size="small" sx={{ textTransform: 'none' }} variant="outlined" onClick={() => { setPagination(p => ({ ...p, pageIndex: 0 })); setSearchTerm(q); }}>
                     Buscar
                 </MUIButton>
                 <Box sx={{ flex: 1 }} />
-                <MUIButton variant="contained" color="success" onClick={() => setShowForm(true)}>
+                <MUIButton variant="contained" size="small" startIcon={<AddOutlined />} sx={{ textTransform: 'none', bgcolor: '#38bdf8', color: '#082f49', boxShadow: 'none' }} onClick={() => setShowForm(true)}>
                     Crear usuario
                 </MUIButton>
             </Box>
@@ -435,49 +369,23 @@ export default function UsersPage() {
         displayColumnDefOptions: {
             'mrt-row-actions': {
                 header: 'Acciones',
-                size: 90,
+                size: 125,
                 muiTableHeadCellProps: { align: 'center' },
                 muiTableBodyCellProps: { align: 'center', sx: { py: 0.3 } },
             },
         },
         enableRowActions: true,
-        positionActionsColumn: 'first',
-        renderRowActions: ({ row }) => (
-            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center' }}>
-                <Tooltip title="Editar usuario">
-                    <IconButton
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(row);
-                        }}
-                        size="small"
-                        sx={{ p: 0.5 }}
-                    >
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
-                {row.original.roleId !== 2 && (
-                    <Tooltip title="Eliminar">
-                        <IconButton
-                            color="error"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(row);
-                            }}
-                            size="small"
-                            sx={{ p: 0.5 }}
-                        >
-                            <DeleteIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                )}
-            </Box>
-        ),
+        positionActionsColumn: 'last',
+        renderRowActions: ({ row }) => <UserRowActions row={row} onView={openUserDetail} onEdit={onEdit} onDelete={onDelete} />,
         muiTableBodyRowProps: ({ row }) => ({
             onClick: () => openUserDetail(row.original.id),
-            sx: { cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(167,139,250,0.08)' } },
+            sx: { cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(56,189,248,0.04)' } },
         }),
-        muiTableContainerProps: { sx: { height: { xs: 'calc(100vh - 260px)', md: 'calc(100vh - 260px)' }, overflowX: 'auto' } },
+        muiTableContainerProps: { sx: { height: { xs: 'calc(100dvh - 190px)', md: 'calc(100dvh - 190px)' }, overflowX: 'auto' } },
+        muiTableHeadCellProps: { sx: { fontSize: 11, color: '#94a3b8', py: 1, backgroundColor: '#0b1422' } },
+        muiTableBodyCellProps: { sx: { py: .8, borderColor: 'rgba(148,163,184,.12)' } },
+        enableRowVirtualization: true,
+        rowVirtualizerOptions: { overscan: 5, estimateSize: () => 52 },
         enableStickyHeader: true,
         enableStickyFooter: true,
         muiPaginationProps: {
@@ -489,9 +397,6 @@ export default function UsersPage() {
 
     return (
         <>
-            <Box component="h2" sx={{ mb: 2, textAlign: 'center', color: '#f8fafc', fontWeight: 800 }}>
-                Users
-            </Box>
 
             {/* Modal Crear usuario */}
             <Dialog open={showForm} onClose={() => setShowForm(false)} fullWidth maxWidth="sm">

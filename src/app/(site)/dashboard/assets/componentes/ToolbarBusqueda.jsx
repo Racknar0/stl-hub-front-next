@@ -1,331 +1,123 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import {
-  Box,
-  TextField,
-  Button,
-  Chip,
-  Autocomplete,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Stack,
-} from '@mui/material'
-import ClearIcon from '@mui/icons-material/Clear'
+import { Box, TextField, Button, Chip, Autocomplete, Select, MenuItem, FormControl, InputLabel, Stack, Collapse, FormControlLabel, Switch, Checkbox } from '@mui/material'
+import SearchOutlined from '@mui/icons-material/SearchOutlined'
+import FilterListOutlined from '@mui/icons-material/FilterListOutlined'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 const STATUS_OPTIONS = [
-  { value: '', label: 'Todos' },
-  { value: 'PUBLISHED', label: 'Publicado' },
-  { value: 'DRAFT', label: 'Borrador' },
-  { value: 'PROCESSING', label: 'Procesando' },
-  { value: 'FAILED', label: 'Fallido' },
+  { value: '', label: 'Todos' }, { value: 'PUBLISHED', label: 'Publicado' },
+  { value: 'DRAFT', label: 'Borrador' }, { value: 'PROCESSING', label: 'Procesando' }, { value: 'FAILED', label: 'Fallido' },
 ]
-
-const SEO_FILTER_OPTIONS = [
-  { value: '', label: 'Sin filtro SEO' },
-  { value: 'noDescription', label: 'Sin descripción (ES)' },
-  { value: 'noDescriptionEn', label: 'Sin descripción (EN)' },
-  { value: 'noTags', label: 'Sin tags' },
-  { value: 'noCategories', label: 'Sin categorías' },
-  { value: 'noImages', label: 'Sin imágenes' },
+const SEO_OPTIONS = [
+  { value: '', label: 'Sin filtro SEO' }, { value: 'noDescription', label: 'Sin descripción (ES)' },
+  { value: 'noDescriptionEn', label: 'Sin descripción (EN)' }, { value: 'noTags', label: 'Sin tags' },
+  { value: 'noCategories', label: 'Sin categorías' }, { value: 'noImages', label: 'Sin imágenes' },
 ]
 
 export default function ToolbarBusqueda({
-  q, setQ, onBuscar,
-  accountQ, setAccountQ, onBuscarCuenta,
-  assetIdQ, setAssetIdQ, onBuscarId,
-  showFreeOnly, onToggleFreeOnly,
-  categories, allTags,
-  categoryFilter, setCategoryFilter,
-  categoryExcludeFilter, setCategoryExcludeFilter,
-  tagFilter, setTagFilter,
-  tagExcludeFilter, setTagExcludeFilter,
-  statusFilter, setStatusFilter,
-  seoFilter, setSeoFilter,
-  onClearAll,
+  q, setQ, onBuscar, accountQ, setAccountQ, onBuscarCuenta, assetIdQ, setAssetIdQ, onBuscarId,
+  showFreeOnly, onToggleFreeOnly, categories, allTags, categoryFilter, setCategoryFilter,
+  categoryExcludeFilter, setCategoryExcludeFilter, tagFilter, setTagFilter, tagExcludeFilter, setTagExcludeFilter,
+  statusFilter, setStatusFilter, seoFilter, setSeoFilter, onClearAll, lexicalSort, onLexicalSortChange, sizeRange = { min: '', max: '' }, onSizeRangeChange,
 }) {
+  const [sizeDraft, setSizeDraft] = useState(sizeRange)
+  const [sizeError, setSizeError] = useState('')
+  useEffect(() => { setSizeDraft(sizeRange); setSizeError('') }, [sizeRange])
+  const [mode, setMode] = useState('name')
+  const [expanded, setExpanded] = useState(false)
   const [localQ, setLocalQ] = useState(q || '')
-  const [localAccountQ, setLocalAccountQ] = useState(accountQ || '')
-  const [localAssetIdQ, setLocalAssetIdQ] = useState(assetIdQ || '')
+  const [localAccount, setLocalAccount] = useState(accountQ || '')
+  const [localId, setLocalId] = useState(assetIdQ || '')
+  useEffect(() => setLocalQ(q || ''), [q])
+  useEffect(() => setLocalAccount(accountQ || ''), [accountQ])
+  useEffect(() => setLocalId(assetIdQ || ''), [assetIdQ])
 
-  useEffect(() => {
-    setLocalQ(q || '')
-  }, [q])
-
-  useEffect(() => {
-    setLocalAccountQ(accountQ || '')
-  }, [accountQ])
-
-  useEffect(() => {
-    setLocalAssetIdQ(assetIdQ || '')
-  }, [assetIdQ])
-
-  const handleBuscar = () => {
-    setQ(localQ)
-    onBuscar?.(localQ)
+  const submit = (event) => {
+    event.preventDefault()
+    if (mode === 'id') {
+      const id = Number(localId)
+      if (!Number.isSafeInteger(id) || id <= 0) return
+      onClearAll?.()
+      setAssetIdQ(String(id))
+      onBuscarId?.(String(id))
+    } else if (mode === 'account') {
+      setQ(''); setAssetIdQ(''); setAccountQ(localAccount.trim()); onBuscarCuenta?.(localAccount.trim())
+    } else {
+      setAccountQ(''); setAssetIdQ(''); setQ(localQ.trim()); onBuscar?.(localQ.trim())
+    }
   }
-
-  const handleBuscarCuenta = () => {
-    setAccountQ(localAccountQ)
-    onBuscarCuenta?.(localAccountQ)
-  }
-
-  const handleBuscarId = () => {
-    setAssetIdQ(localAssetIdQ)
-    onBuscarId?.(localAssetIdQ)
-  }
-
-  const acSx = {
-    minWidth: 160,
-    maxWidth: 200,
-    '& .MuiOutlinedInput-root': {
-      bgcolor: 'rgba(15,23,42,0.6)',
-      borderRadius: '8px',
-      fontSize: '.8rem',
-      color: '#e2e8f0',
-      '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-      '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.3)' },
-      '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-    },
-  }
-
-  const acExcludeCategorySx = {
-    minWidth: 160,
-    maxWidth: 200,
-    '& .MuiOutlinedInput-root': {
-      bgcolor: 'rgba(15,23,42,0.6)',
-      borderRadius: '8px',
-      fontSize: '.8rem',
-      color: '#e2e8f0',
-      '& fieldset': { 
-        borderColor: categoryExcludeFilter ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)' 
-      },
-      '&:hover fieldset': { borderColor: 'rgba(239,68,68,0.7)' },
-      '&.Mui-focused fieldset': { borderColor: '#ef4444' },
-    },
-  }
-
-  const acExcludeTagSx = {
-    minWidth: 160,
-    maxWidth: 200,
-    '& .MuiOutlinedInput-root': {
-      bgcolor: 'rgba(15,23,42,0.6)',
-      borderRadius: '8px',
-      fontSize: '.8rem',
-      color: '#e2e8f0',
-      '& fieldset': { 
-        borderColor: tagExcludeFilter ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)' 
-      },
-      '&:hover fieldset': { borderColor: 'rgba(239,68,68,0.7)' },
-      '&.Mui-focused fieldset': { borderColor: '#ef4444' },
-    },
-  }
-
-  const selectSx = {
-    bgcolor: 'rgba(15,23,42,0.6)',
-    borderRadius: '8px',
-    fontSize: '.8rem',
-    color: '#e2e8f0',
-    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-    '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.3)' },
-    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-  }
-
-  // Build list of active filter chips
-  const activeFilters = []
-  if (q) activeFilters.push({ key: 'q', label: `Buscar: "${q}"`, onDelete: () => { setQ(''); onBuscar?.('') } })
-  if (accountQ) activeFilters.push({ key: 'account', label: `Cuenta: ${accountQ}`, onDelete: () => setAccountQ('') })
-  if (categoryFilter) activeFilters.push({ key: 'category', label: `Cat: ${categoryFilter.name || categoryFilter.slug}`, onDelete: () => setCategoryFilter(null) })
-  if (categoryExcludeFilter) {
-    activeFilters.push({
-      key: 'categoryExclude',
-      label: `Excluir Cat: ${categoryExcludeFilter.name || categoryExcludeFilter.slug}`,
-      onDelete: () => setCategoryExcludeFilter(null),
-      isExclude: true,
-    })
-  }
-  if (tagFilter) activeFilters.push({ key: 'tag', label: `Tag: ${tagFilter.name || tagFilter.slug}`, onDelete: () => setTagFilter(null) })
-  if (tagExcludeFilter) {
-    activeFilters.push({
-      key: 'tagExclude',
-      label: `Excluir Tag: ${tagExcludeFilter.name || tagExcludeFilter.slug}`,
-      onDelete: () => setTagExcludeFilter(null),
-      isExclude: true,
-    })
-  }
-  if (statusFilter) {
-    const statusLabel = STATUS_OPTIONS.find(o => o.value === statusFilter)?.label || statusFilter
-    activeFilters.push({ key: 'status', label: `Estado: ${statusLabel}`, onDelete: () => setStatusFilter('') })
-  }
-  if (showFreeOnly) activeFilters.push({ key: 'free', label: 'Solo FREE', onDelete: () => onToggleFreeOnly?.() })
-  if (seoFilter) {
-    const seoLabel = SEO_FILTER_OPTIONS.find(o => o.value === seoFilter)?.label || seoFilter
-    activeFilters.push({ key: 'seo', label: seoLabel, onDelete: () => setSeoFilter?.('') })
-  }
+  const chips = []
+  if (q) chips.push({ key: 'q', label: `Buscar: ${q}`, clear: () => { setQ(''); onBuscar?.('') } })
+  if (accountQ) chips.push({ key: 'account', label: `Cuenta: ${accountQ}`, clear: () => setAccountQ('') })
+  if (assetIdQ) chips.push({ key: 'id', label: `ID: ${assetIdQ}`, clear: () => setAssetIdQ('') })
+  const classification = [
+    { key: 'category', label: 'Categoría', value: categoryFilter, set: setCategoryFilter, options: categories },
+    { key: 'tag', label: 'Tag', value: tagFilter, set: setTagFilter, options: allTags },
+    { key: 'exclude-category', label: 'Excluir categoría', value: categoryExcludeFilter, set: setCategoryExcludeFilter, options: categories, exclude: true },
+    { key: 'exclude-tag', label: 'Excluir tag', value: tagExcludeFilter, set: setTagExcludeFilter, options: allTags, exclude: true },
+  ]
+  classification.forEach(f => { if (f.value) chips.push({ key: f.key, label: `${f.label}: ${f.value.name || f.value.slug}`, clear: () => f.set(null), exclude: f.exclude }) })
+  if (statusFilter) chips.push({ key: 'status', label: STATUS_OPTIONS.find(o => o.value === statusFilter)?.label || statusFilter, clear: () => setStatusFilter('') })
+  if (seoFilter) chips.push({ key: 'seo', label: SEO_OPTIONS.find(o => o.value === seoFilter)?.label || seoFilter, clear: () => setSeoFilter('') })
+  if (showFreeOnly) chips.push({ key: 'free', label: 'Solo gratuitos', clear: onToggleFreeOnly })
+  if (sizeRange.min !== '') chips.push({ key: 'min-size', label: `Desde ${sizeRange.min} MB`, clear: () => onSizeRangeChange?.({ ...sizeRange, min: '' }) })
+  if (sizeRange.max !== '') chips.push({ key: 'max-size', label: `Hasta ${sizeRange.max} MB`, clear: () => onSizeRangeChange?.({ ...sizeRange, max: '' }) })
+  const filterCount = chips.filter(c => !['q','account','id'].includes(c.key)).length
+  const controlSx = { '& .MuiInputBase-root': { fontSize: 12 }, minWidth: 0 }
 
   return (
-    <Stack spacing={1}>
-      {/* Row 1: Search fields */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
-        <TextField
-          size="small"
-          placeholder="Buscar por nombre o archivo"
-          value={localQ}
-          onChange={(e) => setLocalQ(e.target.value)}
-          sx={{ minWidth: 260 }}
-          onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscar() } }}
-        />
-        <Button variant="outlined" onClick={handleBuscar}>Buscar</Button>
-
-        {/* Buscar por cuenta */}
-        <TextField size="small" placeholder="Cuenta (alias o ID)" value={localAccountQ} onChange={(e) => setLocalAccountQ(e.target.value)} sx={{ minWidth: 200 }} onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscarCuenta() } }} />
-        <Button variant="outlined" onClick={handleBuscarCuenta}>Por cuenta</Button>
-
-        {/* Buscar por ID */}
-        <TextField size="small" placeholder="Asset ID" type="number" value={localAssetIdQ} onChange={(e) => setLocalAssetIdQ(e.target.value)} sx={{ width: 140 }} onKeyDown={(e) => { if (e.key === 'Enter') { handleBuscarId() } }} />
-        <Button variant="outlined" onClick={handleBuscarId}>Por ID</Button>
-
-        {/* Filtro categoría */}
-        <Autocomplete
-          size="small"
-          options={Array.isArray(categories) ? categories : []}
-          getOptionLabel={(o) => o?.name || o?.slug || ''}
-          value={categoryFilter}
-          onChange={(_, v) => setCategoryFilter?.(v)}
-          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
-          renderInput={(params) => (
-            <TextField {...params} placeholder="Categoría…" />
-          )}
-          sx={acSx}
-        />
-
-        {/* Filtro excluir categoría */}
-        <Autocomplete
-          size="small"
-          options={Array.isArray(categories) ? categories : []}
-          getOptionLabel={(o) => o?.name || o?.slug || ''}
-          value={categoryExcludeFilter}
-          onChange={(_, v) => setCategoryExcludeFilter?.(v)}
-          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
-          renderInput={(params) => (
-            <TextField {...params} placeholder="Excluir Cat. 🚫" />
-          )}
-          sx={acExcludeCategorySx}
-        />
-
-        {/* Filtro tag */}
-        <Autocomplete
-          size="small"
-          options={Array.isArray(allTags) ? allTags : []}
-          getOptionLabel={(o) => o?.name || o?.slug || ''}
-          value={tagFilter}
-          onChange={(_, v) => setTagFilter?.(v)}
-          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
-          renderInput={(params) => (
-            <TextField {...params} placeholder="Tag…" />
-          )}
-          sx={acSx}
-        />
-
-        {/* Filtro excluir tag */}
-        <Autocomplete
-          size="small"
-          options={Array.isArray(allTags) ? allTags : []}
-          getOptionLabel={(o) => o?.name || o?.slug || ''}
-          value={tagExcludeFilter}
-          onChange={(_, v) => setTagExcludeFilter?.(v)}
-          isOptionEqualToValue={(o, v) => o?.slug === v?.slug}
-          renderInput={(params) => (
-            <TextField {...params} placeholder="Excluir Tag 🚫" />
-          )}
-          sx={acExcludeTagSx}
-        />
-
-        {/* Filtro estado */}
-        <FormControl size="small" sx={{ minWidth: 130 }}>
-          <Select
-            value={statusFilter || ''}
-            onChange={(e) => setStatusFilter?.(e.target.value)}
-            displayEmpty
-            sx={selectSx}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
+    <Stack spacing={1.25} className="assets-filter-toolbar">
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <FormControl size="small" sx={{ width: { xs: '100%', sm: 170 }, ...controlSx }}>
+          <InputLabel id="asset-search-mode">Buscar por</InputLabel>
+          <Select labelId="asset-search-mode" label="Buscar por" value={mode} onChange={e => setMode(e.target.value)}>
+            <MenuItem value="name">Nombre / archivo</MenuItem><MenuItem value="account">Cuenta</MenuItem><MenuItem value="id">ID del modelo</MenuItem>
           </Select>
         </FormControl>
-
-        {/* Filtro SEO */}
-        <FormControl size="small" sx={{ minWidth: 170 }}>
-          <Select
-            value={seoFilter || ''}
-            onChange={(e) => setSeoFilter?.(e.target.value)}
-            displayEmpty
-            sx={{
-              ...selectSx,
-              ...(seoFilter ? { borderColor: '#a855f7', '& fieldset': { borderColor: '#a855f7 !important' } } : {}),
-            }}
-          >
-            {SEO_FILTER_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Solo FREE */}
-        <Button
-          variant={showFreeOnly ? 'contained' : 'outlined'}
-          color={showFreeOnly ? 'success' : 'inherit'}
-          onClick={() => onToggleFreeOnly?.()}
-          sx={{ ml: 0.5 }}
-        >
-          {showFreeOnly ? 'Mostrando FREE' : 'Solo FREE'}
-        </Button>
+        <TextField size="small" sx={{ flex: '1 1 240px', maxWidth: { sm: 560 }, ...controlSx }}
+          placeholder={mode === 'name' ? 'Nombre del modelo o archivo…' : mode === 'account' ? 'Alias o ID de la cuenta…' : 'ID del modelo…'}
+          inputProps={{ 'aria-label': mode === 'name' ? 'Nombre o archivo' : mode === 'account' ? 'Alias o ID de cuenta' : 'ID del modelo', ...(mode === 'id' ? { min: 1, step: 1 } : {}) }}
+          type={mode === 'id' ? 'number' : 'text'} required={mode === 'id'}
+          value={mode === 'name' ? localQ : mode === 'account' ? localAccount : localId}
+          onChange={e => { if (mode === 'name') setLocalQ(e.target.value); else if (mode === 'account') setLocalAccount(e.target.value); else setLocalId(e.target.value) }} />
+        <Button type="submit" variant="contained" startIcon={<SearchOutlined />} sx={{ textTransform: 'none', boxShadow: 'none' }}>Buscar</Button>
+        <Button variant="outlined" startIcon={<FilterListOutlined />} endIcon={expanded ? <ExpandLess /> : <ExpandMore />} aria-expanded={expanded} aria-controls="asset-advanced-filters" onClick={() => setExpanded(v => !v)} sx={{ textTransform: 'none' }}>Filtros{filterCount ? ` · ${filterCount}` : ''}</Button>
+        <FormControlLabel sx={{ ml: { sm: 'auto' }, mr: 0, '& .MuiFormControlLabel-label': { fontSize: 12, color: '#a7b7cb' } }} label="Agrupar similares" control={<Switch size="small" checked={Boolean(lexicalSort)} onChange={e => onLexicalSortChange?.(e.target.checked)} />} />
       </Box>
-
-      {/* Row 2: Active filter chips */}
-      {activeFilters.length > 0 && (
-        <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
-          {activeFilters.map((f) => (
-            <Chip
-              key={f.key}
-              label={f.label}
-              onDelete={f.onDelete}
-              size="small"
-              variant="outlined"
-              sx={f.isExclude ? {
-                borderColor: 'rgba(239, 68, 68, 0.5)',
-                color: '#fca5a5',
-                bgcolor: 'rgba(239, 68, 68, 0.05)',
-                '& .MuiChip-deleteIcon': { color: 'rgba(239, 68, 68, 0.7)', '&:hover': { color: '#ef4444' } },
-              } : {
-                borderColor: 'rgba(168, 85, 247, 0.5)',
-                color: '#e2e8f0',
-                '& .MuiChip-deleteIcon': { color: 'rgba(168, 85, 247, 0.7)', '&:hover': { color: '#e879f9' } },
-              }}
-            />
-          ))}
-          <Button
-            size="small"
-            variant="text"
-            startIcon={<ClearIcon fontSize="small" />}
-            onClick={onClearAll}
-            sx={{
-              color: 'rgba(248, 113, 113, 0.9)',
-              fontSize: '.75rem',
-              textTransform: 'none',
-              '&:hover': { bgcolor: 'rgba(248, 113, 113, 0.1)' },
-            }}
-          >
-            Limpiar todo
-          </Button>
+      <Collapse in={expanded} id="asset-advanced-filters">
+        <Box sx={{ p: 2, border: '1px solid rgba(148,163,184,.18)', borderRadius: 2, bgcolor: '#101a29', display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,2fr) minmax(0,1fr)' }, gap: 3 }}>
+          <Box>
+            <Box component="h3" sx={{ fontSize: 11, color: '#94a3b8', fontWeight: 500, mb: 1.5 }}>Clasificación</Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', sm: 'repeat(2,minmax(0,1fr))' }, gap: 1.5 }}>
+              {classification.map(f => <Autocomplete key={f.key} size="small" options={Array.isArray(f.options) ? f.options : []} value={f.value || null} getOptionLabel={o => o?.name || o?.slug || ''} isOptionEqualToValue={(o,v) => o?.slug === v?.slug} onChange={(_,value) => f.set?.(value)} renderInput={params => <TextField {...params} label={f.label} />} sx={controlSx} />)}
+            </Box>
+          </Box>
+          <Box>
+            <Box component="h3" sx={{ fontSize: 11, color: '#94a3b8', fontWeight: 500, mb: 1.5 }}>Estado y disponibilidad</Box>
+            <Stack spacing={1.5}>
+              <FormControl size="small" sx={controlSx}><InputLabel id="asset-status-filter">Estado</InputLabel><Select labelId="asset-status-filter" label="Estado" value={statusFilter || ''} onChange={e => setStatusFilter?.(e.target.value)}>{STATUS_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}</Select></FormControl>
+              <FormControl size="small" sx={controlSx}><InputLabel id="asset-seo-filter">SEO</InputLabel><Select labelId="asset-seo-filter" label="SEO" value={seoFilter || ''} onChange={e => setSeoFilter?.(e.target.value)}>{SEO_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}</Select></FormControl>
+              <FormControlLabel sx={{ '& .MuiFormControlLabel-label': { fontSize: 12 } }} label="Solo gratuitos" control={<Checkbox size="small" checked={Boolean(showFreeOnly)} onChange={() => onToggleFreeOnly?.()} />} />
+            </Stack>
+          </Box>
         </Box>
-      )}
+        <Box component="form" onSubmit={event => {
+          event.preventDefault();
+          if (sizeDraft.min !== '' && sizeDraft.max !== '' && Number(sizeDraft.min) > Number(sizeDraft.max)) { setSizeError('El mínimo no puede superar el máximo'); return }
+          onSizeRangeChange?.(sizeDraft);
+        }} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+          <TextField size="small" type="number" label="Tamaño mínimo (MB)" value={sizeDraft.min} inputProps={{ min: 0, step: 'any' }} onChange={event => { setSizeDraft(previous => ({ ...previous, min: event.target.value })); setSizeError('') }} sx={{ width: 190, ...controlSx }} />
+          <TextField size="small" type="number" label="Tamaño máximo (MB)" value={sizeDraft.max} inputProps={{ min: 0, step: 'any' }} onChange={event => { setSizeDraft(previous => ({ ...previous, max: event.target.value })); setSizeError('') }} sx={{ width: 190, ...controlSx }} />
+          <Button type="submit" size="small" variant="outlined" sx={{ textTransform: 'none' }}>Aplicar tamaño</Button>
+          {sizeError && <Box role="alert" sx={{ fontSize: 11, color: '#fb7185' }}>{sizeError}</Box>}
+        </Box>
+      </Collapse>
+      {chips.length > 0 && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: .75 }}>
+        {chips.map(c => <Chip key={c.key} label={c.label} onDelete={c.clear} size="small" variant="outlined" sx={{ maxWidth: '100%', fontSize: 11, borderColor: c.exclude ? '#9b5555' : '#37546e', color: c.exclude ? '#f0aaaa' : '#c3d8ea' }} />)}
+        <Button size="small" onClick={onClearAll} sx={{ textTransform: 'none', color: '#94a3b8', fontSize: 11 }}>Limpiar todo</Button>
+      </Box>}
     </Stack>
   )
 }

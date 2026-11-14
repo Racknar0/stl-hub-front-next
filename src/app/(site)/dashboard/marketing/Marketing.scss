@@ -1,0 +1,440 @@
+// Módulo Marketing — maqueta visual.
+// Sigue el patrón del resto del dashboard: fondo oscuro translúcido + acento naranja.
+
+$mk-accent: #7dd3fc;
+$mk-accent-soft: #7dd3fc;
+$mk-panel: rgba(17, 25, 40, 0.75);
+$mk-border: rgba(255, 255, 255, 0.1);
+$mk-text-dim: #a0aec0;
+
+.mk {
+  padding: 0;
+  color: #fff;
+  min-height: 100vh;
+
+  // ---------- Cabecera ----------
+  .mk-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, $mk-accent, $mk-accent-soft);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      color: $mk-text-dim;
+      font-size: 0.95rem;
+      max-width: 680px;
+    }
+  }
+
+  .mk-demo-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 152, 0, 0.12);
+    border: 1px dashed rgba(255, 152, 0, 0.5);
+    color: $mk-accent-soft;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  // ---------- Pestañas ----------
+  .mk-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid $mk-border;
+    margin-bottom: 1.75rem;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0.6rem 1rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: $mk-text-dim;
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+
+      &:hover { color: #fff; }
+
+      &.is-active {
+        color: $mk-accent;
+        border-bottom-color: $mk-accent;
+      }
+    }
+  }
+
+  // ---------- Tarjetas base ----------
+  .mk-card {
+    background: $mk-panel;
+    backdrop-filter: blur(12px);
+    border: 1px solid $mk-border;
+    border-radius: 14px;
+    padding: 1.25rem;
+  }
+
+  .mk-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    small { color: $mk-text-dim; font-size: 0.8rem; }
+  }
+
+  // ---------- Rejilla de métricas ----------
+  .mk-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .mk-stat {
+    @extend .mk-card;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .label {
+      font-size: 0.78rem;
+      color: $mk-text-dim;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .value {
+      font-size: 1.9rem;
+      font-weight: 800;
+      line-height: 1.15;
+      color: #fff;
+    }
+
+    .hint { font-size: 0.78rem; color: $mk-text-dim; }
+
+    &.is-good .value { color: #68d391; }
+    &.is-warn .value { color: $mk-accent; }
+    &.is-bad  .value { color: #fc8181; }
+  }
+
+  // ---------- Barra de progreso ----------
+  .mk-bar {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    margin-top: 8px;
+
+    i {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, $mk-accent, $mk-accent-soft);
+    }
+
+    &.is-good i { background: linear-gradient(90deg, #38a169, #68d391); }
+    &.is-bad  i { background: linear-gradient(90deg, #c53030, #fc8181); }
+  }
+
+  // ---------- Ciclo de vida ----------
+  .mk-lifecycle {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mk-stage {
+    flex: 1 1 150px;
+    min-width: 150px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $mk-border;
+    border-radius: 12px;
+    padding: 0.9rem;
+    position: relative;
+
+    .stage-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $mk-text-dim;
+      margin-bottom: 4px;
+    }
+
+    .stage-count { font-size: 1.5rem; font-weight: 800; }
+    .stage-rule { font-size: 0.75rem; color: $mk-text-dim; margin-top: 6px; line-height: 1.35; }
+
+    &.s-new    { border-left: 3px solid #4299e1; .stage-count { color: #4299e1; } }
+    &.s-active { border-left: 3px solid #68d391; .stage-count { color: #68d391; } }
+    &.s-sleep  { border-left: 3px solid $mk-accent; .stage-count { color: $mk-accent; } }
+    &.s-out    { border-left: 3px solid #718096; .stage-count { color: #a0aec0; } }
+  }
+
+  .mk-arrow {
+    align-self: center;
+    color: #4a5568;
+    font-size: 1.3rem;
+    flex: 0 0 auto;
+  }
+
+  // ---------- Embudo ----------
+  .mk-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .mk-step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $mk-border;
+    border-radius: 12px;
+    padding: 0.9rem 1.1rem;
+
+    .step-day {
+      flex: 0 0 64px;
+      text-align: center;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $mk-text-dim;
+
+      b { display: block; font-size: 1.25rem; color: $mk-accent; }
+    }
+
+    .step-body {
+      flex: 1 1 auto;
+      min-width: 0;
+
+      .step-subject {
+        font-weight: 600;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .step-meta { font-size: 0.78rem; color: $mk-text-dim; margin-top: 2px; }
+    }
+
+    .step-kpis {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 1.25rem;
+      text-align: right;
+
+      div {
+        span { display: block; font-size: 0.7rem; color: $mk-text-dim; text-transform: uppercase; }
+        b { font-size: 1rem; }
+      }
+    }
+  }
+
+  .mk-wait {
+    align-self: center;
+    font-size: 0.75rem;
+    color: $mk-text-dim;
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    &::before, &::after {
+      content: '';
+      width: 1px;
+      height: 14px;
+      background: #4a5568;
+    }
+  }
+
+  // ---------- Tabla ----------
+  .mk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+
+    th {
+      text-align: left;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $mk-text-dim;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid $mk-border;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+  }
+
+  // ---------- Etiquetas de estado ----------
+  .mk-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+
+    &.t-on     { background: rgba(104, 211, 145, 0.15); color: #68d391; }
+    &.t-off    { background: rgba(160, 174, 192, 0.15); color: #a0aec0; }
+    &.t-draft  { background: rgba(66, 153, 225, 0.15); color: #4299e1; }
+    &.t-wait   { background: rgba(255, 152, 0, 0.15); color: $mk-accent; }
+  }
+
+  // ---------- Botones ----------
+  .mk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.5rem 0.95rem;
+    border: 1px solid $mk-border;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover { background: rgba(255, 255, 255, 0.1); }
+
+    &.is-primary {
+      background: $mk-accent;
+      border-color: $mk-accent;
+      color: #1a1300;
+
+      &:hover { background: $mk-accent-soft; }
+    }
+
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+  }
+
+  // ---------- Avisos ----------
+  .mk-note {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: rgba(66, 153, 225, 0.08);
+    border: 1px solid rgba(66, 153, 225, 0.3);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-size: 0.85rem;
+    color: #cbd5e0;
+    line-height: 1.5;
+
+    b { color: #fff; }
+
+    &.is-warn {
+      background: rgba(255, 152, 0, 0.08);
+      border-color: rgba(255, 152, 0, 0.35);
+    }
+  }
+
+  // ---------- Rejilla genérica ----------
+  .mk-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  // ---------- Vista previa de plantilla ----------
+  .mk-tpl {
+    @extend .mk-card;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .tpl-thumb {
+      aspect-ratio: 2 / 1;
+      background: #0b0918;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4a5568;
+      font-size: 0.78rem;
+      border-bottom: 1px solid $mk-border;
+      overflow: hidden;
+
+      img { width: 100%; height: 100%; object-fit: cover; }
+    }
+
+    .tpl-body {
+      padding: 0.9rem 1rem;
+      flex: 1 1 auto;
+
+      .tpl-name { font-weight: 700; font-size: 0.92rem; margin-bottom: 3px; }
+      .tpl-subject { font-size: 0.8rem; color: $mk-text-dim; line-height: 1.4; }
+    }
+
+    .tpl-foot {
+      padding: 0.7rem 1rem;
+      border-top: 1px solid $mk-border;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+
+    .mk-step {
+      flex-wrap: wrap;
+      .step-kpis { width: 100%; justify-content: flex-start; text-align: left; }
+    }
+  }
+}
+
+.mk {
+  .mk-tabs { gap: 0 24px; flex-wrap: wrap; overflow: visible; border-bottom-color: #334155; margin-bottom: 12px; }
+  .mk-tabs a { gap: 7px; flex-shrink: 0; padding: 10px 0 13px; font-size: 13px; font-weight: 500; border-bottom-width: 3px; color: #94a3b8; }
+  .mk-tabs a svg { width: 17px; height: 17px; }
+  .mk-tabs a.is-active { color: #7dd3fc; border-bottom-color: #38bdf8; font-weight: 600; }
+  .mk-local-note { font-size: 11px; color: #7b91aa; margin: 0 0 16px; }
+}

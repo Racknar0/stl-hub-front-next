@@ -27,7 +27,6 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CachedIcon from '@mui/icons-material/Cached';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
@@ -41,7 +40,6 @@ export default function MetaSeoTab({
     setMetaReviewMode,
     metaBusy,
     loading,
-    handleGenerateAllDescriptions,
     handleGenerateMissingDescriptions,
     handleGenerateSelectedDescriptions,
     runMetaTagsGenerationForSelected,
@@ -147,22 +145,6 @@ export default function MetaSeoTab({
                             }
                             sx={{ mr: 1.5 }}
                         />
-
-                        <Tooltip title="Generar descripciones IA (todos)">
-                            <span>
-                                <IconButton
-                                    onClick={handleGenerateAllDescriptions}
-                                    disabled={metaBusy || loading}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1.5,
-                                    }}
-                                >
-                                    <AutoAwesomeIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
 
                         <Tooltip title="Sincronizar Vectores Multimodal (IA)">
                             <span>

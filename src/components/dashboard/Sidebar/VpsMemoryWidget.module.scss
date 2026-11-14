@@ -65,3 +65,23 @@
   color: rgba(232, 232, 240, 0.7);
   text-align: right;
 }
+
+.compact {
+  margin: 0;
+  min-width: 0;
+  padding: 10px 12px;
+  background: #111a28;
+  border: 1px solid rgba(148,163,184,.18);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 18px;
+  .header { grid-column: 1 / -1; font-weight: 600; font-size: 11px; color: #98a7bb; }
+  .metricBlock { margin: 0; padding: 0; border: 0; min-width: 0; }
+  .meta { margin: 0; font-size: 11px; }
+  .meta span { color: #c6d4e5; white-space: nowrap; }
+  .track { height: 3px; margin-top: 5px; box-shadow: none; }
+  .footer { font-size: 10px; margin-top: 3px; }
+}
+@media (max-width: 480px) {
+  .compact { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}

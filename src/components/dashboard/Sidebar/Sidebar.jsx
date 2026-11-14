@@ -1,220 +1,109 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
+import HomeOutlined from '@mui/icons-material/HomeOutlined'
+import ViewInArOutlined from '@mui/icons-material/ViewInArOutlined'
+import CategoryOutlined from '@mui/icons-material/CategoryOutlined'
+import CloudOutlined from '@mui/icons-material/CloudOutlined'
+import FolderOutlined from '@mui/icons-material/FolderOutlined'
+import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined'
+import CampaignOutlined from '@mui/icons-material/CampaignOutlined'
+import Telegram from '@mui/icons-material/Telegram'
+import PeopleOutline from '@mui/icons-material/PeopleOutline'
+import MailOutline from '@mui/icons-material/MailOutline'
+import CardGiftcardOutlined from '@mui/icons-material/CardGiftcardOutlined'
+import NotificationsNone from '@mui/icons-material/NotificationsNone'
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
+import Menu from '@mui/icons-material/Menu'
+import Close from '@mui/icons-material/Close'
 import HttpService from '@/services/HttpService'
 import './Sidebar.scss'
-import VpsMemoryWidget from './VpsMemoryWidget'
-import AssetsUploadedWidget from './AssetsUploadedWidget'
 
-const Sidebar = () => {
+const groups = [
+  { label: 'Catálogo', items: [
+    { label: 'Modelos', href: '/dashboard/assets', icon: ViewInArOutlined },
+    { label: 'Taxonomía', href: '/dashboard/categories', paths: ['/dashboard/categories', '/dashboard/tags'], icon: CategoryOutlined },
+    { label: 'Cuentas MEGA', href: '/dashboard/accounts', icon: CloudOutlined },
+  ] },
+  { label: 'Herramientas', items: [
+    { label: 'Upload Batch', href: '/dashboard/upload-batch', icon: FileUploadOutlined },
+    { label: 'Publicaciones', href: '/dashboard/pinterest', paths: ['/dashboard/pinterest', '/dashboard/reels', '/dashboard/hero-banners'], icon: CampaignOutlined },
+    { label: 'Telegram', href: '/dashboard/telegram-downloader', paths: ['/dashboard/telegram-downloader', '/dashboard/telegram-organizer'], icon: Telegram },
+    { label: 'Explorador de archivos', href: '/dashboard/file-explorer', icon: FolderOutlined },
+  ] },
+  { label: 'Gestión', items: [
+    { label: 'Usuarios', href: '/dashboard/users', icon: PeopleOutline },
+    ...(process.env.NODE_ENV !== 'production' ? [{ label: 'Marketing', href: '/dashboard/marketing', icon: MailOutline }] : []),
+    { label: 'Publicidad', href: '/dashboard?tab=campaigns', tab: 'campaigns', icon: CampaignOutlined },
+    { label: 'Códigos regalo', href: '/dashboard?tab=gift-codes', tab: 'gift-codes', icon: CardGiftcardOutlined },
+  ] },
+  { label: 'Sistema', items: [
+    { label: 'Notificaciones', href: '/dashboard/notifications', icon: NotificationsNone, notifications: true },
+    { label: 'Configuración', href: '/dashboard/system-config', icon: SettingsOutlined },
+  ] },
+]
+
+function SidebarContents() {
   const [open, setOpen] = useState(false)
   const [hasUnread, setHasUnread] = useState(false)
+  const pathname = usePathname()
+  const params = useSearchParams()
 
-  useEffect(()=>{
-    let abort=false
+  useEffect(() => {
+    let mounted = true
     const http = new HttpService()
-    async function fetchUnread(){
+    const fetchUnread = async () => {
       try {
         const res = await http.getData('/admin/notifications?status=UNREAD&take=1')
-        if(!abort) setHasUnread((res.data?.notifications||[]).length>0)
-      } catch{}
+        if (mounted) setHasUnread((res.data?.notifications || []).length > 0)
+      } catch {}
     }
     fetchUnread()
-    const id = setInterval(fetchUnread, 15000)
-    return ()=>{ abort=true; clearInterval(id) }
-  },[])
+    const timer = setInterval(fetchUnread, 15000)
+    return () => { mounted = false; clearInterval(timer) }
+  }, [])
+
+  const renderItem = (item) => {
+    const Icon = item.icon
+    const active = item.tab
+      ? pathname === '/dashboard' && params.get('tab') === item.tab
+      : item.href === '/dashboard'
+        ? pathname === '/dashboard' && !['campaigns', 'gift-codes'].includes(params.get('tab'))
+        : (item.paths || [item.href]).some(path => pathname === path || pathname.startsWith(path + '/'))
+    return (
+      <li key={item.href}>
+        <Link href={item.href} className={`item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => setOpen(false)}>
+          <Icon className="nav-icon" aria-hidden="true" />
+          <span>{item.label}</span>
+          {item.notifications && hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
+        </Link>
+      </li>
+    )
+  }
 
   return (
     <>
-      <button
-        type="button"
-        className="dash-toggle"
-        aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        )}
+      <button type="button" className="dash-toggle" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={open} aria-controls="dashboard-navigation" onClick={() => setOpen(v => !v)}>
+        {open ? <Close fontSize="small" /> : <Menu fontSize="small" />}
       </button>
-
-      <aside className={`dash-sidebar ${open ? 'open' : ''}`} aria-label="Dashboard menu">
-        <div className="brand">
-          <Link href="/">
-            <img src="/nuevo_horizontal.png" alt="STL HUB" />
-          </Link>
-        </div>
-        <nav className="menu mt-5">
-          <ul>
-            <li>
-              <Link href="/dashboard" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5H10v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                Dashboard
-              </Link>
-            </li>
-            <li className="submenu-group" tabIndex={0}>
-              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Upload
-                <span className="submenu-caret" aria-hidden>▾</span>
-              </div>
-              <ul className="submenu" aria-label="Submenu Upload">
-                <li>
-                  <Link href="/dashboard/upload-batch" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Upload Batch
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/pinterest" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Pinterest Publisher
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/reels" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Reels Publisher
-                  </Link>
-                </li>
-              </ul>
-            </li>
-
-            <li className="submenu-group" tabIndex={0}>
-              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                Download
-                <span className="submenu-caret" aria-hidden>▾</span>
-              </div>
-              <ul className="submenu" aria-label="Submenu Download">
-                <li>
-                  <Link href="/dashboard/telegram-downloader" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Telegram Downloader
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/telegram-organizer" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Telegram Organizer
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            <li className="submenu-group" tabIndex={0}>
-              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </span>
-                Meta Info
-                <span className="submenu-caret" aria-hidden>▾</span>
-              </div>
-              <ul className="submenu" aria-label="Submenu Meta Info">
-                <li>
-                  <Link href="/dashboard/categories" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Categorías
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/tags" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Tags
-                  </Link>
-                </li>
-              </ul>
-            </li>
-
-            <li className="submenu-group" tabIndex={0}>
-              <div className="item submenu-parent" role="button" aria-haspopup="true" aria-expanded="false">
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </span>
-                Informacion
-                {hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
-                <span className="submenu-caret" aria-hidden>▾</span>
-              </div>
-              <ul className="submenu" aria-label="Submenu Informacion">
-                <li>
-                  <Link href="/dashboard/assets" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Asset
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/users" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Usuarios
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/accounts" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Cuentas MEGA
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/notifications" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Notificaciones
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard?tab=campaigns" className="item submenu-item" onClick={() => setOpen(false)}>
-                    Campanas publicitarias
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard?tab=gift-codes" className="item submenu-item" onClick={() => setOpen(false)}>
-                    🎁 Gift Codes
-                  </Link>
-                </li>
-              </ul>
-            </li>
-
-            <li>
-              <Link href="/dashboard/file-explorer" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                File Explorer
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/system-config" className="item" onClick={() => setOpen(false)}>
-                <span className="icon" aria-hidden>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                System Config
-              </Link>
-            </li>
-          </ul>
+      <aside id="dashboard-navigation" className={`dash-sidebar dash-sidebar-grouped${open ? ' open' : ''}`} aria-label="Menú de administración">
+        <div className="brand"><Link href="/"><img src="/nuevo_horizontal.png" alt="STL HUB" /></Link></div>
+        <nav className="menu" aria-label="Secciones de administración">
+          <ul>{renderItem({ label: 'Dashboard', href: '/dashboard', icon: HomeOutlined })}</ul>
+          {groups.map(group => (
+            <section className="nav-section" key={group.label} aria-label={group.label}>
+              <h2 className="nav-section-label">{group.label}</h2>
+              <ul>{group.items.map(renderItem)}</ul>
+            </section>
+          ))}
         </nav>
-        <div className="sidebar-bottom">
-          <VpsMemoryWidget />
-          <AssetsUploadedWidget />
-        </div>
       </aside>
     </>
   )
 }
 
-export default Sidebar
+export default function Sidebar() {
+  return <Suspense fallback={<aside className="dash-sidebar" aria-label="Cargando navegación" />}><SidebarContents /></Suspense>
+}

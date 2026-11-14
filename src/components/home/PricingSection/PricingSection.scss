@@ -1,198 +1,197 @@
-@use 'sass:color';
 @use '../../../styles/base/variables' as *;
 
+.pricing {
+  --plan-ink: #252641;
+  --plan-muted: #767990;
+  --plan-purple: #6b50ef;
+  --plan-border: #e0e3f0;
+  padding: 2rem 1rem;
+  color: var(--plan-ink);
 
-.pricing { padding:2rem 0; }
-.pricing-header { text-align:center; margin-bottom:2rem; 
-  h1 { font-size:2rem; font-weight:900; color:$light; }
-  p { color:#dbdbdb; }
-}
-.plan-grid { 
-  display:grid; 
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-  gap:1.5rem; 
-  margin: 2rem 0;
-}
+  .pricing-header {
+    text-align: center;
+    margin: 0 auto 2rem;
+    max-width: 760px;
 
-.plan-card { 
-  position:relative; 
-  background:#fff; 
-  border:2px solid #eee; 
-  border-radius:20px; 
-  padding:1.5rem; 
-  box-shadow: 0 8px 32px rgba(0,0,0,.08);
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 40px rgba(0,0,0,.12);
+    .pricing-title {
+      color: #f7f7fb;
+      font-family: inherit;
+      font-size: clamp(2rem, 3.8vw, 2.7rem);
+      line-height: 1.14;
+      font-weight: 800;
+      letter-spacing: -.055em;
+      margin: 0 0 .65rem;
+
+      span { color: #9e8cff; }
+    }
+
+    p { color: #c5c7d5; font-size: .9rem; line-height: 1.6; margin: 0; }
   }
-}
 
-.plan-card.highlight { 
-  border-color: $primary; 
-  box-shadow: 0 12px 40px rgba($primary,.25);
-  transform: scale(1.05);
-  
-  &:hover {
-    transform: scale(1.05) translateY(-4px);
-    box-shadow: 0 20px 48px rgba($primary,.3);
+  .plan-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 16px;
+    margin: 1.5rem 0;
   }
-}
 
-.plan-badge { 
-  position:absolute; 
-  top:-8px; 
-  right:1rem; 
-  background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
-  color:#fff; 
-  font-weight:800; 
-  font-size:.8rem; 
-  padding:.5rem 1rem; 
-  border-radius:999px;
-  box-shadow: 0 4px 12px rgba($primary,.3);
-}
-
-.plan-name { 
-  font-weight:900; 
-  font-size: 1.3rem;
-  margin-bottom:.8rem; 
-  color: $dark;
-}
-
-.price-row { margin:1rem 0 1.5rem; text-align: center; }
-
-.price { 
-  display:flex; 
-  align-items:baseline; 
-  justify-content: center;
-  gap:.3rem; 
-  margin-bottom: .5rem;
-}
-
-.amount { 
-  font-size:2.5rem; 
-  font-weight:900; 
-  color: #16a34a;
-  text-shadow: none;
-}
-
-.per { 
-  color:#4a5568; 
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.bill-note { 
-  color:#4a5568; 
-  font-size:.85rem; 
-  margin-bottom: .5rem;
-}
-
-.save { 
-  color: #0f8138; 
-  font-weight:800; 
-  font-size: .9rem;
-  background: rgba(15, 129, 56, .1);
-  padding: .25rem .5rem;
-  border-radius: 6px;
-  display: inline-block;
-}
-
-.features { 
-  list-style: none; 
-  padding:0; 
-  margin: 1rem 0 1.5rem; 
-  color:#4a4a5c; 
-  font-size: 0.95rem;
-  
-  li { 
-    padding: .6rem 0; 
-    position: relative;
+  .plan-card {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    position: relative;
+    min-width: 0;
+    min-height: 566px;
+    padding: 22px 19px 18px;
+    border: 1px solid var(--plan-border);
+    border-radius: 20px;
+    background: #fff;
+    color: var(--plan-ink);
+    box-shadow: 0 12px 30px rgba(12, 15, 37, .08);
+    transition: border-color .18s ease, box-shadow .18s ease;
+
+    &:hover { border-color: #b9b1ed; box-shadow: 0 14px 32px rgba(12, 15, 37, .13); }
+
+    &.highlight {
+      border: 2px solid #7959ff;
+      padding: 21px 18px 17px;
+      box-shadow: 0 0 0 4px rgba(121, 89, 255, .13), 0 12px 32px rgba(42, 25, 107, .12);
+
+      .plan-badge { color: #fff; background: var(--plan-purple); }
+    }
+
+    &.best-value {
+      background: #fafaff;
+      .plan-badge { color: #13834d; background: #e4f6ec; }
+      .btn-pill { color: #fff; background: var(--plan-ink); }
+      .btn-pill:hover { background: #363853; }
+    }
+  }
+
+  .plan-topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    margin-bottom: 11px;
+  }
+
+  .plan-eyebrow {
+    color: #7c7f94;
+    font-size: .53rem;
+    font-weight: 750;
+    line-height: 1.3;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .plan-badge {
+    color: #646b90;
+    background: #f0f1fb;
+    border-radius: 20px;
+    padding: 6px 8px;
+    font-size: .52rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .plan-name { color: var(--plan-ink); font-family: inherit; font-size: 1.32rem; font-weight: 750; line-height: 1.25; letter-spacing: -.045em; margin: 0; }
+  .price-row { padding: 12px 0 11px; margin: 0; min-height: 131px; }
+  .price { display: flex; align-items: baseline; gap: 3px; margin-bottom: 5px; white-space: nowrap; }
+  .price-currency { align-self: center; color: #7759ff; font-size: .9rem; font-weight: 800; }
+  .amount { color: #272947; font-size: clamp(2.5rem, 3.9vw, 3.1rem); font-weight: 800; line-height: 1.13; letter-spacing: -.065em; font-variant-numeric: lining-nums tabular-nums; }
+  .per { color: var(--plan-muted); font-size: .7rem; font-weight: 650; letter-spacing: -.02em; }
+  .bill-note { color: #777b92; font-size: .62rem; line-height: 1.5; margin: 0 0 12px; }
+  .save { display: inline-flex; align-items: center; padding: 5px 9px; background: #e5f6e9; color: #168443; border-radius: 8px; font-size: .65rem; font-weight: 750; line-height: 1.4; }
+  .save-neutral { background: #f3f4f9; color: #9499ad; }
+  .features-heading { border-top: 1px solid #e9e8f3; padding-top: 15px; margin-bottom: 9px; color: #666b83; font-size: .57rem; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+  .features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    display: grid;
     gap: 10px;
-    
-    .icon {
-      flex-shrink: 0;
-      width: 24px;
-      text-align: center;
-      font-size: 1.1rem;
-    }
+    color: #30344c;
+    font-size: .68rem;
+    font-weight: 500;
+    line-height: 1.65;
 
-    &.glow-feature {
-      background: rgba($primary, 0.05);
-      border: 1px solid rgba($primary, 0.2);
-      border-radius: 10px;
-      padding: .8rem;
-      margin-bottom: .8rem;
-      box-shadow: 0 4px 15px rgba($primary, 0.1);
+    li { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 0; }
+    .feature-check { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 1px; padding: 3px; border-radius: 50%; background: #eee9ff; color: #7458f7; }
+  }
+  .plan-footer { margin-top: auto; }
+  .plan-note { display: flex; align-items: center; gap: 7px; min-height: 40px; margin: 0 0 10px; padding: 9px 10px; border-radius: 10px; background: #f6f4fd; color: #666787; font-size: .62rem; font-weight: 650; line-height: 1.4; }
+  .plan-note svg { color: #8167f7; width: 14px; height: 14px; flex-shrink: 0; }
+  .plan-card .btn-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-height: 43px;
+    padding: 12px 13px;
+    border: 0;
+    border-radius: 10px;
+    background: #f0edff;
+    color: #6b50ef;
+    font-size: .72rem;
+    font-weight: 750;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color .16s ease, box-shadow .16s ease;
 
-      .icon {
-        font-size: 1.3rem;
-        animation: floatPulse 2s ease-in-out infinite;
-      }
+    svg { width: 17px; height: 17px; flex-shrink: 0; }
+    &:hover { background: #e4dfff; }
+    &:focus-visible { outline: 3px solid #baaaff; outline-offset: 3px; }
+    &.fill { background: var(--plan-purple); color: #fff; }
+    &.fill:hover { background: #5a3ddb; }
+  }
 
-      .glow-text {
-        color: $primary;
-        font-weight: 900;
-        font-size: 1.1rem;
-        text-shadow: 0 0 10px rgba($primary, 0.6), 0 0 20px rgba($primary, 0.3);
-      }
-    }
+  .fine-print { max-width: 650px; margin: 1.5rem auto 0; color: #9a9db0; font-size: .75rem; line-height: 1.65; text-align: center; }
+
+  @media (max-width: 1099px) {
+    .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .plan-card { min-height: 548px; padding: 24px; }
+    .plan-card.highlight { padding: 23px; }
+    .amount { font-size: 3.1rem; }
+    .features { font-size: .78rem; }
+    .bill-note { font-size: .72rem; }
+    .plan-note { font-size: .7rem; }
+    .plan-badge { font-size: .59rem; }
+    .plan-eyebrow { font-size: .59rem; }
+    .plan-card .btn-pill { font-size: .8rem; }
+  }
+
+  @media (max-width: 639px) {
+    .plan-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .plan-card { min-height: 0; }
+    .plan-footer { margin-top: 6px; }
+    .pricing-header { margin-bottom: 1.5rem; }
+    .pricing-header p { font-size: .82rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plan-card, .plan-card .btn-pill { transition: none; }
   }
 }
 
-@keyframes floatPulse {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-2px) scale(1.1); text-shadow: 0 0 15px rgba($primary, 0.8); }
-}
-
+// Checkout buttons inside the portal keep their existing class contract.
 .btn-pill {
   width: 100%;
   padding: .8rem 1.5rem;
   border-radius: 12px;
   font-weight: 700;
   font-size: .95rem;
-  transition: all 0.2s ease;
   cursor: pointer;
-  
-  &.fill {
-    background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
-    color: white;
-    border: none;
-    
-    &:hover {
-      background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba($primary,.3);
-    }
-  }
-  
-  &.outline {
-    background: transparent;
-    color: $primary;
-    border: 2px solid $primary;
-    
-    &:hover {
-      background: $primary;
-      color: white;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba($primary,.2);
-    }
-  }
+  &.fill { background: $primary; color: #fff; border: 0; }
+  &.outline { background: transparent; color: $primary; border: 2px solid $primary; }
+  &:disabled { opacity: .6; cursor: wait; }
 }
-
-.fine-print { 
-  margin-top:2rem; 
-  color:#818199; 
-  font-size:.85rem; 
-  text-align:center; 
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
 .payment-method-list {
   display: grid;
   gap: 12px;

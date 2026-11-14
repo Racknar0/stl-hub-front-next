@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import styles from './AssetsUploadedWidget.module.scss'
 import HttpService from '@/services/HttpService'
-import Chip from '@mui/material/Chip';
 
-const AssetsUploadedWidget = ({ counts: initialCounts }) => {
+const AssetsUploadedWidget = ({ counts: initialCounts, compact = false }) => {
   const [counts, setCounts] = useState(initialCounts || null)
   const [loading, setLoading] = useState(false)
   const http = new HttpService()
@@ -78,8 +77,8 @@ const AssetsUploadedWidget = ({ counts: initialCounts }) => {
   }, [])
 
   return (
-    <div className={styles.widget} role="status" aria-label="Assets subidos resumen">
-      <div className={styles.header}>STL's subidos</div>
+    <div className={[styles.widget, compact ? styles.compact : ''].filter(Boolean).join(' ')} aria-label="Assets subidos resumen" aria-busy={loading}>
+      <div className={styles.header}>STL subidos {compact && <span className={styles.legend}>Modelos · GB</span>}</div>
       {loading && (
         <div className={styles.row}>
           <span className={styles.label}>Cargando…</span>
@@ -87,6 +86,7 @@ const AssetsUploadedWidget = ({ counts: initialCounts }) => {
           <span className={styles.size}> </span>
         </div>
       )}
+      <div className={styles.periods}>
       {renderRow('Hoy', counts?.today, counts?.sizeGB?.today, { highlight: true })}
       {renderRow('2 días', counts?.last2d, counts?.sizeGB?.last2d)}
       {renderRow('3 días', counts?.last3d, counts?.sizeGB?.last3d)}
@@ -95,6 +95,7 @@ const AssetsUploadedWidget = ({ counts: initialCounts }) => {
       {renderRow('2 meses', counts?.months2, counts?.sizeGB?.months2)}
       {renderRow('3 meses', counts?.months3, counts?.sizeGB?.months3)}
       {renderRow('Total', counts?.all, counts?.sizeGB?.all, { strong: true })}
+      </div>
     </div>
   )
 }

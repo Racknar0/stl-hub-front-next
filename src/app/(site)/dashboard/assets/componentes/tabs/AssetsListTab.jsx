@@ -9,6 +9,10 @@ export default function AssetsListTab({
     table,
     // unified modal
     assetModalOpen,
+    assetModalMode,
+    assetDetailError,
+    onStartEdit,
+    onCancelEdit,
     onCloseAssetModal,
     detail,
     selected,
@@ -50,6 +54,10 @@ export default function AssetsListTab({
 
             <ModalAsset
                 open={assetModalOpen}
+                mode={assetModalMode}
+                detailError={assetDetailError}
+                onStartEdit={onStartEdit}
+                onCancelEdit={onCancelEdit}
                 onClose={onCloseAssetModal}
                 detail={detail}
                 selected={selected}

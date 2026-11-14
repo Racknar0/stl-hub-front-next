@@ -1,266 +1,156 @@
 'use client'
-
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import styles from './notifications.module.scss'
-import { Tabs, Tab } from '@mui/material'
-import { Box, Card, CardHeader, CardContent, IconButton, LinearProgress, Stack, Tooltip, Typography, Button, Chip, Divider } from '@mui/material'
+import { IconButton, LinearProgress, Tooltip } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead'
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread'
-import DeleteIcon from '@mui/icons-material/Delete'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import RestoreIcon from '@mui/icons-material/Restore'
+import ShoppingBagOutlined from '@mui/icons-material/ShoppingBagOutlined'
+import CreditCardOutlined from '@mui/icons-material/CreditCardOutlined'
+import MailOutline from '@mui/icons-material/MailOutline'
+import CloudOutlined from '@mui/icons-material/CloudOutlined'
+import CampaignOutlined from '@mui/icons-material/CampaignOutlined'
+import FlagOutlined from '@mui/icons-material/FlagOutlined'
+import AutoModeOutlined from '@mui/icons-material/AutoModeOutlined'
 import HttpService from '@/services/HttpService'
 import { successAlert, errorAlert } from '@/helpers/alerts'
+import styles from './notifications.module.scss'
 
 const http = new HttpService()
+const TYPES = [
+  { key: 'SALES', label: 'Ventas', icon: ShoppingBagOutlined },
+  { key: 'BILLING', label: 'Cobros', icon: CreditCardOutlined },
+  { key: 'MAIL', label: 'Correos', icon: MailOutline },
+  { key: 'STORAGE', label: 'Almacenamiento', icon: CloudOutlined },
+  { key: 'SOCIAL', label: 'Redes sociales', icon: CampaignOutlined },
+  { key: 'REPORT', label: 'Reportes', icon: FlagOutlined },
+  { key: 'AUTOMATION', label: 'Automatizaciones', icon: AutoModeOutlined },
+]
 
-export default function NotificationsPage(){
+function NotificationRow({ notification: n, busy, onToggle, onDelete, onRestore }) {
+  const [expanded, setExpanded] = useState(false)
+  const unread = n.status === 'UNREAD'
+  const lines = String(n.body || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+  const important = lines.filter(line => /^(?:plan|monto|proveedor|usuario email|email|cuenta|error|estado)\s*:/i.test(line))
+  const preview = (important.length ? important : lines).slice(0, 3).join(' · ')
+  const date = n.createdAt ? new Date(n.createdAt) : null
+  const validDate = date && !Number.isNaN(date.getTime())
+  const assetId = n.type === 'REPORT' ? String(n.body || '').match(/assetId=(\d+)/)?.[1] : null
+  const tone = n.typeStatus === 'ERROR' ? 'error' : n.typeStatus === 'PENDING' ? 'pending' : n.typeStatus === 'SUCCESS' ? 'success' : ''
+  return <article className={`${styles.row} ${unread ? styles.unread : ''} ${tone ? styles[tone] : ''}`}>
+    <div className={styles.rowMain}>
+      <button type="button" className={styles.content} disabled={!n.body} aria-expanded={expanded} aria-controls={`notification-${n.id}`} onClick={() => setExpanded(value => !value)}>
+        <span className={styles.titleLine}><span className={styles.title}>{n.title || 'Notificación'}</span>{unread && <span className={styles.unreadDot} aria-label="Sin leer" />}
+          {tone === 'error' && <span className={styles.status}>Error</span>}{tone === 'pending' && <span className={styles.status}>Pendiente</span>}
+        </span>
+        {preview && <span className={styles.preview}>{preview}</span>}
+      </button>
+      <div className={styles.actions}>
+        {validDate && <time dateTime={date.toISOString()} title={date.toLocaleString('es-CO')} className={styles.date}>{date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })} · {date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</time>}
+        {assetId && <Tooltip title="Restaurar enlace del modelo"><span><IconButton size="small" disabled={busy} aria-label="Restaurar enlace del modelo" onClick={() => onRestore(assetId)}><RestoreIcon fontSize="small" /></IconButton></span></Tooltip>}
+        <Tooltip title={unread ? 'Marcar como leída' : 'Marcar como no leída'}><span><IconButton size="small" disabled={busy} aria-label={unread ? 'Marcar como leída' : 'Marcar como no leída'} onClick={() => onToggle(n)}>{unread ? <MarkEmailReadIcon fontSize="small" /> : <MarkEmailUnreadIcon fontSize="small" />}</IconButton></span></Tooltip>
+        <Tooltip title="Eliminar notificación"><span><IconButton size="small" disabled={busy} aria-label="Eliminar notificación" onClick={() => onDelete(n.id)}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+        {n.body && <Tooltip title={expanded ? 'Ocultar detalle' : 'Mostrar detalle'}><IconButton size="small" aria-label={expanded ? 'Ocultar detalle' : 'Mostrar detalle'} aria-expanded={expanded} aria-controls={`notification-${n.id}`} onClick={() => setExpanded(value => !value)}><ExpandMoreIcon fontSize="small" sx={{ transform: expanded ? 'rotate(180deg)' : undefined }} /></IconButton></Tooltip>}
+      </div>
+    </div>
+    {expanded && <div id={`notification-${n.id}`} className={styles.detail}>{n.body}</div>}
+  </article>
+}
+
+export default function NotificationsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [marking, setMarking] = useState(false)
-  const [filter, setFilter] = useState('ALL') // ALL | UNREAD | READ
+  const [filter, setFilter] = useState('ALL')
   const [tabType, setTabType] = useState('SALES')
+  const totalUnread = items.filter(item => item.status === 'UNREAD').length
+  const itemsByType = useMemo(() => items.filter(item => item.type === tabType), [items, tabType])
+  const unreadCount = itemsByType.filter(item => item.status === 'UNREAD').length
+  const filtered = useMemo(() => [...itemsByType]
+    .filter(item => filter === 'ALL' || item.status === filter)
+    .sort((a, b) => (a.status === 'UNREAD' ? 0 : 1) - (b.status === 'UNREAD' ? 0 : 1) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0)), [itemsByType, filter])
 
-  // Tipos disponibles
-  const types = [
-    { key:'SALES', label:'Ventas' },
-    { key:'BILLING', label:'Cobros/Pasarelas' },
-    { key:'MAIL', label:'Correos' },
-    { key:'STORAGE', label:'Almacenamiento/Backups' },
-    { key:'SOCIAL', label:'Redes Sociales' },
-    { key:'REPORT', label:'Reportes' },
-    { key:'AUTOMATION', label:'Automatizaciones' }
-  ]
-
-  // Filtrar por tipo
-  const itemsByType = useMemo(() => items.filter(i => i.type === tabType), [items, tabType])
-  const unreadCount = itemsByType.filter(i=>i.status==='UNREAD').length
-  const readCount = itemsByType.filter(i=>i.status==='READ').length
-  const allCount = itemsByType.length
-
-  // Orden y filtro dentro del tipo
-  const ordered = useMemo(()=>{
-    const list = [...itemsByType]
-    const unread = list.filter(i=>i.status==='UNREAD')
-    const read = list.filter(i=>i.status==='READ')
-    return [...unread, ...read]
-  },[itemsByType])
-  const filtered = useMemo(()=>{
-    if(filter==='ALL') return ordered
-    return ordered.filter(i=>i.status===filter)
-  }, [ordered, filter])
-
-  // Refresca desde backend
   const fetchAll = useCallback(async () => {
+    setLoading(true)
     try {
-      setLoading(true)
       const res = await http.getData('/admin/notifications?take=500')
-      const list = res.data?.notifications || res.data?.items || []
-      setItems(list)
-    } catch(e){
-      console.error('load notifications failed', e)
-      await errorAlert('Error', 'No se pudieron cargar las notificaciones')
-    } finally { setLoading(false) }
+      setItems(res.data?.notifications || res.data?.items || [])
+    } catch { await errorAlert('Error', 'No se pudieron cargar las notificaciones') }
+    finally { setLoading(false) }
   }, [])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
-  useEffect(()=>{ fetchAll() }, [fetchAll])
-
-  // Marcar todas y refrescar
   const markAll = async () => {
-    try {
-      setMarking(true)
-      await http.postData('/admin/notifications/mark-all-read', {})
-      await successAlert('Listo', 'Todas marcadas como leídas')
-      await fetchAll()
-    } catch(e){
-      console.error('mark all failed', e)
-      await errorAlert('Error', 'No se pudieron marcar todas')
-    } finally { setMarking(false) }
+    setMarking(true)
+    try { await http.postData('/admin/notifications/mark-all-read', {}); await fetchAll() }
+    catch { await errorAlert('Error', 'No se pudieron marcar todas como leídas') }
+    finally { setMarking(false) }
   }
-
-  // Toggle y refresca
-  const toggleOne = async (n) => {
-    const targetStatus = n.status==='UNREAD' ? 'READ' : 'UNREAD'
-    try {
-      await http.putData('/admin/notifications', n.id, { status: targetStatus })
-      await fetchAll()
-    } catch(e){
-      console.error('toggle notification failed', e)
-      await errorAlert('Error', 'No se pudo actualizar la notificación')
-    }
+  const clearType = async () => {
+    setMarking(true)
+    try { await http.postData('/admin/notifications/clear-by-type', { type: tabType }); await fetchAll() }
+    catch { await errorAlert('Error', 'No se pudieron eliminar las notificaciones') }
+    finally { setMarking(false) }
   }
+  const toggleOne = async n => {
+    setMarking(true)
+    try { await http.putData('/admin/notifications', n.id, { status: n.status === 'UNREAD' ? 'READ' : 'UNREAD' }); await fetchAll() }
+    catch { await errorAlert('Error', 'No se pudo actualizar la notificación') }
+    finally { setMarking(false) }
+  }
+  const deleteOne = async id => {
+    setMarking(true)
+    try { await http.deleteData('/admin/notifications', id); await fetchAll() }
+    catch { await errorAlert('Error', 'No se pudo eliminar la notificación') }
+    finally { setMarking(false) }
+  }
+  const restoreAsset = async id => {
+    if (!window.confirm('¿Deseas intentar restaurar este modelo ahora?')) return
+    setMarking(true)
+    try {
+      const response = await http.postData(`/assets/${id}/restore-link`, {})
+      const result = response?.data || response
+      if (!result?.ok) throw new Error('No se pudo restaurar el modelo')
+      await successAlert('Modelo restaurado', result.link || 'El enlace fue restaurado.'); await fetchAll()
+    } catch (error) { await errorAlert('Error', error?.response?.data?.message || error.message || 'No se pudo restaurar el modelo') }
+    finally { setMarking(false) }
+  }
+  const busy = loading || marking
+  return <section className={styles.page} aria-label="Notificaciones">
+    <nav className={styles.tabs} role="tablist" aria-label="Categorías de notificaciones">
+      {TYPES.map(({ key, label, icon: Icon }, index) => {
+        const count = items.filter(item => item.type === key).length
+        const unread = items.filter(item => item.type === key && item.status === 'UNREAD').length
+        return <button key={key} id={`notification-tab-${key}`} type="button" role="tab" aria-selected={tabType === key} aria-controls="notification-panel" tabIndex={tabType === key ? 0 : -1}
+          className={`${styles.tabButton} ${tabType === key ? styles.activeTab : ''}`} title={`${count} notificaciones · ${unread} sin leer`}
+          onClick={() => { setTabType(key); setFilter('ALL') }} onKeyDown={event => {
+            let next = index;
+            if (event.key === 'ArrowRight') next = (index + 1) % TYPES.length;
+            else if (event.key === 'ArrowLeft') next = (index - 1 + TYPES.length) % TYPES.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = TYPES.length - 1;
+            else return;
+            event.preventDefault(); setTabType(TYPES[next].key); setFilter('ALL');
+            document.getElementById(`notification-tab-${TYPES[next].key}`)?.focus();
+          }}><Icon sx={{ fontSize: 17 }} /><span className={styles.tabLabel}>{label}<span className={unread ? styles.tabUnread : styles.tabCount}>{unread || count}</span></span></button>
 
-  return (
-    <div className="dashboard-content p-3">
-      <Box sx={{mb:2, display:'flex', alignItems:'center', gap:2}}>
-        <Typography variant="h5" sx={{fontWeight:700}}>Notificaciones</Typography>
-        <Chip label={`Sin leer: ${items.filter(i=>i.status==='UNREAD').length}`} color={items.filter(i=>i.status==='UNREAD').length>0?'error':'default'} size="small" />
-        <Chip label={`Total: ${items.length}`} color="primary" size="small" />
-      </Box>
-      <Card className="glass" sx={{ mb: 2 }}>
-        <CardHeader title={<>
-          <Tabs value={tabType} onChange={(_,v)=>setTabType(v)} variant="scrollable" scrollButtons="auto">
-            {types.map(t => {
-              const unreadInTab = items.filter(i => i.type === t.key && i.status === 'UNREAD').length;
-              const totalInTab = items.filter(i => i.type === t.key).length;
-              return (
-                <Tab
-                  key={t.key}
-                  value={t.key}
-                  sx={{
-                    fontWeight: unreadInTab > 0 ? 700 : 500,
-                    color: unreadInTab > 0 ? '#ff4d4d !important' : 'inherit',
-                    backgroundColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.05) !important' : 'transparent',
-                    borderRadius: '8px',
-                    margin: '4px 2px',
-                    minHeight: '40px',
-                    height: '40px',
-                    padding: '6px 12px',
-                    transition: 'all 0.2s',
-                    border: unreadInTab > 0 ? '1px dashed rgba(255, 77, 77, 0.2)' : '1px solid transparent',
-                    '&.Mui-selected': {
-                      backgroundColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.12) !important' : 'rgba(139, 92, 246, 0.08) !important',
-                      color: unreadInTab > 0 ? '#ff3b30 !important' : '#8b5cf6 !important',
-                      borderColor: unreadInTab > 0 ? 'rgba(255, 77, 77, 0.4)' : 'rgba(139, 92, 246, 0.3)',
-                    }
-                  }}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                      <span>{t.label}</span>
-                      {unreadInTab > 0 && (
-                        <Box sx={{ width: 8, height: 8, bgcolor: '#ff4d4d', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 6px #ff4d4d' }} />
-                      )}
-                      <span style={{ fontSize: '0.85em', opacity: 0.75 }}>({unreadInTab}/{totalInTab})</span>
-                    </Box>
-                  }
-                />
-              );
-            })}
-          </Tabs>
-        </>} action={
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Tooltip title="Refrescar"><span><IconButton onClick={fetchAll} disabled={loading}><RefreshIcon /></IconButton></span></Tooltip>
-            <Tooltip title="Marcar todas como leídas"><span><IconButton color="primary" onClick={markAll} disabled={marking || unreadCount===0}><DoneAllIcon /></IconButton></span></Tooltip>
-            {/* Limpiar notificaciones de la pestaña activa */}
-            <Tooltip title={`Limpiar todo en ${types.find(t => t.key === tabType)?.label || tabType}`}>
-              <span>
-                <IconButton
-                  color="error"
-                  onClick={async () => {
-                    try {
-                      setMarking(true)
-                      await http.postData('/admin/notifications/clear-by-type', { type: tabType })
-                      await successAlert('Hecho', `Notificaciones de tipo ${types.find(t => t.key === tabType)?.label || tabType} eliminadas`)
-                      await fetchAll()
-                    } catch (e) {
-                      await errorAlert('Error', 'No se pudieron eliminar las notificaciones')
-                    } finally {
-                      setMarking(false)
-                    }
-                  }}
-                  disabled={marking || items.filter(i => i.type === tabType).length === 0}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
-        } />
-        <CardContent sx={{ pt:0 }}>
-          {loading && <LinearProgress sx={{ mb:2 }} />}
-          <Stack direction="row" spacing={1} sx={{ mb:2, flexWrap:'wrap' }}>
-            <Chip label={`Todas (${allCount})`} color={filter==='ALL' ? 'primary':'default'} onClick={()=>setFilter('ALL')} variant={filter==='ALL'?'filled':'outlined'} size="small" />
-            <Chip label={`Sin leer (${unreadCount})`} color={filter==='UNREAD' ? 'error':'default'} onClick={()=>setFilter('UNREAD')} variant={filter==='UNREAD'?'filled':'outlined'} size="small" />
-            <Chip label={`Leídas (${readCount})`} color={filter==='READ' ? 'success':'default'} onClick={()=>setFilter('READ')} variant={filter==='READ'?'filled':'outlined'} size="small" />
-          </Stack>
-          {!loading && !filtered.length && (
-            <Typography variant="body2" color="text.secondary">No hay notificaciones.</Typography>
-          )}
-          <Stack spacing={2}>
-            {filtered.map(n => {
-              const unread = n.status==='UNREAD'
-              return (
-                <Card key={n.id}
-                  className={
-                    unread
-                      ? `${styles['unread-card']} ` +
-                        (n.typeStatus === 'SUCCESS' ? styles.success :
-                         n.typeStatus === 'PENDING' ? styles.pending :
-                         n.typeStatus === 'ERROR' ? styles.error : '')
-                      : ''
-                  }
-                  elevation={unread?4:0}
-                  sx={{
-                    bgcolor: unread ? '#fff' : '#f5f5f7',
-                    color: '#222',
-                    opacity: unread ? 1 : 0.85,
-                    transition:'all .2s',
-                    position:'relative',
-                    minHeight: 48,
-                    mb: 0.5,
-                  }}>
-                  <CardContent sx={{display:'flex',alignItems:'center',gap:1, py:1.2, px:1.5}}>
-                    <Box sx={{ flex:1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: unread ? 700 : 500, fontSize: '1rem', lineHeight:1.2, color:'#222' }}>{n.title}</Typography>
-                      {n.body && <Typography variant="body2" sx={{ whiteSpace:'pre-wrap', opacity:0.95, mt:0.3, fontSize:'0.97rem', lineHeight:1.25, color:'#222' }}>{n.body}</Typography>}
-                    </Box>
-                    {(() => {
-                      const match = n.body?.match(/assetId=(\d+)/);
-                      const assetId = match ? match[1] : null;
-                      if (n.type === 'REPORT' && assetId) {
-                        return (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="secondary"
-                            sx={{ textTransform: 'none', borderRadius: '6px', fontSize: '0.82rem', mr: 1, minWidth: 110 }}
-                            onClick={async () => {
-                              if (!confirm('¿Deseas intentar restaurar este asset ahora?')) return;
-                              try {
-                                setLoading(true);
-                                const res = await http.postData(`/assets/${assetId}/restore-link`, {});
-                                if (res?.ok) {
-                                  await successAlert('Éxito', `Asset restaurado con éxito. Link: ${res.link}`);
-                                } else {
-                                  await errorAlert('Error', 'No se pudo restaurar el asset.');
-                                }
-                                await fetchAll();
-                              } catch (e) {
-                                await errorAlert('Error', e?.response?.data?.message || 'Error al intentar restaurar.');
-                              } finally {
-                                setLoading(false);
-                              }
-                            }}
-                          >
-                            Restaurar Asset
-                          </Button>
-                        );
-                      }
-                      return null;
-                    })()}
-                    {/* Borrar notificación individual */}
-                    <Tooltip title="Eliminar notificación">
-                      <span>
-                        <IconButton size="small" onClick={async()=>{ try{ await http.deleteData('/admin/notifications', n.id); await fetchAll(); } catch(e){ await errorAlert('Error', 'No se pudo eliminar'); } }} color="error" sx={{p:0.5}}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title={unread ? 'Marcar como leída' : 'Marcar como no leída'}>
-                      <span>
-                        <IconButton size="small" onClick={()=>toggleOne(n)} color={unread ? 'info':'default'} sx={{p:0.5}}>
-                          {unread ? <MarkEmailReadIcon fontSize="small" /> : <MarkEmailUnreadIcon fontSize="small" />}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </Stack>
-        </CardContent>
-      </Card>
+      })}
+    </nav>
+    <div className={styles.toolbar}>
+      <div className={styles.filters}>{[['ALL', 'Todas', itemsByType.length], ['UNREAD', 'Sin leer', unreadCount], ['READ', 'Leídas', itemsByType.length - unreadCount]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={filter === value} className={filter === value ? styles.activeFilter : ''} onClick={() => setFilter(value)}>{label}<span>{count}</span></button>)}</div>
+      <div className={styles.globalActions}><span className={styles.counts}>{items.length} total · {totalUnread} sin leer</span>
+        <Tooltip title="Actualizar"><span><IconButton size="small" aria-label="Actualizar notificaciones" onClick={fetchAll} disabled={busy}><RefreshIcon fontSize="small" /></IconButton></span></Tooltip>
+        <Tooltip title="Marcar todas las categorías como leídas"><span><IconButton size="small" aria-label="Marcar todas las categorías como leídas" onClick={markAll} disabled={busy || !totalUnread}><DoneAllIcon fontSize="small" /></IconButton></span></Tooltip>
+        <Tooltip title={`Eliminar todas de ${TYPES.find(type => type.key === tabType)?.label}`}><span><IconButton size="small" aria-label={`Eliminar notificaciones de ${TYPES.find(type => type.key === tabType)?.label}`} onClick={clearType} disabled={busy || !itemsByType.length}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+      </div>
     </div>
-  )
+    {loading && <LinearProgress sx={{ height: 2, bgcolor: 'transparent' }} />}
+    <div className={styles.list} id="notification-panel" role="tabpanel" aria-labelledby={`notification-tab-${tabType}`} aria-busy={busy}>
+      {!loading && !filtered.length && <div className={styles.empty}>No hay notificaciones en esta categoría con el filtro seleccionado.</div>}
+      {filtered.map(notification => <NotificationRow key={notification.id} notification={notification} busy={busy} onToggle={toggleOne} onDelete={deleteOne} onRestore={restoreAsset} />)}
+    </div>
+  </section>
 }
-

@@ -1,8 +1,17 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useStore from '../../../store/useStore';
 import HttpService from '@/services/HttpService';
+import HomeOutlined from '@mui/icons-material/HomeOutlined';
+import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
+import CardGiftcardOutlined from '@mui/icons-material/CardGiftcardOutlined';
+import CreditCardOutlined from '@mui/icons-material/CreditCardOutlined';
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
+import Link from 'next/link';
+import { summarizeAccountFailures, isAccountAtCapacity } from '@/helpers/accountHealth';
+import VpsMemoryWidget from '@/components/dashboard/Sidebar/VpsMemoryWidget';
+import AssetsUploadedWidget from '@/components/dashboard/Sidebar/AssetsUploadedWidget';
 import { successAlert, errorAlert } from '@/helpers/alerts';
 import TopDownloadsCard from '@/components/dashboard/modules/TopDownloadsCard/TopDownloadsCard';
 import AssetsSubidos from '@/components/dashboard/modules/AssetsSubidos/AssetsSubidos';
@@ -27,7 +36,12 @@ import RecentSearchesCard from '@/components/dashboard/modules/RecentSearchesCar
 
 
 export default function Page() {
+  return <Suspense fallback={null}><DashboardPage /></Suspense>;
+}
+
+function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useStore((s) => s.token);
   const roleId = useStore((s) => s.roleId);
   const hydrateToken = useStore((s) => s.hydrateToken);
@@ -35,7 +49,13 @@ export default function Page() {
 
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = String(searchParams.get('tab') || '').toLowerCase();
+    return ['campaigns', 'traffic', 'gift-codes', 'payments'].includes(tab) ? tab : 'overview';
+  });
+  const [accountsHealth, setAccountsHealth] = useState(null);
+  const failures = summarizeAccountFailures(accountsHealth || []);
+  const excessAccounts = (accountsHealth || []).filter(isAccountAtCapacity);
   const [campaigns, setCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignSaving, setCampaignSaving] = useState(false);
@@ -66,17 +86,9 @@ export default function Page() {
   useEffect(() => { hydrateToken() }, [hydrateToken]);
 
   useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      const tab = String(new URLSearchParams(window.location.search).get('tab') || '').toLowerCase();
-      if (tab === 'campaigns') setActiveTab('campaigns');
-      if (tab === 'traffic') setActiveTab('traffic');
-      if (tab === 'gift-codes') setActiveTab('gift-codes');
-      if (tab === 'payments') setActiveTab('payments');
-    } catch {
-      // noop
-    }
-  }, []);
+    const tab = String(searchParams.get('tab') || '').toLowerCase();
+    setActiveTab(['campaigns', 'traffic', 'gift-codes', 'payments'].includes(tab) ? tab : 'overview');
+  }, [searchParams]);
 
   useEffect(() => {
     if (!hydrated) return; // esperar hidratación
@@ -235,25 +247,16 @@ export default function Page() {
   );
 
   return (
-    <section className="dashboard-page-theme">
-      <h1 className="dashboard-title mb-3">Dashboard</h1>
+    <section className="dashboard-page-theme dashboard-refined">
       <div className="dashboard-page-content">
-        <div className="dashboard-tabs" role="tablist" aria-label="Dashboard tabs">
+        {!['campaigns', 'gift-codes'].includes(activeTab) && <div className="dashboard-tabs" role="tablist" aria-label="Dashboard tabs">
           <button
             className={`dashboard-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
             role="tab"
             aria-selected={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
           >
-            Principal
-          </button>
-          <button
-            className={`dashboard-tab-btn ${activeTab === 'campaigns' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={activeTab === 'campaigns'}
-            onClick={() => setActiveTab('campaigns')}
-          >
-            Campanas publicitarias
+            <HomeOutlined aria-hidden="true" /> Principal
           </button>
           <button
             className={`dashboard-tab-btn ${activeTab === 'traffic' ? 'is-active' : ''}`}
@@ -261,15 +264,7 @@ export default function Page() {
             aria-selected={activeTab === 'traffic'}
             onClick={() => setActiveTab('traffic')}
           >
-            Tráfico
-          </button>
-          <button
-            className={`dashboard-tab-btn ${activeTab === 'payments' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={activeTab === 'payments'}
-            onClick={() => setActiveTab('payments')}
-          >
-            💳 Pagos
+            <InsightsOutlined aria-hidden="true" /> Tráfico
           </button>
           <button
             className={`dashboard-tab-btn ${activeTab === 'gift-codes' ? 'is-active' : ''}`}
@@ -277,9 +272,17 @@ export default function Page() {
             aria-selected={activeTab === 'gift-codes'}
             onClick={() => setActiveTab('gift-codes')}
           >
-            🎁 Gift Codes
+            <CardGiftcardOutlined aria-hidden="true" /> Gift Codes
           </button>
-        </div>
+          <button
+            className={`dashboard-tab-btn ${activeTab === 'payments' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'payments'}
+            onClick={() => setActiveTab('payments')}
+          >
+            <CreditCardOutlined aria-hidden="true" /> Pagos
+          </button>
+        </div>}
 
         {activeTab === 'traffic' && (
           <div className="dashboard-traffic-tab">
@@ -292,25 +295,56 @@ export default function Page() {
 
         {activeTab === 'overview' && (
           <>
-            <div className="dashboard-kpi-row">
+
+            <div className="dashboard-kpi-row overview-kpis">
               <AssetsSubidos />
               <TotalArchivo value={1234} />
               <TotalUsers />
               <ConexionesHoy value={42} />
               <Storage />
               <TotalRegistros value={4321} />
+              <Link href="/dashboard/accounts?status=failed" className={`stat-card failed-accounts ${failures.total > 0 ? 'has-failures' : ''}`}
+                title="Cuentas Main y Backup con error o sesión vencida">
+                <div className="label"><WarningAmberOutlined sx={{ fontSize: 14, mr: .5, verticalAlign: 'text-bottom' }} />Cuentas fallidas</div>
+                <div className="value">{accountsHealth === null ? '…' : failures.total}</div>
+                <div className="sub">Main {failures.main} · Backup {failures.backup}</div>
+              </Link>
+              <Link href="/dashboard/accounts?usage=over" className={`stat-card failed-accounts ${excessAccounts.length > 0 ? 'has-failures' : ''}`}
+                title="Cuentas Main y Backup al 100% de capacidad o más">
+                <div className="label"><WarningAmberOutlined sx={{ fontSize: 14, mr: .5, verticalAlign: 'text-bottom' }} />Cuentas con exceso</div>
+                <div className="value">{accountsHealth === null ? '…' : excessAccounts.length}</div>
+                <div className="sub">Main {excessAccounts.filter(account => account.type === 'main').length} · Backup {excessAccounts.filter(account => account.type === 'backup').length}</div>
+              </Link>
             </div>
 
-            <div className="dashboard-cards-wrap">
-              <div className="dashboard-card-cell"><TaxonomyCountsCard /></div>
-              <div className="dashboard-card-cell"><SearchInsightsCard /></div>
-              <div className="dashboard-card-cell"><LastChecksCard /></div>
-              <div className="dashboard-card-cell"><TopDownloadsCard /></div>
-              <div className="dashboard-card-cell"><RecentDownloadsCard /></div>
-              <div className="dashboard-card-cell"><RecentSearchesCard /></div>
-              <div className="dashboard-card-cell"><ReportsCard /></div>
-              <div className="dashboard-card-cell"><TotalVentas /></div>
-            </div>
+            <section className="overview-section" aria-labelledby="operations-heading">
+              <h2 id="operations-heading" className="overview-section-title">Ventas e infraestructura</h2>
+              <div className="overview-bottom">
+                <div className="dash-status-strip overview-infrastructure" aria-label="Recursos del servidor y modelos subidos">
+                  <VpsMemoryWidget compact />
+                  <AssetsUploadedWidget compact />
+                </div>
+                <div className="overview-panel overview-sales"><TotalVentas /></div>
+                <div className="overview-panel overview-reports"><ReportsCard /></div>
+              </div>
+            </section>
+            <section className="overview-section" aria-labelledby="activity-heading">
+              <h2 id="activity-heading" className="overview-section-title">Actividad reciente</h2>
+              <div className="overview-activity">
+                <div className="overview-panel overview-feed"><RecentDownloadsCard /></div>
+                <div className="overview-panel overview-feed"><RecentSearchesCard /></div>
+                <div className="overview-panel overview-checks"><LastChecksCard onAccountsChange={setAccountsHealth} /></div>
+              </div>
+            </section>
+            <section className="overview-section" aria-labelledby="catalog-heading">
+              <h2 id="catalog-heading" className="overview-section-title">Catálogo y descubrimiento</h2>
+              <div className="overview-analysis">
+                <div className="overview-panel"><TaxonomyCountsCard /></div>
+                <div className="overview-panel"><SearchInsightsCard /></div>
+                <div className="overview-panel"><TopDownloadsCard /></div>
+              </div>
+            </section>
+
           </>
         )}
 

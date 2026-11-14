@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import './SiteTraffic.scss'
 import HttpService from '@/services/HttpService'
+import Tooltip from '@mui/material/Tooltip'
 
 export default function SiteTraffic() {
   const [range, setRange] = useState('hoy')
@@ -57,29 +58,25 @@ export default function SiteTraffic() {
       </div>
 
       <div className="traffic-grid">
-        <div className="traffic-card pv">
+        <Tooltip title="Total de páginas cargadas" arrow><div className="traffic-card pv">
           <div className="label">Vistas de Página</div>
           <div className="value">{pv === '...' ? '...' : Number(pv).toLocaleString()}</div>
-          <div className="desc">Total de páginas cargadas</div>
-        </div>
+        </div></Tooltip>
 
-        <div className="traffic-card sessions">
+        <Tooltip title="Visitas por pestaña activa" arrow><div className="traffic-card sessions">
           <div className="label">Sesiones Únicas</div>
           <div className="value">{sessions === '...' ? '...' : Number(sessions).toLocaleString()}</div>
-          <div className="desc">Visitas por pestaña activa</div>
-        </div>
+        </div></Tooltip>
 
-        <div className="traffic-card visitors">
+        <Tooltip title="Usuarios únicos identificados por cookies" arrow><div className="traffic-card visitors">
           <div className="label">Visitantes Únicos</div>
           <div className="value">{visitors === '...' ? '...' : Number(visitors).toLocaleString()}</div>
-          <div className="desc">Usuarios únicos (Cookies)</div>
-        </div>
+        </div></Tooltip>
 
-        <div className="traffic-card downloads">
+        <Tooltip title="Archivos descargados" arrow><div className="traffic-card downloads">
           <div className="label">Descargas</div>
           <div className="value">{downloads === '...' ? '...' : Number(downloads).toLocaleString()}</div>
-          <div className="desc">Archivos descargados</div>
-        </div>
+        </div></Tooltip>
       </div>
     </div>
   )

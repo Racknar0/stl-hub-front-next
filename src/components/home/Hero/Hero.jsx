@@ -1,15 +1,24 @@
 'use client';
 
-import React from 'react';
-import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
+import React, { useState } from 'react';
 import './Hero.scss';
 
 const Hero = ({ lang }) => {
-  const resolvedLang = useResolvedLanguage(lang);
-  const isEn = resolvedLang === 'en';
+  // Home pages pass their route language. A stored preference must not replace
+  // an already requested ES banner with EN during client hydration.
+  const isEn = lang === 'en';
+  const [useLegacy, setUseLegacy] = useState(false);
+  const imageLanguage = isEn ? 'en' : 'es';
 
-  const desktopImg = isEn ? '/hero/hero-desktop-en.png' : '/hero/hero-desktop-es.png';
-  const mobileImg = isEn ? '/hero/hero-mobile-en.png' : '/hero/hero-mobile-es.png';
+  // The image endpoint picks one complete bundle before redirecting to its
+  // immutable WebP. Keeping this in <picture> avoids downloading other variants
+  // or turning the cached home page into a personalized server render.
+  const desktopImg = useLegacy
+    ? `/hero/hero-desktop-${imageLanguage}.png`
+    : `/api/hero-banners/render/${imageLanguage}/desktop`;
+  const mobileImg = useLegacy
+    ? `/hero/hero-mobile-${imageLanguage}.png`
+    : `/api/hero-banners/render/${imageLanguage}/mobile`;
 
   const h1Title = isEn
     ? '+1,000,000 Free 3D Models & STL Files Ready to Print - STLGratis'
@@ -96,14 +105,18 @@ const Hero = ({ lang }) => {
       {/* Hero Graphical Banner (visible on screen) */}
       <div className="hero-banner-container">
         <picture className="hero-banner-picture">
-          <source media="(max-width: 767px)" srcSet={mobileImg} />
-          <source media="(min-width: 768px)" srcSet={desktopImg} />
+          <source media="(max-width: 767px)" srcSet={mobileImg} width="960" height="1200" />
+          <source media="(min-width: 768px)" srcSet={desktopImg} width="1920" height="720" />
           <img
             src={desktopImg}
             alt={h1Title}
             className="hero-banner-img"
             loading="eager"
+            fetchPriority="high"
             decoding="async"
+            width="1920"
+            height="720"
+            onError={() => setUseLegacy(true)}
           />
         </picture>
       </div>

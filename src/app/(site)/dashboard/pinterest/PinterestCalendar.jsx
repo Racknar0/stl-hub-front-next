@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
@@ -7,6 +7,8 @@ import HttpService from '@/services/HttpService';
 import './PinterestCalendar.scss';
 import './PinterestRedesign.scss';
 import AutopilotCard from './AutopilotCard';
+import PinterestDayCell from './PinterestDayCell';
+import PinterestThumbnail from './PinterestThumbnail';
 
 const MAX_PINS_PER_DAY = 15;
 function getUploadBase() {
@@ -208,14 +210,20 @@ export default function PinterestCalendar() {
 
   // Calendar stats
   const [pinsByDay, setPinsByDay] = useState({});
+  const monthRequest = useRef(0);
+  const dayRequest = useRef(0);
   const fetchPinStats = useCallback(async () => {
+    const request = ++monthRequest.current;
     try {
       const http = new HttpService();
       const res = await http.getData(`/pinterest/queue-stats?year=${currentDate.getFullYear()}&month=${currentDate.getMonth()}`);
-      setPinsByDay(res.data?.pinsByDay || {});
-    } catch { setPinsByDay({}); }
+      if (request === monthRequest.current) setPinsByDay(res.data?.pinsByDay || {});
+    } catch { if (request === monthRequest.current) setPinsByDay({}); }
   }, [currentDate]);
-  useEffect(() => { fetchPinStats(); }, [fetchPinStats]);
+  useEffect(() => {
+    fetchPinStats();
+    return () => { monthRequest.current++; };
+  }, [fetchPinStats]);
 
   const today = new Date();
   const isSelectedDayPast = selectedDay
@@ -225,17 +233,21 @@ export default function PinterestCalendar() {
   // Fetch pins for selected day
   const fetchDayPins = useCallback(async () => {
     if (!selectedDay) return;
+    const request = ++dayRequest.current;
     setLoadingDayPins(true);
     try {
       const http = new HttpService();
       const res = await http.getData(`/pinterest/queue-day?year=${currentDate.getFullYear()}&month=${currentDate.getMonth()}&day=${selectedDay}`);
-      setDayPins(res.data?.pins || []);
-    } catch { setDayPins([]); }
-    finally { setLoadingDayPins(false); }
+      if (request === dayRequest.current) setDayPins(res.data?.pins || []);
+    } catch { if (request === dayRequest.current) setDayPins([]); }
+    finally { if (request === dayRequest.current) setLoadingDayPins(false); }
   }, [selectedDay, currentDate]);
-  useEffect(() => { if (selectedDay) fetchDayPins(); }, [selectedDay, fetchDayPins]);
+  useEffect(() => {
+    if (selectedDay) fetchDayPins();
+    return () => { dayRequest.current++; };
+  }, [selectedDay, fetchDayPins]);
 
-  const handleDayClick = (day) => {
+  const handleDayClick = useCallback((day) => {
     const isSameDay = lastDayRef.current === day;
     let willKeepSelections = selectedPins.length > 0;
 
@@ -256,17 +268,17 @@ export default function PinterestCalendar() {
     lastDayRef.current = day;
     setSelectedDay(day);
     setPanelMode(willKeepSelections ? 'create' : 'list');
-  };
+  }, [selectedPins.length]);
 
   // Abrir / cerrar el espacio de trabajo del día seleccionado
-  const openWorkspace = (mode, pin = null) => {
+  const openWorkspace = useCallback((mode, pin = null) => {
     if (pin) {
       setExpandedPinId(pin.id);
       setEditPin({ title: pin.title || '', description: pin.description || '', link: pin.link || '' });
     }
     setPanelMode(mode);
     setIsWorkspaceOpen(true);
-  };
+  }, []);
 
   const requestCloseWorkspace = () => {
     if (selectedPins.length > 0 && !confirm('Tienes pines en la cola sin programar. ¿Seguro que deseas salir? (Tu selección se conservará si vuelves a abrir el mismo día)')) return;
@@ -939,7 +951,7 @@ export default function PinterestCalendar() {
         }}
       >
         <div className="pin-card-img-wrapper">
-          {imageUrl ? <img src={imageUrl} alt="" /> : <div className="no-img">No Img</div>}
+          {imageUrl ? <PinterestThumbnail src={imageUrl} size={128} /> : <div className="no-img">No Img</div>}
           <span className={`status-badge ${pin.status?.toLowerCase()}`}>{pin.status}</span>
         </div>
         <div className="pin-card-body">
@@ -971,9 +983,9 @@ export default function PinterestCalendar() {
   ).length;
 
   // === GALERÍA ===
-  const usedAssetsCount = searchedAssets.filter(a => a.queueEntries?.length > 0).length;
-  const visibleAssets = hideUsedAssets ? searchedAssets.filter(a => !(a.queueEntries?.length > 0)) : searchedAssets;
-  const flatImages = visibleAssets.flatMap(asset => (asset.images || []).map(img => ({ asset, img })));
+  const usedAssetsCount = useMemo(() => searchedAssets.filter(a => a.queueEntries?.length > 0).length, [searchedAssets]);
+  const visibleAssets = useMemo(() => hideUsedAssets ? searchedAssets.filter(a => !(a.queueEntries?.length > 0)) : searchedAssets, [searchedAssets, hideUsedAssets]);
+  const flatImages = useMemo(() => visibleAssets.flatMap(asset => (asset.images || []).map(img => ({ asset, img }))), [visibleAssets]);
 
   const handleThumbClick = (e, asset, img, flatIndex) => {
     if (e.shiftKey && lastThumbIndexRef.current !== null && lastThumbIndexRef.current < flatImages.length) {
@@ -1072,46 +1084,9 @@ export default function PinterestCalendar() {
               if (!day) return <div key={`empty-${index}`} className="day empty"></div>;
               const isToday = isCurrentMonth && day === today.getDate();
               const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              const dayStats = pinsByDay[day];
-              const pinsCount = dayStats?.total || 0;
-              const isSelected = selectedDay === day;
-              const isGap = !isPast && pinsCount === 0;
-              const scale = Math.max(MAX_PINS_PER_DAY, pinsCount);
-              const dayThumbs = [...(dayStats?.pins || [])].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
-
-              return (
-                <div key={`day-${day}`} className={`day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast ? 'past' : ''} ${isGap ? 'gap' : ''}`}
-                  onClick={() => handleDayClick(day)}
-                  onDoubleClick={() => openWorkspace('list')}
-                  title={pinsCount ? `${dayStats.published} publicados · ${dayStats.pending} programados · ${dayStats.failed} errores` : 'Sin pines'}>
-                  <div className="day-top">
-                    <div className="day-number">{day}</div>
-                    {pinsCount > 0 && <span className={`pr-day-count ${pinsCount >= MAX_PINS_PER_DAY ? 'full' : ''}`}>{pinsCount}/{MAX_PINS_PER_DAY}</span>}
-                  </div>
-                  {pinsCount > 0 ? (
-                    <>
-                      <div className="pr-fill-bar">
-                        <b className="ok" style={{ width: `${(dayStats.published / scale) * 100}%` }} />
-                        <b className="pen" style={{ width: `${(dayStats.pending / scale) * 100}%` }} />
-                        <b className="err" style={{ width: `${(dayStats.failed / scale) * 100}%` }} />
-                      </div>
-                      <div className="pr-day-thumbs">
-                        {dayThumbs.slice(0, MAX_PINS_PER_DAY).map((pin, i) => {
-                          const extra = i === MAX_PINS_PER_DAY - 1 ? dayThumbs.length - MAX_PINS_PER_DAY : 0;
-                          return (
-                            <span key={pin.id} className={`pr-day-thumb st-${pin.status?.toLowerCase()}`}>
-                              <img src={resolveImgUrl(pin.imageUrl)} alt="" loading="lazy" />
-                              {extra > 0 && <small>+{extra}</small>}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : isGap ? (
-                    <span className="pr-gap-label">Sin pines</span>
-                  ) : null}
-                </div>
-              );
+              return <PinterestDayCell key={`day-${day}`} day={day} stats={pinsByDay[day]}
+                today={isToday} past={isPast} selected={selectedDay === day}
+                onSelect={handleDayClick} onOpen={openWorkspace} resolveImage={resolveImgUrl} />;
             })}
           </div>
         </div>
@@ -1179,7 +1154,7 @@ export default function PinterestCalendar() {
                       return (
                         <button type="button" key={pin.id} className={`pr-agenda-item st-${pin.status?.toLowerCase()}`} onClick={() => openWorkspace('list', pin)}>
                           <time>{statusIcon[pin.status] || ''} {new Date(pin.scheduledAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</time>
-                          {img ? <img src={img} alt="" loading="lazy" /> : <span className="pr-noimg" />}
+                          {img ? <PinterestThumbnail src={img} size={64} /> : <span className="pr-noimg" />}
                           <span className="pr-agenda-title">{pin.title || 'Sin título'}</span>
                         </button>
                       );
@@ -1608,7 +1583,7 @@ export default function PinterestCalendar() {
                                     return (
                                       <div key={idx} className={`pr-thumb ${isSelected ? 'selected' : ''}`}
                                         onClick={(e) => handleThumbClick(e, asset, img, myIndex)}>
-                                        <img src={editedImages[key] || url} alt={`Render ${idx + 1}`} loading="lazy" draggable={false} />
+                                        <PinterestThumbnail src={editedImages[key] || url} size={thumbSize === 'l' ? 256 : 128} alt={`Render ${idx + 1}`} draggable={false} />
                                         {isSelected && <div className="pr-check">✓</div>}
                                         <div className="pr-thumb-actions">
                                           <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewImage(editedImages[key] || url); }} title="Ver en grande">👁</button>
@@ -1731,7 +1706,7 @@ export default function PinterestCalendar() {
                                     </div>
                                     {assetPins.map((pin, i) => (
                                       <button type="button" key={pin.key} className={`pr-queue-item ${activePin?.key === pin.key ? 'active' : ''}`} onClick={() => setActivePinKey(pin.key)}>
-                                        <img src={editedImages[pin.key] || resolveImgUrl(pin.imageUrl)} alt="" loading="lazy" />
+                                        <PinterestThumbnail src={editedImages[pin.key] || resolveImgUrl(pin.imageUrl)} size={128} />
                                         <span className="pr-queue-text">
                                           <b>{pin.pinTitle || 'Sin título'}</b>
                                           <small>Pin {i + 1}{pin.pinHashtags?.length ? ` · ${pin.pinHashtags.length} hashtags` : ''}</small>

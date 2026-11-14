@@ -97,3 +97,40 @@
     }
   }
 }
+
+/* Preserve metric colors while reducing the summary footprint. */
+.site-traffic-module {
+  padding: 14px 0; background: transparent; box-shadow: none;
+  .traffic-header { margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+  .traffic-header h2 { font-size: 15px; }
+  .traffic-header .range-controls { flex-wrap: wrap; gap: 3px; }
+  .traffic-header .range-controls .range-btn { font-size: 11px; padding: 4px 8px; }
+  .traffic-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+  .traffic-grid .traffic-card { min-width: 0; padding: 12px 16px; text-align: left; }
+  .traffic-grid .traffic-card .label { font-size: 11px; margin-bottom: 6px; letter-spacing: .025em; }
+  .traffic-grid .traffic-card .value { font-size: 26px; margin-bottom: 5px; }
+  .traffic-grid .traffic-card .desc { font-size: 11px; }
+}
+@media (max-width: 700px) { .site-traffic-module .traffic-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 360px) { .site-traffic-module .traffic-grid { grid-template-columns: minmax(0,1fr); } }
+
+/* Four values belong in a toolbar, not four large cards. */
+.site-traffic-module {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; padding: 6px 0;
+  .traffic-header { display: contents; }
+  .traffic-header h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .traffic-header .range-controls { order: 2; margin: 0; padding: 2px; }
+  .traffic-grid { order: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 0; }
+  .traffic-grid .traffic-card { display: flex; align-items: center; gap: 10px; padding: 6px 18px; border: 0; border-right: 1px solid rgba(148,163,184,.2); border-radius: 0; background: transparent; box-shadow: none; transition: none; }
+  .traffic-grid .traffic-card:first-child { padding-left: 0; }
+  .traffic-grid .traffic-card:last-child { border-right: 0; }
+  .traffic-grid .traffic-card:hover { transform: none; box-shadow: none; border-color: rgba(148,163,184,.2); }
+  .traffic-grid .traffic-card .label { margin: 0; font-size: 11px; text-transform: none; letter-spacing: 0; }
+  .traffic-grid .traffic-card .value { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 600; }
+}
+@media (max-width: 650px) {
+  .site-traffic-module .traffic-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; gap: 4px 0; }
+  .site-traffic-module .traffic-grid .traffic-card { padding: 6px 10px; justify-content: space-between; }
+  .site-traffic-module .traffic-grid .traffic-card:nth-child(odd) { padding-left: 0; }
+  .site-traffic-module .traffic-grid .traffic-card:nth-child(even) { border-right: 0; }
+}

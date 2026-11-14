@@ -17,12 +17,9 @@ import {
     TextField,
     IconButton,
     Switch,
-    Tabs,
-    Tab,
     Paper,
     Dialog,
     ThemeProvider,
-    createTheme,
     ScopedCssBaseline,
 } from '@mui/material';
 import {
@@ -32,6 +29,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import CachedIcon from '@mui/icons-material/Cached';
 import LinkIcon from '@mui/icons-material/Link';
+import ViewListOutlined from '@mui/icons-material/ViewListOutlined';
+import ImageSearchOutlined from '@mui/icons-material/ImageSearchOutlined';
+import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined';
+import dashboardTheme from '../dashboardTheme';
+import './assets.scss';
 import HttpService from '@/services/HttpService';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
 
@@ -39,6 +41,7 @@ import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/ale
 // Nuevos componentes
 import ToolbarBusqueda from './componentes/ToolbarBusqueda';
 import AssetsListTab from './componentes/tabs/AssetsListTab';
+import AssetRowActions from './componentes/AssetRowActions';
 // ImageSimilarTab y NameSimilarTab eliminados Ã¢â‚¬â€ reemplazados por VisualSimilarTab (Qdrant)
 import VisualSimilarTab from './componentes/tabs/VisualSimilarTab';
 import MetaSeoTab from './componentes/tabs/MetaSeoTab';
@@ -53,17 +56,7 @@ const slugify = (s) =>
         .replace(/-+/g, '-')
         .slice(0, 80);
 
-const darkTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        background: {
-            default: '#0f172a',
-            paper: '#1e293b',
-        },
-        primary: { main: '#a855f7' },
-        secondary: { main: '#eab308' },
-    },
-});
+const darkTheme = dashboardTheme;
 
 export default function AssetsAdminPage() {
     // Servicios
@@ -95,6 +88,7 @@ export default function AssetsAdminPage() {
     const [statusFilter, setStatusFilter] = useState('');
     // filtro SEO (noDescription, noDescriptionEn, noTags, noCategories, noImages)
     const [seoFilter, setSeoFilter] = useState('');
+    const [sizeRange, setSizeRange] = useState({ min: '', max: '' });
     // Ordenamiento léxico en memoria
     const [lexicalSort, setLexicalSort] = useState(false);
 
@@ -105,6 +99,9 @@ export default function AssetsAdminPage() {
 
     // Estado: modal unificado
     const [assetModalOpen, setAssetModalOpen] = useState(false);
+    const [assetModalMode, setAssetModalMode] = useState('view');
+    const [assetDetailError, setAssetDetailError] = useState('');
+    const assetDetailRequestRef = useRef(0);
     const [assetModalIndex, setAssetModalIndex] = useState(-1);
     const [syncMultimodalVectorsOpen, setSyncMultimodalVectorsOpen] = useState(false);
     // Para dirty-check al navegar
@@ -228,11 +225,11 @@ export default function AssetsAdminPage() {
 
     const UPLOAD_BASE =
         process.env.NEXT_PUBLIC_UPLOADS_BASE || 'http://localhost:3001/uploads';
-    const imgUrl = (rel) => {
+    const imgUrl = useCallback((rel) => {
         if (!rel) return '';
         const clean = String(rel).replace(/^\\+|^\/+/, '');
         return `${UPLOAD_BASE}/${clean}`;
-    };
+    }, [UPLOAD_BASE]);
     const formatMBfromB = (bytes) => {
         const n = Number(bytes);
         if (!n || n <= 0) return '0 MB';
@@ -282,7 +279,7 @@ export default function AssetsAdminPage() {
                 const res = await http.getData(
                     `/ai/similar-visual-batch?pageIndex=${pageIndexScan}&pageSize=${pageSize}&threshold=${visualSimilarThreshold}`,
                 );
-                
+
                 const { groups, totalProcessed, totalAssets } = res.data;
 
                 if (!totalProcessed || totalProcessed === 0) {
@@ -308,15 +305,15 @@ export default function AssetsAdminPage() {
 
                 setVisualSimilarProgress(prev => ({
                     done: (pageIndexScan + 1) * pageSize,
-                    total: totalAssets || '...' 
+                    total: totalAssets || '...'
                 }));
 
                 pageIndexScan += 1;
-                
+
                 if (totalProcessed < pageSize || pageIndexScan > 500) {
                     setVisualSimilarProgress(prev => ({
                         done: prev.done,
-                        total: prev.done 
+                        total: prev.done
                     }));
                     break;
                 }
@@ -455,7 +452,7 @@ export default function AssetsAdminPage() {
         const idsToDelete = Object.keys(visualSimilarSelectedMap)
             .map(Number)
             .filter((n) => Number.isFinite(n) && n > 0);
-            
+
         if (!idsToDelete.length) return;
 
         const ok = await confirmAlert(
@@ -538,7 +535,7 @@ export default function AssetsAdminPage() {
 
 
 
-    const openSimilarViewer = (asset, imageIndex = 0) => {
+    const openSimilarViewer = useCallback((asset, imageIndex = 0) => {
         const images = Array.isArray(asset?.images) ? asset.images : [];
         if (!images.length) return;
         const safeIndex = Math.max(
@@ -551,7 +548,7 @@ export default function AssetsAdminPage() {
             assetTitle: asset?.title || asset?.archiveName || 'Asset',
             assetId: asset?.id ?? null,
         });
-    };
+    }, []);
 
     const closeSimilarViewer = () => {
         setSimilarViewer((prev) => ({ ...prev, open: false }));
@@ -561,9 +558,17 @@ export default function AssetsAdminPage() {
 
     // Cargar datos de la tabla (paginación servidor)
     useEffect(() => {
+        let cancelled = false;
         const load = async () => {
             try {
                 setLoading(true);
+                if (assetIdQ) {
+                    const res = await http.getData(`/assets/${assetIdQ}`);
+                    if (cancelled) return;
+                    setAssets(res.data ? [res.data] : []);
+                    setRowCount(res.data ? 1 : 0);
+                    return;
+                }
                 const activePageIndex = tab === 2 ? metaPageIndex : pageIndex;
                 const activePageSize = tab === 2 ? metaPageSize : pageSize;
                 const params = new URLSearchParams({
@@ -573,6 +578,8 @@ export default function AssetsAdminPage() {
                 });
                 if (showFreeOnly) params.set('plan', 'free');
                 if (statusFilter) params.set('status', statusFilter);
+                if (sizeRange.min !== '') params.set('minSizeMB', sizeRange.min);
+                if (sizeRange.max !== '') params.set('maxSizeMB', sizeRange.max);
                 // Filtro SEO
                 if (seoFilter) params.set(seoFilter, 'true');
                 // Ordenamiento léxico
@@ -591,6 +598,7 @@ export default function AssetsAdminPage() {
                 if (tagFilter?.slug) params.set('tagSlug', tagFilter.slug);
                 if (tagExcludeFilter?.slug) params.set('tagExcludeSlug', tagExcludeFilter.slug);
                 const res = await http.getData(`/assets?${params.toString()}`);
+                if (cancelled) return;
                 const payload = res.data;
                 if (payload && Array.isArray(payload.items)) {
                     setAssets(payload.items);
@@ -603,15 +611,17 @@ export default function AssetsAdminPage() {
                     setRowCount(0);
                 }
             } catch (e) {
+                if (cancelled) return;
                 console.error('No se pudieron cargar assets', e);
                 setAssets([]);
                 setRowCount(0);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         load();
-    }, [searchTerm, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, categoryExcludeFilter, tagFilter, tagExcludeFilter, statusFilter, seoFilter, lexicalSort]);
+        return () => { cancelled = true; };
+    }, [searchTerm, accountQ, assetIdQ, pageIndex, pageSize, metaPageIndex, metaPageSize, tab, refreshTick, showFreeOnly, categoryFilter, categoryExcludeFilter, tagFilter, tagExcludeFilter, statusFilter, seoFilter, lexicalSort, sizeRange]);
 
     // Tabla: datos filtrados (sin filtrado local extra)
     const filtered = assets;
@@ -623,229 +633,53 @@ export default function AssetsAdminPage() {
     // Detalle: ahora se carga en openAssetModal / loadAssetByIndex
 
     // Tabla: definiciÃƒÂ³n de columnas (ES)
-    const StatusDot = ({ status }) => {
-        const s = String(status || '').toUpperCase();
-        const map = {
-            DRAFT: '#9e9e9e',
-            PROCESSING: '#29b6f6',
-            PUBLISHED: '#66bb6a',
-            FAILED: '#ef5350',
-        };
-        const color = map[s] || '#9e9e9e';
-        return (
-            <Box
-                sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    bgcolor: color,
-                    display: 'inline-block',
-                }}
-            />
-        );
-    };
-    const columns = useMemo(
-        () => [
-            // ID
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                size: 60,
-                Cell: ({ cell }) => (
-                    <Typography
-                        variant="body2"
-                        sx={{ width: 50, textAlign: 'right' }}
-                    >
-                        {cell.getValue()}
-                    </Typography>
-                ),
+    const columns = useMemo(() => [
+        {
+            header: 'Modelo', accessorKey: 'title', size: 520, minSize: 300,
+            Cell: ({ row }) => {
+                const asset = row.original;
+                const first = Array.isArray(asset.images) ? asset.images[0] : null;
+                return (
+                    <div className="model-cell">
+                        {first ? <Box component="button" type="button" className="model-thumbnail" aria-label={`Ampliar imagen de ${asset.title || 'modelo'}`} onClick={event => { event.stopPropagation(); openSimilarViewer(asset); }}>
+                            <Box component="img" src={imgUrl(first)} alt={asset.title || 'Miniatura del modelo'} />
+                        </Box> : <span className="model-thumbnail model-thumbnail-empty" aria-label="Modelo sin imagen"><ViewListOutlined /></span>}
+                        <div className="model-identity">
+                            <span className="model-title" title={asset.title || asset.archiveName}>{asset.title || asset.archiveName || 'Sin nombre'}</span>
+                            <span className="model-id">#{asset.id}{asset.megaLinkAlive === false && <span className="model-link-warning"> · Enlace caído</span>}</span>
+                        </div>
+                    </div>
+                );
             },
-            {
-                header: ' ',
-                accessorKey: 'thumbnail',
-                size: 0,
-                enableSorting: false,
-                Cell: ({ row }) => {
-                    const imgs = Array.isArray(row.original.images)
-                        ? row.original.images
-                        : [];
-                    const first = imgs[0];
-                    return first ? (
-                        <img
-                            src={imgUrl(first)}
-                            alt="thumb"
-                            style={{
-                                width: 64,
-                                height: 64,
-                                objectFit: 'cover',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                            }}
-                            onClick={() => {
-                                setSelected(row.original);
-                                setPreviewOpen(true);
-                            }}
-                            title="Ver imÃƒÂ¡genes"
-                        />
-                    ) : (
-                        <Box
-                            sx={{
-                                width: 64,
-                                height: 40,
-                                borderRadius: 6,
-                                bgcolor: 'rgba(255,255,255,0.06)',
-                            }}
-                        />
-                    );
-                },
+        },
+        {
+            header: 'Estado / Plan', accessorKey: 'status', size: 170,
+            Cell: ({ row }) => {
+                const status = String(row.original.status || '').toUpperCase();
+                const labels = { PUBLISHED: 'Publicado', DRAFT: 'Borrador', PROCESSING: 'Procesando', FAILED: 'Error' };
+                return <div className="model-status-cell"><span className={`model-status model-status-${status.toLowerCase()}`}>{labels[status] || status || 'Sin estado'}</span><span className={row.original.isPremium ? 'model-plan model-plan-premium' : 'model-plan'}>{row.original.isPremium ? 'Premium' : 'Gratuito'}</span></div>;
             },
-            {
-                header: 'Nombre',
-                accessorKey: 'title',
-                Cell: ({ row, cell }) => {
-                    const titleEs = cell.getValue();
-                    const titleEn = row?.original?.titleEn || '';
-                    const archiveName = row?.original?.archiveName || '';
-                    return (
-                        <Box
-                            sx={{
-                                whiteSpace: 'normal',
-                                wordBreak: 'break-word',
-                            }}
-                        >
-                            <Typography variant="body2" sx={{ fontWeight: 600 }} >
-                                <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
-                                    es:
-                                </Typography>
-                                {titleEs}
-                            </Typography>
-                            {titleEn ? (
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }} >
-                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
-                                        en:
-                                    </Typography>
-                                    {titleEn}
-                                </Typography>
-                            ) : null}
-                            {archiveName ? (
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }} >
-                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }} >
-                                        file:
-                                    </Typography>
-                                    {archiveName}
-                                </Typography>
-                            ) : null}
-                        </Box>
-                    );
-                },
-                size: 300,
+        },
+        {
+            id: 'sizeB', header: 'Tamaño', size: 110,
+            accessorFn: asset => asset.fileSizeB ?? asset.archiveSizeB ?? 0,
+            Cell: ({ row, cell }) => <span className="model-file-size" title={row.original.archiveName || 'Sin nombre de archivo'}>{formatMBfromB(cell.getValue())}</span>,
+        },
+        {
+            id: 'account', header: 'Cuenta', size: 170,
+            accessorFn: asset => asset.account?.alias || asset.accountId || '',
+            Cell: ({ cell }) => <span className="model-account" title={String(cell.getValue() || '')}>{cell.getValue() || 'Sin cuenta'}</span>,
+        },
+        {
+            header: 'Subido', accessorKey: 'createdAt', size: 140,
+            Cell: ({ cell }) => {
+                const value = cell.getValue();
+                const date = new Date(value);
+                if (!value || Number.isNaN(date.getTime())) return <span className="model-date">Sin fecha</span>;
+                return <time className="model-date" dateTime={date.toISOString()} title={date.toLocaleString('es-ES')}><span>{date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span><span>{date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span></time>;
             },
-            // {
-            //   id: 'categoriesEs',
-            //   header: 'CategorÃƒÂ­as',
-            //   accessorFn: (row) => {
-            //     const cats = Array.isArray(row.categories) ? row.categories : []
-            //     const names = cats.map(c => c?.name).filter(Boolean)
-            //     return names.length ? names.join(', ') : ''
-            //   },
-            //   Cell: ({ row }) => {
-            //     const cats = Array.isArray(row.original.categories) ? row.original.categories : []
-            //     const names = cats.map(c => c?.name).filter(Boolean)
-            //     const toShow = names
-            //     return (
-            //       <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            //         {toShow.length ? toShow.map((n, i) => <Chip key={`${n}-${i}`} size="small" label={n} variant="outlined" />) : <Typography variant="body2" color="text.secondary">-</Typography>}
-            //       </Stack>
-            //     )
-            //   },
-            //   size: 200,
-            // },
-            // {
-            //   id: 'tags',
-            //   header: 'Tags',
-            //   accessorFn: (row) => Array.isArray(row.tags) ? row.tags.map(t=>t?.name||t?.slug).join(',') : '',
-            //   Cell: ({ row }) => {
-            //     const tags = Array.isArray(row.original.tags) ? row.original.tags : []
-            //     return (
-            //       <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            //         {tags.map((t, i) => <Chip key={`${t?.slug||t}-${i}`} size="small" label={t?.name || t?.slug || t} variant="outlined" />)}
-            //       </Stack>
-            //     )
-            //   },
-            // },
-            {
-                header: 'Plan',
-                accessorKey: 'isPremium',
-                size: 40,
-                Cell: ({ cell }) => {
-                    const isPrem = !!cell.getValue();
-                    const bg = isPrem ? '#ffeb3b33' : '#4caf5033'; // amarillo suave para P, verde suave para F
-                    const fg = isPrem ? '#fbc02d' : '#43a047';
-                    return (
-                        <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 26, height: 22, px: 0.5, borderRadius: 8, bgcolor: bg, }} >
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: fg }} >
-                                {isPrem ? 'P' : 'F'}
-                            </Typography>
-                        </Box>
-                    );
-                },
-            },
-            {
-                header: 'Estado',
-                accessorKey: 'status',
-                size: 60,
-                Cell: ({ cell }) => <StatusDot status={cell.getValue()} />,
-            },
-            {
-                id: 'sizeB',
-                header: 'TamaÃƒÂ±o',
-                accessorFn: (row) => row.fileSizeB ?? row.archiveSizeB ?? 0,
-                Cell: ({ cell }) => ( <Typography variant="body2"> {formatMBfromB(cell.getValue())} </Typography> ),
-                size: 100,
-            },
-            {
-                header: 'Cuenta',
-                accessorFn: (row) => row.account?.alias || row.accountId,
-                size: 140,
-                Cell: ({ row }) => ( <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }} > {row.original.account?.alias || row.original.accountId} </Typography> ),
-            },
-            {
-                header: 'Subido',
-                accessorKey: 'createdAt',
-                size: 150,
-                Cell: ({ cell }) => {
-                    let v = cell.getValue();
-                    if (!v) return ( <Typography variant="body2" color="text.secondary"> - </Typography> );
-                    // Handle object / BigInt-serialized values
-                    if (typeof v === 'object' && v !== null) v = v?.toISOString?.() || JSON.stringify(v);
-                    const d = new Date(v);
-                    const text = Number.isNaN(d.getTime())
-                        ? String(v)
-                        : d.toLocaleString('es-ES');
-                    return <Typography variant="body2">{text}</Typography>;
-                },
-            },
-            {
-                header: 'MEGA',
-                accessorKey: 'megaLink',
-                size: 160,
-                Cell: ({ cell }) =>
-                    cell.getValue() ? (
-                        <Typography variant="body2">
-                            <LinkIcon fontSize="small" style={{ verticalAlign: 'middle' }} />{' '}
-                            <MUILink href={cell.getValue()} target="_blank" rel="noreferrer" underline="hover" >
-                                Abrir
-                            </MUILink>
-                        </Typography>
-                    ) : (
-                        <Typography variant="body2" color="text.secondary">
-                            -
-                        </Typography>
-                    ),
-            },
-        ],
-        [],
-    );
+        },
+    ], [imgUrl, openSimilarViewer]);
 
     // Instancia de la tabla
     const table = useMaterialReactTable({
@@ -878,45 +712,18 @@ export default function AssetsAdminPage() {
         enableColumnFilters: false,
         enableGlobalFilter: false,
         enableRowActions: true,
-        positionActionsColumn: 'first',
-        displayColumnDefOptions: { 'mrt-row-actions': { size: 80 } },
+        positionActionsColumn: 'last',
+        displayColumnDefOptions: { 'mrt-row-actions': { header: 'Acciones', size: 170 } },
+        enableColumnActions: false,
+        rowVirtualizerOptions: { estimateSize: () => 72, overscan: 8 },
+        muiTableHeadCellProps: { sx: { fontSize: 11, fontWeight: 500, color: '#94a3b8', whiteSpace: 'nowrap', py: 1.25 } },
+        muiTableBodyCellProps: { sx: { py: 1, fontSize: 12, borderBottomColor: 'rgba(148,163,184,.14)' } },
         enableTopToolbar: false,
-        renderRowActions: ({ row }) => (
-            <Box sx={{ display: 'flex', gap: 0 }}>
-                <IconButton
-                    aria-label="Editar"
-                    size="small"
-                    onClick={() => openAssetModal(row.original)}
-                    sx={{ p: 0.2 }}
-                    title="Ver / Editar STL"
-                >
-                    <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                    aria-label="Borrar"
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(row.original)}
-                    sx={{ p: 0.2 }}
-                    title="Eliminar STL"
-                >
-                    <DeleteIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                    aria-label="Refrescar link"
-                    size="small"
-                    onClick={() => handleRestoreLink(row.original)}
-                    sx={{ p: 0.2 }}
-                    title="Verificar y restaurar link MEGA"
-                >
-                    <CachedIcon fontSize="small" />
-                </IconButton>
-            </Box>
-        ),
+        renderRowActions: ({ row }) => <AssetRowActions asset={row.original} onView={asset => openAssetModal(asset, 'view')} onEdit={asset => openAssetModal(asset, 'edit')} onDelete={handleDelete} onRestore={handleRestoreLink} />,
         muiTableBodyRowProps: ({ row }) => {
             // Cambia el color de fondo si el link estÃƒÂ¡ caÃƒÂ­do
             return row.original.megaLinkAlive === false
-                ? { sx: { backgroundColor: '#fc8282' } } // rojo claro, puedes ajustar el color
+                ? { sx: { backgroundColor: 'rgba(240,128,128,0.07)' } } // rojo claro, puedes ajustar el color
                 : {};
         },
     });
@@ -930,7 +737,12 @@ export default function AssetsAdminPage() {
         isPremium: !!asset.isPremium,
     });
 
-    const openAssetModal = async (asset) => {
+    const openAssetModal = async (asset, mode = 'edit') => {
+        const requestId = ++assetDetailRequestRef.current;
+        setAssetModalMode(mode);
+        setAssetDetailError('');
+        setDetail(null);
+        setLoadingDetail(true);
         const idx = filtered.findIndex((a) => a.id === asset.id);
         setSelected(asset);
         const form = buildEditFormFromAsset(asset);
@@ -940,23 +752,26 @@ export default function AssetsAdminPage() {
         setEditPreviewIndex(0);
         setAssetModalIndex(idx >= 0 ? idx : 0);
         setAssetModalOpen(true);
-        await loadMeta();
+        if (mode === 'edit') await loadMeta();
         // Cargar detalle completo
         try {
             setLoadingDetail(true);
             const res = await http.getData(`/assets/${asset.id}`);
-            if (res.data) {
+            if (res.data && requestId === assetDetailRequestRef.current) {
                 setDetail(res.data);
                 const freshForm = buildEditFormFromAsset(res.data);
                 setEditForm(freshForm);
                 setInitialEditForm(JSON.stringify(freshForm));
             }
-        } catch {} finally { setLoadingDetail(false); }
+        } catch { if (requestId === assetDetailRequestRef.current) setAssetDetailError('No se pudo cargar la información completa. Cierra y vuelve a abrir el modelo.'); } finally { if (requestId === assetDetailRequestRef.current) setLoadingDetail(false); }
     };
 
     const loadAssetByIndex = async (idx) => {
         const asset = filtered[idx];
         if (!asset) return;
+        const requestId = ++assetDetailRequestRef.current;
+        setDetail(null);
+        setAssetDetailError('');
         setSelected(asset);
         setAssetModalIndex(idx);
         const form = buildEditFormFromAsset(asset);
@@ -967,13 +782,13 @@ export default function AssetsAdminPage() {
         try {
             setLoadingDetail(true);
             const res = await http.getData(`/assets/${asset.id}`);
-            if (res.data) {
+            if (res.data && requestId === assetDetailRequestRef.current) {
                 setDetail(res.data);
                 const freshForm = buildEditFormFromAsset(res.data);
                 setEditForm(freshForm);
                 setInitialEditForm(JSON.stringify(freshForm));
             }
-        } catch {} finally { setLoadingDetail(false); }
+        } catch { if (requestId === assetDetailRequestRef.current) setAssetDetailError('No se pudo cargar la información completa. Cierra y vuelve a abrir el modelo.'); } finally { if (requestId === assetDetailRequestRef.current) setLoadingDetail(false); }
     };
 
     const isDirty = () => {
@@ -985,7 +800,7 @@ export default function AssetsAdminPage() {
     const onNavigateWithDirtyCheck = async (dir) => {
         const nextIdx = dir === 'prev' ? assetModalIndex - 1 : assetModalIndex + 1;
         if (nextIdx < 0 || nextIdx >= filtered.length) return;
-        if (isDirty()) {
+        if (assetModalMode === 'edit' && isDirty()) {
             const answer = await confirmAlert(
                 'Cambios sin guardar',
                 '¿Qué deseas hacer con los cambios actuales?',
@@ -994,13 +809,25 @@ export default function AssetsAdminPage() {
                 'warning',
             );
             if (answer) {
-                await handleSaveEdit();
+                if (!await handleSaveEdit({ closeAfterSave: false })) return;
             }
         }
         await loadAssetByIndex(nextIdx);
     };
 
-    const closeAssetModal = () => {
+    const cancelAssetEditing = async () => {
+        if (isDirty() && !await confirmAlert('Descartar cambios', '¿Quieres descartar las modificaciones de este modelo?', 'Descartar', 'Continuar editando', 'warning')) return;
+        const form = buildEditFormFromAsset(detail || selected || {});
+        setEditForm(form);
+        setInitialEditForm(JSON.stringify(form));
+        setEditImageFiles([]);
+        setEditPreviewIndex(0);
+        setAssetModalMode('view');
+    };
+
+    const closeAssetModal = async () => {
+        if (assetModalMode === 'edit' && isDirty() && !await confirmAlert('Descartar cambios', '¿Quieres cerrar y descartar las modificaciones?', 'Descartar', 'Continuar editando', 'warning')) return;
+        assetDetailRequestRef.current++;
         setAssetModalOpen(false);
         setSelected(null);
         setDetail(null);
@@ -1070,8 +897,8 @@ export default function AssetsAdminPage() {
     const onSelectPreview = (idx) => setEditPreviewIndex(idx);
 
     // Guardar ediciÃƒÂ³n (sin categorÃƒÂ­a legacy)
-    const handleSaveEdit = async () => {
-        if (!selected) return;
+    const handleSaveEdit = async (options = {}) => {
+        if (assetModalMode !== 'edit' || !selected || loadingDetail || assetDetailError) return false;
         const ok = await confirmAlert(
             'Confirmar cambios',
             '¿Deseas aplicar las modificaciones a este STL?',
@@ -1079,7 +906,7 @@ export default function AssetsAdminPage() {
             'Cancelar',
             'question',
         );
-        if (!ok) return;
+        if (!ok) return false;
         try {
             setLoading(true);
             await http.putData('/assets', selected.id, {
@@ -1103,19 +930,27 @@ export default function AssetsAdminPage() {
                     fd,
                 );
             }
-            setAssetModalOpen(false);
-            setSelected(null);
-            setDetail(null);
-            resetEdit();
-            setInitialEditForm(null);
+            if (options.closeAfterSave !== false) {
+                assetDetailRequestRef.current++;
+                setAssetModalOpen(false);
+                setSelected(null);
+                setDetail(null);
+                resetEdit();
+                setInitialEditForm(null);
+            } else {
+                setEditImageFiles([]);
+                setInitialEditForm(JSON.stringify(editForm));
+            }
             setRefreshTick((n) => n + 1);
             await successAlert(
                 'Actualizado',
                 'El STL fue actualizado correctamente',
             );
+            return true;
         } catch (e) {
             console.error('Error guardando cambios', e);
             await errorAlert('Error', 'No se pudieron guardar los cambios');
+            return false;
         } finally {
             setLoading(false);
         }
@@ -1422,7 +1257,7 @@ export default function AssetsAdminPage() {
                 Number(row?.id || 0) === id ? { ...row, images: safeImages } : row,
             ),
         );
-        
+
         const updateGroups = (prevGroups) =>
             (Array.isArray(prevGroups) ? prevGroups : []).map((group) => ({
                 ...group,
@@ -1895,25 +1730,13 @@ export default function AssetsAdminPage() {
         await runMetaDescriptionGeneration('selected', metaSelectedIds);
     };
 
-    const handleGenerateAllDescriptions = async () => {
-        const ok = await confirmAlert(
-            'Generar descripciones (todos)',
-            'Esto intentarÃƒÂ¡ generar descripciones IA para todos los assets segÃƒÂºn el lÃƒÂ­mite configurado. Ã‚Â¿Deseas continuar?',
-            'SÃƒÂ­, generar',
-            'Cancelar',
-            'warning',
-        );
-        if (!ok) return;
-        await runMetaDescriptionGeneration('all');
-    };
-
     const handleGenerateMissingDescriptions = async () => {
         const ok = await confirmAlert(
             'Generar descripciones (faltantes)',
-            'Esto generarÃƒÂ¡ descripciones IA solo para assets con descripciÃƒÂ³n faltante. Ã‚Â¿Deseas continuar?',
-            'SÃƒÂ­, generar',
+            'Se generarán y guardarán descripciones con IA únicamente para modelos sin descripción, según el límite del servidor. Esta operación puede generar costes de IA. ¿Quieres continuar?',
+            'Sí, generar faltantes',
             'Cancelar',
-            'question',
+            'warning',
         );
         if (!ok) return;
         await runMetaDescriptionGeneration('missing');
@@ -1926,10 +1749,10 @@ export default function AssetsAdminPage() {
     const handleQuickAdultos = async (assetId) => {
         const id = Number(assetId);
         if (!Number.isFinite(id) || id <= 0) return;
-        
+
         // Agregar a la lista local de procesamiento
         setMarkingAdultIds(prev => new Set([...prev, id]));
-        
+
         try {
             const row = findAssetInAllSources(id);
             const currentCategories = Array.isArray(row?.categories) ? row.categories : [];
@@ -2175,35 +1998,43 @@ export default function AssetsAdminPage() {
         setTagExcludeFilter(null);
         setStatusFilter('');
         setSeoFilter('');
+        setSizeRange({ min: '', max: '' });
         setShowFreeOnly(false);
         setPageIndex(0);
         setRefreshTick((n) => n + 1);
     };
 
     // Handler: buscar por ID (movido fuera de MRT)
-    const handleBuscarId = async (idVal) => {
-        const targetId = idVal !== undefined ? idVal : assetIdQ;
-        const idNum = Number(targetId);
-        if (!Number.isFinite(idNum) || idNum <= 0) return;
-        try {
-            setLoading(true);
-            const res = await http.getData(`/assets/${idNum}`);
-            const item = res.data;
-            setAssets(item ? [item] : []);
-            setRowCount(item ? 1 : 0);
-            setPageIndex(0);
-        } catch (e) {
-            setAssets([]);
-            setRowCount(0);
-        } finally {
-            setLoading(false);
-        }
+    const handleBuscarId = (idVal) => {
+        const idNum = Number(idVal !== undefined ? idVal : assetIdQ);
+        if (!Number.isSafeInteger(idNum) || idNum <= 0) return;
+        setAssetIdQ(String(idNum));
+        setPageIndex(0);
+        setMetaPageIndex(0);
+        setRefreshTick(n => n + 1);
     };
 
     return (
         <ThemeProvider theme={darkTheme}>
-            <div className="p-3 mb-5">
-                <h1 className="dashboard-title mb-3">Assets & AI Tools</h1>
+            <div className="assets-admin-page mb-5">
+                <div className="assets-page-tabs" role="tablist" aria-label="Vistas de modelos" onKeyDown={(event) => {
+                    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                    if (!keys.includes(event.key)) return;
+                    event.preventDefault();
+                    const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (tab + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+                    React.startTransition(() => setTab(next));
+                    event.currentTarget.querySelectorAll('[role="tab"]')[next]?.focus();
+                }}>
+                    {[
+                        { label: 'STL List', Icon: ViewListOutlined, count: rowCount },
+                        { label: 'Similitud visual', Icon: ImageSearchOutlined },
+                        { label: 'Meta SEO', Icon: ManageSearchOutlined, count: rowCount },
+                    ].map(({ label, Icon, count }, index) => (
+                        <button type="button" role="tab" aria-selected={tab === index} key={label} className={tab === index ? 'is-active' : undefined} onClick={() => React.startTransition(() => setTab(index))}>
+                            <Icon aria-hidden="true" />{label}{count !== undefined && <span className="assets-tab-count">{count.toLocaleString()}</span>}
+                        </button>
+                    ))}
+                </div>
 
                 {/* Toolbar global compartido entre STL-LIST y META-SEO */}
                 <Box sx={{ mb: 2 }}>
@@ -2246,86 +2077,24 @@ export default function AssetsAdminPage() {
                         setStatusFilter={(v) => { setStatusFilter(v); setPageIndex(0); }}
                         seoFilter={seoFilter}
                         setSeoFilter={(v) => { setSeoFilter(v); setPageIndex(0); }}
+                        lexicalSort={lexicalSort}
+                        onLexicalSortChange={(checked) => { setLexicalSort(checked); setPageIndex(0); setMetaPageIndex(0); }}
+                        sizeRange={sizeRange}
+                        onSizeRangeChange={value => { setSizeRange(value); setAssetIdQ(''); setPageIndex(0); setMetaPageIndex(0); }}
                         onClearAll={handleClearAllFilters}
                     />
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-                    <Tabs
-                        value={tab}
-                        onChange={(_, v) => React.startTransition(() => setTab(v))}
-                        sx={{
-                            bgcolor: (theme) =>
-                                theme.palette.mode === 'dark'
-                                    ? 'rgba(30,30,30,0.95)'
-                                    : 'background.paper',
-                            borderRadius: 2,
-                            boxShadow: (theme) =>
-                                theme.palette.mode === 'dark'
-                                    ? '0 2px 8px #0008'
-                                    : '0 2px 8px #8882',
-                            flexGrow: 1
-                        }}
-                        TabIndicatorProps={{
-                            style: { background: '#7c4dff' },
-                        }}
-                    >
-                        <Tab
-                            label={`STL-LIST (${rowCount})`}
-                            sx={{
-                                color: (theme) =>
-                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
-                            }}
-                        />
-                        <Tab
-                            label="SIMILAR-VISUAL"
-                            sx={{
-                                color: (theme) =>
-                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
-                            }}
-                        />
-                        <Tab
-                            label={`META-SEO (${rowCount})`}
-                            sx={{
-                                color: (theme) =>
-                                    theme.palette.mode === 'dark' ? '#fff' : undefined,
-                            }}
-                        />
-                    </Tabs>
-                    
-                    {/* Switch de Agrupamiento Léxico en Memoria */}
-                    <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        bgcolor: 'rgba(30,30,30,0.95)', 
-                        px: 2, 
-                        py: 1, 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px #0008',
-                        border: '1px solid rgba(255,255,255,0.08)'
-                    }}>
-                        <Switch
-                            checked={lexicalSort}
-                            onChange={(e) => {
-                                setLexicalSort(e.target.checked);
-                                setPageIndex(0);
-                                setMetaPageIndex(0);
-                            }}
-                            color="secondary"
-                            size="small"
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
-                            Agrupar Similares (Texto)
-                        </Typography>
-                    </Box>
-                </Box>
             {tab === 0 && (
                 <AssetsListTab
                     loading={loading}
                     table={table}
                     // unified modal
                     assetModalOpen={assetModalOpen}
+                    assetModalMode={assetModalMode}
+                    assetDetailError={assetDetailError}
+                    onStartEdit={async () => { await loadMeta(); setAssetModalMode('edit'); }}
+                    onCancelEdit={cancelAssetEditing}
                     onCloseAssetModal={closeAssetModal}
                     detail={detail}
                     selected={selected}
@@ -2422,9 +2191,6 @@ export default function AssetsAdminPage() {
                     setMetaReviewMode={setMetaReviewMode}
                     metaBusy={metaBusy}
                     loading={loading}
-                    handleGenerateAllDescriptions={
-                        handleGenerateAllDescriptions
-                    }
                     handleGenerateMissingDescriptions={
                         handleGenerateMissingDescriptions
                     }
@@ -2488,6 +2254,7 @@ export default function AssetsAdminPage() {
 
             <Dialog
                 open={similarViewer.open}
+                aria-label={`Imagen ampliada de ${similarViewer.assetTitle || 'modelo'}`}
                 onClose={closeSimilarViewer}
                 maxWidth="lg"
                 disableScrollLock={true}
@@ -2513,7 +2280,7 @@ export default function AssetsAdminPage() {
                         <Box
                             component="img"
                             src={imgUrl(similarViewer.image)}
-                            alt="Preview"
+                            alt={similarViewer.assetTitle || 'Imagen ampliada del modelo'}
                             sx={{
                                 maxWidth: '100%',
                                 maxHeight: '90vh',
@@ -2524,7 +2291,7 @@ export default function AssetsAdminPage() {
                     </Box>
                 )}
             </Dialog>
-            
+
             {/* ═══════════ DELETE SIDEBAR ALERTS ═══════════ */}
             {deleteAlerts.length > 0 && (
                 <Box sx={{

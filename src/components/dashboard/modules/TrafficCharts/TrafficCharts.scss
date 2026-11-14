@@ -211,3 +211,68 @@
     }
   }
 }
+
+/* Compact, readable chart grid; explanations only appear on demand. */
+.traffic-charts-module {
+  padding: 0; margin-top: 8px; background: transparent; box-shadow: none;
+  .charts-list { display: grid; grid-template-columns: repeat(12,minmax(0,1fr)); gap: 16px; align-items: start; }
+  .chart-block { grid-column: span 6; min-width: 0; border: 1px solid rgba(148,163,184,.18); border-radius: 10px; background: #101a29; padding: 16px; }
+  .chart-block--traffic { grid-column: span 8; }
+  .chart-block--user-registrations { grid-column: span 4; }
+  .chart-block--traffic, .chart-block--user-registrations {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    > .charts-controls { min-height: 112px; }
+    > .chart-canvas-wrap { flex: 1; }
+  }
+  .chart-block--sales-revenue {
+    .chart-canvas-wrap { height: 150px; min-height: 150px; }
+    .chart-loading, .chart-empty { height: 150px; }
+  }
+  .chart-block > .charts-controls { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 16px; }
+  .chart-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .chart-heading h4 { margin: 0; font-size: 14px; line-height: 1.4; font-weight: 600; color: #e2e8f0; }
+  .chart-help { position: relative; }
+  .chart-help-trigger { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: transparent; border: 1px solid #45546b; color: #a7b7cc; font-size: 12px; cursor: pointer; }
+  .chart-help-content { display: none; position: absolute; left: -16px; top: 100%; z-index: 20; width: min(440px,calc(100vw - 80px)); max-height: 360px; overflow: auto; padding: 16px; border: 1px solid #45546b; border-radius: 8px; background: #182334; color: #bac7da; font-size: 12px; line-height: 1.6; box-shadow: 0 12px 30px #0007; }
+  .chart-help:is(:hover,:focus-within,.is-open) .chart-help-content { display: block; }
+  .chart-block--user-registrations .chart-help-content { left: auto; right: -16px; }
+  .chart-block--user-registrations .chart-heading { width: 100%; }
+  .registration-view { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; padding: 2px; border: 1px solid #334155; border-radius: 6px; flex-shrink: 0; }
+  .registration-view button { padding: 4px 6px; border: 0; border-radius: 4px; color: #94a3b8; background: transparent; font-size: 10px; line-height: 1.3; white-space: nowrap; cursor: pointer; }
+  .registration-view button[aria-pressed='true'] { color: #e0f2fe; background: #075985; }
+  .registration-view button:hover:not(:disabled) { color: #e2e8f0; }
+  .registration-view button:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+  .registration-view button:disabled { opacity: .45; cursor: help; }
+  .charts-controls-right { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .preset-btns { flex-wrap: wrap; gap: 2px; padding: 2px; }
+  .preset-btn { font-size: 11px; padding: 4px 7px; }
+  .preset-btn.active { background: #075985; color: #e0f2fe; }
+  .date-range-picker { gap: 5px; }
+  .date-input { width: 120px; padding: 4px 6px; font-size: 11px; }
+  .chart-canvas-wrap { height: 280px; min-height: 280px; max-height: none; }
+  .chart-loading, .chart-empty { height: 280px; }
+  .chart-block--traffic-sources .chart-canvas-wrap { overflow-x: auto; }
+  .chart-block--traffic-sources .chart-canvas-wrap > div { min-width: 520px; }
+}
+@media (max-width: 1250px) {
+  .traffic-charts-module {
+    .chart-block, .chart-block--traffic, .chart-block--user-registrations { grid-column: 1 / -1; }
+    .chart-block--user-registrations .chart-help-content { left: -16px; right: auto; }
+  }
+}
+@media (max-width: 550px) {
+  .traffic-charts-module { padding: 0; .chart-block { padding: 12px; } .charts-controls-right { flex-direction: row; } }
+}
+
+.traffic-charts-module {
+  .traffic-sources-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  .source-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin: 0 0 10px; padding: 0 0 8px; border-bottom: 1px solid rgba(148,163,184,.15); flex-shrink: 0; }
+  .source-summary > div { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .source-summary dt { font-size: 11px; color: #94a3b8; font-weight: 400; }
+  .source-summary dd { margin: 0; font-size: 13px; color: #e2e8f0; font-weight: 600; }
+  .source-table-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
+  .source-table-head { position: sticky; top: 0; z-index: 1; background: #101a29; }
+  .source-table-row { display: grid; grid-template-columns: 28px 1fr 100px 80px 80px 54px; gap: 10px; align-items: center; padding: 6px 4px; border-radius: 5px; }
+}

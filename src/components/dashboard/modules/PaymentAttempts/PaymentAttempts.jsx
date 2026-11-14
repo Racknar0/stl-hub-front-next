@@ -70,7 +70,7 @@ function buildAlerts(items) {
 
 const PaymentAttempts = () => {
   const http = React.useMemo(() => new HttpService(), [])
-  const [days, setDays] = React.useState(7)
+  const [days, setDays] = React.useState(30)
   const [provider, setProvider] = React.useState('')
   const [outcomeFilter, setOutcomeFilter] = React.useState('')
   const [loading, setLoading] = React.useState(false)

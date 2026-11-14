@@ -11,6 +11,12 @@ $pr-ok: #22c55e;
 $pr-warn: #f59e0b;
 $pr-err: #ef4444;
 
+// A month of image tiles should not sit on one large blurred GPU surface.
+.pinterest-calendar-container {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 // ---------- Botones genéricos ----------
 .pr-btn {
   background: rgba(255, 255, 255, 0.05);
@@ -161,7 +167,7 @@ $pr-err: #ef4444;
     .err { background: $pr-err; }
   }
 
-  // Todas las miniaturas del día (hasta 15) en una cuadrícula de 5 columnas
+  // Four cached thumbnails and a count; the full day opens in the side panel.
   .pr-day-thumbs {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -182,6 +188,18 @@ $pr-err: #ef4444;
       position: absolute; inset: 0; display: grid; place-items: center;
       background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 0.72rem; font-weight: 700;
     }
+  }
+  .pr-day-more {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 5px;
+    background: rgba(148, 163, 184, 0.08);
+    color: #cbd5e1;
+    font-size: 0.7rem;
+    font-weight: 600;
   }
 
   .pr-gap-label { margin-top: auto; font-size: 0.66rem; color: rgba(245, 158, 11, 0.8); }

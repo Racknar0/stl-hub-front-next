@@ -7,13 +7,12 @@ import {
   PointElement,
   LineElement,
   BarElement,
-  ArcElement,
   Filler,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
+import { Line, Bar } from 'react-chartjs-2'
 import HttpService from '@/services/HttpService'
 import './TrafficCharts.scss'
 
@@ -23,7 +22,6 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
-  ArcElement,
   Filler,
   Title,
   Tooltip,
@@ -36,6 +34,20 @@ const CHART_TYPES = [
   { value: 'visitors-vs-sessions', label: 'Visitantes vs Sesiones' },
   { value: 'plan-clicks', label: 'Clicks en Elegir Plan' },
 ]
+
+const CHART_TITLES = {
+  traffic: 'Evolución del tráfico',
+  'user-registrations': 'Nuevos registros',
+  'traffic-sources': 'Origen de las visitas',
+  'downloads-timeseries': 'Descargas y búsquedas',
+  'plan-clicks': 'Interés en los planes',
+  'freebie-rolls': 'Tiradas de freebies',
+  'sales-revenue': 'Ingresos por pasarela',
+  'top-searches': 'Búsquedas más frecuentes',
+  'top-downloads': 'Modelos más descargados',
+  'visitors-vs-sessions': 'Visitantes y sesiones',
+  'top-pages': 'Páginas más visitadas',
+}
 
 function formatDateForInput(date) {
   const offset = date.getTimezoneOffset()
@@ -148,6 +160,79 @@ const chartColors = {
   searches: { border: '#ec4899', bg: 'rgba(236,72,153,0.15)' },
 }
 
+const REGISTRATION_SOURCES = {
+  google: { label: 'Google', color: '#34d399' },
+  pinterest: { label: 'Pinterest', color: '#f43f5e' },
+  tiktok: { label: 'TikTok', color: '#2dd4bf' },
+  facebook: { label: 'Facebook', color: '#60a5fa' },
+  meta: { label: 'Meta', color: '#818cf8' },
+  instagram: { label: 'Instagram', color: '#c084fc' },
+  bing: { label: 'Bing', color: '#22d3ee' },
+  youtube: { label: 'YouTube', color: '#fb7185' },
+  telegram: { label: 'Telegram', color: '#38bdf8' },
+  direct: { label: 'Directo', color: '#a78bfa' },
+  other: { label: 'Otro', color: '#f59e0b' },
+  unknown: { label: 'Sin identificar', color: '#94a3b8' },
+}
+
+function registrationSourceChart(payload, from, to, totalBuckets = []) {
+  if (!Array.isArray(payload.sourceSeries) || !Array.isArray(payload.sourceTotals)) return null
+  const sourceByDate = new Map(payload.sourceSeries.map(row => [row.date, row]))
+  const granularity = payload.granularity || 'day'
+  const groupedPeriod = ['week', 'month'].includes(granularity)
+  const buckets = totalBuckets.length ? totalBuckets : (payload.series || [])
+  // Legacy totals include the whole first week/month. Use the same bucket
+  // boundaries so changing the view never loses registrations from that query.
+  const firstDay = groupedPeriod && buckets[0]?.date ? buckets[0].date : from
+  const first = new Date(`${firstDay}T00:00:00Z`)
+  const end = new Date(`${to}T00:00:00Z`)
+  const dailyRows = []
+  // Advance date labels in UTC without shifting their Bogotá calendar day.
+  for (let date = first, guard = 0; date <= end && guard < 10000; date = new Date(date.getTime() + 86400000), guard++) {
+    const key = date.toISOString().slice(0, 10)
+    const channels = sourceByDate.get(key)?.channels || {}
+    dailyRows.push({ date: key, channels: Object.fromEntries(Object.entries(channels).map(([source, count]) => [source, Math.max(0, Number(count) || 0)])) })
+  }
+  const bucketDate = date => {
+    if (granularity === 'month') return `${date.slice(0, 7)}-01`
+    const day = new Date(`${date}T00:00:00Z`)
+    day.setUTCDate(day.getUTCDate() - (day.getUTCDay() + 6) % 7)
+    return day.toISOString().slice(0, 10)
+  }
+  const groupedDays = new Map()
+  if (groupedPeriod) for (const day of dailyRows) {
+    const key = bucketDate(day.date)
+    const channels = groupedDays.get(key) || {}
+    for (const [source, count] of Object.entries(day.channels)) channels[source] = (channels[source] || 0) + count
+    groupedDays.set(key, channels)
+  }
+  const days = groupedPeriod ? buckets.map(bucket => ({ date: bucket.date, channels: groupedDays.get(bucket.date) || {} })) : dailyRows
+  const totals = new Map()
+  for (const day of days) for (const [source, count] of Object.entries(day.channels)) totals.set(source, (totals.get(source) || 0) + count)
+  const leading = [...totals].filter(([source, count]) => count > 0 && !['direct', 'unknown', 'other'].includes(source))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 4).map(([source]) => source)
+  const grouped = [...totals].filter(([source, count]) => count > 0 && !leading.includes(source) && !['direct', 'unknown'].includes(source)).map(([source]) => source)
+  const columns = [...leading.map(source => ({ source, keys: [source] })),
+    ...((totals.get('direct') || 0) > 0 ? [{ source: 'direct', keys: ['direct'] }] : []),
+    ...(grouped.length ? [{ source: 'other', keys: grouped }] : []),
+    ...((totals.get('unknown') || 0) > 0 ? [{ source: 'unknown', keys: ['unknown'] }] : []),
+  ]
+  return {
+    granularity: groupedPeriod ? granularity : 'day',
+    labels: days.map(day => formatLabel(day.date, groupedPeriod ? granularity : 'day')),
+    dates: days.map(day => day.date),
+    totals: days.map(day => Object.values(day.channels).reduce((sum, count) => sum + count, 0)),
+    details: days.map(day => Object.entries(day.channels).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1])
+      .map(([source, count]) => `${REGISTRATION_SOURCES[source]?.label || source}: ${count.toLocaleString('es-CO')}`)),
+    datasets: columns.map(({ source, keys }) => ({
+      label: REGISTRATION_SOURCES[source]?.label || source,
+      data: days.map(day => keys.reduce((sum, key) => sum + (day.channels[key] || 0), 0)),
+      backgroundColor: REGISTRATION_SOURCES[source]?.color || '#f59e0b',
+      borderColor: 'transparent', borderRadius: 2, maxBarThickness: 28, stack: 'sources',
+    })),
+  }
+}
+
 const commonLineOpts = {
   responsive: true,
   maintainAspectRatio: false,
@@ -225,12 +310,11 @@ const barOpts = {
 const CHART_DESCRIPTIONS = {
     'traffic': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Visión General del Tráfico y Registros:</strong> Mide la actividad y el crecimiento de tu comunidad día a día:<br/>
+        <strong style={{ color: '#f8fafc' }}>Visión general del tráfico:</strong> Mide la actividad de tu comunidad día a día. Los registros tienen su propio gráfico y escala.<br/>
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
           <li><strong style={{ color: '#ff0844' }}>Visitantes:</strong> Personas reales o dispositivos únicos que entraron.</li>
           <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> Visitas totales.</li>
           <li><strong style={{ color: '#4facfe' }}>Vistas de Página:</strong> La suma de todos los modelos o páginas que cargaron.</li>
-          <li><strong style={{ color: '#f59e0b' }}>Registros:</strong> Nuevos usuarios que crearon una cuenta.</li>
         </ul>
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si 1 visitante entra 2 veces, mira 5 modelos y finalmente se registra = 1 Visitante, 2 Sesiones, 5 Vistas, 1 Registro.
       </>
@@ -242,7 +326,7 @@ const CHART_DESCRIPTIONS = {
           <li><strong style={{ color: '#4facfe' }}>Ruta de la Página (URL):</strong> Te muestra si es el Inicio, la página de búsqueda, o un modelo en específico.</li>
           <li><strong style={{ color: '#00f2fe' }}>Vistas Acumuladas:</strong> La cantidad exacta de veces que esa página fue abierta.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves que un modelo de "Busto de Batman" tiene 300 visitas y el de "Spiderman" solo 50, ya sabes cuál franquicia está más de moda.<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si ves que un modelo de &quot;Busto de Batman&quot; tiene 300 visitas y el de &quot;Spiderman&quot; solo 50, ya sabes cuál franquicia está más de moda.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Detecta tendencias reales. Si ves que un modelo se vuelve sorpresivamente popular aquí, úsalo para tus anuncios principales o sube colecciones similares porque eso es lo que la gente quiere comprar.
       </>
     ),
@@ -250,8 +334,8 @@ const CHART_DESCRIPTIONS = {
       <>
         <strong style={{ color: '#f8fafc' }}>Termómetro de Fidelidad (Retención):</strong> Compara a las personas únicas frente a las veces totales que regresan a la web.<br/>
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
-          <li><strong style={{ color: '#ff0844' }}>Visitantes Únicos:</strong> La línea roja te dice cuántos "humanos" distintos pisaron la web.</li>
-          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> La línea azul suma las veces que esos "humanos" entraron al sitio.</li>
+          <li><strong style={{ color: '#ff0844' }}>Visitantes Únicos:</strong> La línea roja te dice cuántos &quot;humanos&quot; distintos pisaron la web.</li>
+          <li><strong style={{ color: '#00f2fe' }}>Sesiones:</strong> La línea azul suma las veces que esos &quot;humanos&quot; entraron al sitio.</li>
         </ul>
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si tienes 1,000 Visitantes pero 2,500 Sesiones, tienes una comunidad súper fiel que entra en promedio 2.5 veces. ¡Los tienes enganchados!<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si ves que las sesiones casi empatan a los visitantes (ej. 1,000 y 1,050), significa que entran, miran un rato y casi no regresan. Esto te indica que debes usar tácticas como correos electrónicos o notificaciones para recordarles que vuelvan.
@@ -259,13 +343,13 @@ const CHART_DESCRIPTIONS = {
     ),
     'plan-clicks': (
       <>
-        <strong style={{ color: '#f8fafc' }}>Intención de Compra Real:</strong> Mide cuántas veces tus usuarios sienten el impulso de presionar "Elegir Plan" (antes de sacar la tarjeta).<br/>
+        <strong style={{ color: '#f8fafc' }}>Intención de Compra Real:</strong> Mide cuántas veces tus usuarios sienten el impulso de presionar &quot;Elegir Plan&quot; (antes de sacar la tarjeta).<br/>
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
           <li><strong style={{ color: '#a78bfa' }}>Total:</strong> Clics globales sumados de todos tus planes.</li>
           <li><strong style={{ color: '#4facfe' }}>Por Plan (30, 90, 180, 365 días):</strong> Desglose en barras individuales para ver qué oferta les resultó más atractiva visualmente.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que casi nadie le da clic a "30 días", pero el de "180 días" se lleva el 80% de los clics.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el "cuello de botella" de tu negocio.<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Notas que casi nadie le da clic a &quot;30 días&quot;, pero el de &quot;180 días&quot; se lleva el 80% de los clics.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tienes muchísimos clics en los planes pero pocas ventas reales, significa que el precio es atractivo, pero tal vez la gente desconfía al momento de pagar o la pasarela falla. Te indica exactamente dónde está el &quot;cuello de botella&quot; de tu negocio.<br/>
         <span style={{ color: '#fbbf24' }}>🔎 Qué pasó después del clic:</span> en la pestaña <a href="/dashboard?tab=payments" style={{ color: '#a5b4fc' }}>💳 Pagos</a> ves cada intento (abandonó, rechazado, pendiente, pagado) con su motivo.
       </>
     ),
@@ -275,7 +359,7 @@ const CHART_DESCRIPTIONS = {
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
           <li><strong style={{ color: '#ec4899' }}>Términos más buscados:</strong> Las palabras exactas que la gente escribe buscando modelos.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si mucha gente busca "Pokemon" y tú no tienes esos modelos, la barra será muy alta y sabrás que ahí hay dinero.<br/>
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Si mucha gente busca &quot;Pokemon&quot; y tú no tienes esos modelos, la barra será muy alta y sabrás que ahí hay dinero.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si ves términos populares que no tienes en tu tienda, ¡crea o sube esos modelos urgente! Estás perdiendo ventas.
       </>
     ),
@@ -285,9 +369,12 @@ const CHART_DESCRIPTIONS = {
         <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#cbd5e1' }}>
           <li><strong style={{ color: '#38bdf8' }}>Descargas Totales:</strong> Cuántas veces un usuario o suscriptor se descargó tu archivo STL.</li>
         </ul>
-        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> El modelo "Casco Iron Man" se descargó 50 veces esta semana.<br/>
-        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Identifica a tus "Best Sellers" y promuévelos en redes sociales o úsalos como gancho principal en tus anuncios.
+        <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> El modelo &quot;Casco Iron Man&quot; se descargó 50 veces esta semana.<br/>
+        <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Identifica a tus &quot;Best Sellers&quot; y promuévelos en redes sociales o úsalos como gancho principal en tus anuncios.
       </>
+    ),
+    'freebie-rolls': (
+      <>Total de tiradas registradas cada día y usuarios que participaron. Fechas en UTC, como el contador de tiradas. Los días sin actividad aparecen en cero. Los reinicios manuales del contador y la eliminación de usuarios pueden reducir el histórico disponible.</>
     ),
     'sales-revenue': (
       <>
@@ -308,6 +395,7 @@ const CHART_DESCRIPTIONS = {
         </ul>
         <span style={{ color: '#a78bfa' }}>💡 Ejemplo:</span> Entraron 120 usuarios nuevos este mes.<br/>
         <span style={{ color: '#34d399' }}>🚀 Cómo sacarle partido:</span> Si tu tráfico es alto pero tus registros son bajos, necesitas optimizar la página de creación de cuenta o regalar algo a cambio de su registro.
+        <p style={{ margin: '8px 0 0' }}><strong>Por origen:</strong> muestra los registros según su procedencia guardada. Los registros sin información aparecen en gris como «Sin identificar»; no se consideran tráfico directo. Las fechas corresponden a Bogotá. En rangos largos se agrupan las mismas semanas o meses de la vista Total. Si el servidor todavía no ofrece el desglose, puedes seguir consultando el total.</p>
       </>
     ),
     'downloads-timeseries': (
@@ -339,28 +427,32 @@ const CHART_DESCRIPTIONS = {
 
 // Map active preset to backend key
 const getPresetKey = (preset) => preset
+const FIFTEEN_DAY_CHARTS = new Set(['traffic', 'user-registrations', 'downloads-timeseries', 'plan-clicks', 'visitors-vs-sessions', 'freebie-rolls'])
 
 // --- ChartContainer Component ---
-function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, renderChart }) {
-  const [fromDate, setFromDate] = useState(() => formatDateForInput(daysAgo(7)))
-  const [toDate, setToDate] = useState(() => formatDateForInput(new Date()))
-  const [activePreset, setActivePreset] = useState('7d')
+function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, renderChart, headerControls }) {
+  const inputDate = date => id === 'freebie-rolls' ? date.toISOString().slice(0, 10) : formatDateForInput(date)
+  const rangeOffset = days => ['freebie-rolls', 'user-registrations'].includes(id) ? Math.max(0, days - 1) : days
+  const [fromDate, setFromDate] = useState(() => inputDate(daysAgo(rangeOffset(FIFTEEN_DAY_CHARTS.has(id) ? 15 : 7))))
+  const [toDate, setToDate] = useState(() => inputDate(new Date()))
+  const [activePreset, setActivePreset] = useState(() => FIFTEEN_DAY_CHARTS.has(id) ? '15d' : '7d')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
   const [expanded, setExpanded] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const applyPreset = (preset) => {
-    const today = formatDateForInput(new Date())
+    const today = inputDate(new Date())
     setActivePreset(preset)
     setToDate(today)
     if (preset === 'hoy') setFromDate(today)
-    else if (preset === '2d') setFromDate(formatDateForInput(daysAgo(2)))
-    else if (preset === '3d') setFromDate(formatDateForInput(daysAgo(3)))
-    else if (preset === '7d') setFromDate(formatDateForInput(daysAgo(7)))
-    else if (preset === '15d') setFromDate(formatDateForInput(daysAgo(15)))
-    else if (preset === '1m') setFromDate(formatDateForInput(daysAgo(30)))
-    else if (preset === '1y') setFromDate(formatDateForInput(daysAgo(365)))
-    else if (preset === 'all') setFromDate(formatDateForInput(daysAgo(3650)))
+    else if (preset === '2d') setFromDate(inputDate(daysAgo(rangeOffset(2))))
+    else if (preset === '3d') setFromDate(inputDate(daysAgo(rangeOffset(3))))
+    else if (preset === '7d') setFromDate(inputDate(daysAgo(rangeOffset(7))))
+    else if (preset === '15d') setFromDate(inputDate(daysAgo(rangeOffset(15))))
+    else if (preset === '1m') setFromDate(inputDate(daysAgo(rangeOffset(30))))
+    else if (preset === '1y') setFromDate(inputDate(daysAgo(rangeOffset(365))))
+    else if (preset === 'all') setFromDate(inputDate(daysAgo(rangeOffset(3650))))
   }
 
   const onFromChange = (e) => { setFromDate(e.target.value); setActivePreset(null) }
@@ -384,14 +476,19 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
   }, [fromDate, toDate, activePreset, fetchFn, id])
 
   return (
-    <div className="chart-block" style={{ marginBottom: '60px', paddingBottom: '50px', borderBottom: '2px dashed rgba(255,255,255,0.2)' }}>
+    <section className={`chart-block chart-block--${id}`} aria-labelledby={`chart-title-${id}`}>
       
       {/* Container header with specific controls */}
       <div className="charts-controls" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-        <div style={{ flex: '1 1 300px' }}>
-          <div style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '8px' }}>
-            {CHART_DESCRIPTIONS[id]}
+        <div className="chart-heading">
+          <h4 id={`chart-title-${id}`}>{title || CHART_TITLES[id] || id}</h4>
+          <div className={`chart-help ${helpOpen ? 'is-open' : ''}`} onKeyDown={(e) => { if (e.key === 'Escape') { setHelpOpen(false); e.currentTarget.querySelector('button')?.blur() } }}>
+            <button type="button" className="chart-help-trigger" aria-label={`Ayuda: ${title || CHART_TITLES[id] || id}`} aria-expanded={helpOpen} aria-controls={`chart-help-${id}`} onClick={() => setHelpOpen(v => !v)}>?</button>
+            <div className="chart-help-content" id={`chart-help-${id}`}>
+              {CHART_DESCRIPTIONS[id]}
+            </div>
           </div>
+          {headerControls?.(data)}
         </div>
 
         <div className="charts-controls-right" style={{ flexShrink: 0 }}>
@@ -419,16 +516,16 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
 
           {supportsDynamicDates && (
             <div className="date-range-picker">
-              <input type="date" value={fromDate} onChange={onFromChange} className="date-input" max={toDate} />
+              <input type="date" aria-label={`Inicio: ${CHART_TITLES[id]}`} value={fromDate} onChange={onFromChange} className="date-input" max={toDate} />
               <span className="date-separator">→</span>
-              <input type="date" value={toDate} onChange={onToChange} className="date-input" min={fromDate} max={formatDateForInput(new Date())} />
+              <input type="date" aria-label={`Fin: ${CHART_TITLES[id]}`} value={toDate} onChange={onToChange} className="date-input" min={fromDate} max={inputDate(new Date())} />
             </div>
           )}
         </div>
       </div>
 
       {/* Render Area */}
-      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads', 'traffic-sources'].includes(id) ? { height: 'auto', maxHeight: 'none', minHeight: id === 'traffic-sources' ? 'unset' : `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 32)}px`, transition: 'height 0.3s ease' } : {}}>
+      <div className="chart-canvas-wrap" style={['top-pages', 'top-searches', 'top-downloads'].includes(id) ? { height: 'auto', maxHeight: 'none', minHeight: `${Math.max(450, ((expanded ? data?.labels?.length : Math.min(20, data?.labels?.length || 0)) || 0) * 32)}px`, transition: 'height 0.3s ease' } : {}}>
         {loading ? (
           <div className="chart-loading"><span className="chart-spinner" />Cargando datos...</div>
         ) : !data ? (
@@ -451,7 +548,7 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
           </button>
         </div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -459,6 +556,7 @@ function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, 
 export default function TrafficCharts() {
   const http = useMemo(() => new HttpService(), [])
   const [copiedToast, setCopiedToast] = useState(null)
+  const [registrationsView, setRegistrationsView] = useState('total')
 
   const handleBarClick = (evt, elements, chart) => {
     if (elements && elements.length > 0) {
@@ -496,7 +594,6 @@ export default function TrafficCharts() {
         { label: 'Vistas de Página', data: filledSeries.map((s) => s.pv), borderColor: chartColors.pv.border, backgroundColor: chartColors.pv.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
         { label: 'Sesiones', data: filledSeries.map((s) => s.sessions), borderColor: chartColors.sessions.border, backgroundColor: chartColors.sessions.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
         { label: 'Visitantes', data: filledSeries.map((s) => s.visitors), borderColor: chartColors.visitors.border, backgroundColor: chartColors.visitors.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
-        { label: 'Registros', data: filledSeries.map((s) => s.registrations || 0), borderColor: chartColors.registrations.border, backgroundColor: chartColors.registrations.bg, fill: true, tension: 0.35, pointRadius: filledSeries.length > 60 ? 0 : 3, pointHoverRadius: 5 },
       ]
     }
   }, [http])
@@ -540,6 +637,17 @@ export default function TrafficCharts() {
     }
   }, [http])
 
+  const fetchFreebieRolls = React.useCallback(async (from, to) => {
+    const response = await http.getData(`/metrics/freebie-rolls/timeseries?from=${from}&to=${to}`)
+    const series = response?.data?.series
+    if (!Array.isArray(series)) return null
+    return {
+      labels: series.map(row => formatLabel(row.date, 'day')),
+      participants: series.map(row => Number(row.participants || 0)),
+      datasets: [{ label: 'Tiradas', data: series.map(row => Number(row.rolls || 0)), backgroundColor: 'rgba(52,211,153,.65)', borderRadius: 4, maxBarThickness: 28 }],
+    }
+  }, [http])
+
   // 4. Top Pages Fetcher
   const fetchTopPages = React.useCallback(async (from, to) => {
     const res = await http.getData(`/metrics/site-visits/top-pages?from=${from}&to=${to}`)
@@ -574,7 +682,7 @@ export default function TrafficCharts() {
       datasets: [{
         data: [paypal, mp, other].filter(v => v > 0),
         backgroundColor: ['rgba(59, 130, 246, 0.8)','rgba(14, 165, 233, 0.8)','rgba(100, 116, 139, 0.8)'],
-        borderColor: 'rgba(15, 23, 42, 0.8)', borderWidth: 2
+        label: 'Ingresos (COP)', borderColor: 'transparent', borderWidth: 0, borderRadius: 4, barThickness: 20
       }]
     }
   }, [http])
@@ -585,11 +693,12 @@ export default function TrafficCharts() {
     const tsData = res?.data
     if (!tsData?.series?.length && !tsData?.granularity) return null
     
-    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day')
+    const filledSeries = fillMissingBuckets(tsData.series || [], from, to, tsData.granularity || 'day').filter(row => row.date <= to)
     if (!filledSeries.length) return null
 
     return {
       labels: filledSeries.map((s) => formatLabel(s.date, tsData.granularity)),
+      sourceChart: registrationSourceChart(tsData, from, to, filledSeries),
       datasets: [
         { 
           type: 'line', 
@@ -725,30 +834,47 @@ export default function TrafficCharts() {
 
       <div className="charts-list">
         <ChartContainer id="traffic" supportsDynamicDates={true} fetchFn={fetchTraffic} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
+        <ChartContainer id="user-registrations" supportsDynamicDates={true} fetchFn={fetchRegistrations}
+          headerControls={data => (
+            <div className="registration-view" role="group" aria-label="Vista de nuevos registros">
+              <button type="button" aria-pressed={registrationsView === 'total' || !data?.sourceChart} onClick={() => setRegistrationsView('total')}>Total</button>
+              <button type="button" aria-pressed={registrationsView === 'sources' && Boolean(data?.sourceChart)} disabled={!data?.sourceChart}
+                title={data && !data.sourceChart ? 'El servidor todavía no ofrece el desglose por origen. El total sigue disponible.' : 'Registros según la procedencia guardada'}
+                onClick={() => setRegistrationsView('sources')}>Por origen</button>
+            </div>
+          )}
+          renderChart={data => registrationsView === 'sources' && data.sourceChart ? (
+            <Bar key="registration-sources" data={data.sourceChart} options={{
+              ...stackedBarOpts,
+              plugins: {
+                ...stackedBarOpts.plugins,
+                legend: { ...commonLineOpts.plugins.legend, labels: { ...commonLineOpts.plugins.legend.labels, padding: 9, boxWidth: 7, boxHeight: 7, font: { size: 10 } } },
+                tooltip: { ...commonLineOpts.plugins.tooltip, displayColors: false, callbacks: {
+                  title: items => {
+                    const date = data.sourceChart.dates[items[0]?.dataIndex] || ''
+                    return data.sourceChart.granularity === 'week' ? `Semana del ${date}` : data.sourceChart.granularity === 'month' ? `Mes: ${date.slice(0, 7)}` : date
+                  },
+                  afterTitle: items => `Total: ${(data.sourceChart.totals[items[0]?.dataIndex] || 0).toLocaleString('es-CO')}`,
+                  beforeBody: items => data.sourceChart.details[items[0]?.dataIndex] || [],
+                  label: () => '',
+                } },
+              },
+              scales: { ...stackedBarOpts.scales, y: { ...stackedBarOpts.scales.y, ticks: { ...stackedBarOpts.scales.y.ticks, precision: 0 }, suggestedMax: 1 } },
+            }} />
+          ) : <Bar key="registration-total" data={data} options={{ ...commonLineOpts, scales: { ...commonLineOpts.scales, y: { ...commonLineOpts.scales.y, ticks: { ...commonLineOpts.scales.y.ticks, precision: 0 }, suggestedMax: 1 } } }} />}
+        />
         
         <ChartContainer id="traffic-sources" supportsDynamicDates={true} fetchFn={fetchTrafficSources} renderChart={(data) => (
-          <div style={{ width: '100%' }}>
-            {/* Summary KPIs */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 160px', background: 'rgba(79,172,254,0.08)', border: '1px solid rgba(79,172,254,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Sesiones Totales</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#f8fafc' }}>{Number(data.totalSessions || 0).toLocaleString()}</div>
-              </div>
-              <div style={{ flex: '1 1 160px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Canales Detectados</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#f8fafc' }}>{data.rows.length}</div>
-              </div>
-              <div style={{ flex: '1 1 160px', background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Canal Principal</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>{data.rows[0]?.icon}</span>
-                  <span>{data.rows[0]?.label || '—'}</span>
-                </div>
-              </div>
-            </div>
+          <div className="traffic-sources-panel">
+            <dl className="source-summary">
+              <div><dt>Sesiones</dt><dd>{Number(data.totalSessions || 0).toLocaleString()}</dd></div>
+              <div><dt>Canales</dt><dd>{data.rows.length}</dd></div>
+              <div><dt>Principal</dt><dd>{data.rows[0]?.label || '—'}</dd></div>
+            </dl>
+            <div className="source-table-scroll" role="region" aria-label="Canales de tráfico" tabIndex={0}>
 
             {/* Header row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 100px 80px 80px 54px', gap: '10px', alignItems: 'center', padding: '0 4px 10px 4px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: '8px' }}>
+            <div className="source-table-head" style={{ display: 'grid', gridTemplateColumns: '28px 1fr 100px 80px 80px 54px', gap: '10px', alignItems: 'center', padding: '0 4px 10px 4px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: '8px' }}>
               <div />
               <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canal</div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Sesiones</div>
@@ -759,7 +885,7 @@ export default function TrafficCharts() {
 
             {/* Rows */}
             {data.rows.map((row, i) => (
-              <div key={row.source} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 100px 80px 80px 54px', gap: '10px', alignItems: 'center', padding: '10px 4px', borderRadius: '8px', transition: 'background 0.15s', background: i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent' }}>
+              <div className="source-table-row" key={row.source} style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent' }}>
                 {/* Icon */}
                 <div style={{ fontSize: '1.1rem', textAlign: 'center' }}>{row.icon}</div>
 
@@ -788,18 +914,21 @@ export default function TrafficCharts() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )} />
         
         <ChartContainer id="downloads-timeseries" supportsDynamicDates={true} fetchFn={fetchDownloadsTimeseries} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
 
         <ChartContainer id="plan-clicks" supportsDynamicDates={true} fetchFn={fetchPlanClicks} renderChart={(data) => <Bar data={data} options={stackedBarOpts} />} />
-        
-        <ChartContainer id="sales-revenue" supportsDynamicDates={false} fetchFn={fetchSales} renderChart={(data) => (
-          <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <Doughnut data={data} options={{ plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 13 } } }, tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)' } } }} />
-          </div>
+        <ChartContainer id="freebie-rolls" supportsDynamicDates={true} fetchFn={fetchFreebieRolls} renderChart={data => (
+          <Bar data={data} options={{
+            ...commonLineOpts,
+            plugins: { ...commonLineOpts.plugins, legend: { display: false }, tooltip: { ...commonLineOpts.plugins.tooltip, callbacks: { afterLabel: context => `${data.participants[context.dataIndex] || 0} usuarios participantes` } } },
+            scales: { ...commonLineOpts.scales, y: { ...commonLineOpts.scales.y, ticks: { ...commonLineOpts.scales.y.ticks, precision: 0 } } },
+          }} />
         )} />
+
         
         <ChartContainer 
           id="top-searches" 
@@ -850,6 +979,18 @@ export default function TrafficCharts() {
             return <Bar data={limitedData} options={dynamicBarOpts} />
           }} 
         />
+        <ChartContainer id="sales-revenue" supportsDynamicDates={false} fetchFn={fetchSales} renderChart={(data) => (
+          <Bar data={data} options={{
+            ...barOpts,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              ...barOpts.plugins,
+              tooltip: { callbacks: { label: context => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(context.raw) || 0) } },
+            },
+            scales: { ...barOpts.scales, x: { ...barOpts.scales.x, ticks: { color: '#94a3b8', font: { size: 10 }, callback: value => new Intl.NumberFormat('es-CO', { notation: 'compact', style: 'currency', currency: 'COP', maximumFractionDigits: 1 }).format(value) } } },
+          }} />
+        )} />
       </div>
 
       {copiedToast && (

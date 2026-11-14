@@ -1,22 +1,28 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, LinearProgress, Stack, Tabs, Tab, TextField, ToggleButton, ToggleButtonGroup, InputAdornment, Tooltip } from '@mui/material';
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, LinearProgress, Stack, Tabs, Tab, TextField, ToggleButton, ToggleButtonGroup, InputAdornment, Tooltip, Button, Collapse, MenuItem } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
+import AddIcon from '@mui/icons-material/Add';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { isFailedAccount, summarizeAccountFailures, isAccountAtCapacity } from '@/helpers/accountHealth';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
 import { timerAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
 import AddAccountForm from './components/AddAccountForm';
 import StorageSummaryCard from './components/StorageSummaryCard';
 import AccountsTabs from './components/AccountsTabs';
-import AccountCard from './components/AccountCard';
+import VirtualAccountsGrid from './components/VirtualAccountsGrid';
+import ExcessCleanupModal from './components/ExcessCleanupModal';
 import AccountDrawer from './components/AccountDrawer';
 import StatusChip from './components/StatusChip';
 import BulkAddAccountsModal from './components/BulkAddAccountsModal';
 
 const http = new HttpService();
 const API_BASE = '/accounts';
+const aliasCollator = new Intl.Collator(undefined, { numeric: true });
 // Cuota gratuita MEGA en MB para el front (fallback). Puede sobreescribirse en build con NEXT_PUBLIC_MEGA_FREE_QUOTA_MB
 const FREE_QUOTA_MB =
     Number(process.env.NEXT_PUBLIC_MEGA_FREE_QUOTA_MB) || 20480;
@@ -42,6 +48,8 @@ export default function AccountsOverviewPage() {
     const [tab, setTab] = useState('main');
     const [emailGroup, setEmailGroup] = useState('all');
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [addOpen, setAddOpen] = useState(false);
+    const [cleanupAccount, setCleanupAccount] = useState(null);
 
     // Estado del listado de assets en el modal derecho
     const [assets, setAssets] = useState([]);
@@ -329,9 +337,15 @@ export default function AccountsOverviewPage() {
 
     // === Filtros y orden ===
     const [filterSearch, setFilterSearch] = useState('');
+    const deferredSearch = useDeferredValue(filterSearch);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterUsage, setFilterUsage] = useState('all');
     const [sortBy, setSortBy] = useState('alias-desc');
+    useEffect(() => {
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('status') === 'failed') setFilterStatus('failed');
+        if (query.get('usage') === 'over') setFilterUsage('over');
+    }, []);
 
     const emailGroups = useMemo(() => {
         const counts = new Map();
@@ -351,25 +365,24 @@ export default function AccountsOverviewPage() {
         [accounts, activeEmailGroup],
     );
 
-    // Totales de almacenamiento de cuentas OK (CONNECTED) del grupo seleccionado
+    // Capacidad física por tipo; las copias no se suman como catálogo único.
     const totalStorage = useMemo(() => {
-        // Solo cuentas MAIN en estado CONNECTED
-        const ok = groupedAccounts.filter(
-            (a) => a.status === 'CONNECTED' && a.type === 'main',
-        );
-        let used = 0;
-        let total = 0;
-        for (const a of ok) {
-            const t =
-                a.storageTotalMB && a.storageTotalMB > 0
-                    ? a.storageTotalMB
-                    : FREE_QUOTA_MB;
-            const u = Math.max(0, a.storageUsedMB || 0);
-            used += u;
-            total += t;
-        }
-        const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
-        return { used, total, pct, okCount: ok.length };
+        const summarize = (type) => {
+            const typed = groupedAccounts.filter(account => account.type === type);
+            const connected = typed.filter(account => account.status === 'CONNECTED');
+            let used = 0;
+            let total = 0;
+            let estimatedCount = 0;
+            for (const account of connected) {
+                const quota = Number(account.storageTotalMB);
+                if (!(quota > 0)) estimatedCount++;
+                total += quota > 0 ? quota : FREE_QUOTA_MB;
+                used += Math.max(0, Number(account.storageUsedMB) || 0);
+            }
+            return { used, total, pct: total > 0 ? used / total * 100 : 0,
+                okCount: connected.length, excludedCount: typed.length - connected.length, estimatedCount };
+        };
+        return { main: summarize('main'), backup: summarize('backup') };
     }, [groupedAccounts]);
 
     const mainAccounts = useMemo(
@@ -381,13 +394,22 @@ export default function AccountsOverviewPage() {
         [groupedAccounts],
     );
     const tabAccounts = tab === 'main' ? mainAccounts : backupAccounts;
+    const failures = summarizeAccountFailures(groupedAccounts);
+    useEffect(() => {
+        if (filterStatus !== 'failed' && filterUsage !== 'over') return;
+        const matches = account => (filterStatus !== 'failed' || isFailedAccount(account)) &&
+            (filterUsage !== 'over' || isAccountAtCapacity(account));
+        const otherTab = tab === 'main' ? 'backup' : 'main';
+        if (!groupedAccounts.some(account => account.type === tab && matches(account)) &&
+            groupedAccounts.some(account => account.type === otherTab && matches(account))) setTab(otherTab);
+    }, [filterStatus, filterUsage, tab, groupedAccounts]);
 
     const shownAccounts = useMemo(() => {
         let list = [...tabAccounts];
 
         // Filtro búsqueda
-        if (filterSearch.trim()) {
-            const q = filterSearch.trim().toLowerCase();
+        if (deferredSearch.trim()) {
+            const q = deferredSearch.trim().toLowerCase();
             list = list.filter((a) =>
                 (a.alias || '').toLowerCase().includes(q) ||
                 (a.email || '').toLowerCase().includes(q) ||
@@ -397,7 +419,7 @@ export default function AccountsOverviewPage() {
 
         // Filtro estado
         if (filterStatus !== 'all') {
-            list = list.filter((a) => a.status === filterStatus);
+            list = list.filter((a) => filterStatus === 'failed' ? isFailedAccount(a) : a.status === filterStatus);
         }
 
         // Filtro uso
@@ -408,14 +430,15 @@ export default function AccountsOverviewPage() {
                 if (filterUsage === 'low') return pct < 50;
                 if (filterUsage === 'mid') return pct >= 50 && pct < 80;
                 if (filterUsage === 'high') return pct >= 80;
+                if (filterUsage === 'over') return isAccountAtCapacity(a);
                 return true;
             });
         }
 
         // Ordenar
         list.sort((a, b) => {
-            if (sortBy === 'alias-desc') return (b.alias || '').localeCompare(a.alias || '', undefined, { numeric: true });
-            if (sortBy === 'alias-asc') return (a.alias || '').localeCompare(b.alias || '', undefined, { numeric: true });
+            if (sortBy === 'alias-desc') return aliasCollator.compare(b.alias || '', a.alias || '');
+            if (sortBy === 'alias-asc') return aliasCollator.compare(a.alias || '', b.alias || '');
             if (sortBy === 'usage-desc') {
                 const pctA = getPct(a), pctB = getPct(b);
                 return pctB - pctA;
@@ -430,7 +453,7 @@ export default function AccountsOverviewPage() {
         });
 
         return list;
-    }, [tabAccounts, filterSearch, filterStatus, filterUsage, sortBy]);
+    }, [tabAccounts, deferredSearch, filterStatus, filterUsage, sortBy]);
 
     function getPct(a) {
         const total = (a.storageTotalMB && a.storageTotalMB > 0) ? a.storageTotalMB : FREE_QUOTA_MB;
@@ -439,41 +462,33 @@ export default function AccountsOverviewPage() {
 
     return (
         <div className="dashboard-content p-3">
-            <AddAccountForm
-                form={form}
-                setForm={setForm}
-                onSubmit={addAccount}
-                disabled={testing}
-                onBulkOpen={() => setBulkOpen(true)}
-            />
-
+            <Stack direction="row" alignItems="center" justifyContent="space-between" useFlexGap flexWrap="wrap" gap={1.5} sx={{ mb: 1.5 }}>
+                <TextField select size="small" label="Grupo por correo base" value={activeEmailGroup}
+                    onChange={event => setEmailGroup(event.target.value)} sx={{ minWidth: 240, maxWidth: '100%' }}>
+                    <MenuItem value="all">Todas las cuentas ({accounts.length})</MenuItem>
+                    {emailGroups.map(([group, count]) => <MenuItem key={group} value={group}>{group} ({count})</MenuItem>)}
+                </TextField>
+                <Button variant={addOpen ? 'outlined' : 'contained'} startIcon={addOpen ? <ExpandLessIcon /> : <AddIcon />}
+                    aria-expanded={addOpen} aria-controls="add-account-panel" onClick={() => setAddOpen(value => !value)}
+                    sx={{ textTransform: 'none', bgcolor: addOpen ? undefined : '#38bdf8', color: addOpen ? '#7dd3fc' : '#082f49', boxShadow: 'none' }}>
+                    {addOpen ? 'Cerrar formulario' : 'Añadir cuentas'}
+                </Button>
+            </Stack>
+            <Collapse in={addOpen} id="add-account-panel">
+                <AddAccountForm form={form} setForm={setForm} onSubmit={addAccount}
+                    disabled={testing} onBulkOpen={() => setBulkOpen(true)} />
+            </Collapse>
             {loading && <LinearProgress />}
-
-            <Box className="glass" sx={{ mb: 2, px: 1, pt: 1, borderRadius: 2 }}>
-                <Box sx={{ px: 1, fontSize: '.75rem', color: '#94a3b8' }}>
-                    Grupo por correo base
-                </Box>
-                <Tabs
-                    value={activeEmailGroup}
-                    onChange={(_, value) => setEmailGroup(value)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    allowScrollButtonsMobile
-                    aria-label="Grupos de cuentas por correo base"
-                    sx={{
-                        '& .MuiTab-root': { textTransform: 'none', color: '#94a3b8', minHeight: 44 },
-                        '& .MuiTab-root.Mui-selected': { color: '#38bdf8' },
-                        '& .MuiTabs-indicator': { backgroundColor: '#38bdf8' },
-                    }}
-                >
-                    <Tab value="all" label={`Todas (${accounts.length})`} />
-                    {emailGroups.map(([group, count]) => (
-                        <Tab key={group} value={group} label={`${group} (${count})`} />
-                    ))}
-                </Tabs>
-            </Box>
-
             <StorageSummaryCard totalStorage={totalStorage} groupLabel={activeEmailGroup === 'all' ? null : activeEmailGroup} />
+
+            {failures.total > 0 && (
+                <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap', px: 1.5, py: .8, mb: 1.5, borderRadius: 2, border: '1px solid #f45b6b', bgcolor: 'rgba(244,63,94,.08)', color: '#fda4af' }}>
+                    <WarningAmberOutlinedIcon fontSize="small" />
+                    <Box component="strong" sx={{ fontSize: 13 }}>{failures.total} cuentas fallidas</Box>
+                    <Box component="span" sx={{ fontSize: 12 }}>Main: {failures.main} · Backup: {failures.backup} · {failures.errors} con error / {failures.expired} vencidas</Box>
+                    <Button size="small" onClick={() => { setFilterStatus('failed'); setFilterSearch(''); setFilterUsage('all'); }} sx={{ ml: 'auto', color: '#fda4af', textTransform: 'none' }}>Mostrar fallidas</Button>
+                </Box>
+            )}
 
             {/* Tabs para separar cuentas main y backup */}
             <AccountsTabs
@@ -512,8 +527,8 @@ export default function AccountsOverviewPage() {
                             fontSize: '.8rem',
                             color: '#e2e8f0',
                             '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                            '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.3)' },
-                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                            '&:hover fieldset': { borderColor: 'rgba(56,189,248,0.3)' },
+                            '&.Mui-focused fieldset': { borderColor: '#38bdf8' },
                         },
                     }}
                 />
@@ -524,9 +539,10 @@ export default function AccountsOverviewPage() {
                     exclusive
                     value={filterStatus}
                     onChange={(_, v) => v && setFilterStatus(v)}
-                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#a78bfa', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(56,189,248,0.15)', color: '#7dd3fc', borderColor: 'rgba(56,189,248,0.3)' } } }}
                 >
                     <ToggleButton value="all">Todas</ToggleButton>
+                    <ToggleButton value="failed" sx={{ color: '#fb7185', '&.Mui-selected': { color: '#fda4af !important', bgcolor: 'rgba(244,63,94,.15) !important' } }}>Fallidas</ToggleButton>
                     <ToggleButton value="CONNECTED" sx={{ '&.Mui-selected': { color: '#4ade80 !important', bgcolor: 'rgba(34,197,94,0.12) !important' } }}>OK</ToggleButton>
                     <ToggleButton value="ERROR" sx={{ '&.Mui-selected': { color: '#f87171 !important', bgcolor: 'rgba(239,68,68,0.12) !important' } }}>Error</ToggleButton>
                     <ToggleButton value="EXPIRED" sx={{ '&.Mui-selected': { color: '#fbbf24 !important', bgcolor: 'rgba(245,158,11,0.12) !important' } }}>Exp</ToggleButton>
@@ -538,12 +554,13 @@ export default function AccountsOverviewPage() {
                     exclusive
                     value={filterUsage}
                     onChange={(_, v) => v && setFilterUsage(v)}
-                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#a78bfa', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                    sx={{ '& .MuiToggleButton-root': { fontSize: '.7rem', px: 1, py: 0.4, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(56,189,248,0.15)', color: '#7dd3fc', borderColor: 'rgba(56,189,248,0.3)' } } }}
                 >
                     <ToggleButton value="all">Uso: Todo</ToggleButton>
                     <ToggleButton value="low" sx={{ '&.Mui-selected': { color: '#4ade80 !important' } }}>&lt;50%</ToggleButton>
                     <ToggleButton value="mid" sx={{ '&.Mui-selected': { color: '#fbbf24 !important' } }}>50-80%</ToggleButton>
                     <ToggleButton value="high" sx={{ '&.Mui-selected': { color: '#f87171 !important' } }}>&gt;80%</ToggleButton>
+                    <ToggleButton value="over" sx={{ color: '#fb7185', '&.Mui-selected': { color: '#ff455f !important', bgcolor: 'rgba(255,24,59,.12) !important' } }}>+100%</ToggleButton>
                 </ToggleButtonGroup>
 
                 {/* Orden */}
@@ -554,7 +571,7 @@ export default function AccountsOverviewPage() {
                         exclusive
                         value={sortBy}
                         onChange={(_, v) => v && setSortBy(v)}
-                        sx={{ '& .MuiToggleButton-root': { fontSize: '.65rem', px: 0.8, py: 0.3, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(139,92,246,0.15)', color: '#c4b5fd', borderColor: 'rgba(139,92,246,0.3)' } } }}
+                        sx={{ '& .MuiToggleButton-root': { fontSize: '.65rem', px: 0.8, py: 0.3, color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', '&.Mui-selected': { bgcolor: 'rgba(56,189,248,0.15)', color: '#c4b5fd', borderColor: 'rgba(56,189,248,0.3)' } } }}
                     >
                         <Tooltip title="Alias Z→A" arrow><ToggleButton value="alias-desc">Z→A</ToggleButton></Tooltip>
                         <Tooltip title="Alias A→Z" arrow><ToggleButton value="alias-asc">A→Z</ToggleButton></Tooltip>
@@ -570,38 +587,22 @@ export default function AccountsOverviewPage() {
                 </Box>
             </Stack>
 
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                        xs: 'repeat(2, 1fr)',
-                        md: 'repeat(5, 1fr)',
-                        lg: 'repeat(7, 1fr)',
-                    },
-                    gap: 1,
-                }}
-            >
-                {shownAccounts.map((acc) => (
-                    <AccountCard
-                        key={acc.id}
-                        acc={acc}
-                        onClick={openDetail}
-                        isPending={pendingIds.has(acc.id)}
-                        onTest={testConnection}
-                        onCancelTest={cancelTest}
-                        loadingAny={loading}
-                        testing={testing}
-                    />
-                ))}
-                {shownAccounts.length === 0 && (
-                    <Box className="glass" sx={{ p: 2, gridColumn: '1 / -1' }}>
-                        {tab === 'main'
-                            ? 'No hay cuentas main'
-                            : 'No hay cuentas backup'}
-                    </Box>
-                )}
-            </Box>
+            <VirtualAccountsGrid
+                accounts={shownAccounts}
+                resetKey={`${activeEmailGroup}:${tab}:${deferredSearch}:${filterStatus}:${filterUsage}:${sortBy}`}
+                pendingIds={pendingIds}
+                onClick={openDetail}
+                onCleanup={setCleanupAccount}
+                onTest={testConnection}
+                onCancelTest={cancelTest}
+                loadingAny={loading}
+                testing={testing}
+            />
+            {!loading && shownAccounts.length === 0 && (
+                <Box sx={{ p: 2, color: '#94a3b8', fontSize: 13 }}>No hay cuentas que coincidan con estos filtros.</Box>
+            )}
 
+            {cleanupAccount && <ExcessCleanupModal account={cleanupAccount} onClose={() => setCleanupAccount(null)} onComplete={fetchAccounts} />}
             <AccountDrawer
                 open={open}
                 onClose={() => setOpen(false)}

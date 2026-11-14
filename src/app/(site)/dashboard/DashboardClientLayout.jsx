@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ThemeProvider } from '@mui/material/styles'
 import Sidebar from '../../../components/dashboard/Sidebar/Sidebar'
+import SectionTabs from '../../../components/dashboard/Sidebar/SectionTabs'
 import dynamic from 'next/dynamic'
 import dashboardTheme from './dashboardTheme'
 import './dashboard.scss'
@@ -37,6 +38,7 @@ export default function DashboardClientLayout({ children }) {
       <div className="dashboard-page">
         <Sidebar />
         <main className="dashboard-content p-3">
+          <SectionTabs />
           {children}
         </main>
         <ConsoleBar />

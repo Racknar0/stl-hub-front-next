@@ -3,7 +3,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Dialog, DialogContent, Box, Stack, Typography, TextField, IconButton,
     Chip, Button, Autocomplete, FormControlLabel, Switch, Link as MUILink,
-    CircularProgress,
+    CircularProgress, Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -11,6 +11,10 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import OpenInNew from '@mui/icons-material/OpenInNew';
+import UndoOutlined from '@mui/icons-material/UndoOutlined';
+import AssetDetailSections from './AssetDetailSections';
 
 /* ───── helpers ───── */
 const fmtDate = (raw) => {
@@ -31,15 +35,15 @@ const fieldSx = {
     '& .MuiOutlinedInput-root': {
         bgcolor: 'rgba(255,255,255,0.03)',
         '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-        '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.35)' },
-        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+        '&:hover fieldset': { borderColor: 'rgba(56,189,248,0.35)' },
+        '&.Mui-focused fieldset': { borderColor: '#38bdf8' },
     },
 };
 const labelSx = { fontSize: '0.7rem', color: 'rgba(200,210,230,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 };
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function ModalAsset({
-    open, onClose,
+    open, onClose, mode = 'edit', onStartEdit, onCancelEdit, detailError,
     detail, selected, loadingDetail,
     imgUrl, formatMBfromB,
     // edit
@@ -59,10 +63,11 @@ export default function ModalAsset({
 }) {
     const dragFromRef = useRef(null);
     const asset = detail || selected;
+    const editing = mode === 'edit';
     if (!open) return null;
 
     /* ── image gallery data ── */
-    const hasNewImages = editImageFiles && editImageFiles.length > 0;
+    const hasNewImages = editing && editImageFiles && editImageFiles.length > 0;
     const serverImages = Array.isArray(asset?.images) ? asset.images : [];
     const galleryImages = hasNewImages ? editImageFiles : serverImages.map((rel, i) => ({ id: `srv-${i}`, url: imgUrl(rel), name: rel, server: true }));
     const activeIdx = hasNewImages ? editPreviewIndex : Math.min(editPreviewIndex, Math.max(0, galleryImages.length - 1));
@@ -92,9 +97,9 @@ export default function ModalAsset({
     const navArrowSx = {
         position: 'fixed', top: '50%', transform: 'translateY(-50%)', zIndex: 9999,
         width: 48, height: 48,
-        bgcolor: 'rgba(15,23,42,0.92)', border: '1px solid rgba(139,92,246,0.25)',
+        bgcolor: 'rgba(15,23,42,0.92)', border: '1px solid rgba(56,189,248,0.25)',
         color: '#e2e8f0', backdropFilter: 'blur(8px)',
-        '&:hover': { bgcolor: 'rgba(139,92,246,0.18)', borderColor: '#8b5cf6', color: '#fff' },
+        '&:hover': { bgcolor: 'rgba(56,189,248,0.18)', borderColor: '#38bdf8', color: '#fff' },
         transition: 'all 180ms ease',
     };
 
@@ -130,7 +135,7 @@ export default function ModalAsset({
                 {/* ── Header ── */}
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                        <Typography sx={{ fontSize: '0.7rem', color: 'rgba(139,92,246,0.7)', fontWeight: 700, fontFamily: 'monospace' }}>
+                        <Typography sx={{ fontSize: '0.7rem', color: 'rgba(56,189,248,0.7)', fontWeight: 700, fontFamily: 'monospace' }}>
                             #{asset?.id || '—'}
                         </Typography>
                         <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#eef4ff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -141,28 +146,32 @@ export default function ModalAsset({
                                 {asset.titleEn}
                             </Typography>
                         )}
-                        <Typography sx={{ fontSize: '0.65rem', color: 'rgba(139,92,246,0.5)', fontFamily: 'monospace' }}>
+                        <Typography sx={{ fontSize: '0.65rem', color: 'rgba(56,189,248,0.5)', fontFamily: 'monospace' }}>
                             {assetIndex + 1}/{totalAssets}
                         </Typography>
                     </Box>
-                    <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ef4444' } }}>
+                    <Box sx={{ display: 'flex', gap: .5, flexShrink: 0 }}>
+                        {!editing && <Tooltip title="Editar modelo"><span><IconButton disabled={loadingDetail || Boolean(detailError)} onClick={onStartEdit} aria-label="Editar modelo"><EditOutlined /></IconButton></span></Tooltip>}
+                        <Tooltip title={asset?.slug ? 'Ficha pública' : 'Sin ficha pública'}><span><IconButton component="a" href={asset?.slug ? `/asset/${encodeURIComponent(asset.slug)}` : undefined} target="_blank" rel="noopener noreferrer" disabled={!asset?.slug || loadingDetail} aria-label="Abrir ficha pública"><OpenInNew /></IconButton></span></Tooltip>
+                    <IconButton aria-label="Cerrar detalle" onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ef4444' } }}>
                         <CloseIcon />
                     </IconButton>
+                    </Box>
                 </Box>
 
                 {/* ── Body: 2 panels ── */}
-                <DialogContent sx={{ display: 'flex', gap: 0, p: 0, overflow: 'hidden', flex: 1 }}>
+                <DialogContent sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 0, p: 0, overflow: 'hidden', flex: 1, minHeight: 0 }}>
                     {loadingDetail && (
                         <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.4)', zIndex: 10 }}>
-                            <CircularProgress sx={{ color: '#8b5cf6' }} />
+                            <CircularProgress sx={{ color: '#38bdf8' }} />
                         </Box>
                     )}
 
                     {/* ═══ LEFT: Gallery ═══ */}
-                    <Box sx={{ width: '55%', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <Box sx={{ width: { xs: '100%', md: '55%' }, minHeight: { xs: 240, md: 0 }, flex: { xs: '0 0 40%', md: 'initial' }, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                         {/* Main preview */}
-                        <Box sx={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.25)', minHeight: 300, overflow: 'hidden' }}
-                            onDrop={onDrop} onDragOver={onDragOver}
+                        <Box sx={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.25)', minHeight: { xs: 130, md: 300 }, overflow: 'hidden' }}
+                            onDrop={editing ? onDrop : (event) => event.preventDefault()} onDragOver={editing ? onDragOver : (event) => event.preventDefault()}
                         >
                             {activeImg ? (
                                 <img src={activeImg.url || activeImg} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -174,10 +183,10 @@ export default function ModalAsset({
                             )}
                             {galleryImages.length > 1 && (
                                 <>
-                                    <IconButton onClick={goPrev} size="small" sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(139,92,246,0.4)' } }}>
+                                    <IconButton onClick={goPrev} size="small" sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(56,189,248,0.4)' } }}>
                                         <ChevronLeftIcon />
                                     </IconButton>
-                                    <IconButton onClick={goNext} size="small" sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(139,92,246,0.4)' } }}>
+                                    <IconButton onClick={goNext} size="small" sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(56,189,248,0.4)' } }}>
                                         <ChevronRightIcon />
                                     </IconButton>
                                     <Typography sx={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', bgcolor: 'rgba(0,0,0,0.5)', px: 1.5, py: 0.3, borderRadius: 8 }}>
@@ -192,17 +201,17 @@ export default function ModalAsset({
                             {galleryImages.map((img, idx) => (
                                 <Box
                                     key={img.id || idx}
-                                    draggable={hasNewImages}
-                                    onDragStart={handleThumbDragStart(idx)}
-                                    onDragOver={handleThumbDragOver}
-                                    onDrop={handleThumbDrop(idx)}
+                                    draggable={editing && hasNewImages}
+                                    onDragStart={editing ? handleThumbDragStart(idx) : undefined}
+                                    onDragOver={editing ? handleThumbDragOver : undefined}
+                                    onDrop={editing ? handleThumbDrop(idx) : undefined}
                                     onClick={() => onSelectPreview(idx)}
                                     sx={{
                                         width: 72, height: 54, flexShrink: 0, borderRadius: '6px', overflow: 'hidden', cursor: hasNewImages ? 'grab' : 'pointer', position: 'relative',
-                                        border: activeIdx === idx ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.12)',
+                                        border: activeIdx === idx ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.12)',
                                         opacity: activeIdx === idx ? 1 : 0.7,
                                         transition: 'all 120ms ease',
-                                        '&:hover': { opacity: 1, borderColor: 'rgba(139,92,246,0.5)' },
+                                        '&:hover': { opacity: 1, borderColor: 'rgba(56,189,248,0.5)' },
                                     }}
                                     title={hasNewImages ? 'Arrastra para reordenar' : ''}
                                 >
@@ -215,150 +224,26 @@ export default function ModalAsset({
                                     )}
                                 </Box>
                             ))}
-                            <IconButton onClick={onOpenFilePicker}
-                                sx={{ width: 54, height: 54, flexShrink: 0, borderRadius: '6px', border: '1px dashed rgba(139,92,246,0.35)', color: 'rgba(139,92,246,0.6)', '&:hover': { borderColor: '#8b5cf6', color: '#8b5cf6', bgcolor: 'rgba(139,92,246,0.08)' } }}
+                            {editing && <IconButton onClick={onOpenFilePicker}
+                                sx={{ width: 54, height: 54, flexShrink: 0, borderRadius: '6px', border: '1px dashed rgba(56,189,248,0.35)', color: 'rgba(56,189,248,0.6)', '&:hover': { borderColor: '#38bdf8', color: '#38bdf8', bgcolor: 'rgba(56,189,248,0.08)' } }}
                                 title="Agregar imágenes"
                             >
                                 <AddPhotoAlternateIcon sx={{ fontSize: 22 }} />
                             </IconButton>
-                            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onSelectFiles} />
+                            }
+                            {editing && <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onSelectFiles} />}
                         </Box>
                     </Box>
 
-                    {/* ═══ RIGHT: Info + Edit ═══ */}
-                    <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2 }}>
-                            <Stack spacing={2.5}>
-
-                                {/* ── Meta info ── */}
-                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 1.5, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    {[
-                                        ['Slug', asset?.slug],
-                                        ['Cuenta', asset?.account?.alias || asset?.accountId],
-                                        ['Archivo', asset?.archiveName],
-                                        ['Tamaño', formatMBfromB(asset?.fileSizeB ?? asset?.archiveSizeB)],
-                                        ['Creado', fmtDate(asset?.createdAt)],
-                                        ['Plan', asset?.isPremium ? 'Premium' : 'Free'],
-                                    ].map(([label, val]) => (
-                                        <Box key={label}>
-                                            <Typography sx={labelSx}>{label}</Typography>
-                                            <Typography sx={{ fontSize: '0.82rem', color: '#cbd5e1', wordBreak: 'break-all', mt: 0.2 }}>{val || '-'}</Typography>
-                                        </Box>
-                                    ))}
-                                    {(asset?.megaLink) && (
-                                        <Box sx={{ gridColumn: '1 / -1' }}>
-                                            <Typography sx={labelSx}>MEGA Link</Typography>
-                                            <Typography sx={{ fontSize: '0.82rem', mt: 0.2 }}>
-                                                <LinkIcon sx={{ fontSize: 14, verticalAlign: 'middle', mr: 0.5 }} />
-                                                <MUILink href={asset.megaLink} target="_blank" rel="noreferrer" underline="hover" sx={{ color: '#8b5cf6' }}>Abrir enlace</MUILink>
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                </Box>
-
-                                {/* ── Editable fields ── */}
-                                <Stack spacing={1.5}>
-                                    <Typography sx={{ ...labelSx, fontSize: '0.72rem' }}>Títulos</Typography>
-                                    <TextField size="small" label="Nombre (ES)" value={editForm.title} onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))} fullWidth sx={fieldSx} />
-                                    <TextField size="small" label="Name (EN)" value={editForm.titleEn} onChange={(e) => setEditForm(f => ({ ...f, titleEn: e.target.value }))} fullWidth sx={fieldSx} />
-                                </Stack>
-
-                                <Stack spacing={1.5}>
-                                    <Typography sx={{ ...labelSx, fontSize: '0.72rem' }}>Clasificación</Typography>
-                                    <Autocomplete
-                                        multiple disableCloseOnSelect size="small"
-                                        options={categories} getOptionLabel={(o) => o?.name || ''}
-                                        isOptionEqualToValue={(o, v) => o.id === v.id}
-                                        value={editForm.categories || []}
-                                        onChange={(_, v) => setEditForm(f => ({ ...f, categories: v }))}
-                                        renderTags={(value, getTagProps) => value.map((opt, i) => (
-                                            <Chip variant="outlined" label={opt.name} {...getTagProps({ index: i })} key={`${opt.slug}-${i}`} size="small" sx={{ borderColor: 'rgba(139,92,246,0.3)', color: '#c4b5fd' }} />
-                                        ))}
-                                        renderInput={(p) => <TextField {...p} label="Categorías" placeholder="Selecciona…" sx={fieldSx} />}
-                                    />
-                                    <Autocomplete
-                                        multiple freeSolo size="small"
-                                        options={allTags} getOptionLabel={(o) => (typeof o === 'string' ? o : (o?.name || o?.slug || ''))}
-                                        value={editForm.tags}
-                                        onChange={(_, v) => {
-                                            const normalized = [...new Set((v || []).map(item => typeof item === 'string' ? slugify(item) : slugify(item.slug || item.name)).filter(Boolean))];
-                                            setEditForm(f => ({ ...f, tags: normalized }));
-                                        }}
-                                        slotProps={{ popper: { sx: { zIndex: 2000 } } }}
-                                        renderTags={(value, getTagProps) => (value || []).map((opt, i) => (
-                                            <Chip variant="outlined" label={opt} {...getTagProps({ index: i })} key={opt + i} size="small" sx={{ borderColor: 'rgba(34,211,238,0.3)', color: '#67e8f9' }} />
-                                        ))}
-                                        renderInput={(p) => <TextField {...p} label="Tags" placeholder="Añadir tag…" sx={fieldSx} />}
-                                    />
-                                </Stack>
-
-                                <FormControlLabel
-                                    control={<Switch checked={editForm.isPremium} onChange={(e) => setEditForm(f => ({ ...f, isPremium: e.target.checked }))} sx={{ '& .Mui-checked': { color: '#eab308' }, '& .Mui-checked + .MuiSwitch-track': { bgcolor: '#eab30866' } }} />}
-                                    label={<Typography sx={{ fontSize: '0.82rem', color: editForm.isPremium ? '#eab308' : '#66bb6a', fontWeight: 600 }}>{editForm.isPremium ? '★ Premium' : 'Free'}</Typography>}
-                                />
-
-                                {/* ── Descriptions (read-only) ── */}
-                                {(() => {
-                                    const descEs = asset?.description;
-                                    const descEn = asset?.descriptionEn;
-                                    if (!descEs && !descEn) return null;
-                                    return (
-                                        <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <Typography sx={{ ...labelSx, mb: 0.8 }}>Descripciones</Typography>
-                                            {descEs && (
-                                                <Box sx={{ mb: 1 }}>
-                                                    <Typography sx={{ fontSize: '0.65rem', color: 'rgba(200,210,230,0.4)', mb: 0.3 }}>ES</Typography>
-                                                    <Typography sx={{ fontSize: '0.78rem', color: 'rgba(200,210,230,0.65)', lineHeight: 1.5 }}>{descEs}</Typography>
-                                                </Box>
-                                            )}
-                                            {descEn && (
-                                                <Box>
-                                                    <Typography sx={{ fontSize: '0.65rem', color: 'rgba(200,210,230,0.4)', mb: 0.3 }}>EN</Typography>
-                                                    <Typography sx={{ fontSize: '0.78rem', color: 'rgba(200,210,230,0.65)', lineHeight: 1.5 }}>{descEn}</Typography>
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    );
-                                })()}
-
-                                {/* ── Categories/Tags display (from detail, read-only context) ── */}
-                                {(() => {
-                                    const cats = Array.isArray(asset?.categories) ? asset.categories : [];
-                                    const tags = Array.isArray(asset?.tags) ? asset.tags : [];
-                                    if (!cats.length && !tags.length) return null;
-                                    return (
-                                        <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <Typography sx={{ ...labelSx, mb: 0.8 }}>Clasificación actual</Typography>
-                                            {cats.length > 0 && (
-                                                <Box sx={{ mb: 1 }}>
-                                                    <Typography sx={{ fontSize: '0.65rem', color: 'rgba(200,210,230,0.4)', mb: 0.5 }}>Categorías</Typography>
-                                                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {cats.map((c, i) => <Chip key={i} size="small" label={`${c.name}${c.nameEn ? ` / ${c.nameEn}` : ''}`} variant="outlined" sx={{ borderColor: 'rgba(139,92,246,0.2)', color: '#c4b5fd', fontSize: '0.72rem' }} />)}
-                                                    </Stack>
-                                                </Box>
-                                            )}
-                                            {tags.length > 0 && (
-                                                <Box>
-                                                    <Typography sx={{ fontSize: '0.65rem', color: 'rgba(200,210,230,0.4)', mb: 0.5 }}>Tags</Typography>
-                                                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {tags.map((t, i) => <Chip key={i} size="small" label={`${t.name || t.slug}${t.nameEn ? ` / ${t.nameEn}` : ''}`} variant="outlined" sx={{ borderColor: 'rgba(34,211,238,0.2)', color: '#67e8f9', fontSize: '0.72rem' }} />)}
-                                                    </Stack>
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    );
-                                })()}
-                            </Stack>
+                    <Box sx={{ width: { xs: '100%', md: '45%' }, flex: { xs: 1, md: 'initial' }, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {detailError && <Typography role="alert" sx={{ p: 2, color: '#f0aaaa', fontSize: 12 }}>{detailError}</Typography>}
+                        <Box component="fieldset" disabled={loadingDetail || Boolean(detailError) || loading} sx={{ display: 'flex', flexDirection: 'column', border: 0, p: 0, m: 0, minWidth: 0, minHeight: 0, flex: 1 }}>
+                          <AssetDetailSections asset={asset} editing={editing} editForm={editForm} setEditForm={setEditForm} categories={categories} allTags={allTags} formatMBfromB={formatMBfromB} />
                         </Box>
-
-                        {/* ── Footer ── */}
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 3, py: 1.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                            <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#fff' } }}>Cancelar</Button>
-                            <Button variant="contained" onClick={onSave} disabled={loading} startIcon={loading ? <CircularProgress size={16} /> : <SaveIcon />}
-                                sx={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', '&:hover': { background: 'linear-gradient(135deg, #a78bfa, #7c3aed)', transform: 'translateY(-1px)' }, transition: 'all 150ms ease', textTransform: 'none', fontWeight: 600 }}>
-                                {loading ? 'Guardando…' : 'Guardar'}
-                            </Button>
-                        </Box>
+                        {editing && <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, px: 2.5, py: 1, borderTop: '1px solid #334155', flexShrink: 0 }}>
+                            <Tooltip title="Cancelar cambios"><span><IconButton aria-label="Cancelar cambios" disabled={loading || loadingDetail} onClick={onCancelEdit || onClose}><UndoOutlined /></IconButton></span></Tooltip>
+                            <Tooltip title="Guardar cambios"><span><IconButton aria-label="Guardar cambios" disabled={loading || loadingDetail || Boolean(detailError)} onClick={onSave} sx={{ color: '#7dd3fc' }}>{loading ? <CircularProgress size={20} /> : <SaveIcon />}</IconButton></span></Tooltip>
+                        </Box>}
                     </Box>
                 </DialogContent>
             </Dialog>
