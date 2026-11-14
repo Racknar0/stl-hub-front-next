@@ -2,6 +2,7 @@
 import React from 'react';
 import './PricingSection.scss';
 import SimplyModal from '../../common/SimplyModal/SimplyModal';
+import PaymentMethodModal from './PaymentMethodModal';
 import PayButton from '../../common/PaypalButton/PayButton';
 import SocialProofPopup from '../../common/SocialProofPopup/SocialProofPopup';
 import { useI18n } from '../../../i18n';
@@ -273,9 +274,7 @@ const PricingSection = ({
                         <p className="plan-note"><AutoAwesomeRoundedIcon aria-hidden="true" /><span>{planNote(p)}</span></p>
                         <button
                             type="button"
-                            className={`btn-pill ${
-                                p.highlight ? 'fill' : 'outline'
-                            }`}
+                            className="btn-pill fill"
                             onClick={(e) => {
                             sendGTMEvent({ 
                                 event: 'begin_checkout',
@@ -320,95 +319,20 @@ const PricingSection = ({
 
             {showFinePrint && <p className="fine-print">{finePrint}</p>}
 
-            {/* Modal de métodos de pago usando SimplyModal */}
-            <SimplyModal
+            <PaymentMethodModal
                 open={showModal}
                 onClose={() => setShowModal(false)}
-                title={ isEn ? 'Select payment method' : 'Selecciona un método de pago' }
-                brand="STL Hub"
-            >
-                <div className="payment-method-list">
-                    <button
-                        className="payment-method-btn is-primary"
-                        type="button"
-                        onClick={() => {
-                            if (!selectedPlan) setSelectedPlan(plans[0]);
-                            beginPaymentAttempt('MERCADOPAGO', selectedPlan || plans[0]);
-                            setShowModal(false);
-                            setPaymentMethod('mercadopago');
-                            setPaymentModalOpen(true);
-                        }}
-                    >
-                        <span className="payment-method-content">
-                            <span className="payment-method-text">
-                                <span className="payment-method-title">
-                                    {isEn ? 'Latin America & Colombia' : 'Latinoamérica & Colombia'}
-                                </span>
-                                <span className="payment-method-subtitle">
-                                    {isEn
-                                        ? 'Mercado Pago, PSE, Nequi and Credit Cards'
-                                        : 'Mercado Pago, PSE, Nequi y Tarjetas de crédito'}
-                                </span>
-                            </span>
-                            <span className="payment-method-logo" aria-hidden>
-                                <img src="/payments_logos/mercado-pago-logo.png" alt="Mercado Pago" />
-                            </span>
-                        </span>
-                    </button>
-                    <button
-                        className="payment-method-btn"
-                        type="button"
-                        onClick={() => {
-                            if (!selectedPlan) setSelectedPlan(plans[0]);
-                            beginPaymentAttempt('PAYPAL', selectedPlan || plans[0]);
-                            setShowModal(false);
-                            setPaymentMethod('paypal');
-                            setPaymentModalOpen(true);
-                        }}
-                    >
-                        <span className="payment-method-content">
-                            <span className="payment-method-text">
-                                <span className="payment-method-title">
-                                    {isEn ? 'Card / PayPal' : 'Tarjeta / PayPal'}
-                                </span>
-                                <span className="payment-method-subtitle">
-                                    {isEn
-                                        ? 'Accept payments with PayPal and credit cards'
-                                        : 'Recibe pagos con PayPal y tarjeta de crédito'}
-                                </span>
-                            </span>
-                            <span className="payment-method-logo is-paypal" aria-hidden>
-                                <img src="/payments_logos/paypal-logo.png" alt="PayPal" />
-                            </span>
-                        </span>
-                    </button>
-                </div>
-                <div
-                    className="payment-method-plan-summary"
-                >
-                    {selectedPlan && (
-                        <>
-                            <b>{isEn ? 'Plan:' : 'Plan:'}</b>{' '}
-                            {dayWord(selectedPlan.name)}
-                            <br />
-                            <b>{isEn ? 'Total:' : 'Total:'}</b>{' '}
-                            {currency(selectedPlan.total, locale)}
-                        </>
-                    )}
-                </div>
-                <div className="payment-summary-icons" aria-hidden>
-                    <img
-                        className="payment-summary-icon secure"
-                        src="/payments_logos/100-secure.png"
-                        alt=""
-                    />
-                    <img
-                        className="payment-summary-icon"
-                        src="/payments_logos/warranty.png"
-                        alt=""
-                    />
-                </div>
-            </SimplyModal>
+                selectedPlan={selectedPlan}
+                isEn={isEn}
+                onSelect={(method) => {
+                    const plan = selectedPlan || plans[0];
+                    if (!selectedPlan) setSelectedPlan(plan);
+                    beginPaymentAttempt(method === 'paypal' ? 'PAYPAL' : 'MERCADOPAGO', plan);
+                    setShowModal(false);
+                    setPaymentMethod(method);
+                    setPaymentModalOpen(true);
+                }}
+            />
 
             {/* Modal específico del método de pago: muestra PayButton para PayPal o placeholder para tarjeta */}
             <SimplyModal

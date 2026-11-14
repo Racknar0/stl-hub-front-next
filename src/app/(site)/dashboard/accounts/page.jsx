@@ -10,12 +10,14 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { isFailedAccount, summarizeAccountFailures, isAccountAtCapacity } from '@/helpers/accountHealth';
 import AppButton from '@/components/layout/Buttons/Button';
 import HttpService from '@/services/HttpService';
+import axiosInstance from '@/services/AxiosInterceptor';
 import { timerAlert, errorAlert, confirmAlert } from '@/helpers/alerts';
 import AddAccountForm from './components/AddAccountForm';
 import StorageSummaryCard from './components/StorageSummaryCard';
 import AccountsTabs from './components/AccountsTabs';
 import VirtualAccountsGrid from './components/VirtualAccountsGrid';
 import ExcessCleanupModal from './components/ExcessCleanupModal';
+import CleanupJobsStatus from './components/CleanupJobsStatus';
 import AccountDrawer from './components/AccountDrawer';
 import StatusChip from './components/StatusChip';
 import BulkAddAccountsModal from './components/BulkAddAccountsModal';
@@ -81,17 +83,22 @@ export default function AccountsOverviewPage() {
             return n;
         });
 
-    const fetchAccounts = async () => {
+    const fetchAccounts = async ({ quiet = false } = {}) => {
         try {
             setLoading(true);
-            const res = await http.getData(`${API_BASE}`);
+            const res = quiet ? await axiosInstance.get(API_BASE, { timeout: 10000 }) : await http.getData(API_BASE);
             setAccounts(res.data || []);
+            return true;
         } catch (e) {
             console.error(e);
-            await errorAlert('Error', 'No se pudieron cargar las cuentas');
+            if (!quiet) await errorAlert('Error', 'No se pudieron cargar las cuentas');
+            return false;
         } finally {
             setLoading(false);
         }
+    };
+    const refreshCleanupAccounts = async () => {
+        if (!await fetchAccounts({ quiet: true })) throw new Error('No se pudieron actualizar las cuentas después de la depuración.');
     };
 
     useEffect(() => {
@@ -480,6 +487,7 @@ export default function AccountsOverviewPage() {
             </Collapse>
             {loading && <LinearProgress />}
             <StorageSummaryCard totalStorage={totalStorage} groupLabel={activeEmailGroup === 'all' ? null : activeEmailGroup} />
+            <CleanupJobsStatus accounts={accounts} onOpen={setCleanupAccount} onComplete={refreshCleanupAccounts} />
 
             {failures.total > 0 && (
                 <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap', px: 1.5, py: .8, mb: 1.5, borderRadius: 2, border: '1px solid #f45b6b', bgcolor: 'rgba(244,63,94,.08)', color: '#fda4af' }}>
@@ -602,7 +610,7 @@ export default function AccountsOverviewPage() {
                 <Box sx={{ p: 2, color: '#94a3b8', fontSize: 13 }}>No hay cuentas que coincidan con estos filtros.</Box>
             )}
 
-            {cleanupAccount && <ExcessCleanupModal account={cleanupAccount} onClose={() => setCleanupAccount(null)} onComplete={fetchAccounts} />}
+            {cleanupAccount && <ExcessCleanupModal account={cleanupAccount} onClose={() => setCleanupAccount(null)} onComplete={refreshCleanupAccounts} />}
             <AccountDrawer
                 open={open}
                 onClose={() => setOpen(false)}

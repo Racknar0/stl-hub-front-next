@@ -12,6 +12,8 @@ export default function SimplyModal({
     ariaLabelledBy = 'simply-modal-title',
     bodyStyles = {},
     titleStyles = {},
+    className = '',
+    closeLabel = 'Cerrar',
 }) {
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -39,7 +41,7 @@ export default function SimplyModal({
     return (
         <>
             <div
-                className={`simply-modal modal fade show`}
+                className={`simply-modal modal fade show ${className}`}
                 style={{ display: 'block' }}
                 role="dialog"
                 aria-modal="true"
@@ -58,7 +60,7 @@ export default function SimplyModal({
                             <button
                                 type="button"
                                 className="btn-close"
-                                aria-label="Cerrar"
+                                aria-label={closeLabel}
                                 onClick={onClose}
                             />
                         </div>
