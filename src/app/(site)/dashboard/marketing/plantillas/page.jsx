@@ -4,6 +4,7 @@ import React from 'react'
 import emailMarketingService from '../../../../../services/EmailMarketingService'
 import useMarketingData from '../useMarketingData'
 import MarketingStatus from '../MarketingStatus'
+import Ayuda from '../Ayuda'
 import { PLANTILLAS_META, ETIQUETAS_ESTADO } from '../demoData'
 
 export default function MarketingPlantillas() {
@@ -15,10 +16,12 @@ export default function MarketingPlantillas() {
     <>
       <MarketingStatus loading={loading} error={error} onRetry={reload} />
 
-      <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
+      <section className="mk-card">
         <div className="mk-card-title">
-          <h2>Plantillas de correo</h2>
-          <small>Bilingües: cada contacto la recibe en su idioma</small>
+          <h2>
+            Plantillas de correo
+            <Ayuda texto="Los diseños de los correos, que viven en Brevo. Son bilingües: cada contacto recibe la plantilla en su idioma. Están enlazadas a los pasos del embudo, así que al cambiar una cambia en todos los correos donde se usa." />
+          </h2>
         </div>
 
         <div className="mk-grid-2" style={{ marginBottom: 0 }}>
@@ -44,7 +47,16 @@ export default function MarketingPlantillas() {
                   <span style={{ color: '#a0aec0', fontSize: '0.78rem' }}>
                     {meta.uso || `Plantilla #${t.id}`}
                   </span>
-                  <span className={`mk-tag ${estado.clase}`}>{estado.texto}</span>
+                  <span className={`mk-tag ${estado.clase}`}>
+                    {estado.texto}
+                    <Ayuda
+                      texto={
+                        t.isActive
+                          ? 'Activa: el embudo la puede enviar.'
+                          : 'Inactiva: no envía nada, aunque el embudo o la campaña que la usa esté encendida. Hay que activarla en Brevo.'
+                      }
+                    />
+                  </span>
                 </div>
               </article>
             )
@@ -54,15 +66,6 @@ export default function MarketingPlantillas() {
           )}
         </div>
       </section>
-
-      <div className="mk-note">
-        <span aria-hidden>i</span>
-        <div>
-          Las plantillas viven en Brevo y están enlazadas a los pasos del embudo: al cambiar una,
-          cambia en todos los correos donde se usa. Una plantilla <b>inactiva no envía nada</b>,
-          aunque el embudo esté encendido.
-        </div>
-      </div>
     </>
   )
 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import emailMarketingService from '../../../../../services/EmailMarketingService'
 import useMarketingData from '../useMarketingData'
 import MarketingStatus from '../MarketingStatus'
+import Ayuda from '../Ayuda'
 
 const PAGE_SIZE = 25
 
@@ -35,27 +36,32 @@ export default function MarketingAudiencias() {
   const AUDIENCIAS = [
     {
       nombre: 'Activos',
-      regla: `Abrió, hizo clic, inició sesión o descargó · últimos ${windows.ACTIVE_DAYS} días`,
+      regla: `Señal de vida en ${windows.ACTIVE_DAYS} días`,
+      ayuda: `Abrieron o hicieron clic en un correo, iniciaron sesión o descargaron un modelo en los últimos ${windows.ACTIVE_DAYS} días. Reciben las novedades periódicas.`,
       contactos: stages.ACTIVE,
     },
     {
       nombre: 'Dormidos',
-      regla: `Sin ninguna señal · ${windows.ACTIVE_DAYS} días · registro hace más de ${windows.DORMANT_MIN_AGE_DAYS} días`,
+      regla: `Sin señales en ${windows.ACTIVE_DAYS} días`,
+      ayuda: `Tienen que cumplirse todas a la vez durante ${windows.ACTIVE_DAYS} días: no abrieron ni hicieron clic en ningún correo, no iniciaron sesión y no descargaron nada. Además llevan más de ${windows.DORMANT_MIN_AGE_DAYS} días registrados, para no perseguir a quien acaba de llegar. Reciben el reenganche.`,
       contactos: stages.DORMANT,
     },
     {
       nombre: 'Nuevos',
-      regla: `Registrados en los últimos ${windows.NEW_DAYS} días`,
+      regla: `Registro hace menos de ${windows.NEW_DAYS} días`,
+      ayuda: 'Están recorriendo el embudo de bienvenida. Mientras tanto no se evalúan como activos ni dormidos.',
       contactos: stages.NEW,
     },
     {
       nombre: 'Premium',
-      regla: 'Con suscripción activa · excluidos de los correos de venta',
+      regla: 'Suscripción activa',
+      ayuda: 'Usuarios con suscripción activa. Es independiente de la etapa y se usa para no enviarles los correos de venta de Premium.',
       contactos: premium,
     },
     {
       nombre: 'Bloqueados',
-      regla: 'Baja voluntaria, rebote duro, queja de spam o sin reacción al reenganche',
+      regla: 'Sin marketing',
+      ayuda: `Salen del marketing si no reaccionan al reenganche en ${windows.REENGAGE_GRACE_DAYS} días, o al instante si se dan de baja, marcan el correo como spam o su dirección rebota de forma permanente. Siguen teniendo cuenta y reciben correos de activación y contraseña.`,
       contactos: stages.OPTED_OUT,
     },
   ]
@@ -71,22 +77,27 @@ export default function MarketingAudiencias() {
     <>
       <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
         <div className="mk-card-title">
-          <h2>Audiencias</h2>
-          <small>Se calculan solas con las señales de la web y del correo</small>
+          <h2>
+            Audiencias
+            <Ayuda texto="Grupos de contactos que se calculan solos con las señales de la web y del correo. Sirven para elegir a quién va cada campaña." />
+          </h2>
         </div>
 
         <table className="mk-table">
           <thead>
             <tr>
               <th>Audiencia</th>
-              <th>Regla</th>
+              <th>Criterio</th>
               <th className="num">Contactos</th>
             </tr>
           </thead>
           <tbody>
             {AUDIENCIAS.map((a) => (
               <tr key={a.nombre}>
-                <td><b>{a.nombre}</b></td>
+                <td>
+                  <b>{a.nombre}</b>
+                  <Ayuda texto={a.ayuda} />
+                </td>
                 <td style={{ color: '#a0aec0' }}>{a.regla}</td>
                 <td className="num">{a.contactos}</td>
               </tr>
@@ -95,9 +106,12 @@ export default function MarketingAudiencias() {
         </table>
       </section>
 
-      <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
+      <section className="mk-card">
         <div className="mk-card-title">
-          <h2>Contactos</h2>
+          <h2>
+            Contactos
+            <Ayuda texto="Lista de personas de la etapa elegida, de la más reciente a la más antigua en su última señal." />
+          </h2>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {ETAPAS.map((e) => (
               <button
@@ -121,7 +135,10 @@ export default function MarketingAudiencias() {
                 <tr>
                   <th>Correo</th>
                   <th>Registro</th>
-                  <th>Última señal</th>
+                  <th>
+                    Última señal
+                    <Ayuda texto="Su actividad más reciente entre iniciar sesión, descargar un modelo, abrir un correo o hacer clic. Un guion significa que nunca dio ninguna." />
+                  </th>
                   <th>Plan</th>
                 </tr>
               </thead>
@@ -169,42 +186,6 @@ export default function MarketingAudiencias() {
             </div>
           </>
         )}
-      </section>
-
-      <section className="mk-grid-2">
-        <article className="mk-card">
-          <div className="mk-card-title"><h2>Cuándo pasa a Dormido</h2></div>
-          <p style={{ color: '#a0aec0', fontSize: '0.88rem', lineHeight: 1.6 }}>
-            Tienen que cumplirse <b style={{ color: '#fff' }}>todas</b> a la vez durante {windows.ACTIVE_DAYS} días:
-          </p>
-          <ul style={{ color: '#cbd5e0', fontSize: '0.88rem', lineHeight: 1.9, paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
-            <li>No abrió ningún correo</li>
-            <li>No hizo clic en ningún enlace</li>
-            <li>No inició sesión en la web</li>
-            <li>No descargó ningún modelo</li>
-          </ul>
-          <p style={{ color: '#a0aec0', fontSize: '0.82rem', marginTop: '0.75rem' }}>
-            Además tiene que llevar más de {windows.DORMANT_MIN_AGE_DAYS} días registrado, para no
-            perseguir a quien acaba de llegar.
-          </p>
-        </article>
-
-        <article className="mk-card">
-          <div className="mk-card-title"><h2>Cuándo sale del marketing</h2></div>
-          <p style={{ color: '#a0aec0', fontSize: '0.88rem', lineHeight: 1.6 }}>
-            Solo después de haber recibido el reenganche y no haber reaccionado en {windows.REENGAGE_GRACE_DAYS} días.
-            También sale al instante si:
-          </p>
-          <ul style={{ color: '#cbd5e0', fontSize: '0.88rem', lineHeight: 1.9, paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
-            <li>Pulsa «darme de baja»</li>
-            <li>Marca el correo como spam</li>
-            <li>Su dirección rebota de forma permanente</li>
-          </ul>
-          <div className="mk-note" style={{ marginTop: '1rem' }}>
-            <span aria-hidden>i</span>
-            <div>Sigue teniendo cuenta y recibiendo activación y contraseña. Solo deja de recibir promociones.</div>
-          </div>
-        </article>
       </section>
     </>
   )
