@@ -6,7 +6,6 @@ export default function MarketingLayout({ children }) {
   return (
     <div className="mk">
       <MarketingTabs />
-      <div className="mk-local-note">Maqueta local · datos de ejemplo</div>
 
       {children}
     </div>

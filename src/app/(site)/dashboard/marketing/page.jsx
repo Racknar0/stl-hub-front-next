@@ -1,48 +1,100 @@
+'use client'
+
 import React from 'react'
-import { RESUMEN, CICLO } from './demoData'
+import emailMarketingService from '../../../../services/EmailMarketingService'
+import useMarketingData from './useMarketingData'
+import MarketingStatus from './MarketingStatus'
 
 const pct = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0)
+const rate = (valor, hayEnvios) => (hayEnvios ? `${valor}%` : '—')
 
 export default function MarketingResumen() {
-  const usoDiario = pct(RESUMEN.enviadosHoy, RESUMEN.limiteDiario)
+  const { data, error, loading, reload } = useMarketingData(() => emailMarketingService.overview(), [])
+
+  if (!data) return <MarketingStatus loading={loading} error={error} onRetry={reload} />
+
+  const { contacts, stages, premium, windows, daily, last30 } = data
+  const hayEnvios = last30.sent > 0
+
+  const CICLO = [
+    {
+      key: 'nuevos',
+      clase: 's-new',
+      nombre: 'Nuevos',
+      cantidad: stages.NEW,
+      regla: `Registrados hace menos de ${windows.NEW_DAYS} días. Están recorriendo el embudo.`,
+    },
+    {
+      key: 'activos',
+      clase: 's-active',
+      nombre: 'Activos',
+      cantidad: stages.ACTIVE,
+      regla: `Abrieron, hicieron clic, entraron o descargaron en los últimos ${windows.ACTIVE_DAYS} días.`,
+    },
+    {
+      key: 'dormidos',
+      clase: 's-sleep',
+      nombre: 'Dormidos',
+      cantidad: stages.DORMANT,
+      regla: `Sin señal de vida en ${windows.ACTIVE_DAYS} días. Reciben el correo de reenganche.`,
+    },
+    {
+      key: 'fuera',
+      clase: 's-out',
+      nombre: 'Fuera',
+      cantidad: stages.OPTED_OUT,
+      regla: 'No reaccionaron al reenganche o se dieron de baja. Sin marketing, conservan su cuenta.',
+    },
+  ]
 
   return (
     <>
+      <MarketingStatus loading={loading} error={error} onRetry={reload} />
+
       {/* ---------- Métricas ---------- */}
       <section className="mk-stats">
         <article className="mk-stat">
           <span className="label">Contactos</span>
-          <span className="value">{RESUMEN.contactos}</span>
-          <span className="hint">Usuarios de la web con marketing activo</span>
+          <span className="value">{contacts}</span>
+          <span className="hint">Usuarios registrados en la web</span>
         </article>
 
         <article className="mk-stat is-warn">
           <span className="label">Envíos hoy</span>
           <span className="value">
-            {RESUMEN.enviadosHoy}
-            <small style={{ fontSize: '1rem', color: '#a0aec0' }}> / {RESUMEN.limiteDiario}</small>
+            {daily.sentToday}
+            <small style={{ fontSize: '1rem', color: '#a0aec0' }}> / {daily.limit}</small>
           </span>
-          <div className="mk-bar is-good"><i style={{ width: `${usoDiario}%` }} /></div>
+          <div className="mk-bar is-good"><i style={{ width: `${pct(daily.sentToday, daily.limit)}%` }} /></div>
         </article>
 
         <article className="mk-stat">
-          <span className="label">En cola</span>
-          <span className="value">{RESUMEN.enCola}</span>
-          <span className="hint">Correos esperando turno · próximo envío: {RESUMEN.proximoEnvio}</span>
-        </article>
-
-        <article className="mk-stat is-bad">
-          <span className="label">Apertura media</span>
-          <span className="value">{RESUMEN.aperturaMedia}%</span>
-          <span className="hint">Objetivo tras la limpieza: 25%</span>
+          <span className="label">Premium</span>
+          <span className="value">{premium}</span>
+          <span className="hint">Con suscripción activa</span>
         </article>
 
         <article className="mk-stat">
-          <span className="label">Clics</span>
-          <span className="value">{RESUMEN.clicMedio}%</span>
-          <span className="hint">{RESUMEN.bajas} bajas · {RESUMEN.quejasSpam} quejas de spam</span>
+          <span className="label">Apertura (30 días)</span>
+          <span className="value">{rate(last30.openRate, hayEnvios)}</span>
+          <span className="hint">{hayEnvios ? `${last30.sent} correos enviados` : 'Sin envíos registrados aún'}</span>
+        </article>
+
+        <article className="mk-stat">
+          <span className="label">Clics (30 días)</span>
+          <span className="value">{rate(last30.clickRate, hayEnvios)}</span>
+          <span className="hint">{last30.unsubscribes} bajas · {last30.spamComplaints} quejas de spam</span>
         </article>
       </section>
+
+      <div className="mk-note" style={{ marginBottom: '1.5rem' }}>
+        <span aria-hidden>⚙</span>
+        <div>
+          <b>Las automatizaciones correrán en nuestro servidor.</b> Brevo solo entrega los correos
+          y nos avisa de aperturas, clics y rebotes. Hoy el embudo de bienvenida todavía corre en
+          Brevo, así que las métricas de envío se llenarán cuando el motor propio empiece a enviar.
+        </div>
+      </div>
 
       {/* ---------- Ciclo de vida ---------- */}
       <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
@@ -73,16 +125,6 @@ export default function MarketingResumen() {
           </div>
         </div>
       </section>
-
-      <div className="mk-note" style={{ marginBottom: '1.5rem' }}>
-        <span aria-hidden>⚙</span>
-        <div>
-          <b>Las automatizaciones corren en nuestro servidor.</b> Brevo solo entrega los correos
-          y nos avisa de aperturas, clics y rebotes. Sin tope de contactos en automatizaciones:
-          el único límite es el cupo diario de envío, y lo que no cabe queda en cola para el
-          día siguiente.
-        </div>
-      </div>
 
       {/* ---------- Qué decide cada cosa ---------- */}
       <section className="mk-grid-2">
@@ -139,34 +181,28 @@ export default function MarketingResumen() {
             <thead>
               <tr>
                 <th>Paso</th>
-                <th>Cuándo</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Webhook de Brevo a este panel</td>
-                <td>Primero</td>
-                <td><span className="mk-tag t-wait">Pendiente</span></td>
+                <td><span className="mk-tag t-on">Activo</span></td>
               </tr>
               <tr>
                 <td>Motor de envíos propio (cola + cupo diario)</td>
-                <td>Después</td>
                 <td><span className="mk-tag t-draft">Planificado</span></td>
               </tr>
               <tr>
                 <td>Embudo de bienvenida desde el servidor</td>
-                <td>Al migrar y apagar el de Brevo</td>
                 <td><span className="mk-tag t-draft">Planificado</span></td>
               </tr>
               <tr>
                 <td>Reenganche y limpieza de dormidos</td>
-                <td>Con el motor propio</td>
                 <td><span className="mk-tag t-draft">Planificado</span></td>
               </tr>
               <tr>
                 <td>Novedades periódicas</td>
-                <td>Tras la limpieza</td>
                 <td><span className="mk-tag t-draft">Planificado</span></td>
               </tr>
             </tbody>

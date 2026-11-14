@@ -1,9 +1,20 @@
+'use client'
+
 import React from 'react'
-import { PLANTILLAS, ETIQUETAS_ESTADO } from '../demoData'
+import emailMarketingService from '../../../../../services/EmailMarketingService'
+import useMarketingData from '../useMarketingData'
+import MarketingStatus from '../MarketingStatus'
+import { PLANTILLAS_META, ETIQUETAS_ESTADO } from '../demoData'
 
 export default function MarketingPlantillas() {
+  const { data, error, loading, reload } = useMarketingData(() => emailMarketingService.templates(), [])
+
+  if (!data) return <MarketingStatus loading={loading} error={error} onRetry={reload} />
+
   return (
     <>
+      <MarketingStatus loading={loading} error={error} onRetry={reload} />
+
       <section className="mk-card" style={{ marginBottom: '1.5rem' }}>
         <div className="mk-card-title">
           <h2>Plantillas de correo</h2>
@@ -11,30 +22,36 @@ export default function MarketingPlantillas() {
         </div>
 
         <div className="mk-grid-2" style={{ marginBottom: 0 }}>
-          {PLANTILLAS.map((t) => {
-            const estado = ETIQUETAS_ESTADO[t.estado]
+          {data.items.map((t) => {
+            const meta = PLANTILLAS_META[t.id] || {}
+            const estado = ETIQUETAS_ESTADO[t.isActive ? 'on' : 'off']
             return (
               <article className="mk-tpl" key={t.id}>
                 <div className="tpl-thumb">
-                  {t.imagen ? (
-                    <img src={`/marketing/${t.imagen}.jpg`} alt="" loading="lazy" />
+                  {meta.imagen ? (
+                    <img src={`/marketing/${meta.imagen}.jpg`} alt="" loading="lazy" />
                   ) : (
                     <span>Sin banner · solo cabecera</span>
                   )}
                 </div>
 
                 <div className="tpl-body">
-                  <div className="tpl-name">{t.nombre}</div>
-                  <div className="tpl-subject">{t.asunto}</div>
+                  <div className="tpl-name">{t.name}</div>
+                  <div className="tpl-subject">{t.subject}</div>
                 </div>
 
                 <div className="tpl-foot">
-                  <span style={{ color: '#a0aec0', fontSize: '0.78rem' }}>{t.uso}</span>
+                  <span style={{ color: '#a0aec0', fontSize: '0.78rem' }}>
+                    {meta.uso || `Plantilla #${t.id}`}
+                  </span>
                   <span className={`mk-tag ${estado.clase}`}>{estado.texto}</span>
                 </div>
               </article>
             )
           })}
+          {data.items.length === 0 && (
+            <div style={{ color: '#a0aec0' }}>Brevo no devolvió plantillas.</div>
+          )}
         </div>
       </section>
 
