@@ -9,10 +9,11 @@ import VideoLibraryOutlined from '@mui/icons-material/VideoLibraryOutlined'
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined'
 import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined'
 import PanoramaOutlined from '@mui/icons-material/PanoramaOutlined'
+import OndemandVideoOutlined from '@mui/icons-material/OndemandVideoOutlined'
 
 const sections = [
   { title: 'Taxonomía', tabs: [['Categorías', '/dashboard/categories'], ['Tags', '/dashboard/tags']] },
-  { title: 'Publicaciones', tabs: [['Pinterest', '/dashboard/pinterest'], ['Reels', '/dashboard/reels'], ['Banners del home', '/dashboard/hero-banners']] },
+  { title: 'Publicaciones', tabs: [['Pinterest', '/dashboard/pinterest'], ['Reels', '/dashboard/reels'], ['Videos horizontales', '/dashboard/videos-horizontales'], ['Banners del home', '/dashboard/hero-banners']] },
   { title: 'Telegram', tabs: [['Descargas', '/dashboard/telegram-downloader'], ['Organizador', '/dashboard/telegram-organizer']] },
 ]
 

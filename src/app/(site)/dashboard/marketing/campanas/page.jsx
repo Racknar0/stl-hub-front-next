@@ -5,20 +5,8 @@ import emailMarketingService from '../../../../../services/EmailMarketingService
 import useMarketingData from '../useMarketingData'
 import MarketingStatus from '../MarketingStatus'
 import Ayuda from '../Ayuda'
+import Reenganche from './Reenganche'
 import { CAMPANAS, ETIQUETAS_ESTADO } from '../demoData'
-
-// Reparto del reenganche en tandas crecientes: 100, 200 y el resto.
-const repartirTandas = (total) => {
-  const tandas = []
-  let restante = total
-  for (const tope of [100, 200, Infinity]) {
-    if (restante <= 0) break
-    const cantidad = Math.min(restante, tope)
-    tandas.push({ dia: `Día ${tandas.length + 1}`, cantidad })
-    restante -= cantidad
-  }
-  return tandas
-}
 
 export default function MarketingCampanas() {
   const { data, error, loading, reload } = useMarketingData(() => emailMarketingService.audiences(), [])
@@ -29,7 +17,6 @@ export default function MarketingCampanas() {
     Dormidos: data.stages.DORMANT,
     Activos: data.stages.ACTIVE,
   }
-  const tandas = repartirTandas(data.stages.DORMANT)
 
   return (
     <>
@@ -76,37 +63,7 @@ export default function MarketingCampanas() {
         </table>
       </section>
 
-      <section className="mk-card">
-        <div className="mk-card-title">
-          <h2>
-            Reenganche · plan de envío
-            <Ayuda texto={`Correo para los dormidos que intenta recuperarlos. Quien abre o hace clic vuelve a Activos; quien no reacciona en ${data.windows.REENGAGE_GRACE_DAYS} días pasa a Bloqueado. Se reparte en tandas crecientes porque el dominio es nuevo: soltar todo de golpe es la forma más rápida de acabar en spam.`} />
-          </h2>
-          <small>{data.stages.DORMANT} destinatarios</small>
-        </div>
-
-        <table className="mk-table">
-          <thead>
-            <tr>
-              <th>Tanda</th>
-              <th className="num">Correos</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tandas.map((t) => (
-              <tr key={t.dia}>
-                <td>{t.dia}</td>
-                <td className="num">{t.cantidad}</td>
-                <td><span className="mk-tag t-wait">Pendiente</span></td>
-              </tr>
-            ))}
-            {tandas.length === 0 && (
-              <tr><td colSpan={3} style={{ color: '#a0aec0' }}>No hay contactos dormidos.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+      <Reenganche />
     </>
   )
 }

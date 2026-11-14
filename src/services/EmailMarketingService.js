@@ -48,6 +48,18 @@ export class EmailMarketingService extends HttpService {
     return resp.data
   }
 
+  // Estado del reenganche de dormidos.
+  async reengage() {
+    const resp = await this.getData('/admin/email-marketing/reengage')
+    return resp.data
+  }
+
+  // Pone en cola una tanda de reenganche.
+  async launchReengage(batchSize) {
+    const resp = await this.postData('/admin/email-marketing/reengage/launch', { batchSize })
+    return resp.data
+  }
+
   // Recalcula las etapas de todos los contactos.
   async sync() {
     const resp = await this.postData('/admin/email-marketing/sync', {})
