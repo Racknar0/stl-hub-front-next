@@ -274,6 +274,7 @@ const postToForm = (post) => ({
   caption: post.caption || '', facebookCaption: post.facebookCaption || '', title: post.title || '',
   youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
   youtubeChannels: Array.isArray(post.youtubeChannels) ? post.youtubeChannels : null, // null = todos los canales conectados
+  facebookPages: Array.isArray(post.facebookPages) ? post.facebookPages : null, // null = todas las Páginas asignadas
   youtubeVariants: post.youtubeVariants && typeof post.youtubeVariants === 'object' ? post.youtubeVariants : {},
   tiktokOptions: { ...TIKTOK_DEFAULT_OPTIONS, ...(post.tiktokOptions && typeof post.tiktokOptions === 'object' ? post.tiktokOptions : {}) },
   hashtags: toList(post.hashtags), platforms: toList(post.platforms),
@@ -654,6 +655,14 @@ export default function ReelsPublisher() {
                   <PlatformIcon platform="youtube" title={p.label} />{connectingYt ? 'Esperando autorización…' : '+ Canal'}
                 </button>
               </React.Fragment>
+            ) : p.key === 'facebook' && (connection?.facebook?.pages || []).length > 1 ? (
+              <React.Fragment key={p.key}>
+                {connection.facebook.pages.map(pg => (
+                  <span key={pg.id} className="rl-conn on" title={`Página asignada: ${pg.name}`}>
+                    <PlatformIcon platform="facebook" title={p.label} />{pg.name}
+                  </span>
+                ))}
+              </React.Fragment>
             ) : p.key === 'youtube' && !ytConnected ? (
               <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
                 title="Autoriza tu canal de YouTube para publicar Shorts">
@@ -888,7 +897,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -903,7 +912,7 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], fbPages = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
   const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
@@ -1103,6 +1112,23 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <span><PlatformIcon platform="instagram" /> Caption de Instagram <small>{form.caption.length}/2200</small></span>
                   <textarea className="form-input" rows="5" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
                 </label>
+              )}
+              {form.platforms.includes('facebook') && isVisible('facebook') && fbPages.length > 1 && (
+                <div className="rl-field">
+                  <span><PlatformIcon platform="facebook" /> Páginas de Facebook</span>
+                  <div className="rl-tt-checks">
+                    {fbPages.map(pg => {
+                      const chosen = form.facebookPages ?? fbPages.map(x => x.id);
+                      return (
+                        <label key={pg.id}>
+                          <input type="checkbox" checked={chosen.includes(pg.id)} disabled={readOnly}
+                            onChange={(e) => update({ facebookPages: e.target.checked ? [...chosen, pg.id] : chosen.filter(id => id !== pg.id) })} />
+                          {pg.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
               {form.platforms.includes('facebook') && isVisible('facebook') && (
                 <label className="rl-field">
@@ -1340,6 +1366,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                       </li>
                     );
                   })}
+                  {Object.entries(post.results).filter(([key]) => key.startsWith('facebook:')).map(([key, r]) => (
+                    <li key={key}>
+                      <PlatformIcon platform="facebook" title="Facebook" />Facebook · {r.pageName || 'página'}
+                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
+                      {!r.simulated && <small>{r.commentId ? '💬 link comentado' : '⚠ sin comentario con link'}</small>}
+                      ✓
+                    </li>
+                  ))}
                   {Object.entries(post.results).filter(([key]) => key.startsWith('youtube:')).map(([key, r]) => (
                     <li key={key}>
                       <PlatformIcon platform="youtube" title="YouTube" />YouTube · {r.channelTitle || 'canal'}
