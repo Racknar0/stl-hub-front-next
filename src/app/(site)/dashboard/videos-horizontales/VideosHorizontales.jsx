@@ -27,6 +27,7 @@ export default function VideosHorizontales() {
   const [activeMetaTab, setActiveMetaTab] = useState('description'); // 'description', 'timestamps', 'tags'
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [copiedDesc, setCopiedDesc] = useState(false);
+  const [withRender, setWithRender] = useState(true);
 
   // Estados sincronizados exclusivamente con el backend (sin datos mock)
   const [channels, setChannels] = useState([]);
@@ -117,9 +118,9 @@ export default function VideosHorizontales() {
       await http.postData('/reels/horizontal/generate', {
         title: upcomingTitle,
         description: customDesc,
-        render: false
+        render: withRender
       });
-      alert('¡Recopilación generada y registrada en base de datos con éxito! Modelos rotados al final de la cola.');
+      alert('¡Recopilación generada con éxito! ' + (withRender ? 'El video MP4 fue ensamblado con FFmpeg y está listo para descargar en el historial.' : 'Registrado en la base de datos.'));
       await loadStatus();
       await loadModels(filter);
       await loadHistory();
@@ -283,7 +284,7 @@ export default function VideosHorizontales() {
             <div className="vh-video-wrapper">
               <video 
                 controls 
-                src="/demo_horizontal.mp4" 
+                src={historyList[0]?.videoPath ? resolveMediaUrl(historyList[0].videoPath) : "/demo_horizontal.mp4"} 
                 poster="/demo_horizontal_poster.png"
                 playsInline
               >
@@ -607,13 +608,21 @@ export default function VideosHorizontales() {
                   >
                     f {item.fbSynced ? 'Re-enviar a Facebook' : 'Publicar en Facebook'}
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-download-mp4"
-                    onClick={() => alert(`Descargando archivo maestro: ${item.title}`)}
-                  >
-                    ⬇ Descargar MP4
-                  </button>
+                  {item.videoPath ? (
+                    <a 
+                      href={resolveMediaUrl(item.videoPath)} 
+                      download 
+                      className="btn-download-mp4"
+                      target="_blank" 
+                      rel="noreferrer"
+                    >
+                      ⬇ Descargar MP4 ({item.fileSize})
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '0.7rem', color: '#9490a6', textAlign: 'center' }}>
+                      Sin archivo MP4
+                    </span>
+                  )}
                 </div>
               </div>
             ))
@@ -650,6 +659,30 @@ export default function VideosHorizontales() {
               </div>
 
               <div className="form-group">
+                <label>Modo de Procesamiento</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem', fontSize: '0.78rem', color: '#e2e0ea' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input 
+                      type="radio" 
+                      name="renderOpt" 
+                      checked={withRender} 
+                      onChange={() => setWithRender(true)} 
+                    />
+                    <span>🎬 <strong>Ensamblar Video MP4 Completo</strong> (FFmpeg en VPS, listo para descargar)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input 
+                      type="radio" 
+                      name="renderOpt" 
+                      checked={!withRender} 
+                      onChange={() => setWithRender(false)} 
+                    />
+                    <span>⚡ <strong>Registro Rápido</strong> (sin renderizar archivo de video)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-group">
                 <label>Resumen de Modelos ({turnModels.length} seleccionados automáticamente)</label>
                 <textarea 
                   rows={5} 
@@ -669,7 +702,7 @@ export default function VideosHorizontales() {
                 disabled={isSimulating || turnModels.length === 0}
                 onClick={handleSimulateGeneration}
               >
-                {isSimulating ? 'Generando Ensamble...' : '⚡ Ensamblar y Generar Video'}
+                {isSimulating ? 'Ensamblando Video en VPS (~1 min)...' : '⚡ Ensamblar y Generar Video'}
               </button>
             </div>
           </div>

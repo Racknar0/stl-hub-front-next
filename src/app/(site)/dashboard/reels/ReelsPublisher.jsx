@@ -275,6 +275,7 @@ const postToForm = (post) => ({
   youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
   youtubeChannels: Array.isArray(post.youtubeChannels) ? post.youtubeChannels : null, // null = todos los canales conectados
   facebookPages: Array.isArray(post.facebookPages) ? post.facebookPages : null, // null = todas las Páginas asignadas
+  facebookVariants: post.facebookVariants && typeof post.facebookVariants === 'object' ? post.facebookVariants : {},
   youtubeVariants: post.youtubeVariants && typeof post.youtubeVariants === 'object' ? post.youtubeVariants : {},
   tiktokOptions: { ...TIKTOK_DEFAULT_OPTIONS, ...(post.tiktokOptions && typeof post.tiktokOptions === 'object' ? post.tiktokOptions : {}) },
   hashtags: toList(post.hashtags), platforms: toList(post.platforms),
@@ -1136,6 +1137,20 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <textarea className="form-input" rows="3" maxLength={2200} value={form.facebookCaption} placeholder="Vacío = se usa el de Instagram" disabled={readOnly || processing} onChange={(e) => update({ facebookCaption: e.target.value })} />
                 </label>
               )}
+              {/* Las demás Páginas llevan su propio caption (salen unas horas después de la principal) */}
+              {form.platforms.includes('facebook') && isVisible('facebook') && fbPages.slice(1)
+                .filter(pg => (form.facebookPages ?? fbPages.map(x => x.id)).includes(pg.id))
+                .map(pg => {
+                  const v = form.facebookVariants[pg.id] || {};
+                  return (
+                    <label key={pg.id} className="rl-field">
+                      <span><PlatformIcon platform="facebook" /> Caption · {pg.name} <small>{(v.caption || '').length}/2200</small></span>
+                      <textarea className="form-input" rows="3" maxLength={2200} value={v.caption || ''} placeholder={form.facebookCaption || form.caption}
+                        disabled={readOnly || processing}
+                        onChange={(e) => update({ facebookVariants: { ...form.facebookVariants, [pg.id]: { caption: e.target.value } } })} />
+                    </label>
+                  );
+                })}
               {hasTiktok && isVisible('tiktok') && (
                 <label className="rl-field">
                   <span><PlatformIcon platform="tiktok" /> Texto de TikTok <small>{form.tiktokCaption.length}/2200</small></span>
@@ -1370,7 +1385,8 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                     <li key={key}>
                       <PlatformIcon platform="facebook" title="Facebook" />Facebook · {r.pageName || 'página'}
                       {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
-                      {!r.simulated && <small>{r.commentId ? '💬 link comentado' : '⚠ sin comentario con link'}</small>}
+                      {r.publishAt && <small>público a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
+                      {!r.simulated && <small>{r.commentId ? '💬 link comentado' : r.pendingComment ? '💬 link al publicarse' : '⚠ sin comentario con link'}</small>}
                       ✓
                     </li>
                   ))}
