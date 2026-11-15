@@ -142,7 +142,7 @@ export default function MotorAjustes({ onChange }) {
       <div className="mk-engine-actions" style={{ marginTop: '1rem' }}>
         <span style={{ fontSize: '0.9rem' }}>
           Novedades semanales
-          <Ayuda texto="Cada martes llega un correo con los modelos nuevos de la semana a quienes están Activos. Solo lleva los que esa persona aún no descargó, y si no hay novedades no sale nada. Necesita el motor encendido y la fecha de corte." />
+          <Ayuda texto="Cada martes llega un correo con los modelos más descargados de la semana a quienes están Activos. Solo lleva los que esa persona aún no descargó. Necesita el motor encendido y la fecha de corte." />
         </span>
         <span className={`mk-tag ${motor.newsletterEnabled ? 't-on' : 't-off'}`}>{motor.newsletterEnabled ? 'Encendidas' : 'Apagadas'}</span>
         <button className="mk-btn" onClick={alternarNovedades} disabled={saving}>
