@@ -4,39 +4,39 @@ import "../styles/bundle.scss";
 import "./globals.css";
 import LangSetter from "./LangSetter";
 import { GoogleTagManager } from '@next/third-parties/google';
-import { DM_Sans, Syne, Outfit, Montserrat, Poppins } from 'next/font/google';
+import localFont from 'next/font/local';
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+// Fuentes servidas desde el repo (subset latin de Google Fonts). Se usa next/font/local
+// porque Turbopack no procesa las nuevas URLs de fonts.gstatic.com con next/font/google.
+const dmSans = localFont({
+  src: [{ path: './fonts/DMSans-Variable-latin.woff2', weight: '300 700', style: 'normal' }],
   variable: '--font-dm-sans',
   display: 'swap',
 });
 
-const syne = Syne({
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
+const syne = localFont({
+  src: [{ path: './fonts/Syne-Variable-latin.woff2', weight: '500 800', style: 'normal' }],
   variable: '--font-syne',
   display: 'swap',
 });
 
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
+const outfit = localFont({
+  src: [{ path: './fonts/Outfit-Variable-latin.woff2', weight: '300 600', style: 'normal' }],
   variable: '--font-outfit',
   display: 'swap',
 });
 
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
+const montserrat = localFont({
+  src: [{ path: './fonts/Montserrat-Variable-latin.woff2', weight: '400 800', style: 'normal' }],
   variable: '--font-montserrat',
   display: 'swap',
 });
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['700', '800'],
+const poppins = localFont({
+  src: [
+    { path: './fonts/Poppins-700-latin.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/Poppins-800-latin.woff2', weight: '800', style: 'normal' },
+  ],
   variable: '--font-poppins',
   display: 'swap',
 });
