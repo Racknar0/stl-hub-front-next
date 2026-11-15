@@ -70,6 +70,52 @@ export class EmailMarketingService extends HttpService {
     return resp.data
   }
 
+  // ---- Campañas manuales
+  async campaigns() {
+    const resp = await this.getData('/admin/email-marketing/campaigns')
+    return resp.data
+  }
+
+  // A cuántos contactos llegaría una campaña con esa audiencia y plan.
+  async campaignAudience(audience, plan) {
+    const qs = new URLSearchParams({ audience, plan })
+    const resp = await this.getData(`/admin/email-marketing/campaigns/audience?${qs.toString()}`)
+    return resp.data
+  }
+
+  // body: { name, templateId, audience, plan, dailyCap, scheduledAt? }
+  async createCampaign(body) {
+    const resp = await this.postData('/admin/email-marketing/campaigns', body)
+    return resp.data
+  }
+
+  async updateCampaign(id, body) {
+    const resp = await this.putData('/admin/email-marketing/campaigns', id, body)
+    return resp.data
+  }
+
+  async deleteCampaign(id) {
+    const resp = await this.deleteData('/admin/email-marketing/campaigns', id)
+    return resp.data
+  }
+
+  // Sin scheduledAt (o pasada) se lanza ya; con fecha futura queda programada.
+  async launchCampaign(id, scheduledAt = null) {
+    const resp = await this.postData(`/admin/email-marketing/campaigns/${id}/launch`, { scheduledAt })
+    return resp.data
+  }
+
+  async cancelCampaign(id) {
+    const resp = await this.postData(`/admin/email-marketing/campaigns/${id}/cancel`, {})
+    return resp.data
+  }
+
+  // Envía la plantilla de la campaña al correo del admin.
+  async testCampaign(id) {
+    const resp = await this.postData(`/admin/email-marketing/campaigns/${id}/test`, {})
+    return resp.data
+  }
+
   // Recalcula las etapas de todos los contactos.
   async sync() {
     const resp = await this.postData('/admin/email-marketing/sync', {})
