@@ -1196,7 +1196,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                           ? update({ facebookCaption: e.target.value })
                           : update({ facebookVariants: { ...form.facebookVariants, [current.id]: { caption: e.target.value } } }))} />
                     </label>
-                    <p className="rl-tt-note">🔗 El link va en el primer comentario{fbPages.length > 1 ? ', también en las páginas programadas' : ''}.</p>
+                    <p className="rl-tt-note">🔗 El link va en el primer comentario{fbPages.length > 1 ? ', también en las páginas extra' : ''}.</p>
                   </>
                 );
               })()}
@@ -1438,18 +1438,20 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   {Object.entries(post.results).filter(([key]) => key.startsWith('facebook:')).map(([key, r]) => (
                     <li key={key}>
                       <PlatformIcon platform="facebook" title="Facebook" />Facebook · {r.pageName || 'página'}
-                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
-                      {r.publishAt && <small>público a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
-                      {!r.simulated && <small>{r.commentId ? '💬 link comentado' : r.pendingComment ? '💬 link al publicarse' : '⚠ sin comentario con link'}</small>}
-                      ✓
+                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : r.id ? <code>{r.id}</code> : null}
+                      {r.deferred && <small>⏳ sale a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
+                      {r.failed && <small>⚠ {r.error || 'falló'}</small>}
+                      {r.id && !r.simulated && <small>{r.commentId ? '💬 link comentado' : r.pendingComment ? '💬 link al publicarse' : '⚠ sin comentario con link'}</small>}
+                      {r.id && '✓'}
                     </li>
                   ))}
                   {Object.entries(post.results).filter(([key]) => key.startsWith('youtube:')).map(([key, r]) => (
                     <li key={key}>
                       <PlatformIcon platform="youtube" title="YouTube" />YouTube · {r.channelTitle || 'canal'}
-                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : <code>{r.id}</code>}
-                      {r.publishAt && <small>público a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
-                      ✓
+                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : r.id ? <code>{r.id}</code> : null}
+                      {r.deferred && <small>⏳ sale a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
+                      {r.failed && <small>⚠ {r.error || 'falló'}</small>}
+                      {r.id && '✓'}
                     </li>
                   ))}
                 </ul>
