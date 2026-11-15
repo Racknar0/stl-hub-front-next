@@ -219,6 +219,13 @@
   .chart-block { grid-column: span 6; min-width: 0; border: 1px solid rgba(148,163,184,.18); border-radius: 10px; background: #101a29; padding: 16px; }
   .chart-block--traffic { grid-column: span 8; }
   .chart-block--user-registrations { grid-column: span 4; }
+  // Clics en enlaces cortos y Visitantes y sesiones van lado a lado con el mismo alto
+  .chart-block--short-link-clicks, .chart-block--visitors-vs-sessions {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    > .chart-canvas-wrap { flex: 1; }
+  }
   .chart-block--traffic, .chart-block--user-registrations {
     align-self: stretch;
     display: flex;

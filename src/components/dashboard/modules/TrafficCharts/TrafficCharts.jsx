@@ -35,6 +35,15 @@ const CHART_TYPES = [
   { value: 'plan-clicks', label: 'Clicks en Elegir Plan' },
 ]
 
+// Nombre legible de cada red de los enlaces cortos (tooltip de la gráfica de clics)
+const SHORT_LINK_SOURCES = {
+  youtube_horizontal: 'Videos horizontales',
+  facebook: 'Comentario de Facebook',
+  youtube_short: 'Shorts de YouTube',
+  threads: 'Threads',
+  instagram_bio: 'Bio de Instagram',
+}
+
 const CHART_TITLES = {
   traffic: 'Evolución del tráfico',
   'user-registrations': 'Nuevos registros',
@@ -42,6 +51,7 @@ const CHART_TITLES = {
   'downloads-timeseries': 'Descargas y búsquedas',
   'plan-clicks': 'Interés en los planes',
   'freebie-rolls': 'Tiradas de freebies',
+  'short-link-clicks': 'Clics en enlaces cortos',
   'sales-revenue': 'Ingresos por pasarela',
   'top-searches': 'Búsquedas más frecuentes',
   'top-downloads': 'Modelos más descargados',
@@ -376,6 +386,9 @@ const CHART_DESCRIPTIONS = {
     'freebie-rolls': (
       <>Total de tiradas registradas cada día y usuarios que participaron. Fechas en UTC, como el contador de tiradas. Los días sin actividad aparecen en cero. Los reinicios manuales del contador y la eliminación de usuarios pueden reducir el histórico disponible.</>
     ),
+    'short-link-clicks': (
+      <>Clics de personas en los enlaces stlgratis.com/v/… que se publican en los videos horizontales, el comentario de Facebook, los Shorts, Threads y la bio de Instagram. No cuenta bots ni vistas previas. Fechas en UTC. El detalle de cada enlace está en <a href="/dashboard/enlaces-cortos" style={{ color: '#a5b4fc' }}>Publicaciones → Enlaces cortos</a>.</>
+    ),
     'sales-revenue': (
       <>
         <strong style={{ color: '#f8fafc' }}>Ingresos por Pasarela (COP):</strong> Cuánto dinero entró a tu plataforma y de qué manera.<br/>
@@ -427,12 +440,14 @@ const CHART_DESCRIPTIONS = {
 
 // Map active preset to backend key
 const getPresetKey = (preset) => preset
-const FIFTEEN_DAY_CHARTS = new Set(['traffic', 'user-registrations', 'downloads-timeseries', 'plan-clicks', 'visitors-vs-sessions', 'freebie-rolls'])
+const FIFTEEN_DAY_CHARTS = new Set(['traffic', 'user-registrations', 'downloads-timeseries', 'plan-clicks', 'visitors-vs-sessions', 'freebie-rolls', 'short-link-clicks'])
+// Gráficas con fechas en UTC (el backend agrupa por día UTC)
+const UTC_DAY_CHARTS = new Set(['freebie-rolls', 'short-link-clicks'])
 
 // --- ChartContainer Component ---
 function ChartContainer({ id, title, supportsDynamicDates, expandable, fetchFn, renderChart, headerControls }) {
-  const inputDate = date => id === 'freebie-rolls' ? date.toISOString().slice(0, 10) : formatDateForInput(date)
-  const rangeOffset = days => ['freebie-rolls', 'user-registrations'].includes(id) ? Math.max(0, days - 1) : days
+  const inputDate = date => UTC_DAY_CHARTS.has(id) ? date.toISOString().slice(0, 10) : formatDateForInput(date)
+  const rangeOffset = days => ['freebie-rolls', 'short-link-clicks', 'user-registrations'].includes(id) ? Math.max(0, days - 1) : days
   const [fromDate, setFromDate] = useState(() => inputDate(daysAgo(rangeOffset(FIFTEEN_DAY_CHARTS.has(id) ? 15 : 7))))
   const [toDate, setToDate] = useState(() => inputDate(new Date()))
   const [activePreset, setActivePreset] = useState(() => FIFTEEN_DAY_CHARTS.has(id) ? '15d' : '7d')
@@ -645,6 +660,18 @@ export default function TrafficCharts() {
       labels: series.map(row => formatLabel(row.date, 'day')),
       participants: series.map(row => Number(row.participants || 0)),
       datasets: [{ label: 'Tiradas', data: series.map(row => Number(row.rolls || 0)), backgroundColor: 'rgba(52,211,153,.65)', borderRadius: 4, maxBarThickness: 28 }],
+    }
+  }, [http])
+
+  // Clics en los enlaces cortos por día (con el desglose por red para el tooltip)
+  const fetchShortLinkClicks = React.useCallback(async (from, to) => {
+    const response = await http.getData(`/metrics/short-links/timeseries?from=${from}&to=${to}`)
+    const series = response?.data?.series
+    if (!Array.isArray(series)) return null
+    return {
+      labels: series.map(row => formatLabel(row.date, 'day')),
+      bySource: series.map(row => row.bySource || {}),
+      datasets: [{ label: 'Clics', data: series.map(row => Number(row.clicks || 0)), backgroundColor: 'rgba(251,146,60,.75)', borderRadius: 4, maxBarThickness: 28 }],
     }
   }, [http])
 
@@ -929,6 +956,19 @@ export default function TrafficCharts() {
           }} />
         )} />
 
+        <ChartContainer id="short-link-clicks" supportsDynamicDates={true} fetchFn={fetchShortLinkClicks} renderChart={data => (
+          <Bar data={data} options={{
+            ...commonLineOpts,
+            plugins: { ...commonLineOpts.plugins, legend: { display: false }, tooltip: { ...commonLineOpts.plugins.tooltip, callbacks: {
+              afterLabel: context => Object.entries(data.bySource[context.dataIndex] || {})
+                .sort((a, b) => b[1] - a[1])
+                .map(([source, n]) => `${SHORT_LINK_SOURCES[source] || source}: ${n}`),
+            } } },
+            scales: { ...commonLineOpts.scales, y: { ...commonLineOpts.scales.y, ticks: { ...commonLineOpts.scales.y.ticks, precision: 0 }, suggestedMax: 1 } },
+          }} />
+        )} />
+        <ChartContainer id="visitors-vs-sessions" supportsDynamicDates={true} fetchFn={fetchVisitorsVsSessions} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
+
         
         <ChartContainer 
           id="top-searches" 
@@ -962,9 +1002,7 @@ export default function TrafficCharts() {
           }} 
         />
         
-        <ChartContainer id="visitors-vs-sessions" supportsDynamicDates={true} fetchFn={fetchVisitorsVsSessions} renderChart={(data) => <Line data={data} options={commonLineOpts} />} />
-        
-        <ChartContainer 
+        <ChartContainer
           id="top-pages" 
           supportsDynamicDates={true} 
           expandable={true}
