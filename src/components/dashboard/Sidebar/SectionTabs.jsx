@@ -10,10 +10,11 @@ import DownloadOutlined from '@mui/icons-material/DownloadOutlined'
 import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined'
 import PanoramaOutlined from '@mui/icons-material/PanoramaOutlined'
 import OndemandVideoOutlined from '@mui/icons-material/OndemandVideoOutlined'
+import LinkOutlined from '@mui/icons-material/LinkOutlined'
 
 const sections = [
   { title: 'Taxonomía', tabs: [['Categorías', '/dashboard/categories'], ['Tags', '/dashboard/tags']] },
-  { title: 'Publicaciones', tabs: [['Pinterest', '/dashboard/pinterest'], ['Reels', '/dashboard/reels'], ['Videos horizontales', '/dashboard/videos-horizontales'], ['Banners del home', '/dashboard/hero-banners']] },
+  { title: 'Publicaciones', tabs: [['Pinterest', '/dashboard/pinterest'], ['Reels', '/dashboard/reels'], ['Videos horizontales', '/dashboard/videos-horizontales'], ['Banners del home', '/dashboard/hero-banners'], ['Enlaces cortos', '/dashboard/enlaces-cortos']] },
   { title: 'Telegram', tabs: [['Descargas', '/dashboard/telegram-downloader'], ['Organizador', '/dashboard/telegram-organizer']] },
 ]
 
@@ -33,6 +34,7 @@ export default function SectionTabs() {
             {href === '/dashboard/reels' && <VideoLibraryOutlined />}
             {href === '/dashboard/videos-horizontales' && <OndemandVideoOutlined />}
             {href === '/dashboard/hero-banners' && <PanoramaOutlined />}
+            {href === '/dashboard/enlaces-cortos' && <LinkOutlined />}
             {href === '/dashboard/telegram-downloader' && <DownloadOutlined />}
             {href === '/dashboard/telegram-organizer' && <AccountTreeOutlined />}
             {label}
