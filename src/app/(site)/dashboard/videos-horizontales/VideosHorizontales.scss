@@ -674,6 +674,7 @@ $vh-yt: #ff0000;
 
       .vh-meta-actions {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0.75rem;
         margin-top: auto;
@@ -732,6 +733,37 @@ $vh-yt: #ff0000;
           &:disabled {
             color: #6f6b80;
             cursor: not-allowed;
+          }
+        }
+
+        // Publicar el mismo video en la Página de Facebook en turno
+        .btn-facebook {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: #1877f2;
+          border: none;
+          color: #fff;
+          font-weight: 700;
+          font-size: 0.78rem;
+          padding: 0.6rem 0.85rem;
+          border-radius: 8px;
+          cursor: pointer;
+          text-decoration: none;
+          transition: all 0.2s;
+          &:hover:not(:disabled) {
+            background: #166fe0;
+            box-shadow: 0 4px 15px rgba(24, 119, 242, 0.35);
+          }
+          &:disabled {
+            background: rgba(255, 255, 255, 0.08);
+            color: #8b879c;
+            cursor: not-allowed;
+          }
+          &.done {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
           }
         }
       }
@@ -1356,8 +1388,13 @@ $vh-yt: #ff0000;
             cursor: pointer;
             transition: all 0.2s;
 
-            &:hover {
+            &:hover:not(:disabled) {
               background: rgba(59, 130, 246, 0.2);
+            }
+
+            &:disabled {
+              color: #6f6b80;
+              cursor: not-allowed;
             }
           }
 

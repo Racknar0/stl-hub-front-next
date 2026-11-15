@@ -134,6 +134,26 @@ export default function VideosHorizontales() {
   const shownDesc = showingLatest ? latest.description : customDesc;
   const shownTags = showingLatest ? (latest.tags?.length ? latest.tags : tagsList) : tagsList;
 
+  // Botón de Facebook del último video generado: publicar, subiendo o ya publicado
+  const latestFb = latest?.facebook || null;
+  const facebookButton = showingLatest && latest?.videoPath ? (
+    latestFb?.published ? (
+      latestFb.url
+        ? <a className="btn-facebook done" href={latestFb.url} target="_blank" rel="noreferrer">✓ En Facebook ↗</a>
+        : <button type="button" className="btn-facebook done" disabled>✓ En Facebook</button>
+    ) : (
+      <button
+        type="button"
+        className="btn-facebook"
+        disabled={Boolean(latestFb?.publishing) || !kpis.facebook?.pageToday}
+        title={kpis.facebook?.pageToday ? `Página en turno: ${kpis.facebook.pageToday}` : 'No hay Páginas de Facebook disponibles'}
+        onClick={() => handlePublishFacebook(latest)}
+      >
+        {latestFb?.publishing ? 'Subiendo a Facebook...' : latestFb?.error ? '🔁 Reintentar en Facebook' : 'f Publicar en Facebook'}
+      </button>
+    )
+  ) : null;
+
   const timestamps = timestampsList.length > 0 ? timestampsList : turnModels.map((m, idx) => ({
     index: idx + 1,
     time: `0:${String(idx * 10).padStart(2, '0')}`,
@@ -198,16 +218,27 @@ export default function VideosHorizontales() {
     }
   };
 
-  const handleSyncFacebook = async (item) => {
+  // Publica la recopilación en la Página de Facebook en turno; la subida sigue en el servidor y el panel se refresca solo
+  const handlePublishFacebook = async (item) => {
+    const page = kpis.facebook?.pageToday;
+    if (!confirm(`¿Publicar en Facebook el video "${item.title}"?\n\nPágina en turno: ${page || 'la siguiente de la rotación'}`)) return;
     try {
       const http = new HttpService();
-      await http.postData(`/reels/horizontal/${item.id}/sync-facebook`, {});
-      alert(`¡Video "${item.title}" sincronizado hacia tus páginas de Facebook!`);
+      await http.postData('/reels/horizontal/publish-facebook', { compilationId: Number(item.id) });
+      await loadStatus();
       await loadHistory();
     } catch (e) {
-      alert(`Sincronización hacia Facebook para "${item.title}": ${e?.response?.data?.error || e.message}`);
+      alert(`No se pudo publicar en Facebook: ${e?.response?.data?.error || e.message}`);
     }
   };
+
+  // Mientras un video se sube a Facebook, refrescar el estado cada 10 s
+  const fbPublishing = Boolean(latest?.facebook?.publishing) || historyList.some(item => item.facebook?.publishing);
+  useEffect(() => {
+    if (!fbPublishing) return undefined;
+    const timer = setInterval(() => { loadStatus(); loadHistory(); }, 10000);
+    return () => clearInterval(timer);
+  }, [fbPublishing, loadStatus, loadHistory]);
 
   const handleRegenerateAiMetadata = async (langOverride = null) => {
     const lang = langOverride || selectedLang;
@@ -290,6 +321,11 @@ export default function VideosHorizontales() {
           <span className={`vh-kpi-footer ${kpis.channelConnected ? 'ok' : 'warn'}`}>
             {kpis.channelConnected ? '● Conectado en YouTube' : '⚠ Este canal no está conectado en YouTube'}
           </span>
+          <span className={`vh-kpi-footer ${kpis.facebook?.pageToday ? 'info' : 'warn'}`}>
+            {kpis.facebook?.pageToday
+              ? `f Facebook: ${kpis.facebook.pageToday}`
+              : kpis.facebook?.configured === false ? '⚠ Facebook no configurado' : '⚠ Sin Páginas de Facebook'}
+          </span>
         </div>
 
         <div className="vh-kpi-card">
@@ -301,6 +337,12 @@ export default function VideosHorizontales() {
             <span className="vh-kpi-footer ok">
               {kpis.lastPublished.channel}
               {kpis.lastPublished.url && <> · <a href={kpis.lastPublished.url} target="_blank" rel="noreferrer">Ver en YouTube ↗</a></>}
+            </span>
+          )}
+          {kpis.facebook?.lastPublished && (
+            <span className="vh-kpi-footer info">
+              f {kpis.facebook.lastPublished.page}{kpis.facebook.lastPublished.date ? ` · ${kpis.facebook.lastPublished.date}` : ''}
+              {kpis.facebook.lastPublished.url && <> · <a href={kpis.facebook.lastPublished.url} target="_blank" rel="noreferrer">Ver en Facebook ↗</a></>}
             </span>
           )}
         </div>
@@ -419,6 +461,16 @@ export default function VideosHorizontales() {
                     {latest.status === 'FAILED'
                       ? `⚠ No se pudo publicar en ${latest.channel}: ${latest.errorMessage || 'error desconocido'}`
                       : `● Lista para publicar en ${latest.channel} · ${latest.language === 'en' ? 'English' : 'Español'}`}
+                  </span>
+                )}
+                {showingLatest && latest.facebook && (latest.facebook.published || latest.facebook.publishing || latest.facebook.error) && (
+                  <span className={`vh-meta-sub ${latest.facebook.published ? 'vh-meta-sub-done' : latest.facebook.error && !latest.facebook.publishing ? 'vh-meta-sub-error' : ''}`}>
+                    {latest.facebook.publishing
+                      ? '● Subiendo a Facebook…'
+                      : latest.facebook.published
+                        ? <>✓ En Facebook · {latest.facebook.pageName}{latest.facebook.publishedAt ? ` · ${latest.facebook.publishedAt}` : ''}
+                          {latest.facebook.url && <> · <a href={latest.facebook.url} target="_blank" rel="noreferrer">Ver en Facebook ↗</a></>}</>
+                        : `⚠ Facebook falló${latest.facebook.pageName ? ` (${latest.facebook.pageName})` : ''}: ${latest.facebook.error}`}
                   </span>
                 )}
                 {viewMode === 'next' && (
@@ -575,6 +627,7 @@ export default function VideosHorizontales() {
             <div className="vh-meta-actions">
               {viewMode === 'published' && <>
                 <button type="button" className="btn-push" disabled>✓ Ya publicado en YouTube</button>
+                {facebookButton}
                 <button type="button" className="btn-edit" onClick={() => { setPrepareNext(true); setActiveMetaTab('description'); }}>
                   ⚡ Preparar el siguiente
                 </button>
@@ -583,6 +636,7 @@ export default function VideosHorizontales() {
                 <button type="button" className="btn-push" disabled={isPublishing} onClick={handlePublishNow}>
                   {isPublishing ? 'Subiendo a YouTube...' : latest.status === 'FAILED' ? '🔁 Reintentar publicación' : '🚀 Publicar a YouTube Ahora'}
                 </button>
+                {facebookButton}
                 <button type="button" className="btn-edit" disabled={isPublishing} onClick={() => setModalOpen(true)}>
                   ✏️ Generar otro
                 </button>
@@ -748,9 +802,11 @@ export default function VideosHorizontales() {
                   <div className="vh-item-meta-top">
                     <span className="vh-ch-badge">▶ {item.channel}</span>
                     {item.fbSynced ? (
-                      <span className="vh-fb-badge">f Facebook Sincronizado</span>
+                      <span className="vh-fb-badge">f {item.facebook?.pageName || 'Facebook'}</span>
                     ) : (
-                      <span style={{ fontSize: '0.68rem', color: '#9490a6' }}>f Facebook pendiente</span>
+                      <span style={{ fontSize: '0.68rem', color: item.facebook?.error ? '#f87171' : '#9490a6' }} title={item.facebook?.error || ''}>
+                        {item.facebook?.publishing ? 'f Subiendo a Facebook…' : item.facebook?.error ? 'f Facebook falló' : 'f Facebook pendiente'}
+                      </span>
                     )}
                     {item.language === 'en' ? (
                       <span className="vh-lang-badge vh-lang-en">🇬🇧 English</span>
@@ -785,13 +841,22 @@ export default function VideosHorizontales() {
                   ) : (
                     <span style={{ fontSize: '0.72rem', color: '#9490a6', textAlign: 'center' }}>Listo para subir</span>
                   )}
-                  <button 
-                    type="button" 
-                    className="btn-fb-sync"
-                    onClick={() => handleSyncFacebook(item)}
-                  >
-                    f {item.fbSynced ? 'Re-enviar a Facebook' : 'Publicar en Facebook'}
-                  </button>
+                  {item.fbSynced ? (
+                    item.facebook?.url && (
+                      <a href={item.facebook.url} target="_blank" rel="noreferrer" className="btn-fb-sync">
+                        f Ver en Facebook
+                      </a>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-fb-sync"
+                      disabled={!item.videoPath || Boolean(item.facebook?.publishing) || !kpis.facebook?.pageToday}
+                      onClick={() => handlePublishFacebook(item)}
+                    >
+                      {item.facebook?.publishing ? 'f Subiendo...' : 'f Publicar en Facebook'}
+                    </button>
+                  )}
                   {item.videoPath ? (
                     <a 
                       href={resolveMediaUrl(item.videoPath)} 
