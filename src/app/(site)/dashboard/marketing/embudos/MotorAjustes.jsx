@@ -139,6 +139,8 @@ export default function MotorAjustes({ onChange }) {
           <option value="WELCOME_2">2 · Premium</option>
           <option value="WELCOME_3">3 · Top descargas</option>
           <option value="WELCOME_4">4 · Planes</option>
+          <option value="PREMIUM_EXPIRING">6 · Premium vence</option>
+          <option value="PREMIUM_EXPIRED">7 · Premium venció</option>
         </select>
         <button className="mk-btn" onClick={enviarPrueba} disabled={saving || prueba.sending}>
           {prueba.sending ? 'Enviando…' : 'Enviarme una prueba'}
