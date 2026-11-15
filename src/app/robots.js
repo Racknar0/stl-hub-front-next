@@ -20,6 +20,8 @@ export default function robots() {
     '/en/payment-success',
     '/en/payment/mercadopago/callback',
     '/api/',
+    // Enlaces cortos (redirecciones): no se indexan
+    '/v/',
   ];
 
   return {
