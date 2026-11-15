@@ -922,6 +922,8 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
   const [busy, setBusy] = useState(null); // 'save' | 'approve' | 'ai' | 'publish'
   const [previewPlatform, setPreviewPlatform] = useState(toList(post.platforms).find(isVisible) || visible[0]?.key || 'instagram');
   const [hashtagInput, setHashtagInput] = useState('');
+  const [fbTab, setFbTab] = useState(null); // Página de Facebook cuyo texto se edita (null = la principal)
+  const [ytTab, setYtTab] = useState(null); // canal de YouTube cuyo texto se edita (null = el principal)
   const [aiNotes, setAiNotes] = useState('');
   const [assetTitle, setAssetTitle] = useState(post.assetTitle || '');
   const st = reelState(post);
@@ -1035,8 +1037,10 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
     setHashtagInput('');
   };
 
+  const textTabs = visible.filter(p => (p.key === 'tiktok' ? hasTiktok : form.platforms.includes(p.key)) || (p.key === 'youtube' && !ytConnected));
+  const activeText = textTabs.some(p => p.key === previewPlatform) ? previewPlatform : textTabs[0]?.key;
   const previewCaption = previewPlatform === 'threads' ? captionBody(form.caption)
-    : previewPlatform === 'facebook' ? (form.facebookCaption || form.caption)
+    : previewPlatform === 'facebook' ? ((fbTab && fbTab !== fbPages[0]?.id && form.facebookVariants[fbTab]?.caption) || form.facebookCaption || form.caption)
     : previewPlatform === 'tiktok' ? (form.tiktokCaption || form.caption) : form.caption;
   const checks = videoChecks({ ...post, platforms: form.platforms }, visible);
 
@@ -1061,7 +1065,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               ))}
             </div>
             <PhonePreview videoUrl={resolveMediaUrl(post.videoPath)} platform={previewPlatform} caption={previewCaption}
-              hashtags={form.hashtags} title={form.title} />
+              hashtags={form.hashtags} title={(ytTab && ytTab !== ytChannels[0]?.id && form.youtubeVariants[ytTab]?.title) || form.title} />
             <ul className="rl-checks">{checks.map((c, i) => <li key={i} className={c.ok ? 'ok' : 'warn'}>{c.ok ? '✓' : '⚠'} {c.text}</li>)}</ul>
           </div>
 
@@ -1108,67 +1112,130 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                 <span className="pr-side-eyebrow">Textos</span>
                 {post.aiGenerated && <span className="pr-ai ok">🔍 revisado</span>}
               </div>
-              {form.platforms.includes('instagram') && isVisible('instagram') && (
-                <label className="rl-field">
-                  <span><PlatformIcon platform="instagram" /> Caption de Instagram <small>{form.caption.length}/2200</small></span>
-                  <textarea className="form-input" rows="5" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
-                </label>
-              )}
-              {form.platforms.includes('facebook') && isVisible('facebook') && fbPages.length > 1 && (
-                <div className="rl-field">
-                  <span><PlatformIcon platform="facebook" /> Páginas de Facebook</span>
-                  <div className="rl-tt-checks">
-                    {fbPages.map(pg => {
-                      const chosen = form.facebookPages ?? fbPages.map(x => x.id);
-                      return (
-                        <label key={pg.id}>
-                          <input type="checkbox" checked={chosen.includes(pg.id)} disabled={readOnly}
-                            onChange={(e) => update({ facebookPages: e.target.checked ? [...chosen, pg.id] : chosen.filter(id => id !== pg.id) })} />
-                          {pg.name}
-                        </label>
-                      );
-                    })}
-                  </div>
+              {textTabs.length > 0 && (
+                <div className="rl-text-tabs" role="tablist" aria-label="Textos por red">
+                  {textTabs.map(p => (
+                    <button key={p.key} type="button" role="tab" aria-selected={activeText === p.key}
+                      className={activeText === p.key ? 'on' : ''} onClick={() => setPreviewPlatform(p.key)}>
+                      <PlatformIcon platform={p.key} title={p.label} />{p.label.replace(/ (Reels|Shorts)$/, '')}
+                    </button>
+                  ))}
                 </div>
               )}
-              {form.platforms.includes('facebook') && isVisible('facebook') && (
+
+              {activeText === 'instagram' && (
                 <label className="rl-field">
-                  <span><PlatformIcon platform="facebook" /> Caption de Facebook <small>{form.facebookCaption.length}/2200</small></span>
-                  <textarea className="form-input" rows="3" maxLength={2200} value={form.facebookCaption} placeholder="Vacío = se usa el de Instagram" disabled={readOnly || processing} onChange={(e) => update({ facebookCaption: e.target.value })} />
+                  <span>Caption <small>{form.caption.length}/2200</small></span>
+                  <textarea className="form-input" rows="7" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
                 </label>
               )}
-              {/* Las demás Páginas llevan su propio caption (salen unas horas después de la principal) */}
-              {form.platforms.includes('facebook') && isVisible('facebook') && fbPages.slice(1)
-                .filter(pg => (form.facebookPages ?? fbPages.map(x => x.id)).includes(pg.id))
-                .map(pg => {
-                  const v = form.facebookVariants[pg.id] || {};
-                  return (
-                    <label key={pg.id} className="rl-field">
-                      <span><PlatformIcon platform="facebook" /> Caption · {pg.name} <small>{(v.caption || '').length}/2200</small></span>
-                      <textarea className="form-input" rows="3" maxLength={2200} value={v.caption || ''} placeholder={form.facebookCaption || form.caption}
-                        disabled={readOnly || processing}
-                        onChange={(e) => update({ facebookVariants: { ...form.facebookVariants, [pg.id]: { caption: e.target.value } } })} />
+
+              {activeText === 'facebook' && (() => {
+                const chosen = form.facebookPages ?? fbPages.map(x => x.id);
+                const current = fbPages.find(pg => pg.id === fbTab) || fbPages[0];
+                const isPrimary = !current || current.id === fbPages[0]?.id;
+                const included = !current || chosen.includes(current.id);
+                const value = isPrimary ? form.facebookCaption : (form.facebookVariants[current.id]?.caption || '');
+                return (
+                  <>
+                    {fbPages.length > 1 && (
+                      <div className="rl-subtabs">
+                        {fbPages.map((pg, i) => (
+                          <div key={pg.id} className={`rl-subtab ${current?.id === pg.id ? 'on' : ''} ${chosen.includes(pg.id) ? '' : 'excluded'}`}>
+                            <input type="checkbox" checked={chosen.includes(pg.id)} disabled={readOnly} title={chosen.includes(pg.id) ? 'Publicar en esta página' : 'No se publica en esta página'}
+                              onChange={(e) => update({ facebookPages: e.target.checked ? [...chosen, pg.id] : chosen.filter(id => id !== pg.id) })} />
+                            <button type="button" onClick={() => setFbTab(pg.id)}>{pg.name}<small>{i === 0 ? 'al momento' : `+${i * 2} h`}</small></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className={`rl-field ${included ? '' : 'rl-dim'}`}>
+                      <span>Caption{current && fbPages.length > 1 ? ` · ${current.name}` : ''} <small>{value.length}/2200</small></span>
+                      <textarea className="form-input" rows="6" maxLength={2200} value={value}
+                        placeholder={isPrimary ? 'Vacío = se usa el de Instagram' : (form.facebookCaption || form.caption)}
+                        disabled={readOnly || processing || !included}
+                        onChange={(e) => (isPrimary
+                          ? update({ facebookCaption: e.target.value })
+                          : update({ facebookVariants: { ...form.facebookVariants, [current.id]: { caption: e.target.value } } }))} />
                     </label>
-                  );
-                })}
-              {hasTiktok && isVisible('tiktok') && (
+                    <p className="rl-tt-note">🔗 El link va en el primer comentario{fbPages.length > 1 ? ', también en las páginas programadas' : ''}.</p>
+                  </>
+                );
+              })()}
+
+              {activeText === 'youtube' && !ytConnected && (
+                <div className="rl-field rl-soon-block" title="Conecta tu canal de YouTube en la cabecera">
+                  <span>Título y descripción <small>Sin conectar</small></span>
+                  <input type="text" className="form-input" disabled value={form.title} placeholder="Conecta YouTube para publicar también en Shorts" />
+                </div>
+              )}
+              {activeText === 'youtube' && ytConnected && (() => {
+                const chosen = form.youtubeChannels ?? ytChannels.map(c => c.id);
+                const current = ytChannels.find(ch => ch.id === ytTab) || ytChannels[0];
+                const isPrimary = !current || current.id === ytChannels[0]?.id;
+                const included = !current || chosen.includes(current.id);
+                const v = (!isPrimary && form.youtubeVariants[current.id]) || {};
+                const setV = (patch) => update({ youtubeVariants: { ...form.youtubeVariants, [current.id]: { ...v, ...patch } } });
+                const title = isPrimary ? form.title : (v.title || '');
+                const description = isPrimary ? form.youtubeDescription : (v.description || '');
+                return (
+                  <>
+                    {ytChannels.length > 1 && (
+                      <div className="rl-subtabs">
+                        {ytChannels.map((ch, i) => (
+                          <div key={ch.id} className={`rl-subtab ${current?.id === ch.id ? 'on' : ''} ${chosen.includes(ch.id) ? '' : 'excluded'}`}>
+                            <input type="checkbox" checked={chosen.includes(ch.id)} disabled={readOnly} title={chosen.includes(ch.id) ? 'Publicar en este canal' : 'No se publica en este canal'}
+                              onChange={(e) => update({ youtubeChannels: e.target.checked ? [...chosen, ch.id] : chosen.filter(id => id !== ch.id) })} />
+                            <button type="button" onClick={() => setYtTab(ch.id)}>{ch.title}<small>{i === 0 ? 'al momento' : `+${i * 2} h`}</small></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className={`rl-field ${included ? '' : 'rl-dim'}`}>
+                      <span>Título <small>{title.length}/100</small></span>
+                      <input type="text" className="form-input" maxLength={100} value={title} placeholder={isPrimary ? '' : form.title}
+                        disabled={readOnly || processing || !included}
+                        onChange={(e) => (isPrimary ? update({ title: e.target.value }) : setV({ title: e.target.value }))} />
+                    </label>
+                    <label className={`rl-field ${included ? '' : 'rl-dim'}`}>
+                      <span>Descripción</span>
+                      <textarea className="form-input" rows="4" value={description} placeholder={isPrimary ? '' : form.youtubeDescription}
+                        disabled={readOnly || processing || !included}
+                        onChange={(e) => (isPrimary ? update({ youtubeDescription: e.target.value }) : setV({ description: e.target.value }))} />
+                    </label>
+                    <label className="rl-field rl-field-inline">
+                      <span>Privacidad <small>todos los Shorts</small></span>
+                      <select className="form-input" value={settings.youtubePrivacy || 'public'} disabled={readOnly} onChange={(e) => onSaveSetting({ youtubePrivacy: e.target.value })}>
+                        <option value="public">Público</option>
+                        <option value="unlisted">No listado</option>
+                        <option value="private">Privado</option>
+                      </select>
+                    </label>
+                    <p className="rl-tt-note">🔗 El link va al final de la descripción.</p>
+                  </>
+                );
+              })()}
+
+              {activeText === 'tiktok' && (
                 <label className="rl-field">
-                  <span><PlatformIcon platform="tiktok" /> Texto de TikTok <small>{form.tiktokCaption.length}/2200</small></span>
-                  <textarea className="form-input" rows="4" maxLength={2200} value={form.tiktokCaption}
+                  <span>Texto <small>{form.tiktokCaption.length}/2200</small></span>
+                  <textarea className="form-input" rows="6" maxLength={2200} value={form.tiktokCaption}
                     placeholder={isVisible('instagram') ? 'Vacío = se usa el de Instagram' : 'Descripción del video'} disabled={readOnly || processing}
                     onChange={(e) => update({ tiktokCaption: e.target.value })} />
                 </label>
               )}
-              {form.platforms.includes('threads') && isVisible('threads') && (
+
+              {activeText === 'threads' && (
                 <div className="rl-field">
-                  <span><PlatformIcon platform="threads" /> Texto de Threads <small>automático</small></span>
-                  <p className="rl-tt-note">Se usa el caption sin la cabecera ni el pie, y al final el link del modelo (clicable en Threads, con UTM).</p>
+                  <span>Texto <small>automático</small></span>
+                  <p className="rl-tt-note">Se usa el caption de Instagram sin la cabecera ni el pie, y al final el link del modelo (clicable, con UTM).</p>
                   <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Threads'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
                 </div>
               )}
+
               {form.platforms.some(p => p !== 'youtube' && isVisible(p)) && (
-                <div className="rl-field">
-                  <span>Hashtags <small>{form.hashtags.length}/5</small></span>
+                <div className="rl-field rl-hashtags">
+                  <span>Hashtags <small>{form.hashtags.length}/5 · para todas las redes menos YouTube</small></span>
                   <div className="rl-chips">
                     {form.hashtags.map(h => (
                       <span key={h} className="rl-chip">#{h}{!readOnly && <button type="button" onClick={() => update({ hashtags: form.hashtags.filter(x => x !== h) })}>✕</button>}</span>
@@ -1180,66 +1247,6 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                     )}
                   </div>
                 </div>
-              )}
-              {!ytConnected && isVisible('youtube') && (
-                <div className="rl-field rl-soon-block" title="Conecta tu canal de YouTube en la cabecera">
-                  <span><PlatformIcon platform="youtube" /> Título y descripción de YouTube Shorts <small>Sin conectar</small></span>
-                  <input type="text" className="form-input" disabled value={form.title} placeholder="Conecta YouTube para publicar también en Shorts" />
-                </div>
-              )}
-              {form.platforms.includes('youtube') && isVisible('youtube') && (
-                <>
-                  {ytChannels.length > 1 && (
-                    <div className="rl-field">
-                      <span><PlatformIcon platform="youtube" /> Canales de YouTube</span>
-                      <div className="rl-tt-checks">
-                        {ytChannels.map(ch => {
-                          const chosen = form.youtubeChannels ?? ytChannels.map(c => c.id);
-                          return (
-                            <label key={ch.id}>
-                              <input type="checkbox" checked={chosen.includes(ch.id)} disabled={readOnly}
-                                onChange={(e) => update({ youtubeChannels: e.target.checked ? [...chosen, ch.id] : chosen.filter(id => id !== ch.id) })} />
-                              {ch.title}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <label className="rl-field">
-                    <span><PlatformIcon platform="youtube" /> Título de YouTube Shorts{ytChannels.length > 1 ? ` · ${ytChannels[0].title}` : ''} <small>{form.title.length}/100</small></span>
-                    <input type="text" className="form-input" maxLength={100} value={form.title} disabled={readOnly || processing} onChange={(e) => update({ title: e.target.value })} />
-                  </label>
-                  <label className="rl-field">
-                    <span>Descripción de YouTube</span>
-                    <textarea className="form-input" rows="3" value={form.youtubeDescription} disabled={readOnly || processing} onChange={(e) => update({ youtubeDescription: e.target.value })} />
-                  </label>
-                  {/* Los demás canales llevan su propio título y descripción (salen unas horas después del principal) */}
-                  {ytChannels.slice(1).filter(ch => (form.youtubeChannels ?? ytChannels.map(c => c.id)).includes(ch.id)).map(ch => {
-                    const v = form.youtubeVariants[ch.id] || {};
-                    const setV = (patch) => update({ youtubeVariants: { ...form.youtubeVariants, [ch.id]: { ...v, ...patch } } });
-                    return (
-                      <React.Fragment key={ch.id}>
-                        <label className="rl-field">
-                          <span><PlatformIcon platform="youtube" /> Título · {ch.title} <small>{(v.title || '').length}/100</small></span>
-                          <input type="text" className="form-input" maxLength={100} value={v.title || ''} placeholder={form.title} disabled={readOnly || processing} onChange={(e) => setV({ title: e.target.value })} />
-                        </label>
-                        <label className="rl-field">
-                          <span>Descripción · {ch.title}</span>
-                          <textarea className="form-input" rows="3" value={v.description || ''} placeholder={form.youtubeDescription} disabled={readOnly || processing} onChange={(e) => setV({ description: e.target.value })} />
-                        </label>
-                      </React.Fragment>
-                    );
-                  })}
-                  <label className="rl-field">
-                    <span>Privacidad en YouTube <small>se aplica a todos los Shorts</small></span>
-                    <select className="form-input" value={settings.youtubePrivacy || 'public'} disabled={readOnly} onChange={(e) => onSaveSetting({ youtubePrivacy: e.target.value })}>
-                      <option value="public">Público</option>
-                      <option value="unlisted">No listado</option>
-                      <option value="private">Privado</option>
-                    </select>
-                  </label>
-                </>
               )}
 
               {!readOnly && (
