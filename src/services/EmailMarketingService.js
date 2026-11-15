@@ -60,6 +60,16 @@ export class EmailMarketingService extends HttpService {
     return resp.data
   }
 
+  // Historial de envíos. params: { status, kind, q, campaign, page, pageSize }
+  async sends(params = {}) {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== '' && v !== null && v !== undefined) qs.set(k, v)
+    })
+    const resp = await this.getData(`/admin/email-marketing/sends?${qs.toString()}`)
+    return resp.data
+  }
+
   // Recalcula las etapas de todos los contactos.
   async sync() {
     const resp = await this.postData('/admin/email-marketing/sync', {})
