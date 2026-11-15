@@ -24,7 +24,9 @@ export default function VideosHorizontales() {
   const [copied, setCopied] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activeMetaTab, setActiveMetaTab] = useState('description'); // 'description', 'timestamps', 'tags'
+  const [isRegeneratingAi, setIsRegeneratingAi] = useState(false);
+  const [syncingPinterestId, setSyncingPinterestId] = useState(null);
+  const [activeMetaTab, setActiveMetaTab] = useState('description'); // 'description', 'timestamps', 'tags', 'pinterest'
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [copiedDesc, setCopiedDesc] = useState(false);
   const [withRender, setWithRender] = useState(true);
@@ -40,6 +42,15 @@ export default function VideosHorizontales() {
   });
   const [upcomingTitle, setUpcomingTitle] = useState('');
   const [customDesc, setCustomDesc] = useState('');
+  const [tagsList, setTagsList] = useState([
+    'STL', '3D Printing', 'Modelos 3D', 'Impresión 3D', 'Anime STL', 
+    'Marvel STL', 'Dragon Ball STL', 'Figuras Coleccionables', 
+    'Archivos STL Gratis', 'Resina 3D', 'Filamento PLA', 'STLGratis'
+  ]);
+  const [pinterestMeta, setPinterestMeta] = useState({
+    title: '',
+    description: ''
+  });
   const [modelsList, setModelsList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [timestampsList, setTimestampsList] = useState([]);
@@ -56,6 +67,12 @@ export default function VideosHorizontales() {
         if (res.data.upcoming?.description) setCustomDesc(res.data.upcoming.description);
         if (res.data.upcoming?.timestamps) setTimestampsList(res.data.upcoming.timestamps);
         if (res.data.upcoming?.videoPath) setUpcomingVideoPath(res.data.upcoming.videoPath);
+        if (Array.isArray(res.data.upcoming?.tags) && res.data.upcoming.tags.length > 0) {
+          setTagsList(res.data.upcoming.tags);
+        }
+        if (res.data.upcoming?.pinterest) {
+          setPinterestMeta(res.data.upcoming.pinterest);
+        }
       }
     } catch (e) {
       console.warn('Error cargando estado:', e?.message);
@@ -162,6 +179,47 @@ export default function VideosHorizontales() {
       await loadHistory();
     } catch (e) {
       alert(`Sincronización hacia Facebook para "${item.title}": ${e?.response?.data?.error || e.message}`);
+    }
+  };
+
+  const handleRegenerateAiMetadata = async () => {
+    setIsRegeneratingAi(true);
+    try {
+      const http = new HttpService();
+      const res = await http.postData('/reels/horizontal/regenerate-metadata', {
+        heroId: heroModel?.id || null
+      });
+      if (res?.data?.success) {
+        if (res.data.title) setUpcomingTitle(res.data.title);
+        if (res.data.description) setCustomDesc(res.data.description);
+        if (Array.isArray(res.data.tags) && res.data.tags.length > 0) {
+          setTagsList(res.data.tags);
+        }
+        if (res.data.pinterest) {
+          setPinterestMeta(res.data.pinterest);
+        }
+        alert('✨ ¡Metadata generada con IA (Gemini) exitosamente! Los capítulos y timestamps se mantienen 100% intactos.');
+      }
+    } catch (e) {
+      alert(`Error generando metadata con IA: ${e?.response?.data?.error || e.message}`);
+    } finally {
+      setIsRegeneratingAi(false);
+    }
+  };
+
+  const handleSyncPinterest = async (item) => {
+    setSyncingPinterestId(item.id);
+    try {
+      const http = new HttpService();
+      const res = await http.postData(`/reels/horizontal/${item.id}/sync-pinterest`, {});
+      if (res?.data?.success) {
+        alert(`📌 ¡Pin publicado exitosamente en Pinterest! ${res.data.pinUrl || ''}`);
+        await loadHistory();
+      }
+    } catch (e) {
+      alert(`Error publicando en Pinterest: ${e?.response?.data?.error || e.message}`);
+    } finally {
+      setSyncingPinterestId(null);
     }
   };
 
@@ -352,16 +410,32 @@ export default function VideosHorizontales() {
                 className={activeMetaTab === 'tags' ? 'active' : ''} 
                 onClick={() => setActiveMetaTab('tags')}
               >
-                🏷️ Tags SEO (14)
+                🏷️ Tags SEO ({tagsList.length})
+              </button>
+              <button 
+                type="button" 
+                className={activeMetaTab === 'pinterest' ? 'active' : ''} 
+                onClick={() => setActiveMetaTab('pinterest')}
+              >
+                📌 Pinterest Pin
               </button>
             </div>
 
             {/* Tab 1: Descripción Completa */}
             {activeMetaTab === 'description' && (
               <div className="vh-full-description-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#9490a6', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#9490a6', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <span>Redactado con enlaces a stlgratis.com y capítulos</span>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn-ai-regen-inline"
+                      disabled={isRegeneratingAi}
+                      onClick={handleRegenerateAiMetadata}
+                      title="Redactar nuevo título y descripción con Gemini IA respetando los 20 capítulos"
+                    >
+                      {isRegeneratingAi ? '⏳ Generando con IA...' : '⚡ Regenerar con IA'}
+                    </button>
                     <span 
                       style={{ cursor: 'pointer', color: '#38bdf8', fontWeight: 600 }}
                       onClick={() => setIsEditingDesc(!isEditingDesc)}
@@ -417,15 +491,54 @@ export default function VideosHorizontales() {
             {activeMetaTab === 'tags' && (
               <div className="vh-timestamps-box" style={{ padding: '0.75rem' }}>
                 <div className="vh-ts-label" style={{ marginBottom: '0.5rem' }}>
-                  <span>Palabras clave para la API de YouTube</span>
-                  <span style={{ cursor: 'pointer', color: '#c084fc' }} onClick={() => alert('Tags copiados')}>📋 Copiar tags</span>
+                  <span>Palabras clave para la API de YouTube ({tagsList.length})</span>
+                  <span 
+                    style={{ cursor: 'pointer', color: '#c084fc' }} 
+                    onClick={() => {
+                      navigator.clipboard.writeText(tagsList.join(', '));
+                      alert('📋 Tags copiados al portapapeles');
+                    }}
+                  >
+                    📋 Copiar tags
+                  </span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {['STL', '3D Printing', 'Modelos 3D', 'Impresión 3D', 'Anime STL', 'Marvel STL', 'Dragon Ball STL', 'Warcraft 3D', 'Figuras Coleccionables', 'Archivos STL Gratis', 'Resina 3D', 'Filamento PLA', 'STLGratis'].map((tag, i) => (
+                  {tagsList.map((tag, i) => (
                     <span key={i} style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#d8b4fe', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem' }}>
-                      #{tag}
+                      #{String(tag).replace(/^#/, '')}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 4: Pinterest Pin */}
+            {activeMetaTab === 'pinterest' && (
+              <div className="vh-timestamps-box" style={{ padding: '0.85rem' }}>
+                <div className="vh-ts-label" style={{ marginBottom: '0.65rem' }}>
+                  <span>📌 Contenido optimizado para Pin de Pinterest</span>
+                  <span 
+                    style={{ cursor: 'pointer', color: '#e60023', fontWeight: 600 }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${pinterestMeta.title || upcomingTitle}\n\n${pinterestMeta.description || customDesc}`);
+                      alert('📋 Contenido de Pinterest copiado al portapapeles');
+                    }}
+                  >
+                    📋 Copiar texto Pin
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.78rem' }}>
+                  <div>
+                    <span style={{ color: '#9490a6', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Título del Pin (SEO Pinterest):</span>
+                    <strong style={{ color: '#fff', fontSize: '0.84rem' }}>{pinterestMeta.title || upcomingTitle}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#9490a6', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Descripción y Hashtags Pin:</span>
+                    <p style={{ color: '#d1d0db', margin: '0.25rem 0 0', lineHeight: 1.45 }}>{pinterestMeta.description || 'Descubre los 20 mejores archivos STL para imprimir hoy mismo en resina o filamento. Descárgalos en https://stlgratis.com/ #3DPrinting #STL #STLGratis #Impresion3D'}</p>
+                  </div>
+                  <div style={{ paddingTop: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#34d399', fontSize: '0.72rem' }}>✓ Enlace directo a ficha en stlgratis.com</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -601,6 +714,19 @@ export default function VideosHorizontales() {
                     ) : (
                       <span style={{ fontSize: '0.68rem', color: '#9490a6' }}>f Facebook pendiente</span>
                     )}
+                    {item.pinterestSynced ? (
+                      <a 
+                        href={item.pinterestUrl || '#'} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="vh-pinterest-badge"
+                        title="Ver Pin en Pinterest"
+                      >
+                        📌 Pinterest Sincronizado
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: '0.68rem', color: '#9490a6' }}>📌 Pinterest pendiente</span>
+                    )}
                     <span className="vh-item-date">{item.date}</span>
                     <span style={{ color: '#64748b', fontSize: '0.68rem' }}>· {item.fileSize}</span>
                   </div>
@@ -635,6 +761,14 @@ export default function VideosHorizontales() {
                     onClick={() => handleSyncFacebook(item)}
                   >
                     f {item.fbSynced ? 'Re-enviar a Facebook' : 'Publicar en Facebook'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-pinterest-sync"
+                    disabled={syncingPinterestId === item.id}
+                    onClick={() => handleSyncPinterest(item)}
+                  >
+                    {syncingPinterestId === item.id ? '📌 Publicando...' : item.pinterestSynced ? '📌 Re-publicar Pin' : '📌 Publicar en Pinterest'}
                   </button>
                   {item.videoPath ? (
                     <a 
