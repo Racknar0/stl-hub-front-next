@@ -73,6 +73,12 @@ export default function MotorAjustes({ onChange }) {
     guardar({ enabled: encender })
   }
 
+  const alternarNovedades = () => {
+    const encender = !motor.newsletterEnabled
+    if (encender && !window.confirm('Cada martes saldrá un correo de novedades a los usuarios Activos. ¿Encender las novedades?')) return
+    guardar({ newsletterEnabled: encender })
+  }
+
   if (!motor) {
     return error ? <div className="mk-note is-warn" style={{ marginBottom: '1.5rem' }}>{error}</div> : null
   }
@@ -134,6 +140,17 @@ export default function MotorAjustes({ onChange }) {
       </div>
 
       <div className="mk-engine-actions" style={{ marginTop: '1rem' }}>
+        <span style={{ fontSize: '0.9rem' }}>
+          Novedades semanales
+          <Ayuda texto="Cada martes llega un correo con los modelos más descargados de la semana a quienes están Activos. Solo lleva los que esa persona aún no descargó. Necesita el motor encendido y la fecha de corte." />
+        </span>
+        <span className={`mk-tag ${motor.newsletterEnabled ? 't-on' : 't-off'}`}>{motor.newsletterEnabled ? 'Encendidas' : 'Apagadas'}</span>
+        <button className="mk-btn" onClick={alternarNovedades} disabled={saving}>
+          {motor.newsletterEnabled ? 'Apagar novedades' : 'Encender novedades'}
+        </button>
+      </div>
+
+      <div className="mk-engine-actions" style={{ marginTop: '1rem' }}>
         <select className="mk-btn" value={prueba.kind} onChange={(e) => setPrueba({ ...prueba, kind: e.target.value })}>
           <option value="WELCOME_1">1 · Bienvenida</option>
           <option value="WELCOME_2">2 · Premium</option>
@@ -141,6 +158,7 @@ export default function MotorAjustes({ onChange }) {
           <option value="WELCOME_4">4 · Planes</option>
           <option value="PREMIUM_EXPIRING">6 · Premium vence</option>
           <option value="PREMIUM_EXPIRED">7 · Premium venció</option>
+          <option value="NEWSLETTER">8 · Novedades</option>
         </select>
         <button className="mk-btn" onClick={enviarPrueba} disabled={saving || prueba.sending}>
           {prueba.sending ? 'Enviando…' : 'Enviarme una prueba'}

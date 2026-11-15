@@ -322,6 +322,7 @@ $mk-text-dim: #a0aec0;
     &.t-off    { background: rgba(160, 174, 192, 0.15); color: #a0aec0; }
     &.t-draft  { background: rgba(66, 153, 225, 0.15); color: #4299e1; }
     &.t-wait   { background: rgba(255, 152, 0, 0.15); color: $mk-accent; }
+    &.t-fail   { background: rgba(245, 101, 101, 0.15); color: #f56565; }
   }
 
   // ---------- Botones ----------

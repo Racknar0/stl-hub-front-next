@@ -72,8 +72,8 @@ export default function MarketingResumen() {
 
         <article className="mk-stat is-warn">
           <span className="label">
-            Envíos hoy
-            <Ayuda texto={`Correos enviados hoy sobre el tope diario de ${daily.limit} del plan de Brevo. Lo que no cabe espera al día siguiente.`} />
+            Envíos en 24 h
+            <Ayuda texto={`Correos enviados en las últimas 24 horas sobre el tope de ${daily.limit} del plan de Brevo. Se cuenta una ventana móvil porque Brevo reinicia su límite a una hora propia. Lo que no cabe espera.`} />
           </span>
           <span className="value">
             {daily.sentToday}

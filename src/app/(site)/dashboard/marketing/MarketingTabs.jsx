@@ -9,6 +9,7 @@ const TABS = [
   { href: '/dashboard/marketing/embudos', label: 'Embudos', icon: 'M3 4h18l-7 8v6l-4 2v-8z' },
   { href: '/dashboard/marketing/audiencias', label: 'Audiencias', icon: 'M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0M22 20v-2a4 4 0 0 0-3-3.87' },
   { href: '/dashboard/marketing/campanas', label: 'Campañas', icon: 'M3 11l18-8-8 18-2-7-8-3z' },
+  { href: '/dashboard/marketing/envios', label: 'Envíos', icon: 'M4 6h16M4 12h16M4 18h10' },
   { href: '/dashboard/marketing/plantillas', label: 'Plantillas', icon: 'M4 4h16v5H4zM4 13h7v7H4zM15 13h5v7h-5z' },
 ]
 
