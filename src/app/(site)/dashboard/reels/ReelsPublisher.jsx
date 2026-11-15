@@ -275,6 +275,8 @@ const postToForm = (post) => ({
   youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
   youtubeChannels: Array.isArray(post.youtubeChannels) ? post.youtubeChannels : null, // null = todos los canales conectados
   facebookPages: Array.isArray(post.facebookPages) ? post.facebookPages : null, // null = todas las Páginas asignadas
+  instagramAccounts: Array.isArray(post.instagramAccounts) ? post.instagramAccounts : null, // null = todas las cuentas vinculadas
+  instagramVariants: post.instagramVariants && typeof post.instagramVariants === 'object' ? post.instagramVariants : {},
   facebookVariants: post.facebookVariants && typeof post.facebookVariants === 'object' ? post.facebookVariants : {},
   youtubeVariants: post.youtubeVariants && typeof post.youtubeVariants === 'object' ? post.youtubeVariants : {},
   tiktokOptions: { ...TIKTOK_DEFAULT_OPTIONS, ...(post.tiktokOptions && typeof post.tiktokOptions === 'object' ? post.tiktokOptions : {}) },
@@ -656,6 +658,14 @@ export default function ReelsPublisher() {
                   <PlatformIcon platform="youtube" title={p.label} />{connectingYt ? 'Esperando autorización…' : '+ Canal'}
                 </button>
               </React.Fragment>
+            ) : p.key === 'instagram' && (connection?.instagram?.accounts || []).length > 1 ? (
+              <React.Fragment key={p.key}>
+                {connection.instagram.accounts.map(acc => (
+                  <span key={acc.id} className="rl-conn on" title={`Cuenta vinculada${acc.pageName ? ` a ${acc.pageName}` : ''}`}>
+                    <PlatformIcon platform="instagram" title={p.label} />@{acc.username}
+                  </span>
+                ))}
+              </React.Fragment>
             ) : p.key === 'facebook' && (connection?.facebook?.pages || []).length > 1 ? (
               <React.Fragment key={p.key}>
                 {connection.facebook.pages.map(pg => (
@@ -898,7 +908,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -913,7 +923,7 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], fbPages = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
   const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
@@ -923,6 +933,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
   const [previewPlatform, setPreviewPlatform] = useState(toList(post.platforms).find(isVisible) || visible[0]?.key || 'instagram');
   const [hashtagInput, setHashtagInput] = useState('');
   const [fbTab, setFbTab] = useState(null); // Página de Facebook cuyo texto se edita (null = la principal)
+  const [igTab, setIgTab] = useState(null); // cuenta de Instagram cuyo texto se edita (null = la principal)
   const [ytTab, setYtTab] = useState(null); // canal de YouTube cuyo texto se edita (null = el principal)
   const [aiNotes, setAiNotes] = useState('');
   const [assetTitle, setAssetTitle] = useState(post.assetTitle || '');
@@ -1041,7 +1052,9 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
   const activeText = textTabs.some(p => p.key === previewPlatform) ? previewPlatform : textTabs[0]?.key;
   const previewCaption = previewPlatform === 'threads' ? captionBody(form.caption)
     : previewPlatform === 'facebook' ? ((fbTab && fbTab !== fbPages[0]?.id && form.facebookVariants[fbTab]?.caption) || form.facebookCaption || form.caption)
-    : previewPlatform === 'tiktok' ? (form.tiktokCaption || form.caption) : form.caption;
+    : previewPlatform === 'tiktok' ? (form.tiktokCaption || form.caption)
+      : previewPlatform === 'instagram' && igTab && igTab !== igAccounts[0]?.id ? (form.instagramVariants[igTab]?.caption || form.caption)
+        : form.caption;
   const checks = videoChecks({ ...post, platforms: form.platforms }, visible);
 
   return (
@@ -1123,12 +1136,37 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                 </div>
               )}
 
-              {activeText === 'instagram' && (
-                <label className="rl-field">
-                  <span>Caption <small>{form.caption.length}/2200</small></span>
-                  <textarea className="form-input" rows="7" maxLength={2200} value={form.caption} disabled={readOnly || processing} onChange={(e) => update({ caption: e.target.value })} />
-                </label>
-              )}
+              {activeText === 'instagram' && (() => {
+                const chosen = form.instagramAccounts ?? igAccounts.map(a => a.id);
+                const current = igAccounts.find(a => a.id === igTab) || igAccounts[0];
+                const isPrimary = !current || current.id === igAccounts[0]?.id;
+                const included = !current || chosen.includes(current.id);
+                const value = isPrimary ? form.caption : (form.instagramVariants[current.id]?.caption || '');
+                return (
+                  <>
+                    {igAccounts.length > 1 && (
+                      <div className="rl-subtabs">
+                        {igAccounts.map((acc, i) => (
+                          <div key={acc.id} className={`rl-subtab ${current?.id === acc.id ? 'on' : ''} ${chosen.includes(acc.id) ? '' : 'excluded'}`}>
+                            <input type="checkbox" checked={chosen.includes(acc.id)} disabled={readOnly} title={chosen.includes(acc.id) ? 'Publicar en esta cuenta' : 'No se publica en esta cuenta'}
+                              onChange={(e) => update({ instagramAccounts: e.target.checked ? [...chosen, acc.id] : chosen.filter(id => id !== acc.id) })} />
+                            <button type="button" onClick={() => setIgTab(acc.id)}>@{acc.username}<small>{i === 0 ? 'al momento' : `+${2 * i - 1} h`}</small></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className={`rl-field ${included ? '' : 'rl-dim'}`}>
+                      <span>Caption{current && igAccounts.length > 1 ? ` · @${current.username}` : ''} <small>{value.length}/2200</small></span>
+                      <textarea className="form-input" rows="7" maxLength={2200} value={value} placeholder={isPrimary ? '' : form.caption}
+                        disabled={readOnly || processing || !included}
+                        onChange={(e) => (isPrimary
+                          ? update({ caption: e.target.value })
+                          : update({ instagramVariants: { ...form.instagramVariants, [current.id]: { caption: e.target.value } } }))} />
+                    </label>
+                    {igAccounts.length > 1 && <p className="rl-tt-note">🔗 El link va en la bio de cada cuenta. Las cuentas extra se publican solas a su hora.</p>}
+                  </>
+                );
+              })()}
 
               {activeText === 'facebook' && (() => {
                 const chosen = form.facebookPages ?? fbPages.map(x => x.id);
@@ -1388,6 +1426,15 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                       </li>
                     );
                   })}
+                  {Object.entries(post.results).filter(([key]) => key.startsWith('instagram:')).map(([key, r]) => (
+                    <li key={key}>
+                      <PlatformIcon platform="instagram" title="Instagram" />Instagram · @{r.username || 'cuenta'}
+                      {r.url ? <a href={r.url} target="_blank" rel="noreferrer">Ver publicación ↗</a> : r.id ? <code>{r.id}</code> : null}
+                      {r.deferred && <small>⏳ sale a las {new Date(r.publishAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</small>}
+                      {r.failed && <small>⚠ {r.error || 'falló'}</small>}
+                      {r.id && '✓'}
+                    </li>
+                  ))}
                   {Object.entries(post.results).filter(([key]) => key.startsWith('facebook:')).map(([key, r]) => (
                     <li key={key}>
                       <PlatformIcon platform="facebook" title="Facebook" />Facebook · {r.pageName || 'página'}
