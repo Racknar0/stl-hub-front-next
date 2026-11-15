@@ -25,14 +25,15 @@ export default function VideosHorizontales() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isRegeneratingAi, setIsRegeneratingAi] = useState(false);
-  const [syncingPinterestId, setSyncingPinterestId] = useState(null);
-  const [activeMetaTab, setActiveMetaTab] = useState('description'); // 'description', 'timestamps', 'tags', 'pinterest'
+  const [activeMetaTab, setActiveMetaTab] = useState('description'); // 'description', 'timestamps', 'tags'
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [copiedDesc, setCopiedDesc] = useState(false);
   const [withRender, setWithRender] = useState(true);
   const [previewModalModel, setPreviewModalModel] = useState(null);
 
   // Estados sincronizados exclusivamente con el backend (sin datos mock)
+  const [selectedLang, setSelectedLang] = useState('es'); // 'es', 'en'
+  const [autoLang, setAutoLang] = useState('es');
   const [channels, setChannels] = useState([]);
   const [kpis, setKpis] = useState({
     nextPublish: '',
@@ -47,10 +48,6 @@ export default function VideosHorizontales() {
     'Marvel STL', 'Dragon Ball STL', 'Figuras Coleccionables', 
     'Archivos STL Gratis', 'Resina 3D', 'Filamento PLA', 'STLGratis'
   ]);
-  const [pinterestMeta, setPinterestMeta] = useState({
-    title: '',
-    description: ''
-  });
   const [modelsList, setModelsList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [timestampsList, setTimestampsList] = useState([]);
@@ -70,8 +67,9 @@ export default function VideosHorizontales() {
         if (Array.isArray(res.data.upcoming?.tags) && res.data.upcoming.tags.length > 0) {
           setTagsList(res.data.upcoming.tags);
         }
-        if (res.data.upcoming?.pinterest) {
-          setPinterestMeta(res.data.upcoming.pinterest);
+        if (res.data.upcoming?.language) {
+          setSelectedLang(res.data.upcoming.language);
+          setAutoLang(res.data.upcoming.language);
         }
       }
     } catch (e) {
@@ -141,6 +139,10 @@ export default function VideosHorizontales() {
       await http.postData('/reels/horizontal/generate', {
         title: upcomingTitle,
         description: customDesc,
+        tags: tagsList,
+        language: selectedLang,
+        heroId: heroModel?.id,
+        channelName: kpis.channelToday,
         render: withRender
       });
       alert('¡Recopilación generada con éxito! ' + (withRender ? 'El video MP4 fue ensamblado con FFmpeg y está listo para descargar en el historial.' : 'Registrado en la base de datos.'));
@@ -182,12 +184,14 @@ export default function VideosHorizontales() {
     }
   };
 
-  const handleRegenerateAiMetadata = async () => {
+  const handleRegenerateAiMetadata = async (langOverride = null) => {
+    const lang = langOverride || selectedLang;
     setIsRegeneratingAi(true);
     try {
       const http = new HttpService();
       const res = await http.postData('/reels/horizontal/regenerate-metadata', {
-        heroId: heroModel?.id || null
+        heroId: heroModel?.id || null,
+        language: lang
       });
       if (res?.data?.success) {
         if (res.data.title) setUpcomingTitle(res.data.title);
@@ -195,10 +199,10 @@ export default function VideosHorizontales() {
         if (Array.isArray(res.data.tags) && res.data.tags.length > 0) {
           setTagsList(res.data.tags);
         }
-        if (res.data.pinterest) {
-          setPinterestMeta(res.data.pinterest);
+        if (Array.isArray(res.data.timestamps) && res.data.timestamps.length > 0) {
+          setTimestampsList(res.data.timestamps);
         }
-        alert('✨ ¡Metadata generada con IA (Gemini) exitosamente! Los capítulos y timestamps se mantienen 100% intactos.');
+        alert(`✨ ¡Metadata generada con IA (Gemini) en ${lang === 'en' ? 'Inglés 🇬🇧' : 'Español 🇪🇸'} exitosamente! Los capítulos y enlaces se mantienen 100% intactos.`);
       }
     } catch (e) {
       alert(`Error generando metadata con IA: ${e?.response?.data?.error || e.message}`);
@@ -207,20 +211,10 @@ export default function VideosHorizontales() {
     }
   };
 
-  const handleSyncPinterest = async (item) => {
-    setSyncingPinterestId(item.id);
-    try {
-      const http = new HttpService();
-      const res = await http.postData(`/reels/horizontal/${item.id}/sync-pinterest`, {});
-      if (res?.data?.success) {
-        alert(`📌 ¡Pin publicado exitosamente en Pinterest! ${res.data.pinUrl || ''}`);
-        await loadHistory();
-      }
-    } catch (e) {
-      alert(`Error publicando en Pinterest: ${e?.response?.data?.error || e.message}`);
-    } finally {
-      setSyncingPinterestId(null);
-    }
+  const handleSwitchLanguage = async (newLang) => {
+    if (newLang === selectedLang) return;
+    setSelectedLang(newLang);
+    await handleRegenerateAiMetadata(newLang);
   };
 
   return (
@@ -239,7 +233,7 @@ export default function VideosHorizontales() {
           <button 
             type="button" 
             className="vh-btn vh-btn-secondary"
-            onClick={() => alert('Ajustes: Horario programado a las 17:30 (+2h 30m después del Short diario) para máxima visibilidad.')}
+            onClick={() => alert('Publicación automática: cada video horizontal se genera y se sube a YouTube 2 h después de que se publica el reel del día, rotando entre los 3 canales.')}
           >
             ⚙️ Ajustes de Horario
           </button>
@@ -383,7 +377,30 @@ export default function VideosHorizontales() {
           {/* Columna Derecha: Metadatos IA y Timestamps */}
           <div className="vh-meta-col">
             <div className="vh-meta-header">
-              <span className="vh-meta-sub">● Recopilación Lista para Hoy ({kpis.channelToday || 'Canal en turno'})</span>
+              <div className="vh-meta-header-top">
+                <span className="vh-meta-sub">● Recopilación Lista para Hoy ({kpis.channelToday || 'Canal en turno'})</span>
+                <div className="vh-lang-selector">
+                  <span className="vh-lang-label">Idioma:</span>
+                  <button
+                    type="button"
+                    className={`vh-lang-btn ${selectedLang === 'es' ? 'active' : ''}`}
+                    onClick={() => handleSwitchLanguage('es')}
+                    disabled={isRegeneratingAi}
+                    title="Generar y redactar con IA en Español"
+                  >
+                    🇪🇸 Español {autoLang === 'es' && <span className="vh-auto-pill">Turno</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className={`vh-lang-btn ${selectedLang === 'en' ? 'active' : ''}`}
+                    onClick={() => handleSwitchLanguage('en')}
+                    disabled={isRegeneratingAi}
+                    title="Generate and write with AI in English"
+                  >
+                    🇬🇧 English {autoLang === 'en' && <span className="vh-auto-pill">Turn</span>}
+                  </button>
+                </div>
+              </div>
               <h3 className="vh-meta-title">
                 {upcomingTitle || 'Top Modelos 3D del Día'}
               </h3>
@@ -411,13 +428,6 @@ export default function VideosHorizontales() {
                 onClick={() => setActiveMetaTab('tags')}
               >
                 🏷️ Tags SEO ({tagsList.length})
-              </button>
-              <button 
-                type="button" 
-                className={activeMetaTab === 'pinterest' ? 'active' : ''} 
-                onClick={() => setActiveMetaTab('pinterest')}
-              >
-                📌 Pinterest Pin
               </button>
             </div>
 
@@ -512,36 +522,6 @@ export default function VideosHorizontales() {
               </div>
             )}
 
-            {/* Tab 4: Pinterest Pin */}
-            {activeMetaTab === 'pinterest' && (
-              <div className="vh-timestamps-box" style={{ padding: '0.85rem' }}>
-                <div className="vh-ts-label" style={{ marginBottom: '0.65rem' }}>
-                  <span>📌 Contenido optimizado para Pin de Pinterest</span>
-                  <span 
-                    style={{ cursor: 'pointer', color: '#e60023', fontWeight: 600 }}
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${pinterestMeta.title || upcomingTitle}\n\n${pinterestMeta.description || customDesc}`);
-                      alert('📋 Contenido de Pinterest copiado al portapapeles');
-                    }}
-                  >
-                    📋 Copiar texto Pin
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.78rem' }}>
-                  <div>
-                    <span style={{ color: '#9490a6', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Título del Pin (SEO Pinterest):</span>
-                    <strong style={{ color: '#fff', fontSize: '0.84rem' }}>{pinterestMeta.title || upcomingTitle}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9490a6', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Descripción y Hashtags Pin:</span>
-                    <p style={{ color: '#d1d0db', margin: '0.25rem 0 0', lineHeight: 1.45 }}>{pinterestMeta.description || 'Descubre los 20 mejores archivos STL para imprimir hoy mismo en resina o filamento. Descárgalos en https://stlgratis.com/ #3DPrinting #STL #STLGratis #Impresion3D'}</p>
-                  </div>
-                  <div style={{ paddingTop: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#34d399', fontSize: '0.72rem' }}>✓ Enlace directo a ficha en stlgratis.com</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="vh-meta-actions">
               <button 
@@ -714,18 +694,10 @@ export default function VideosHorizontales() {
                     ) : (
                       <span style={{ fontSize: '0.68rem', color: '#9490a6' }}>f Facebook pendiente</span>
                     )}
-                    {item.pinterestSynced ? (
-                      <a 
-                        href={item.pinterestUrl || '#'} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="vh-pinterest-badge"
-                        title="Ver Pin en Pinterest"
-                      >
-                        📌 Pinterest Sincronizado
-                      </a>
+                    {item.language === 'en' ? (
+                      <span className="vh-lang-badge vh-lang-en">🇬🇧 English</span>
                     ) : (
-                      <span style={{ fontSize: '0.68rem', color: '#9490a6' }}>📌 Pinterest pendiente</span>
+                      <span className="vh-lang-badge vh-lang-es">🇪🇸 Español</span>
                     )}
                     <span className="vh-item-date">{item.date}</span>
                     <span style={{ color: '#64748b', fontSize: '0.68rem' }}>· {item.fileSize}</span>
@@ -761,14 +733,6 @@ export default function VideosHorizontales() {
                     onClick={() => handleSyncFacebook(item)}
                   >
                     f {item.fbSynced ? 'Re-enviar a Facebook' : 'Publicar en Facebook'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-pinterest-sync"
-                    disabled={syncingPinterestId === item.id}
-                    onClick={() => handleSyncPinterest(item)}
-                  >
-                    {syncingPinterestId === item.id ? '📌 Publicando...' : item.pinterestSynced ? '📌 Re-publicar Pin' : '📌 Publicar en Pinterest'}
                   </button>
                   {item.videoPath ? (
                     <a 
@@ -809,6 +773,30 @@ export default function VideosHorizontales() {
                     <option key={ch.id} value={ch.name}>{ch.name} ({ch.turnLabel})</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Idioma de la Recopilación</label>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+                  <button
+                    type="button"
+                    className={`vh-lang-btn ${selectedLang === 'es' ? 'active' : ''}`}
+                    onClick={() => handleSwitchLanguage('es')}
+                    style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem' }}
+                    disabled={isRegeneratingAi}
+                  >
+                    🇪🇸 Español {autoLang === 'es' ? '(Turno Hoy)' : ''}
+                  </button>
+                  <button
+                    type="button"
+                    className={`vh-lang-btn ${selectedLang === 'en' ? 'active' : ''}`}
+                    onClick={() => handleSwitchLanguage('en')}
+                    style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem' }}
+                    disabled={isRegeneratingAi}
+                  >
+                    🇬🇧 English {autoLang === 'en' ? '(Turn Today)' : ''}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">

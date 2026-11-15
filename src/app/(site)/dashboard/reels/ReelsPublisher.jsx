@@ -20,6 +20,48 @@ const CAPTION_FOOTERS = ['📦 +1MM Premium STL · 🔗 link in bio', '📦 +1MM
 const captionBody = (caption) => CAPTION_FOOTERS.reduce((t, f) => t.replace(f, ''), String(caption || '').replace(CAPTION_HEADER, '')).trim();
 // Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
 const VisiblePlatforms = createContext(PLATFORMS);
+
+// Botón por red con desplegable de cuentas/canales conectados
+function ConnGroup({ platform, label, iconTitle, items, action }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const on = items.length > 0;
+  return (
+    <div className="rl-grp" ref={ref}>
+      <button type="button" className={`rl-grp-btn ${on ? 'on' : 'off'}`} aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <PlatformIcon platform={platform} title={iconTitle} />
+        <span>{label}</span>
+        {on && <span className="rl-grp-count">{items.length}</span>}
+        <i className="rl-grp-dot" />
+        <span className="rl-grp-caret">▾</span>
+      </button>
+      {open && (
+        <div className="rl-grp-menu" role="menu">
+          {!on && <div className="rl-grp-empty">Sin cuentas conectadas</div>}
+          {items.map(it => (
+            <div key={it.id} className="rl-grp-item" title={it.title}>
+              <span className="rl-grp-name">{it.name}</span>
+              {it.onRemove && <button type="button" className="rl-conn-x" title={it.removeTitle} onClick={(e) => { it.onRemove(e); setOpen(false); }}>✕</button>}
+            </div>
+          ))}
+          {action && (
+            <button type="button" className="rl-grp-add" onClick={() => { action.onClick(); setOpen(false); }} disabled={action.busy} title={action.title}>
+              {action.busy ? 'Esperando autorización…' : action.label}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 const FOCUS_KEY = 'reels_focus_platform';
 // Sin ?solo= se muestran todas las redes (?solo=tiktok enfoca una sola; ?solo=all vuelve a todas)
 const DEFAULT_FOCUS = null;
@@ -618,75 +660,32 @@ export default function ReelsPublisher() {
           <span className="stat rl-stat-cover" title="Días seguidos con reel desde hoy">📆 {stats.coveredDays ?? 0} días cubiertos</span>
         </div>
         <div className="rl-connections">
-          {visible.map(p => (
-            p.key === 'threads' ? (
-              thConnected ? (
-                <span key={p.key} className="rl-conn on" title={`Cuenta conectada: @${connection.threads.account?.username || ''}`}>
-                  <PlatformIcon platform={p.key} title={p.label} />
-                  @{connection.threads.account?.username || 'threads'}
-                  <button type="button" className="rl-conn-x" title="Desconectar Threads" onClick={disconnectThreads}>✕</button>
-                </span>
-              ) : (
-                <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectThreads} disabled={connectingTh}
-                  title="Autoriza tu cuenta de Threads para publicar videos">
-                  <PlatformIcon platform={p.key} title={p.label} />{connectingTh ? 'Esperando autorización…' : 'Conectar Threads'}
-                </button>
-              )
-            ) : p.key === 'tiktok' ? (
-              ttConnected ? (
-                <span key={p.key} className="rl-conn on" title={`Cuenta conectada: ${connection.tiktok.account?.displayName || ''}`}>
-                  <PlatformIcon platform={p.key} title={p.label} />
-                  {connection.tiktok.account?.displayName || 'TikTok'}
-                  <button type="button" className="rl-conn-x" title="Desconectar TikTok" onClick={disconnectTiktok}>✕</button>
-                </span>
-              ) : (
-                <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectTiktok} disabled={connectingTt}
-                  title="Autoriza tu cuenta de TikTok para publicar videos">
-                  <PlatformIcon platform={p.key} title={p.label} />{connectingTt ? 'Esperando autorización…' : 'Conectar TikTok'}
-                </button>
-              )
-            ) : p.key === 'youtube' && ytConnected ? (
-              <React.Fragment key={p.key}>
-                {(connection.youtube.channels || []).map(ch => (
-                  <span key={ch.id} className="rl-conn on" title={`Canal conectado: ${ch.title || ''}`}>
-                    <PlatformIcon platform="youtube" title={p.label} />{ch.title || 'YouTube'}
-                    <button type="button" className="rl-conn-x" title={`Desconectar ${ch.title || 'el canal'}`} onClick={(e) => disconnectYoutube(e, ch)}>✕</button>
-                  </span>
-                ))}
-                <button type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
-                  title="Conecta otro canal de YouTube (elígelo en la pantalla de Google)">
-                  <PlatformIcon platform="youtube" title={p.label} />{connectingYt ? 'Esperando autorización…' : '+ Canal'}
-                </button>
-              </React.Fragment>
-            ) : p.key === 'instagram' && (connection?.instagram?.accounts || []).length > 1 ? (
-              <React.Fragment key={p.key}>
-                {connection.instagram.accounts.map(acc => (
-                  <span key={acc.id} className="rl-conn on" title={`Cuenta vinculada${acc.pageName ? ` a ${acc.pageName}` : ''}`}>
-                    <PlatformIcon platform="instagram" title={p.label} />@{acc.username}
-                  </span>
-                ))}
-              </React.Fragment>
-            ) : p.key === 'facebook' && (connection?.facebook?.pages || []).length > 1 ? (
-              <React.Fragment key={p.key}>
-                {connection.facebook.pages.map(pg => (
-                  <span key={pg.id} className="rl-conn on" title={`Página asignada: ${pg.name}`}>
-                    <PlatformIcon platform="facebook" title={p.label} />{pg.name}
-                  </span>
-                ))}
-              </React.Fragment>
-            ) : p.key === 'youtube' && !ytConnected ? (
-              <button key={p.key} type="button" className="rl-conn rl-conn-btn" onClick={connectYoutube} disabled={connectingYt}
-                title="Autoriza tu canal de YouTube para publicar Shorts">
-                <PlatformIcon platform={p.key} title={p.label} />{connectingYt ? 'Esperando autorización…' : 'Conectar YouTube'}
-              </button>
-            ) : (
-              <span key={p.key} className={`rl-conn ${connection?.[p.key]?.configured ? 'on' : 'off'}`}
-                title={p.key === 'youtube' ? `Canal conectado: ${connection.youtube.channel?.title || ''}` : connection?.[p.key]?.configured ? 'Credenciales configuradas' : 'Sin credenciales'}>
-                <PlatformIcon platform={p.key} title={p.label} />{p.key === 'youtube' ? (connection.youtube.channel?.title || 'YouTube') : p.label.split(' ')[0]}
-                {p.key === 'youtube' && <button type="button" className="rl-conn-x" title="Desconectar YouTube" onClick={disconnectYoutube}>✕</button>}
-              </span>
-            )
-          ))}
+          {visible.map(p => {
+            const name = p.label.split(' ')[0];
+            let items = [];
+            let action = null;
+            if (p.key === 'threads') {
+              if (thConnected) items = [{ id: 'th', name: `@${connection.threads.account?.username || 'threads'}`, title: 'Cuenta conectada', onRemove: disconnectThreads, removeTitle: 'Desconectar Threads' }];
+              else action = { label: 'Conectar Threads', onClick: connectThreads, busy: connectingTh, title: 'Autoriza tu cuenta de Threads para publicar videos' };
+            } else if (p.key === 'tiktok') {
+              if (ttConnected) items = [{ id: 'tt', name: connection.tiktok.account?.displayName || 'TikTok', title: 'Cuenta conectada', onRemove: disconnectTiktok, removeTitle: 'Desconectar TikTok' }];
+              else action = { label: 'Conectar TikTok', onClick: connectTiktok, busy: connectingTt, title: 'Autoriza tu cuenta de TikTok para publicar videos' };
+            } else if (p.key === 'youtube') {
+              items = ytConnected ? (connection.youtube.channels || []).map(ch => ({ id: ch.id, name: ch.title || 'YouTube', title: 'Canal conectado', onRemove: (e) => disconnectYoutube(e, ch), removeTitle: `Desconectar ${ch.title || 'el canal'}` })) : [];
+              action = { label: ytConnected ? '+ Añadir canal' : 'Conectar YouTube', onClick: connectYoutube, busy: connectingYt, title: ytConnected ? 'Conecta otro canal de YouTube (elígelo en la pantalla de Google)' : 'Autoriza tu canal de YouTube para publicar Shorts' };
+            } else if (p.key === 'instagram') {
+              const accs = connection?.instagram?.accounts || [];
+              items = accs.length ? accs.map(acc => ({ id: acc.id, name: `@${acc.username}`, title: acc.pageName ? `Vinculada a ${acc.pageName}` : 'Cuenta vinculada' }))
+                : connection?.instagram?.configured ? [{ id: 'ig', name: 'Cuenta configurada', title: 'Credenciales configuradas' }] : [];
+            } else if (p.key === 'facebook') {
+              const pgs = connection?.facebook?.pages || [];
+              items = pgs.length ? pgs.map(pg => ({ id: pg.id, name: pg.name, title: 'Página asignada' }))
+                : connection?.facebook?.configured ? [{ id: 'fb', name: 'Página configurada', title: 'Credenciales configuradas' }] : [];
+            } else if (connection?.[p.key]?.configured) {
+              items = [{ id: p.key, name: 'Configurada', title: 'Credenciales configuradas' }];
+            }
+            return <ConnGroup key={p.key} platform={p.key} label={name} iconTitle={p.label} items={items} action={action} />;
+          })}
         </div>
       </div>
 
