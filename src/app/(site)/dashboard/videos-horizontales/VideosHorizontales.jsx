@@ -139,8 +139,8 @@ export default function VideosHorizontales() {
   const facebookButton = showingLatest && latest?.videoPath ? (
     latestFb?.published ? (
       latestFb.url
-        ? <a className="btn-facebook done" href={latestFb.url} target="_blank" rel="noreferrer">✓ En Facebook ↗</a>
-        : <button type="button" className="btn-facebook done" disabled>✓ En Facebook</button>
+        ? <a className="btn-facebook done" href={latestFb.url} target="_blank" rel="noreferrer">✓ Publicado en Facebook · {latestFb.pageName} ↗</a>
+        : <button type="button" className="btn-facebook done" disabled>✓ Publicado en Facebook · {latestFb.pageName}</button>
     ) : (
       <button
         type="button"
@@ -149,7 +149,9 @@ export default function VideosHorizontales() {
         title={kpis.facebook?.pageToday ? `Página en turno: ${kpis.facebook.pageToday}` : 'No hay Páginas de Facebook disponibles'}
         onClick={() => handlePublishFacebook(latest)}
       >
-        {latestFb?.publishing ? 'Subiendo a Facebook...' : latestFb?.error ? '🔁 Reintentar en Facebook' : 'f Publicar en Facebook'}
+        {latestFb?.publishing
+          ? `Subiendo a Facebook${latestFb.pageName ? ` · ${latestFb.pageName}` : ''}...`
+          : `${latestFb?.error ? '🔁 Reintentar' : 'f Publicar'} en Facebook${kpis.facebook?.pageToday ? ` · ${kpis.facebook.pageToday}` : ''}`}
       </button>
     )
   ) : null;
@@ -282,7 +284,7 @@ export default function VideosHorizontales() {
             Videos Horizontales
             <span className="vh-badge-16x9">16:9 Showcase</span>
           </h1>
-          <p>Recopilaciones automáticas de 3 minutos · Rotación continua entre tus 3 canales de YouTube · Se publican solas 2 h después de cada reel</p>
+          <p>Recopilaciones automáticas de 3 minutos · Rotación continua entre tus canales de YouTube y Páginas de Facebook · Se publican solas 2 h después de cada reel</p>
         </div>
 
         <div className="vh-header-actions">
@@ -386,6 +388,14 @@ export default function VideosHorizontales() {
                   <span className={`vh-turn-badge badge-${ch.status}`}>
                     {ch.turnLabel}
                   </span>
+                </div>
+
+                <div className={`vh-channel-fb ${ch.facebookPage ? '' : 'empty'}`}>
+                  <div className="vh-fb-icon">f</div>
+                  <div>
+                    <div className="vh-channel-name">{ch.facebookPage || 'Sin Página de Facebook'}</div>
+                    <div className="vh-channel-sub">Página de Facebook</div>
+                  </div>
                 </div>
 
                 <div className="vh-channel-details">
@@ -626,7 +636,7 @@ export default function VideosHorizontales() {
 
             <div className="vh-meta-actions">
               {viewMode === 'published' && <>
-                <button type="button" className="btn-push" disabled>✓ Ya publicado en YouTube</button>
+                <button type="button" className="btn-push" disabled>✓ Publicado en YouTube · {latest.channel}</button>
                 {facebookButton}
                 <button type="button" className="btn-edit" onClick={() => { setPrepareNext(true); setActiveMetaTab('description'); }}>
                   ⚡ Preparar el siguiente
@@ -634,7 +644,9 @@ export default function VideosHorizontales() {
               </>}
               {viewMode === 'ready' && <>
                 <button type="button" className="btn-push" disabled={isPublishing} onClick={handlePublishNow}>
-                  {isPublishing ? 'Subiendo a YouTube...' : latest.status === 'FAILED' ? '🔁 Reintentar publicación' : '🚀 Publicar a YouTube Ahora'}
+                  {isPublishing
+                    ? `Subiendo a YouTube · ${latest.channel}...`
+                    : latest.status === 'FAILED' ? `🔁 Reintentar en YouTube · ${latest.channel}` : `🚀 Publicar en YouTube · ${latest.channel}`}
                 </button>
                 {facebookButton}
                 <button type="button" className="btn-edit" disabled={isPublishing} onClick={() => setModalOpen(true)}>
