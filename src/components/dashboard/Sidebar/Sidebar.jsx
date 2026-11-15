@@ -29,7 +29,7 @@ const groups = [
   ] },
   { label: 'Herramientas', items: [
     { label: 'Upload Batch', href: '/dashboard/upload-batch', icon: FileUploadOutlined },
-    { label: 'Publicaciones', href: '/dashboard/pinterest', paths: ['/dashboard/pinterest', '/dashboard/reels', '/dashboard/hero-banners'], icon: CampaignOutlined },
+    { label: 'Publicaciones', href: '/dashboard/pinterest', paths: ['/dashboard/pinterest', '/dashboard/reels', '/dashboard/videos-horizontales', '/dashboard/hero-banners'], icon: CampaignOutlined },
     { label: 'Telegram', href: '/dashboard/telegram-downloader', paths: ['/dashboard/telegram-downloader', '/dashboard/telegram-organizer'], icon: Telegram },
     { label: 'Explorador de archivos', href: '/dashboard/file-explorer', icon: FolderOutlined },
   ] },

@@ -85,7 +85,6 @@ const PricingSection = ({
 
     // Dynamic plans from API
     const [plans, setPlans] = React.useState(FALLBACK_PLANS);
-    const [totalAssets, setTotalAssets] = React.useState(null);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -94,8 +93,6 @@ const PricingSection = ({
                 const res = await httpService.getData('/admin/settings/public/plans');
                 if (!cancelled && res?.data?.plans?.length > 0) {
                     setPlans(res.data.plans);
-                    const count = Number(res.data.totalAssets);
-                    if (Number.isFinite(count) && count > 0) setTotalAssets(count);
                 }
             } catch (err) {
                 console.warn('[PricingSection] Could not fetch dynamic plans, using fallback:', err?.message);
@@ -158,9 +155,7 @@ const PricingSection = ({
         '12m': isEn ? 'Annual license with maximum savings' : 'Licencia anual con el mayor ahorro',
     }[plan.id]);
     const benefits = [
-        totalAssets
-            ? (isEn ? `Access to ${totalAssets.toLocaleString(locale)} 3D models` : `Acceso a ${totalAssets.toLocaleString(locale)} modelos 3D`)
-            : (isEn ? 'Full access to the premium catalog' : 'Acceso completo al catálogo premium'),
+        isEn ? 'Access to over 1 Million files' : 'Acceso a más de 1Millon de Archivos',
         isEn ? 'AI-powered smart search' : 'Búsqueda inteligente impulsada por IA',
         isEn ? 'Unlimited downloads' : 'Descargas ilimitadas sin restricciones',
         isEn ? 'Detailed gallery and asset previews' : 'Galería y vista previa de cada modelo',

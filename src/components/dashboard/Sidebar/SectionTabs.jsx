@@ -31,6 +31,7 @@ export default function SectionTabs() {
             {href === '/dashboard/tags' && <SellOutlinedIcon sx={{ fontSize: 19 }} />}
             {href === '/dashboard/pinterest' && <PushPinOutlined />}
             {href === '/dashboard/reels' && <VideoLibraryOutlined />}
+            {href === '/dashboard/videos-horizontales' && <OndemandVideoOutlined />}
             {href === '/dashboard/hero-banners' && <PanoramaOutlined />}
             {href === '/dashboard/telegram-downloader' && <DownloadOutlined />}
             {href === '/dashboard/telegram-organizer' && <AccountTreeOutlined />}
