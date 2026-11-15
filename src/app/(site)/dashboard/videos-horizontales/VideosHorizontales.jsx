@@ -43,6 +43,7 @@ export default function VideosHorizontales() {
   const [modelsList, setModelsList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [timestampsList, setTimestampsList] = useState([]);
+  const [upcomingVideoPath, setUpcomingVideoPath] = useState(null);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -54,6 +55,7 @@ export default function VideosHorizontales() {
         if (res.data.upcoming?.title) setUpcomingTitle(res.data.upcoming.title);
         if (res.data.upcoming?.description) setCustomDesc(res.data.upcoming.description);
         if (res.data.upcoming?.timestamps) setTimestampsList(res.data.upcoming.timestamps);
+        if (res.data.upcoming?.videoPath) setUpcomingVideoPath(res.data.upcoming.videoPath);
       }
     } catch (e) {
       console.warn('Error cargando estado:', e?.message);
@@ -96,6 +98,9 @@ export default function VideosHorizontales() {
   const totalDurationSec = turnModels.reduce((acc, m) => acc + (m.duration || 10), 0) || 0;
   const totalMinutes = Math.floor(totalDurationSec / 60);
   const totalSeconds = String(totalDurationSec % 60).padStart(2, '0');
+
+  const currentVideoPath = historyList[0]?.videoPath || upcomingVideoPath;
+  const currentVideoUrl = currentVideoPath ? resolveMediaUrl(currentVideoPath) : null;
 
   const timestamps = timestampsList.length > 0 ? timestampsList : turnModels.map((m, idx) => ({
     index: idx + 1,
@@ -283,14 +288,22 @@ export default function VideosHorizontales() {
           {/* Columna Izquierda: Video Player */}
           <div className="vh-player-col">
             <div className="vh-video-wrapper">
-              <video 
-                controls 
-                src={historyList[0]?.videoPath ? resolveMediaUrl(historyList[0].videoPath) : "/demo_horizontal.mp4"} 
-                poster="/demo_horizontal_poster.png"
-                playsInline
-              >
-                Tu navegador no soporta video HTML5.
-              </video>
+              {currentVideoUrl ? (
+                <video 
+                  controls 
+                  src={currentVideoUrl} 
+                  playsInline
+                  key={currentVideoUrl}
+                >
+                  Tu navegador no soporta video HTML5.
+                </video>
+              ) : (
+                <div className="vh-video-empty-player">
+                  <span className="vh-empty-icon">🎬</span>
+                  <h4>Recopilación lista para ensamblar</h4>
+                  <p>Pulsa "Generar Recopilación Ahora" para renderizar el archivo MP4.</p>
+                </div>
+              )}
               <div className="vh-video-overlay-badge">
                 <span>● 16:9 HD</span>
                 <span>· {totalMinutes}:{totalSeconds} min</span>
@@ -498,8 +511,10 @@ export default function VideosHorizontales() {
                 >
                   {model.videoPath ? (
                     <video src={`${resolveMediaUrl(model.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
+                  ) : model.thumb ? (
+                    <img src={model.thumb} alt={model.title} />
                   ) : (
-                    <img src={model.thumb || '/demo_horizontal_poster.png'} alt={model.title} />
+                    <div className="vh-thumb-placeholder"><span>🎬</span></div>
                   )}
                   <div className="vh-thumb-overlay">
                     <span className="vh-thumb-play-btn">▶</span>
@@ -567,8 +582,10 @@ export default function VideosHorizontales() {
                 >
                   {item.videoPath ? (
                     <video src={`${resolveMediaUrl(item.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
+                  ) : item.thumb ? (
+                    <img src={item.thumb} alt={item.title} />
                   ) : (
-                    <img src={item.thumb || '/demo_horizontal_poster.png'} alt={item.title} />
+                    <div className="vh-thumb-placeholder"><span>🎬</span></div>
                   )}
                   <div className="vh-thumb-overlay">
                     <span className="vh-thumb-play-btn">▶</span>
@@ -726,7 +743,13 @@ export default function VideosHorizontales() {
             <div className="vh-preview-lightbox-header">
               <div className="vh-preview-title-wrap">
                 <span className="vh-preview-badge">
-                  {previewModalModel.isHero ? '★ HERO #1 DE HOY' : previewModalModel.turnPosition ? `Posición #${previewModalModel.turnPosition}` : 'Modelo en Catálogo'}
+                  {previewModalModel.isCompilation 
+                    ? `🎬 Recopilación Horizontal 16:9 (${previewModalModel.channel || ''})` 
+                    : previewModalModel.isHero 
+                    ? '★ HERO #1 DE HOY' 
+                    : previewModalModel.turnPosition 
+                    ? `Posición #${previewModalModel.turnPosition}` 
+                    : 'Modelo en Catálogo'}
                 </span>
                 <h3>{(previewModalModel.title || '').replace(/^STL\s*[-–:]\s*/i, '')}</h3>
               </div>
