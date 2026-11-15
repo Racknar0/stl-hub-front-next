@@ -194,6 +194,10 @@ Desde figuras de acción icónicas como Mario & Bowser, Goku Super Saiyan y Lich
   const turnModels = modelsList.filter(m => m.status === 'hero' || m.status === 'turn');
   const restModels = modelsList.filter(m => m.status === 'rest');
 
+  const totalDurationSec = turnModels.reduce((acc, m) => acc + (m.duration || 10), 0) || 180;
+  const totalMinutes = Math.floor(totalDurationSec / 60);
+  const totalSeconds = String(totalDurationSec % 60).padStart(2, '0');
+
   const timestamps = timestampsList.length > 0 ? timestampsList : turnModels.map((m, idx) => ({
     index: idx + 1,
     time: `0:${String(idx * 9).padStart(2, '0')}`,
@@ -389,9 +393,9 @@ Desde figuras de acción icónicas como Mario & Bowser, Goku Super Saiyan y Lich
         {/* Columna Derecha: Metadatos IA y Timestamps */}
         <div className="vh-meta-col">
           <div className="vh-meta-header">
-            <span className="vh-meta-sub">● Recopilación Lista para Hoy (Ozaru_art)</span>
+            <span className="vh-meta-sub">● Recopilación Lista para Hoy ({kpis.channelToday || 'Ozaru_art'})</span>
             <h3 className="vh-meta-title">
-              🔥 TOP 20 Mejores Modelos 3D de Acción y Fantasía: Mario, Bowser, Goku, Arthas y Más | Archivos STL Premium
+              {upcomingTitle}
             </h3>
           </div>
 
@@ -555,6 +559,9 @@ Desde figuras de acción icónicas como Mario & Bowser, Goku Super Saiyan y Lich
             >
               <div className="vh-card-thumb-wrap">
                 <img src={model.thumb || '/demo_horizontal_poster.png'} alt={model.title} />
+                <div className="vh-thumb-overlay">
+                  <span className="vh-thumb-play-btn">▶</span>
+                </div>
                 <span className="vh-thumb-pos">
                   {model.isHero ? '★ HERO #1' : model.turnPosition ? `#${model.turnPosition}` : 'DESC'}
                 </span>
@@ -604,6 +611,9 @@ Desde figuras de acción icónicas como Mario & Bowser, Goku Super Saiyan y Lich
             <div key={item.id} className="vh-history-item">
               <div className="vh-item-thumb">
                 <img src={item.thumb || '/demo_horizontal_poster.png'} alt={item.title} />
+                <div className="vh-thumb-overlay">
+                  <span className="vh-thumb-play-btn">▶</span>
+                </div>
                 <span className="vh-thumb-dur">{item.duration}</span>
               </div>
 
