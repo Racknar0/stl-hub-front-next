@@ -28,6 +28,7 @@ export default function VideosHorizontales() {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [copiedDesc, setCopiedDesc] = useState(false);
   const [withRender, setWithRender] = useState(true);
+  const [previewModalModel, setPreviewModalModel] = useState(null);
 
   // Estados sincronizados exclusivamente con el backend (sin datos mock)
   const [channels, setChannels] = useState([]);
@@ -489,7 +490,12 @@ export default function VideosHorizontales() {
                 key={model.id} 
                 className={`vh-model-card ${model.isHero ? 'is-hero' : model.status === 'turn' ? 'is-turn' : 'is-resting'}`}
               >
-                <div className="vh-card-thumb-wrap">
+                <div 
+                  className="vh-card-thumb-wrap"
+                  onClick={() => setPreviewModalModel(model)}
+                  style={{ cursor: 'pointer' }}
+                  title={`Reproducir ${model.title}`}
+                >
                   {model.videoPath ? (
                     <video src={`${resolveMediaUrl(model.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
                   ) : (
@@ -553,7 +559,12 @@ export default function VideosHorizontales() {
           ) : (
             historyList.map(item => (
               <div key={item.id} className="vh-history-item">
-                <div className="vh-item-thumb">
+                <div 
+                  className="vh-item-thumb"
+                  onClick={() => item.videoPath && setPreviewModalModel({ ...item, isCompilation: true })}
+                  style={{ cursor: item.videoPath ? 'pointer' : 'default' }}
+                  title={item.videoPath ? `Reproducir ${item.title}` : ''}
+                >
                   {item.videoPath ? (
                     <video src={`${resolveMediaUrl(item.videoPath)}#t=0.5`} preload="metadata" muted playsInline />
                   ) : (
@@ -704,6 +715,74 @@ export default function VideosHorizontales() {
               >
                 {isSimulating ? 'Ensamblando Video en VPS (~1 min)...' : '⚡ Ensamblar y Generar Video'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 8. Modal Reproductor / Lightbox del Video del Modelo */}
+      {previewModalModel && (
+        <div className="vh-modal-backdrop" onClick={() => setPreviewModalModel(null)}>
+          <div className="vh-preview-lightbox" onClick={e => e.stopPropagation()}>
+            <div className="vh-preview-lightbox-header">
+              <div className="vh-preview-title-wrap">
+                <span className="vh-preview-badge">
+                  {previewModalModel.isHero ? '★ HERO #1 DE HOY' : previewModalModel.turnPosition ? `Posición #${previewModalModel.turnPosition}` : 'Modelo en Catálogo'}
+                </span>
+                <h3>{(previewModalModel.title || '').replace(/^STL\s*[-–:]\s*/i, '')}</h3>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setPreviewModalModel(null)}>✕</button>
+            </div>
+
+            <div className="vh-preview-lightbox-body">
+              <div className={`vh-preview-video-container ${previewModalModel.isCompilation ? 'is-horizontal' : 'is-vertical'}`}>
+                {previewModalModel.videoPath ? (
+                  <video 
+                    controls 
+                    autoPlay 
+                    playsInline 
+                    src={resolveMediaUrl(previewModalModel.videoPath)}
+                  >
+                    Tu navegador no soporta reproducción de video HTML5.
+                  </video>
+                ) : (
+                  <div style={{ color: '#9490a6', padding: '2rem', textAlign: 'center' }}>
+                    Archivo de video no disponible
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="vh-preview-lightbox-footer">
+              <div className="vh-preview-meta-info">
+                <span>⏱️ Duración: <strong>{previewModalModel.duration}{typeof previewModalModel.duration === 'number' ? 's' : ''}</strong></span>
+                {previewModalModel.uses !== undefined && (
+                  <span>📊 Usos en compilaciones: <strong>{previewModalModel.uses} veces</strong></span>
+                )}
+              </div>
+
+              <div className="vh-preview-lightbox-actions">
+                {previewModalModel.assetId && (
+                  <a 
+                    href={`https://stlgratis.com/stl/${previewModalModel.assetId}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="btn-view-site"
+                  >
+                    🔗 Ver en stlgratis.com
+                  </a>
+                )}
+                {previewModalModel.videoPath && (
+                  <a 
+                    href={resolveMediaUrl(previewModalModel.videoPath)} 
+                    download 
+                    className="btn-download"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    ⬇ Descargar Archivo
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
