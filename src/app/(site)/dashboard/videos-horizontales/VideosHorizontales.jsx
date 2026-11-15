@@ -37,8 +37,10 @@ export default function VideosHorizontales() {
   const [channels, setChannels] = useState([]);
   const [kpis, setKpis] = useState({
     nextPublish: '',
+    nextPublishNote: '',
     channelToday: '',
-    googleQuota: { used: 0, total: 10000, safe: true },
+    channelConnected: false,
+    lastPublished: null,
     catalog: { total: 0, inTurn: 0, inRest: 0 }
   });
   const [upcomingTitle, setUpcomingTitle] = useState('');
@@ -158,11 +160,16 @@ export default function VideosHorizontales() {
   };
 
   const handlePublishNow = async () => {
-    if (!confirm('¿Deseas enviar y publicar esta recopilación de 3 minutos ahora mismo a YouTube?')) return;
+    // Publica el último video ya generado y sin publicar (si no hay ninguno, el servidor genera uno nuevo)
+    const ready = historyList.find(item => item.status === 'READY' && item.videoPath);
+    const question = ready
+      ? `¿Publicar ahora en YouTube el video ya generado?\n\n"${ready.title}"\nCanal: ${ready.channel}`
+      : 'No hay ningún video generado sin publicar. ¿Generar uno nuevo y publicarlo ahora? (tarda unos minutos)';
+    if (!confirm(question)) return;
     setIsPublishing(true);
     try {
       const http = new HttpService();
-      const res = await http.postData('/reels/horizontal/publish', {});
+      const res = await http.postData('/reels/horizontal/publish', ready ? { compilationId: ready.id } : {});
       alert(`¡Video publicado exitosamente en YouTube! ID: ${res?.data?.published?.youtubeVideoId || 'OK'}`);
       await loadStatus();
       await loadHistory();
@@ -226,7 +233,7 @@ export default function VideosHorizontales() {
             Videos Horizontales
             <span className="vh-badge-16x9">16:9 Showcase</span>
           </h1>
-          <p>Recopilaciones automáticas de 3 minutos · Rotación continua entre tus 3 canales de YouTube · +2h 30m tras el Short</p>
+          <p>Recopilaciones automáticas de 3 minutos · Rotación continua entre tus 3 canales de YouTube · Se publican solas 2 h después de cada reel</p>
         </div>
 
         <div className="vh-header-actions">
@@ -254,7 +261,7 @@ export default function VideosHorizontales() {
           <div className="vh-kpi-value">
             {kpis.nextPublish || 'Sin reels programados'}
           </div>
-          <span className="vh-kpi-footer glow">Espaciado óptimo para no canibalizar</span>
+          {kpis.nextPublishNote && <span className="vh-kpi-footer glow">{kpis.nextPublishNote}</span>}
         </div>
 
         <div className="vh-kpi-card">
@@ -262,17 +269,22 @@ export default function VideosHorizontales() {
           <div className="vh-kpi-value">
             {kpis.channelToday || 'Por asignar'}
           </div>
-          <span className="vh-kpi-footer ok">● Conectado y listo</span>
+          <span className={`vh-kpi-footer ${kpis.channelConnected ? 'ok' : 'warn'}`}>
+            {kpis.channelConnected ? '● Conectado en YouTube' : '⚠ Este canal no está conectado en YouTube'}
+          </span>
         </div>
 
         <div className="vh-kpi-card">
-          <span className="vh-kpi-label">Cuota Google API <span>📊</span></span>
+          <span className="vh-kpi-label">Último Video Publicado <span>📊</span></span>
           <div className="vh-kpi-value">
-            {(kpis.googleQuota?.used || 6650).toLocaleString('es-ES')} <span className="vh-subtext">/ {(kpis.googleQuota?.total || 10000).toLocaleString('es-ES')} pts</span>
+            {kpis.lastPublished?.date || 'Ninguno aún'}
           </div>
-          <span className="vh-kpi-footer ok">
-            ✓ {((kpis.googleQuota?.total || 10000) - (kpis.googleQuota?.used || 6650)).toLocaleString('es-ES')} pts de margen seguro
-          </span>
+          {kpis.lastPublished && (
+            <span className="vh-kpi-footer ok">
+              {kpis.lastPublished.channel}
+              {kpis.lastPublished.url && <> · <a href={kpis.lastPublished.url} target="_blank" rel="noreferrer">Ver en YouTube ↗</a></>}
+            </span>
+          )}
         </div>
 
         <div className="vh-kpi-card">

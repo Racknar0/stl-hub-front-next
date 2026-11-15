@@ -204,6 +204,7 @@ $vh-yt: #ff0000;
         gap: 0.35rem;
 
         &.ok { color: $vh-green; }
+        &.warn { color: #fbbf24; }
         &.info { color: $vh-cyan; }
         &.glow { color: #c084fc; }
       }
