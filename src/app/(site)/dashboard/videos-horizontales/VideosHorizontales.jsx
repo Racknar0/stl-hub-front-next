@@ -54,6 +54,9 @@ export default function VideosHorizontales() {
   const [historyList, setHistoryList] = useState([]);
   const [timestampsList, setTimestampsList] = useState([]);
   const [upcomingVideoPath, setUpcomingVideoPath] = useState(null);
+  // Última recopilación generada (publicada, lista o fallida) y si se está preparando la siguiente
+  const [latest, setLatest] = useState(null);
+  const [prepareNext, setPrepareNext] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -62,6 +65,7 @@ export default function VideosHorizontales() {
       if (res?.data) {
         setChannels(res.data.channels || []);
         if (res.data.kpis) setKpis(res.data.kpis);
+        setLatest(res.data.latest || null);
         if (res.data.upcoming?.title) setUpcomingTitle(res.data.upcoming.title);
         if (res.data.upcoming?.description) setCustomDesc(res.data.upcoming.description);
         if (res.data.upcoming?.timestamps) setTimestampsList(res.data.upcoming.timestamps);
@@ -116,8 +120,19 @@ export default function VideosHorizontales() {
   const totalMinutes = Math.floor(totalDurationSec / 60);
   const totalSeconds = String(totalDurationSec % 60).padStart(2, '0');
 
-  const currentVideoPath = historyList[0]?.videoPath || upcomingVideoPath;
+  // Modo de la tarjeta principal:
+  // - published: el último video ya está en YouTube (todo bloqueado hasta preparar el siguiente)
+  // - ready: hay un video generado sin publicar (o que falló): se puede publicar
+  // - next: se prepara la siguiente recopilación (idioma, textos con IA) para generarla
+  const viewMode = !latest || (latest.status === 'PUBLISHED' && prepareNext)
+    ? 'next'
+    : latest.status === 'PUBLISHED' ? 'published' : 'ready';
+  const showingLatest = viewMode !== 'next';
+  const currentVideoPath = showingLatest ? latest?.videoPath : null;
   const currentVideoUrl = currentVideoPath ? resolveMediaUrl(currentVideoPath) : null;
+  const shownTitle = showingLatest ? latest.title : upcomingTitle;
+  const shownDesc = showingLatest ? latest.description : customDesc;
+  const shownTags = showingLatest ? (latest.tags?.length ? latest.tags : tagsList) : tagsList;
 
   const timestamps = timestampsList.length > 0 ? timestampsList : turnModels.map((m, idx) => ({
     index: idx + 1,
@@ -147,7 +162,8 @@ export default function VideosHorizontales() {
         channelName: kpis.channelToday,
         render: withRender
       });
-      alert('¡Recopilación generada con éxito! ' + (withRender ? 'El video MP4 fue ensamblado con FFmpeg y está listo para descargar en el historial.' : 'Registrado en la base de datos.'));
+      alert('¡Recopilación generada con éxito! ' + (withRender ? 'El video está listo: revísalo y pulsa "Publicar a YouTube Ahora".' : 'Registrado en la base de datos.'));
+      setPrepareNext(false);
       await loadStatus();
       await loadModels(filter);
       await loadHistory();
@@ -160,8 +176,10 @@ export default function VideosHorizontales() {
   };
 
   const handlePublishNow = async () => {
-    // Publica el último video ya generado y sin publicar (si no hay ninguno, el servidor genera uno nuevo)
-    const ready = historyList.find(item => item.status === 'READY' && item.videoPath);
+    // Publica el video generado que se está mostrando (lista o que falló antes)
+    const ready = viewMode === 'ready' && latest?.videoPath
+      ? { id: latest.id, title: latest.title, channel: latest.channel }
+      : historyList.find(item => item.status === 'READY' && item.videoPath);
     const question = ready
       ? `¿Publicar ahora en YouTube el video ya generado?\n\n"${ready.title}"\nCanal: ${ready.channel}`
       : 'No hay ningún video generado sin publicar. ¿Generar uno nuevo y publicarlo ahora? (tarda unos minutos)';
@@ -344,7 +362,7 @@ export default function VideosHorizontales() {
           <div className="vh-empty-showcase">
             <span className="vh-empty-icon">⏳</span>
             <h3>Sin modelos para la recopilación de hoy</h3>
-            <p>Se requieren reels aprobados en el catálogo para generar automáticamente la recopilación horizontal de 3 minutos (+2h 30m después del Short diario).</p>
+            <p>Se requieren reels aprobados en el catálogo para generar automáticamente la recopilación horizontal de 3 minutos (2 h después de cada reel).</p>
           </div>
         </section>
       ) : (
@@ -364,8 +382,8 @@ export default function VideosHorizontales() {
               ) : (
                 <div className="vh-video-empty-player">
                   <span className="vh-empty-icon">🎬</span>
-                  <h4>Recopilación lista para ensamblar</h4>
-                  <p>Pulsa "Generar Recopilación Ahora" para renderizar el archivo MP4.</p>
+                  <h4>Siguiente recopilación por generar</h4>
+                  <p>Revisa el texto y pulsa "Generar recopilación": el video aparecerá aquí listo para publicar.</p>
                 </div>
               )}
               <div className="vh-video-overlay-badge">
@@ -378,7 +396,7 @@ export default function VideosHorizontales() {
               <div className="vh-tags-group">
                 <span className="vh-tag">1920x1080 Full HD</span>
                 <span className="vh-tag">Logo STLFREE Superior Izq</span>
-                <span className="vh-tag">{turnModels.length} Modelos Unidos</span>
+                <span className="vh-tag">{showingLatest && latest.modelsCount ? latest.modelsCount : turnModels.length} Modelos Unidos</span>
               </div>
               <div className="vh-audio-tag">
                 🔊 Audio y Voz Original de Cada Reel
@@ -390,8 +408,23 @@ export default function VideosHorizontales() {
           <div className="vh-meta-col">
             <div className="vh-meta-header">
               <div className="vh-meta-header-top">
-                <span className="vh-meta-sub">● Recopilación Lista para Hoy ({kpis.channelToday || 'Canal en turno'})</span>
-                <div className="vh-lang-selector">
+                {viewMode === 'published' && (
+                  <span className="vh-meta-sub vh-meta-sub-done">
+                    ✓ Último publicado · {latest.channel}{latest.publishedAt ? ` · ${latest.publishedAt}` : ''}
+                    {latest.youtubeUrl && <> · <a href={latest.youtubeUrl} target="_blank" rel="noreferrer">Ver en YouTube ↗</a></>}
+                  </span>
+                )}
+                {viewMode === 'ready' && (
+                  <span className={`vh-meta-sub ${latest.status === 'FAILED' ? 'vh-meta-sub-error' : ''}`}>
+                    {latest.status === 'FAILED'
+                      ? `⚠ No se pudo publicar en ${latest.channel}: ${latest.errorMessage || 'error desconocido'}`
+                      : `● Lista para publicar en ${latest.channel} · ${latest.language === 'en' ? 'English' : 'Español'}`}
+                  </span>
+                )}
+                {viewMode === 'next' && (
+                  <span className="vh-meta-sub">● Siguiente recopilación ({kpis.channelToday || 'Canal en turno'})</span>
+                )}
+                {viewMode === 'next' && <div className="vh-lang-selector">
                   <span className="vh-lang-label">Idioma:</span>
                   <button
                     type="button"
@@ -411,10 +444,10 @@ export default function VideosHorizontales() {
                   >
                     🇬🇧 English {autoLang === 'en' && <span className="vh-auto-pill">Turn</span>}
                   </button>
-                </div>
+                </div>}
               </div>
               <h3 className="vh-meta-title">
-                {upcomingTitle || 'Top Modelos 3D del Día'}
+                {shownTitle || 'Top Modelos 3D del Día'}
               </h3>
             </div>
 
@@ -427,19 +460,21 @@ export default function VideosHorizontales() {
               >
                 📋 Descripción Completa (YouTube)
               </button>
-              <button 
-                type="button" 
-                className={activeMetaTab === 'timestamps' ? 'active' : ''} 
-                onClick={() => setActiveMetaTab('timestamps')}
-              >
-                ⏱️ Capítulos ({timestamps.length})
-              </button>
+              {viewMode === 'next' && (
+                <button
+                  type="button"
+                  className={activeMetaTab === 'timestamps' ? 'active' : ''}
+                  onClick={() => setActiveMetaTab('timestamps')}
+                >
+                  ⏱️ Capítulos ({timestamps.length})
+                </button>
+              )}
               <button 
                 type="button" 
                 className={activeMetaTab === 'tags' ? 'active' : ''} 
                 onClick={() => setActiveMetaTab('tags')}
               >
-                🏷️ Tags SEO ({tagsList.length})
+                🏷️ Tags SEO ({shownTags.length})
               </button>
             </div>
 
@@ -447,8 +482,9 @@ export default function VideosHorizontales() {
             {activeMetaTab === 'description' && (
               <div className="vh-full-description-box">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#9490a6', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <span>Redactado con enlaces a stlgratis.com y capítulos</span>
+                  <span>{showingLatest ? 'Texto con el que se sube a YouTube' : 'Redactado con enlaces a stlgratis.com y capítulos'}</span>
                   <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                    {viewMode === 'next' && <>
                     <button
                       type="button"
                       className="btn-ai-regen-inline"
@@ -464,10 +500,11 @@ export default function VideosHorizontales() {
                     >
                       {isEditingDesc ? '💾 Guardar' : '✏️ Editar texto'}
                     </span>
-                    <span 
+                    </>}
+                    <span
                       style={{ cursor: 'pointer', color: '#c084fc', fontWeight: 600 }}
                       onClick={() => {
-                        navigator.clipboard.writeText(customDesc);
+                        navigator.clipboard.writeText(shownDesc || '');
                         setCopiedDesc(true);
                         setTimeout(() => setCopiedDesc(false), 2000);
                       }}
@@ -477,20 +514,20 @@ export default function VideosHorizontales() {
                   </div>
                 </div>
 
-                {isEditingDesc ? (
+                {isEditingDesc && viewMode === 'next' ? (
                   <textarea 
                     className="desc-textarea" 
                     value={customDesc} 
                     onChange={e => setCustomDesc(e.target.value)} 
                   />
                 ) : (
-                  <div className="desc-text">{customDesc || 'Sin descripción generada aún.'}</div>
+                  <div className="desc-text">{shownDesc || 'Sin descripción generada aún.'}</div>
                 )}
               </div>
             )}
 
             {/* Tab 2: Solo Capítulos */}
-            {activeMetaTab === 'timestamps' && (
+            {activeMetaTab === 'timestamps' && viewMode === 'next' && (
               <div className="vh-timestamps-box">
                 <div className="vh-ts-label">
                   <span>Capítulos del Video ({timestamps.length} modelos)</span>
@@ -513,11 +550,11 @@ export default function VideosHorizontales() {
             {activeMetaTab === 'tags' && (
               <div className="vh-timestamps-box" style={{ padding: '0.75rem' }}>
                 <div className="vh-ts-label" style={{ marginBottom: '0.5rem' }}>
-                  <span>Palabras clave para la API de YouTube ({tagsList.length})</span>
+                  <span>Palabras clave para la API de YouTube ({shownTags.length})</span>
                   <span 
                     style={{ cursor: 'pointer', color: '#c084fc' }} 
                     onClick={() => {
-                      navigator.clipboard.writeText(tagsList.join(', '));
+                      navigator.clipboard.writeText(shownTags.join(', '));
                       alert('📋 Tags copiados al portapapeles');
                     }}
                   >
@@ -525,7 +562,7 @@ export default function VideosHorizontales() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {tagsList.map((tag, i) => (
+                  {shownTags.map((tag, i) => (
                     <span key={i} style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#d8b4fe', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem' }}>
                       #{String(tag).replace(/^#/, '')}
                     </span>
@@ -536,21 +573,30 @@ export default function VideosHorizontales() {
 
 
             <div className="vh-meta-actions">
-              <button 
-                type="button" 
-                className="btn-push"
-                disabled={isPublishing}
-                onClick={handlePublishNow}
-              >
-                {isPublishing ? 'Subiendo a YouTube...' : '🚀 Publicar a YouTube Ahora'}
-              </button>
-              <button 
-                type="button" 
-                className="btn-edit"
-                onClick={() => setModalOpen(true)}
-              >
-                ✏️ Ajustar Selección
-              </button>
+              {viewMode === 'published' && <>
+                <button type="button" className="btn-push" disabled>✓ Ya publicado en YouTube</button>
+                <button type="button" className="btn-edit" onClick={() => { setPrepareNext(true); setActiveMetaTab('description'); }}>
+                  ⚡ Preparar el siguiente
+                </button>
+              </>}
+              {viewMode === 'ready' && <>
+                <button type="button" className="btn-push" disabled={isPublishing} onClick={handlePublishNow}>
+                  {isPublishing ? 'Subiendo a YouTube...' : latest.status === 'FAILED' ? '🔁 Reintentar publicación' : '🚀 Publicar a YouTube Ahora'}
+                </button>
+                <button type="button" className="btn-edit" disabled={isPublishing} onClick={() => setModalOpen(true)}>
+                  ✏️ Generar otro
+                </button>
+              </>}
+              {viewMode === 'next' && <>
+                <button type="button" className="btn-push btn-generate" onClick={() => setModalOpen(true)}>
+                  ⚡ Generar recopilación
+                </button>
+                {latest && (
+                  <button type="button" className="btn-edit" onClick={() => setPrepareNext(false)}>
+                    Cancelar
+                  </button>
+                )}
+              </>}
             </div>
           </div>
         </section>
