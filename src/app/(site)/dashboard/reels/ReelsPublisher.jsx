@@ -525,6 +525,23 @@ export default function ReelsPublisher() {
     finally { setGeneratingVariants(false); }
   };
 
+  // Reels sin publicar que aún no tienen Pinterest marcado (los de antes de añadir Pinterest)
+  const [pinterestPending, setPinterestPending] = useState(0);
+  const fetchPinterestPending = useCallback(() => http.getData('/reels/missing-platform/pinterest').then(r => setPinterestPending(r.data?.pending || 0)).catch(() => {}), [http]);
+  useEffect(() => { fetchPinterestPending(); }, [tray, postsByDay, fetchPinterestPending]);
+  const [addingPinterest, setAddingPinterest] = useState(false);
+  const addPinterestToPending = async () => {
+    if (!confirm(`¿Añadir Pinterest a los ${pinterestPending} reels que aún no han salido? Se publicarán también como pin de video a su hora.`)) return;
+    setAddingPinterest(true);
+    try {
+      const res = await http.postData('/reels/missing-platform/pinterest', {});
+      showToast(`📌 Pinterest añadido a ${res.data.added} ${res.data.added === 1 ? 'reel' : 'reels'}`);
+      setPinterestPending(0);
+      refreshAll();
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setAddingPinterest(false); }
+  };
+
   // Abre la autorización de Google en una ventana y espera (hasta 3 min) a que el canal quede conectado
   const connectYoutube = async () => {
     try {
@@ -736,6 +753,12 @@ export default function ReelsPublisher() {
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateVariants} disabled={generatingVariants}
               title="Genera el título y la descripción propios de cada canal de YouTube extra, sin tocar los demás textos">
               {generatingVariants ? '⏳ Generando…' : `🔍 Textos para los otros canales (${variantsPending})`}
+            </button>
+          )}
+          {pinterestPending > 0 && isVisible('pinterest') && (
+            <button type="button" className="pr-btn rl-ai-generate" onClick={addPinterestToPending} disabled={addingPinterest}
+              title="Marca Pinterest en los reels que aún no han salido, para que también se publiquen como pin de video">
+              {addingPinterest ? '⏳ Añadiendo…' : `📌 Añadir Pinterest a los pendientes (${pinterestPending})`}
             </button>
           )}
           {tray.length > 0 && (
