@@ -13,7 +13,7 @@ const PLATFORMS = [
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
   { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: null },
   { key: 'threads', label: 'Threads', short: 'TH', maxSec: 300, linkHint: 'Link clicable al final del texto (automático, con UTM)' },
-  { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo (con UTM)' },
+  { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo en inglés' },
 ];
 // Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
 const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
@@ -325,6 +325,7 @@ function PlatformBadges({ list }) {
 const postToForm = (post) => ({
   caption: post.caption || '', facebookCaption: post.facebookCaption || '', title: post.title || '',
   youtubeDescription: post.youtubeDescription || '', tiktokCaption: post.tiktokCaption || '',
+  pinterestTitle: post.pinterestTitle || '', pinterestDescription: post.pinterestDescription || '',
   youtubeChannels: Array.isArray(post.youtubeChannels) ? post.youtubeChannels : null, // null = todos los canales conectados
   facebookPages: Array.isArray(post.facebookPages) ? post.facebookPages : null, // null = todas las Páginas asignadas
   instagramAccounts: Array.isArray(post.instagramAccounts) ? post.instagramAccounts : null, // null = todas las cuentas vinculadas
@@ -511,7 +512,8 @@ export default function ReelsPublisher() {
   // Textos propios de los canales de YouTube extra para los reels que aún no los tienen
   const [variantsPending, setVariantsPending] = useState(0);
   const fetchVariantsPending = useCallback(() => http.getData('/reels/youtube-variants').then(r => setVariantsPending(r.data?.pending || 0)).catch(() => {}), [http]);
-  useEffect(() => { if ((connection?.youtube?.channels?.length || 0) > 1) fetchVariantsPending(); }, [connection, tray, postsByDay, fetchVariantsPending]);
+  // También cuenta los reels con Pinterest sin sus textos propios
+  useEffect(() => { fetchVariantsPending(); }, [connection, tray, postsByDay, fetchVariantsPending]);
   const [generatingVariants, setGeneratingVariants] = useState(false);
   const generateVariants = async () => {
     setGeneratingVariants(true);
@@ -749,10 +751,10 @@ export default function ReelsPublisher() {
               {anyProcessing ? '⏳ Generando metadatos…' : `🔍 Generar Metadatos (${stats.noMetadata})`}
             </button>
           )}
-          {variantsPending > 0 && isVisible('youtube') && (
+          {variantsPending > 0 && (
             <button type="button" className="pr-btn rl-ai-generate" onClick={generateVariants} disabled={generatingVariants}
-              title="Genera el título y la descripción propios de cada canal de YouTube extra, sin tocar los demás textos">
-              {generatingVariants ? '⏳ Generando…' : `🔍 Textos para los otros canales (${variantsPending})`}
+              title="Genera los textos propios de cada cuenta extra y los de Pinterest (en inglés), sin tocar los demás textos">
+              {generatingVariants ? '⏳ Generando…' : `🔍 Textos para otros canales y Pinterest (${variantsPending})`}
             </button>
           )}
           {pinterestPending > 0 && isVisible('pinterest') && (
@@ -1310,9 +1312,24 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
 
               {activeText === 'pinterest' && (
                 <div className="rl-field">
-                  <span>Pin de video <small>automático</small></span>
-                  <p className="rl-tt-note">Título: el de YouTube (o el del modelo). Descripción: el caption de Instagram sin la cabecera ni el pie, con los hashtags. El pin lleva directo a la página del modelo, con UTM.</p>
-                  <pre className="rl-threads-preview">{`${(form.title || assetTitle || 'Título del modelo').slice(0, 100)}\n\n${(captionBody(form.caption) || 'Escribe o genera el caption para ver la descripción').slice(0, 450)}${form.hashtags.length ? `\n\n${form.hashtags.map(t => `#${String(t).replace(/^#/, '')}`).join(' ')}` : ''}`}</pre>
+                  <span>Pin de video <small>en inglés · lo redacta la IA para Pinterest</small></span>
+                  <p className="rl-tt-note">
+                    Pinterest funciona como buscador: título con el nombre del modelo y palabras clave, y una descripción que invita a hacer clic.
+                    El pin lleva directo a la página del modelo en inglés.
+                    {!form.pinterestTitle && ' Si lo dejas vacío, la IA lo genera (botón "Textos para otros canales y Pinterest" o al publicar).'}
+                  </p>
+                  <label className="rl-field">
+                    <span>Título <small>{form.pinterestTitle.length}/100</small></span>
+                    <input type="text" className="form-input" maxLength={100} value={form.pinterestTitle}
+                      placeholder="Se genera con la IA" disabled={readOnly || processing}
+                      onChange={(e) => update({ pinterestTitle: e.target.value })} />
+                  </label>
+                  <label className="rl-field">
+                    <span>Descripción <small>{form.pinterestDescription.length}/500</small></span>
+                    <textarea className="form-input" rows="6" maxLength={500} value={form.pinterestDescription}
+                      placeholder="Se genera con la IA" disabled={readOnly || processing}
+                      onChange={(e) => update({ pinterestDescription: e.target.value })} />
+                  </label>
                 </div>
               )}
 
