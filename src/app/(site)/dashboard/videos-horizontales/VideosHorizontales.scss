@@ -207,6 +207,33 @@ $vh-yt: #ff0000;
         &.warn { color: #fbbf24; }
         &.info { color: $vh-cyan; }
         &.glow { color: #c084fc; }
+
+        a { color: inherit; text-decoration: underline; }
+      }
+
+      // Fila de canales o Páginas: el primero (resaltado) recibe el próximo video
+      .vh-queue {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+        color: #a1a0b5;
+
+        a { color: inherit; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .first {
+          color: #ffffff;
+          font-weight: 700;
+        }
+
+        .vh-queue-arrow { color: #6f6b80; }
+        .vh-queue-icon {
+          font-weight: 800;
+          &.yt { color: #ff4d4d; }
+          &.fb { color: #60a5fa; }
+        }
       }
     }
   }
@@ -753,6 +780,15 @@ $vh-yt: #ff0000;
             background: linear-gradient(135deg, #a855f7, #6366f1);
             &:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(168, 85, 247, 0.35); }
           }
+
+          // Ya publicado: enlace al video en YouTube
+          &.done {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #fca5a5;
+            text-decoration: none;
+            &:hover { background: rgba(255, 0, 0, 0.18); box-shadow: none; }
+          }
         }
 
         .btn-edit {
@@ -805,6 +841,12 @@ $vh-yt: #ff0000;
             color: #93c5fd;
           }
         }
+      }
+
+      .vh-actions-hint {
+        margin: 0;
+        font-size: 0.72rem;
+        color: #a1a0b5;
       }
     }
   }

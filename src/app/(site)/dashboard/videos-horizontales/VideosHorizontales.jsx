@@ -134,13 +134,18 @@ export default function VideosHorizontales() {
   const shownDesc = showingLatest ? latest.description : customDesc;
   const shownTags = showingLatest ? (latest.tags?.length ? latest.tags : tagsList) : tagsList;
 
+  // Resumen de arriba: enlace al canal, Facebook del último video publicado y fila de Páginas de Facebook
+  const youtubeChannelUrl = (name) => `https://www.youtube.com/@${String(name || '').replace(/^@/, '')}`;
+  const lastFb = latest?.status === 'PUBLISHED' ? latest.facebook : null;
+  const fbQueue = channels.map(ch => ch.facebookPage).filter(Boolean);
+
   // Botón de Facebook del último video generado: publicar, subiendo o ya publicado
   const latestFb = latest?.facebook || null;
   const facebookButton = showingLatest && latest?.videoPath ? (
     latestFb?.published ? (
       latestFb.url
-        ? <a className="btn-facebook done" href={latestFb.url} target="_blank" rel="noreferrer">✓ Publicado en Facebook · {latestFb.pageName} ↗</a>
-        : <button type="button" className="btn-facebook done" disabled>✓ Publicado en Facebook · {latestFb.pageName}</button>
+        ? <a className="btn-facebook done" href={latestFb.url} target="_blank" rel="noreferrer">✓ Ver en Facebook · {latestFb.pageName} ↗</a>
+        : <button type="button" className="btn-facebook done" disabled>✓ En Facebook · {latestFb.pageName}</button>
     ) : (
       <button
         type="button"
@@ -151,7 +156,7 @@ export default function VideosHorizontales() {
       >
         {latestFb?.publishing
           ? `Subiendo a Facebook${latestFb.pageName ? ` · ${latestFb.pageName}` : ''}...`
-          : `${latestFb?.error ? '🔁 Reintentar' : 'f Publicar'} en Facebook${kpis.facebook?.pageToday ? ` · ${kpis.facebook.pageToday}` : ''}`}
+          : `${latestFb?.error ? '🔁 Reintentar' : 'f Publicar'} en Facebook${kpis.facebook?.pageToday ? ` · página ${kpis.facebook.pageToday}` : ''}`}
       </button>
     )
   ) : null;
@@ -284,18 +289,11 @@ export default function VideosHorizontales() {
             Videos Horizontales
             <span className="vh-badge-16x9">16:9 Showcase</span>
           </h1>
-          <p>Recopilaciones automáticas de 3 minutos · Rotación continua entre tus canales de YouTube y Páginas de Facebook · Se publican solas 2 h después de cada reel</p>
+          <p>Todos los días a las 9:00 p. m. sale solo un video de 3 minutos en un canal de YouTube y en una Página de Facebook.</p>
         </div>
 
         <div className="vh-header-actions">
-          <button 
-            type="button" 
-            className="vh-btn vh-btn-secondary"
-            onClick={() => alert('Publicación automática: cada video horizontal se genera y se sube a YouTube 2 h después de que se publica el reel del día, rotando entre los 3 canales.')}
-          >
-            ⚙️ Ajustes de Horario
-          </button>
-          <button 
+          <button
             type="button" 
             className="vh-btn vh-btn-primary"
             onClick={() => setModalOpen(true)}
@@ -305,106 +303,75 @@ export default function VideosHorizontales() {
         </div>
       </header>
 
-      {/* 2. Tarjetas de Métricas / KPIs */}
+      {/* 2. Resumen: qué sale después, qué salió último y en qué orden van los canales */}
       <section className="vh-kpi-grid">
         <div className="vh-kpi-card">
-          <span className="vh-kpi-label">Próxima Publicación <span>⏰</span></span>
+          <span className="vh-kpi-label">Próximo video</span>
           <div className="vh-kpi-value">
-            {kpis.nextPublish || 'Sin reels programados'}
+            {kpis.nextPublish || 'Sin programar'}
           </div>
-          {kpis.nextPublishNote && <span className="vh-kpi-footer glow">{kpis.nextPublishNote}</span>}
-        </div>
-
-        <div className="vh-kpi-card">
-          <span className="vh-kpi-label">Canal en Turno <span>📺</span></span>
-          <div className="vh-kpi-value">
-            {kpis.channelToday || 'Por asignar'}
-          </div>
-          <span className={`vh-kpi-footer ${kpis.channelConnected ? 'ok' : 'warn'}`}>
-            {kpis.channelConnected ? '● Conectado en YouTube' : '⚠ Este canal no está conectado en YouTube'}
+          {kpis.nextPublishNote && <span className="vh-kpi-footer">{kpis.nextPublishNote}</span>}
+          <span className={`vh-kpi-footer ${kpis.channelConnected ? '' : 'warn'}`}>
+            ▶ YouTube:{' '}
+            {kpis.channelToday
+              ? <a href={youtubeChannelUrl(kpis.channelToday)} target="_blank" rel="noreferrer">{kpis.channelToday} ↗</a>
+              : 'por asignar'}
+            {kpis.channelToday && !kpis.channelConnected && ' · ⚠ canal no conectado'}
           </span>
-          <span className={`vh-kpi-footer ${kpis.facebook?.pageToday ? 'info' : 'warn'}`}>
+          <span className={`vh-kpi-footer ${kpis.facebook?.pageToday ? '' : 'warn'}`}>
+            f Facebook:{' '}
             {kpis.facebook?.pageToday
-              ? `f Facebook: ${kpis.facebook.pageToday}`
-              : kpis.facebook?.configured === false ? '⚠ Facebook no configurado' : '⚠ Sin Páginas de Facebook'}
+              || (kpis.facebook?.configured === false ? '⚠ no configurado' : '⚠ sin Páginas')}
           </span>
         </div>
 
         <div className="vh-kpi-card">
-          <span className="vh-kpi-label">Último Video Publicado <span>📊</span></span>
+          <span className="vh-kpi-label">Último video</span>
           <div className="vh-kpi-value">
             {kpis.lastPublished?.date || 'Ninguno aún'}
           </div>
           {kpis.lastPublished && (
             <span className="vh-kpi-footer ok">
-              {kpis.lastPublished.channel}
-              {kpis.lastPublished.url && <> · <a href={kpis.lastPublished.url} target="_blank" rel="noreferrer">Ver en YouTube ↗</a></>}
+              ▶ YouTube:{' '}
+              <a href={youtubeChannelUrl(kpis.lastPublished.channel)} target="_blank" rel="noreferrer">{kpis.lastPublished.channel} ↗</a>
+              {kpis.lastPublished.url && <> · <a href={kpis.lastPublished.url} target="_blank" rel="noreferrer">Ver video ↗</a></>}
             </span>
           )}
-          {kpis.facebook?.lastPublished && (
-            <span className="vh-kpi-footer info">
-              f {kpis.facebook.lastPublished.page}{kpis.facebook.lastPublished.date ? ` · ${kpis.facebook.lastPublished.date}` : ''}
-              {kpis.facebook.lastPublished.url && <> · <a href={kpis.facebook.lastPublished.url} target="_blank" rel="noreferrer">Ver en Facebook ↗</a></>}
-            </span>
+          {kpis.lastPublished && lastFb && (
+            lastFb.published ? (
+              <span className="vh-kpi-footer ok">
+                f Facebook: {lastFb.pageName}
+                {lastFb.url && <> · <a href={lastFb.url} target="_blank" rel="noreferrer">Ver video ↗</a></>}
+              </span>
+            ) : (
+              <span className="vh-kpi-footer warn">
+                f Facebook: {lastFb.publishing ? 'subiendo…' : lastFb.error ? 'falló al publicar' : 'no se publicó'}
+              </span>
+            )
           )}
         </div>
 
         <div className="vh-kpi-card">
-          <span className="vh-kpi-label">Catálogo en Rotación <span>📦</span></span>
-          <div className="vh-kpi-value">
-            {kpis.catalog?.total ?? 0} <span className="vh-subtext">modelos</span>
+          <span className="vh-kpi-label">Orden de canales</span>
+          <div className="vh-queue">
+            <span className="vh-queue-icon yt">▶</span>
+            {channels.length === 0 ? 'Cargando…' : channels.map((ch, i) => (
+              <React.Fragment key={ch.id}>
+                {i > 0 && <span className="vh-queue-arrow">→</span>}
+                <a className={i === 0 ? 'first' : ''} href={youtubeChannelUrl(ch.name)} target="_blank" rel="noreferrer">{ch.name}</a>
+              </React.Fragment>
+            ))}
           </div>
-          <span className="vh-kpi-footer info">
-            {kpis.catalog?.inTurn ?? 0} en turno hoy · {kpis.catalog?.inRest ?? 0} descansando
-          </span>
-        </div>
-      </section>
-
-      {/* 3. Tira de Rotación Continua de Canales */}
-      <section className="vh-section-channels">
-        <h2 className="vh-section-title">
-          Rotación Diaria Continua de Canales
-          <span className="vh-pill">Bucle Infinito: C1 → C2 → C3</span>
-        </h2>
-
-        <div className="vh-channels-grid">
-          {channels.length === 0 ? (
-            <div className="vh-empty-catalog" style={{ padding: '1.25rem' }}>
-              <span className="vh-empty-icon">📺</span>
-              <h4>Cargando canales conectados...</h4>
-            </div>
-          ) : (
-            channels.map(ch => (
-              <div key={ch.id} className={`vh-channel-card ${ch.status === 'today' ? 'active-today' : ''}`}>
-                <div className="vh-channel-top">
-                  <div className="vh-channel-identity">
-                    <div className="vh-yt-icon">▶</div>
-                    <div>
-                      <div className="vh-channel-name">{ch.name}</div>
-                      <div className="vh-channel-sub">{ch.handle}</div>
-                    </div>
-                  </div>
-
-                  <span className={`vh-turn-badge badge-${ch.status}`}>
-                    {ch.turnLabel}
-                  </span>
-                </div>
-
-                <div className={`vh-channel-fb ${ch.facebookPage ? '' : 'empty'}`}>
-                  <div className="vh-fb-icon">f</div>
-                  <div>
-                    <div className="vh-channel-name">{ch.facebookPage || 'Sin Página de Facebook'}</div>
-                    <div className="vh-channel-sub">Página de Facebook</div>
-                  </div>
-                </div>
-
-                <div className="vh-channel-details">
-                  <span>Próximo Video:</span>
-                  <span className="val">{ch.nextPublish}</span>
-                </div>
-              </div>
-            ))
-          )}
+          <div className="vh-queue">
+            <span className="vh-queue-icon fb">f</span>
+            {fbQueue.length === 0 ? 'Sin Páginas de Facebook' : fbQueue.map((page, i) => (
+              <React.Fragment key={page}>
+                {i > 0 && <span className="vh-queue-arrow">→</span>}
+                <span className={i === 0 ? 'first' : ''}>{page}</span>
+              </React.Fragment>
+            ))}
+          </div>
+          <span className="vh-kpi-footer">El primero de cada fila recibe el próximo video. Avanza uno con cada video.</span>
         </div>
       </section>
 
@@ -414,7 +381,7 @@ export default function VideosHorizontales() {
           <div className="vh-empty-showcase">
             <span className="vh-empty-icon">⏳</span>
             <h3>Sin modelos para la recopilación de hoy</h3>
-            <p>Se requieren reels aprobados en el catálogo para generar automáticamente la recopilación horizontal de 3 minutos (2 h después de cada reel).</p>
+            <p>Se requieren reels aprobados en el catálogo para generar automáticamente la recopilación horizontal de 3 minutos de cada día.</p>
           </div>
         </section>
       ) : (
@@ -446,12 +413,7 @@ export default function VideosHorizontales() {
 
             <div className="vh-player-meta-bar">
               <div className="vh-tags-group">
-                <span className="vh-tag">1920x1080 Full HD</span>
-                <span className="vh-tag">Logo STLFREE Superior Izq</span>
-                <span className="vh-tag">{showingLatest && latest.modelsCount ? latest.modelsCount : turnModels.length} Modelos Unidos</span>
-              </div>
-              <div className="vh-audio-tag">
-                🔊 Audio y Voz Original de Cada Reel
+                <span className="vh-tag">{showingLatest && latest.modelsCount ? latest.modelsCount : turnModels.length} modelos en el video</span>
               </div>
             </div>
           </div>
@@ -636,7 +598,9 @@ export default function VideosHorizontales() {
 
             <div className="vh-meta-actions">
               {viewMode === 'published' && <>
-                <button type="button" className="btn-push" disabled>✓ Publicado en YouTube · {latest.channel}</button>
+                {latest.youtubeUrl
+                  ? <a className="btn-push done" href={latest.youtubeUrl} target="_blank" rel="noreferrer">✓ Ver en YouTube · {latest.channel} ↗</a>
+                  : <button type="button" className="btn-push" disabled>✓ En YouTube · {latest.channel}</button>}
                 {facebookButton}
                 <button type="button" className="btn-edit" onClick={() => { setPrepareNext(true); setActiveMetaTab('description'); }}>
                   ⚡ Preparar el siguiente
@@ -664,6 +628,11 @@ export default function VideosHorizontales() {
                 )}
               </>}
             </div>
+            {showingLatest && latest?.videoPath && latestFb && !latestFb.published && !latestFb.publishing && kpis.facebook?.pageToday && (
+              <p className="vh-actions-hint">
+                Este video todavía no está en Facebook. Si lo publicas, irá a la página {kpis.facebook.pageToday}, que es la siguiente en la fila de Facebook.
+              </p>
+            )}
           </div>
         </section>
       )}
@@ -684,7 +653,7 @@ export default function VideosHorizontales() {
               className={filter === 'turn' ? 'active' : ''} 
               onClick={() => setFilter('turn')}
             >
-              En Turno de Hoy ({turnModels.length})
+              En el próximo video ({turnModels.length})
             </button>
             <button 
               type="button" 
@@ -696,8 +665,7 @@ export default function VideosHorizontales() {
           </div>
 
           <div className="vh-pool-hint">
-            <span>Algoritmo de Cooldown:</span>
-            <strong>Los que salen hoy descansan y rotan con los demás del catálogo.</strong>
+            <strong>Los modelos que ya salieron descansan y rotan con el resto.</strong>
           </div>
         </div>
 
@@ -708,7 +676,7 @@ export default function VideosHorizontales() {
               <h4>No hay modelos disponibles</h4>
               <p>
                 {filter === 'turn'
-                  ? 'No hay modelos asignados al turno de hoy.'
+                  ? 'No hay modelos asignados al próximo video.'
                   : filter === 'rest'
                   ? 'No hay modelos en descanso.'
                   : 'No hay modelos aprobados en la base de datos para rotación. Sube o aprueba reels para que se incluyan automáticamente.'}
@@ -749,9 +717,9 @@ export default function VideosHorizontales() {
 
                   <div className={`vh-card-status-badge ${model.isHero ? 'st-hero' : model.status === 'turn' ? 'st-turn' : 'st-rest'}`}>
                     {model.isHero 
-                      ? '★ Apertura de Hoy' 
-                      : model.status === 'turn' 
-                        ? '● En video de hoy' 
+                      ? '★ Abre el próximo video'
+                      : model.status === 'turn'
+                        ? '● En el próximo video'
                         : `💤 Descansa (${model.restDays}d)`
                     }
                   </div>
@@ -904,8 +872,8 @@ export default function VideosHorizontales() {
               <div className="form-group">
                 <label>Canal de Destino</label>
                 <select defaultValue={kpis.channelToday || (channels[0]?.name || '')}>
-                  {channels.map(ch => (
-                    <option key={ch.id} value={ch.name}>{ch.name} ({ch.turnLabel})</option>
+                  {channels.map((ch, i) => (
+                    <option key={ch.id} value={ch.name}>{ch.name}{i === 0 ? ' (siguiente en la fila)' : ''}</option>
                   ))}
                 </select>
               </div>
