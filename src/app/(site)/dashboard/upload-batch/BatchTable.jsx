@@ -36,9 +36,8 @@ const readBrushStorage = (field) => {
 
 // ─── Constantes ───
 import {
-  UI_ACCOUNT_LIMIT_MB, BACKEND_SAFETY_LIMIT_MB,
-  DISTRIBUTION_HEADROOM_MB, AUTO_DISTRIBUTION_LIMIT_MB, MIN_SELECTOR_FREE_MB,
-  SELECTOR_GREEN_PCT, REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
+  UI_ACCOUNT_LIMIT_MB, ACCOUNT_MAX_USAGE_PCT, MIN_SELECTOR_FREE_MB,
+  REVIEW_ROW_HEIGHT, REVIEW_VIEWPORT_HEIGHT, RIGHT_SIDEBAR_WIDTH,
 } from './constants'
 
 
@@ -872,22 +871,29 @@ export default function BatchTable() {
       const list = Array.isArray(accs?.data) ? accs.data : []
       const normalized = list
         .filter(c => String(c?.type || '').toLowerCase() === 'main')
-        .map(c => ({
-          id: c.id,
-          alias: c.alias || c.email || `Cuenta ${c.id}`,
-          limitMB: c.storageTotalMB > 0 ? Math.min(UI_ACCOUNT_LIMIT_MB, Number(c.storageTotalMB)) : UI_ACCOUNT_LIMIT_MB,
-          usedMB: Number(c.storageUsedMB || 0),
-          totalMB: Number(c.storageTotalMB || 0),
-        }))
-        .filter(c => {
-          if (Number(c.id) <= 0) return false
-          // Usar el total real (ajustado por bottleneck de backup) para calcular %
-          const effectiveTotal = c.totalMB > 0 ? c.totalMB : UI_ACCOUNT_LIMIT_MB
-          const pct = effectiveTotal > 0 ? (c.usedMB / effectiveTotal) * 100 : 100
-          return pct < SELECTOR_GREEN_PCT
+        .map(c => {
+          const totalMB = Number(c.storageTotalMB || 0)
+          const usedMB = Number(c.storageUsedMB || 0)
+          // Tope por cuenta: 95 % de su tamaño real (lo calcula el backend)
+          const limitMB = Number(c.batchLimitMB) > 0
+            ? Number(c.batchLimitMB)
+            : (totalMB > 0 ? totalMB * ACCOUNT_MAX_USAGE_PCT : UI_ACCOUNT_LIMIT_MB)
+          // MB que aún admite: ya descuenta el backup más lleno y lo encolado
+          const usableFreeMB = c.batchUsableFreeMB != null && Number.isFinite(Number(c.batchUsableFreeMB))
+            ? Math.max(0, Number(c.batchUsableFreeMB))
+            : Math.max(0, limitMB - usedMB)
+          return {
+            id: c.id,
+            alias: c.alias || c.email || `Cuenta ${c.id}`,
+            limitMB,
+            usedMB,
+            totalMB,
+            usableFreeMB,
+          }
         })
+        .filter(c => Number(c.id) > 0)
 
-      const availableIds = new Set(normalized.map((c) => Number(c.id)))
+      const availableIds = new Set(normalized.filter((c) => c.usableFreeMB > 0).map((c) => Number(c.id)))
       setDistributionAccountIds((prev) => {
         const keep = (Array.isArray(prev) ? prev : [])
           .map((id) => Number(id))
@@ -2066,27 +2072,23 @@ export default function BatchTable() {
     const minRequiredFreeMb = Math.max(0, Math.max(Number(minPendingAssetMb || 0), MIN_SELECTOR_FREE_MB))
 
     const enriched = (Array.isArray(cuentas) ? cuentas : []).map((c) => {
-      const limitMb = Number(c?.limitMB || BACKEND_SAFETY_LIMIT_MB)
       const usedMb = Math.max(0, Number(c?.usedMB || 0))
-      const freeMb = Math.max(0, limitMb - usedMb)
-      const effectiveLimitMb = Math.max(0, limitMb - DISTRIBUTION_HEADROOM_MB)
-      const effectiveFreeMb = Math.max(0, effectiveLimitMb - usedMb)
+      const usableFreeMb = Math.max(0, Number(c?.usableFreeMB || 0))
       const checked = selectedSet.has(Number(c?.id || 0))
-      const pct = limitMb > 0 ? (usedMb / limitMb) * 100 : 100
-      const canFitMinPending = pct < SELECTOR_GREEN_PCT
+      // Aparece solo si le cabe al menos el asset pendiente más chico
+      const canFitMinPending = usableFreeMb > 0 && usableFreeMb >= minRequiredFreeMb
       return {
         ...c,
-        limitMb,
         usedMb,
-        freeMb,
-        effectiveLimitMb,
-        effectiveFreeMb,
+        usableFreeMb,
         checked,
         canFitMinPending,
       }
     })
 
-    const selectable = enriched.filter((c) => c.canFitMinPending || c.checked)
+    const selectable = enriched
+      .filter((c) => c.canFitMinPending || (c.checked && c.usableFreeMb > 0))
+      .sort((a, b) => b.usableFreeMb - a.usableFreeMb)
     const selectableIdSet = new Set(selectable.map((c) => Number(c.id)))
     const blockedCount = Math.max(0, enriched.length - selectable.length)
 
@@ -2100,9 +2102,6 @@ export default function BatchTable() {
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
   const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
-    const LIMIT_MB = Math.max(0, AUTO_DISTRIBUTION_LIMIT_MB - DISTRIBUTION_HEADROOM_MB)
-    const LIMIT_GB = LIMIT_MB / 1024
-
     const freshAccounts = await refreshBatchAccounts({ silent: true })
     if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
       setToast({ open: true, msg: 'No hay cuentas disponibles para distribuir.', type: 'warning' })
@@ -2135,17 +2134,13 @@ export default function BatchTable() {
       Number.isFinite(minPendingMb) ? Math.max(0, Number(minPendingMb || 0)) : 0
     )
 
+    // remainingMB = lo que aún admite cada cuenta (tope 95 % real, backup y cola ya descontados)
     let accountsStatus = freshAccounts
       .map(c => ({
         ...c,
-        simulatedUsedMB: Math.max(0, Number(c?.usedMB || 0)),
+        remainingMB: Math.max(0, Number(c?.usableFreeMB || 0)),
       }))
-      .filter((a) => Number(a.simulatedUsedMB || 0) < LIMIT_MB)
-
-    accountsStatus = accountsStatus.filter((a) => {
-      const freeMb = Math.max(0, LIMIT_MB - Number(a.simulatedUsedMB || 0))
-      return freeMb >= minRequiredFreeMb
-    })
+      .filter((a) => a.remainingMB > 0 && a.remainingMB >= minRequiredFreeMb)
 
     if (preferredSet.size > 0) {
       accountsStatus = accountsStatus.filter((a) => preferredSet.has(Number(a.id)))
@@ -2162,7 +2157,7 @@ export default function BatchTable() {
       return
     }
 
-    accountsStatus = accountsStatus.sort((a, b) => a.simulatedUsedMB - b.simulatedUsedMB)
+    accountsStatus = accountsStatus.sort((a, b) => b.remainingMB - a.remainingMB)
 
     const updatedRows = currentRows.map(r => ({ ...r }))
     const candidatesBySize = updatedRows
@@ -2178,18 +2173,14 @@ export default function BatchTable() {
     for (const { index, pesoMb } of candidatesBySize) {
       const row = updatedRows[index]
       const fitCandidates = accountsStatus
-        .filter((a) => (Number(a.simulatedUsedMB || 0) + pesoMb) <= LIMIT_MB)
-        .sort((a, b) => {
-          const remA = LIMIT_MB - (Number(a.simulatedUsedMB || 0) + pesoMb)
-          const remB = LIMIT_MB - (Number(b.simulatedUsedMB || 0) + pesoMb)
-          return remA - remB
-        })
+        .filter((a) => pesoMb <= a.remainingMB)
+        .sort((a, b) => a.remainingMB - b.remainingMB)
 
       const bestAccount = fitCandidates[0]
 
       if (bestAccount) {
         row.cuenta = bestAccount.id
-        bestAccount.simulatedUsedMB = Number(bestAccount.simulatedUsedMB || 0) + pesoMb
+        bestAccount.remainingMB = Math.max(0, bestAccount.remainingMB - pesoMb)
       } else {
         row.cuenta = ''
         unassignedCount++
@@ -2320,16 +2311,15 @@ export default function BatchTable() {
     for (const [accountId, incomingMb] of incomingByAccount.entries()) {
       const account = cuentas.find(c => Number(c.id) === Number(accountId))
       if (!account) continue
-      const usedMb = Number(account.usedMB || 0)
-      const projectedMb = usedMb + Number(incomingMb || 0)
-      if (projectedMb > BACKEND_SAFETY_LIMIT_MB) {
-        overflowAccounts.push(`${account.alias} (${(projectedMb / 1024).toFixed(2)} GB)`)
+      const usableMb = Math.max(0, Number(account.usableFreeMB || 0))
+      if (Number(incomingMb || 0) > usableMb) {
+        overflowAccounts.push(`${account.alias} (asignado ${(Number(incomingMb || 0) / 1024).toFixed(2)} GB, caben ${(usableMb / 1024).toFixed(2)} GB)`)
       }
     }
     if (overflowAccounts.length > 0) {
       setToast({
         open: true,
-        msg: `Límite 19GB excedido en: ${overflowAccounts.join(', ')}. Reasigna antes de confirmar.`,
+        msg: `Espacio insuficiente en: ${overflowAccounts.join(', ')}. Reasigna antes de confirmar.`,
         type: 'error'
       })
       return

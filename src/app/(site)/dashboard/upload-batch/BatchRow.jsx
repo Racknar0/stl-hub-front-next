@@ -97,9 +97,10 @@ const BatchRow = React.memo(function BatchRow({
 
     const activeCuentas = React.useMemo(() => {
         const selectedIds = Array.isArray(distributionAccountIds) ? distributionAccountIds.map(Number) : [];
-        let filtered = cuentas;
+        // Solo cuentas con espacio utilizable (la ya asignada a la fila se conserva abajo)
+        let filtered = cuentas.filter(c => Number(c.usableFreeMB || 0) > 0);
         if (selectedIds.length > 0) {
-            filtered = cuentas.filter(c => selectedIds.includes(Number(c.id)));
+            filtered = filtered.filter(c => selectedIds.includes(Number(c.id)));
         }
         // Asegurar que la cuenta asignada actualmente a la fila esté en las opciones
         const rowAccId = Number(row.cuenta || 0);
