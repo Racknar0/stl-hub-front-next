@@ -13,6 +13,7 @@ const PLATFORMS = [
   { key: 'youtube', label: 'YouTube Shorts', short: 'YT', maxSec: 180, linkHint: 'Link al final de la descripción (automático, con UTM)' },
   { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: null },
   { key: 'threads', label: 'Threads', short: 'TH', maxSec: 300, linkHint: 'Link clicable al final del texto (automático, con UTM)' },
+  { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo (con UTM)' },
 ];
 // Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
 const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
@@ -273,6 +274,15 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'pinterest') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <circle cx="12" cy="12" r="11" fill="#E60023" />
+        <path fill="#fff" d="M12.3 5.2c-3.9 0-5.9 2.8-5.9 5.1 0 1.4.5 2.6 1.6 3.1.2.1.4 0 .4-.2l.2-.6c.1-.2 0-.3-.1-.5-.3-.4-.5-.9-.5-1.6 0-2.1 1.6-3.9 4.1-3.9 2.2 0 3.5 1.4 3.5 3.2 0 2.4-1.1 4.5-2.7 4.5-.9 0-1.5-.7-1.3-1.6.2-1.1.7-2.2.7-2.9 0-.7-.4-1.2-1.1-1.2-.9 0-1.6.9-1.6 2.2 0 .8.3 1.3.3 1.3l-1.1 4.6c-.3 1.3 0 3 0 3.1 0 .1.1.1.2 0 .1-.1 1-1.3 1.3-2.4l.5-2c.3.5 1 .9 1.8.9 2.4 0 4-2.2 4-5.1 0-2.2-1.9-4.3-4.7-4.3z" />
+      </svg>
+    );
+  }
   if (platform === 'threads') {
     return (
       <svg {...common}>
@@ -341,6 +351,8 @@ export default function ReelsPublisher() {
   const ttConnected = !!connection?.tiktok?.connected;
   const [connectingTh, setConnectingTh] = useState(false);
   const thConnected = !!connection?.threads?.connected;
+  // Pinterest se conecta en Publicaciones → Pinterest (la misma cuenta de los pines automáticos)
+  const pnConnected = !!connection?.pinterest?.connected;
   // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
   const [focus, setFocus] = useState(DEFAULT_FOCUS);
   useEffect(() => {
@@ -664,7 +676,10 @@ export default function ReelsPublisher() {
             const name = p.label.split(' ')[0];
             let items = [];
             let action = null;
-            if (p.key === 'threads') {
+            if (p.key === 'pinterest') {
+              if (pnConnected) items = [{ id: 'pn', name: connection.pinterest.username ? `@${connection.pinterest.username}` : 'Pinterest', title: 'Cuenta conectada (la de los pines automáticos)' }];
+              else action = { label: 'Conectar Pinterest', onClick: () => { window.location.href = '/dashboard/pinterest'; }, busy: false, title: 'Se conecta en Publicaciones → Pinterest' };
+            } else if (p.key === 'threads') {
               if (thConnected) items = [{ id: 'th', name: `@${connection.threads.account?.username || 'threads'}`, title: 'Cuenta conectada', onRemove: disconnectThreads, removeTitle: 'Desconectar Threads' }];
               else action = { label: 'Conectar Threads', onClick: connectThreads, busy: connectingTh, title: 'Autoriza tu cuenta de Threads para publicar videos' };
             } else if (p.key === 'tiktok') {
@@ -907,7 +922,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} pnConnected={pnConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -922,9 +937,9 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
-  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected);
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'pinterest' && !pnConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
@@ -1111,7 +1126,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               </div>
               <div className="rl-platform-toggles row">
                 {visible.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : 'tu canal de YouTube'} en la cabecera` : undefined}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -1267,6 +1282,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <span>Texto <small>automático</small></span>
                   <p className="rl-tt-note">Se usa el caption de Instagram sin la cabecera ni el pie, y al final el link del modelo (clicable, con UTM).</p>
                   <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Threads'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
+                </div>
+              )}
+
+              {activeText === 'pinterest' && (
+                <div className="rl-field">
+                  <span>Pin de video <small>automático</small></span>
+                  <p className="rl-tt-note">Título: el de YouTube (o el del modelo). Descripción: el caption de Instagram sin la cabecera ni el pie, con los hashtags. El pin lleva directo a la página del modelo, con UTM.</p>
+                  <pre className="rl-threads-preview">{`${(form.title || assetTitle || 'Título del modelo').slice(0, 100)}\n\n${(captionBody(form.caption) || 'Escribe o genera el caption para ver la descripción').slice(0, 450)}${form.hashtags.length ? `\n\n${form.hashtags.map(t => `#${String(t).replace(/^#/, '')}`).join(' ')}` : ''}`}</pre>
                 </div>
               )}
 
