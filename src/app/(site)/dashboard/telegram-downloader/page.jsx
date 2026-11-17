@@ -484,28 +484,43 @@ export default function TelegramDownloader() {
     } catch { alert('Error eliminando canal'); }
   };
 
+  // Resultado del escaneo (llega por SSE en scan_finish)
+  const applyScanResult = (channelName, d) => {
+    if (d?.success) {
+      setScanResults(prev => ({
+        ...prev,
+        [channelName]: {
+          newFiles: d.newFiles,
+          totalSize: d.totalSize,
+          totalMessages: d.totalMessages,
+          totalSizeBytes: d.totalSizeBytes,
+          maxId: d.maxId
+        }
+      }));
+    } else {
+      setScanResults(prev => ({ ...prev, [channelName]: { error: d?.message || 'Error' } }));
+    }
+    fetchChannels();
+    setScanningChannel(prev => (prev === channelName ? null : prev));
+  };
+
   const handleQuickScan = async (channelName) => {
     setScanningChannel(channelName);
     try {
-      const res = await http.getData(`/telegram/quick-scan?channelName=${encodeURIComponent(channelName)}`);
-      const d = res.data || res;
-      if (d.success) {
-        setScanResults(prev => ({
-          ...prev,
-          [channelName]: {
-            newFiles: d.newFiles,
-            totalSize: d.totalSize,
-            totalMessages: d.totalMessages,
-            totalSizeBytes: d.totalSizeBytes,
-            maxId: d.maxId
-          }
-        }));
-        await fetchChannels();
-      }
+      // async=1: el backend responde al instante y avisa al terminar por SSE.
+      // Así los canales grandes no chocan con el corte de 100 s de Cloudflare.
+      await http.getData(`/telegram/quick-scan?channelName=${encodeURIComponent(channelName)}&async=1`);
+      // Respaldo por si se pierde el evento SSE: refresca la tabla y libera el botón a los 15 min
+      setTimeout(() => {
+        setScanningChannel(prev => {
+          if (prev === channelName) fetchChannels();
+          return prev === channelName ? null : prev;
+        });
+      }, 15 * 60 * 1000);
     } catch (e) {
       setScanResults(prev => ({ ...prev, [channelName]: { error: e.message || 'Error' } }));
+      setScanningChannel(null);
     }
-    setScanningChannel(null);
   };
 
   const getTelegramUrl = (channelName) => {
@@ -673,7 +688,10 @@ export default function TelegramDownloader() {
       else if (data.type === 'info') addLog(data.message, 'info');
       else if (data.type === 'scan_progress') setScanProgress(data);
       else if (data.type === 'scan_start') setScanProgress({ started: true });
-      else if (data.type === 'scan_finish') setScanProgress(null);
+      else if (data.type === 'scan_finish') {
+        setScanProgress(null);
+        if (data.result && data.channelName) applyScanResult(data.channelName, data.result);
+      }
     };
   };
 
