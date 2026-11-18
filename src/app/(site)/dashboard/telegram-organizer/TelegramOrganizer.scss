@@ -261,8 +261,8 @@
     }
     &:hover .preview-btn-quick { opacity: 1; }
     .preview-btn-quick:hover { background: #2196f3; transform: scale(1.1); }
-    // En los assets el nº de mensaje ocupa la esquina inferior izquierda
-    &.anchor .preview-btn-quick { left: auto; right: 5px; }
+    // En los assets va arriba, al lado del check (abajo están el nº de mensaje y la papelera)
+    &.anchor .preview-btn-quick { top: 5px; bottom: auto; left: 34px; }
 
     .quick-pack {
       position: absolute; top: 50%; transform: translateY(-50%);
