@@ -34,11 +34,14 @@ function OrganizerCard({ file, isSelectedAnchor, isSelectedFile, isToDelete, ima
         onClick={(e) => actions.onToggleDelete(file, e)}
       />
       <button className="delete-btn-quick" title="Eliminar" onClick={(e) => actions.onQuickDelete(file, e)}>🗑️</button>
-      {!isAnchor && (
-        <button className="preview-btn-quick" title="Ver en grande" onClick={(e) => actions.onPreview(file, e)}>
-          <VisibilityIcon fontSize="small" />
-        </button>
-      )}
+      <button
+        className="preview-btn-quick"
+        title={isAnchor ? 'Ver contenido' : 'Ver en grande'}
+        onClick={(e) => actions.onPreview(file, e)}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <VisibilityIcon fontSize="small" />
+      </button>
 
       {isAnchor && (
         <>

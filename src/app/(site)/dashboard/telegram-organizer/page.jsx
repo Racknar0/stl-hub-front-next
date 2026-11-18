@@ -10,6 +10,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import useStore from '@/store/useStore';
 import OrganizerCard from './OrganizerCard';
+import ArchivePreviewDialog from './ArchivePreviewDialog';
 import './TelegramOrganizer.scss';
 
 // Se carga la lista entera (son solo nombres) y la grilla está virtualizada: solo se pintan las filas visibles
@@ -57,6 +58,7 @@ export default function TelegramOrganizer() {
   const [loading, setLoading] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [archivePreview, setArchivePreview] = useState(null); // asset cuyo contenido se está viendo
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -486,7 +488,8 @@ export default function TelegramOrganizer() {
     onQuickDelete: (file, e) => quickDelete(file.name, e),
     onPreview: (file, e) => {
       e.stopPropagation();
-      setPreviewImage(imageUrl(file.name));
+      if (file.type === 'anchor') setArchivePreview(file);
+      else setPreviewImage(imageUrl(file.name));
     },
     onCardMouseLeave: (file) => {
       if (hoveredRef.current === file.name) hoveredRef.current = null;
@@ -497,7 +500,7 @@ export default function TelegramOrganizer() {
   keyHandlerRef.current = (e) => {
     const tag = e.target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
-    if (purgeOpen || previewImage || showExplorer) return; // con un diálogo abierto, los atajos no actúan
+    if (purgeOpen || previewImage || archivePreview || showExplorer) return; // con un diálogo abierto, los atajos no actúan
     const key = e.key.toLowerCase();
 
     if (e.code === 'Space' && selectedAnchor) {
@@ -762,6 +765,15 @@ export default function TelegramOrganizer() {
           </Box>
         )}
       </Dialog>
+
+      {archivePreview && (
+        <ArchivePreviewDialog
+          file={archivePreview}
+          apiBase={apiBase}
+          token={token}
+          onClose={() => setArchivePreview(null)}
+        />
+      )}
 
       <Dialog open={purgeOpen} onClose={() => setPurgeOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#1a1020', color: '#fff', border: '1px solid rgba(239, 68, 68, 0.5)' } }}>
         <DialogTitle sx={{ fontWeight: 700, color: '#f87171' }}>☠️ Purgar carpeta de Telegram</DialogTitle>

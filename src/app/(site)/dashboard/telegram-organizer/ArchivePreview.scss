@@ -1,0 +1,206 @@
+// El Dialog de MUI se pinta en un portal fuera de .telegram-organizer: estilos de nivel superior
+.archive-preview-paper {
+  &.MuiPaper-root {
+    width: 94vw;
+    height: 90vh;
+    max-width: 94vw;
+    max-height: 90vh;
+    margin: 0;
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 152, 0, 0.35);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+}
+
+.archive-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  outline: none;
+
+  .ap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .ap-title {
+    font-weight: 700;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ap-meta {
+    margin-left: 10px;
+    font-weight: 400;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .ap-close {
+    background: transparent;
+    border: none;
+    color: #cbd5e1;
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    &:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  }
+
+  .ap-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  .ap-left {
+    width: 34%;
+    min-width: 260px;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .ap-search {
+    margin: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    &:focus { border-color: #ff9800; }
+  }
+
+  .ap-tree {
+    flex: 1;
+    overflow: auto;
+    padding-bottom: 8px;
+  }
+
+  .ap-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    &:hover { background: rgba(255, 255, 255, 0.05); }
+    &.selected { background: rgba(255, 152, 0, 0.18); color: #ffb74d; }
+    &.dir { color: #cbd5e1; font-weight: 600; }
+    &.kind-other, &.kind-archive { color: #94a3b8; }
+  }
+
+  .ap-caret { width: 10px; color: #94a3b8; }
+  .ap-icon { width: 18px; text-align: center; flex-shrink: 0; }
+
+  .ap-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ap-size {
+    font-size: 11px;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+
+  .ap-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .ap-path {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .ap-stage {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    background: #0b0f17;
+  }
+
+  .ap-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .ap-pdf {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+  }
+
+  .ap-text {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    font-size: 12px;
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .model-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    touch-action: none;
+    &:active { cursor: grabbing; }
+  }
+
+  .ap-model-info {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 3px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .ap-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #94a3b8;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+    &.error { color: #f87171; }
+    &.small { font-size: 12px; padding: 12px; }
+  }
+}

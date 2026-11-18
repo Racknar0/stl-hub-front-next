@@ -11,6 +11,11 @@ export default class HttpService {
     });
   }
 
+  // GET con configuración de axios (responseType, signal…), p. ej. para descargar binarios
+  async getRaw(url, config = {}) {
+    return axiosInstance.get(url, config);
+  }
+
   async getById(url, id) {
     return axiosInstance.get(`${url}/${id}`).then((response) => response);
   }
