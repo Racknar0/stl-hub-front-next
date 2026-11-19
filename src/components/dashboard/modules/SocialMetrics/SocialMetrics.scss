@@ -1,0 +1,216 @@
+.social-metrics-module {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+
+  .sm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: var(--text-color);
+      font-weight: 600;
+    }
+  }
+
+  .sm-ranges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  .sm-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      color: var(--text-color);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: var(--primary-color, #ff3366);
+      color: white;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
+  .sm-custom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+
+    input {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      color: var(--text-color);
+      padding: 4px 8px;
+      font-size: 0.85rem;
+      color-scheme: dark;
+    }
+  }
+
+  .sm-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .sm-chip {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &.active {
+      color: white;
+      background: var(--primary-color, #ff3366);
+      border-color: transparent;
+    }
+  }
+
+  .sm-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .sm-kpi {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+
+    span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    strong {
+      font-size: 1.5rem;
+      color: var(--text-color);
+    }
+  }
+
+  .sm-error,
+  .sm-note {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+  }
+
+  .sm-error { color: #ff6b6b; }
+  .sm-note { color: var(--text-muted); }
+
+  .sm-table-wrap {
+    overflow-x: auto;
+  }
+
+  .sm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    color: var(--text-color);
+
+    th,
+    td {
+      padding: 10px 12px;
+      text-align: right;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.78rem;
+
+      &.sortable { cursor: pointer; }
+      &.sortable:hover { color: var(--text-color); }
+    }
+
+    .sm-left {
+      text-align: left;
+      white-space: normal;
+      max-width: 380px;
+    }
+
+    td.sm-left small {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 2px;
+    }
+
+    td.sm-left a {
+      color: var(--text-color);
+      text-decoration: none;
+
+      &:hover { text-decoration: underline; }
+    }
+
+    .sm-pin-row {
+      background: rgba(230, 0, 35, 0.06);
+    }
+
+    .sm-bad { color: #ff6b6b !important; }
+
+    .sm-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px;
+    }
+  }
+
+  .sm-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    margin-right: 8px;
+    color: white;
+    background: #555;
+  }
+
+  .sm-net-facebook { &.sm-badge { background: #1877f2; } }
+  .sm-net-instagram { &.sm-badge { background: #d6249f; } }
+  .sm-net-youtube { &.sm-badge { background: #e62117; } }
+  .sm-net-pinterest { &.sm-badge { background: #e60023; } }
+  .sm-net-threads { &.sm-badge { background: #444; } }
+
+  .sm-foot {
+    margin: 12px 0 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}

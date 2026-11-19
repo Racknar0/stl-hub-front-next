@@ -5,6 +5,7 @@ import useStore from '../../../store/useStore';
 import HttpService from '@/services/HttpService';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
+import ShareOutlined from '@mui/icons-material/ShareOutlined';
 import CardGiftcardOutlined from '@mui/icons-material/CardGiftcardOutlined';
 import CreditCardOutlined from '@mui/icons-material/CreditCardOutlined';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
@@ -29,6 +30,7 @@ import TaxonomyCountsCard from '@/components/dashboard/modules/TaxonomyCountsCar
 import SearchInsightsCard from '@/components/dashboard/modules/SearchInsightsCard/SearchInsightsCard';
 import SiteTraffic from '@/components/dashboard/modules/SiteTraffic/SiteTraffic';
 import TrafficCharts from '@/components/dashboard/modules/TrafficCharts/TrafficCharts';
+import SocialMetrics from '@/components/dashboard/modules/SocialMetrics/SocialMetrics';
 import PaymentAttempts from '@/components/dashboard/modules/PaymentAttempts/PaymentAttempts';
 import GiftCodes from '@/components/dashboard/modules/GiftCodes/GiftCodes';
 import RecentDownloadsCard from '@/components/dashboard/modules/RecentDownloadsCard/RecentDownloadsCard';
@@ -51,7 +53,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const tab = String(searchParams.get('tab') || '').toLowerCase();
-    return ['campaigns', 'traffic', 'gift-codes', 'payments'].includes(tab) ? tab : 'overview';
+    return ['campaigns', 'traffic', 'social', 'gift-codes', 'payments'].includes(tab) ? tab : 'overview';
   });
   const [accountsHealth, setAccountsHealth] = useState(null);
   const failures = summarizeAccountFailures(accountsHealth || []);
@@ -267,6 +269,14 @@ function DashboardPage() {
             <InsightsOutlined aria-hidden="true" /> Tráfico
           </button>
           <button
+            className={`dashboard-tab-btn ${activeTab === 'social' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'social'}
+            onClick={() => setActiveTab('social')}
+          >
+            <ShareOutlined aria-hidden="true" /> Redes
+          </button>
+          <button
             className={`dashboard-tab-btn ${activeTab === 'gift-codes' ? 'is-active' : ''}`}
             role="tab"
             aria-selected={activeTab === 'gift-codes'}
@@ -290,6 +300,8 @@ function DashboardPage() {
             <TrafficCharts />
           </div>
         )}
+
+        {activeTab === 'social' && <SocialMetrics />}
 
         {activeTab === 'payments' && <PaymentAttempts />}
 
