@@ -1,5 +1,5 @@
 "use client"
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './SocialMetrics.scss'
 import HttpService from '@/services/HttpService'
 
@@ -115,12 +115,13 @@ export default function SocialMetrics() {
     return { from, to: now }
   }, [range, customFrom, customTo])
 
-  const load = useCallback(async () => {
+  // fresh = consultar las redes en vivo (al entrar y con "Actualizar"); al cambiar de rango se reutiliza lo ya consultado
+  const load = useCallback(async (fresh = false) => {
     if (bounds.to < bounds.from) { setError('La fecha final es anterior a la inicial'); return }
     setLoading(true)
     setError('')
     try {
-      const res = await http.getData(`/reels/metrics?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}`)
+      const res = await http.getData(`/reels/metrics?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}${fresh ? '&fresh=1' : ''}`)
       setData(res.data)
     } catch (e) {
       setError(e?.response?.data?.error || e.message || 'No se pudieron cargar las métricas')
@@ -129,7 +130,11 @@ export default function SocialMetrics() {
     }
   }, [bounds, http])
 
-  useEffect(() => { load() }, [load])
+  const firstLoad = useRef(true)
+  useEffect(() => {
+    load(firstLoad.current)
+    firstLoad.current = false
+  }, [load])
 
   const rows = useMemo(() => {
     const list = (data?.rows || []).filter(r => network === 'all' || r.network === network)
@@ -166,7 +171,7 @@ export default function SocialMetrics() {
               <input type="date" value={customTo} min={customFrom} max={inputDate(new Date())} onChange={(e) => setCustomTo(e.target.value)} />
             </span>
           )}
-          <button className="sm-btn sm-refresh" onClick={load} disabled={loading} title="Volver a consultar las redes">{loading ? 'Cargando…' : 'Actualizar'}</button>
+          <button className="sm-btn sm-refresh" onClick={() => load(true)} disabled={loading} title="Volver a consultar las redes">{loading ? 'Cargando…' : 'Actualizar'}</button>
         </div>
       </div>
 
@@ -235,7 +240,7 @@ export default function SocialMetrics() {
           </tbody>
         </table>
       </div>
-      <p className="sm-foot">Las cifras de cada publicación son las acumuladas hasta ahora. Se actualizan cada 10 minutos.</p>
+      <p className="sm-foot">Las cifras de cada publicación son las acumuladas hasta ahora. Se consultan en vivo al entrar y al pulsar Actualizar.</p>
     </div>
   )
 }
