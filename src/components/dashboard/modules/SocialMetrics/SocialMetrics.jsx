@@ -170,6 +170,19 @@ export default function SocialMetrics() {
   const arrow = (key) => (sort.key === key ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : '')
   const hasThreadsError = (data?.rows || []).some(r => r.network === 'threads' && r.error)
 
+  // Una sección por red (todo Facebook junto, todo Instagram junto...) con sus totales
+  const groups = useMemo(() => NETWORKS.map(n => {
+    const list = rows.filter(r => r.network === n.key)
+    const summary = n.key === 'pinterest' && pin ? pin : null
+    const all = [...list, ...(summary && !summary.error ? [summary] : [])]
+    return {
+      ...n,
+      list,
+      summary,
+      totals: Object.fromEntries(COLUMNS.filter(c => c.key !== 'avgWatchSec').map(c => [c.key, all.some(x => x[c.key] != null) ? sum(all, c.key) : null])),
+    }
+  }).filter(g => g.list.length || g.summary), [rows, pin])
+
   return (
     <div className="social-metrics-module">
       <div className="sm-header">
@@ -215,44 +228,54 @@ export default function SocialMetrics() {
           <thead>
             <tr>
               <th className="sm-left sm-col-channel">Canal</th>
-              <th className="sm-left sortable" onClick={() => toggleSort('publishedAt')}>Publicación · fecha{arrow('publishedAt')}</th>
+              <th className="sm-left">Publicación</th>
+              <th className="sm-left sortable sm-col-date" onClick={() => toggleSort('publishedAt')}>Fecha{arrow('publishedAt')}</th>
               {COLUMNS.map(c => (
                 <th key={c.key} className="sortable" title={c.tip || ''} onClick={() => toggleSort(c.key)}>{c.label}{arrow(c.key)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {pin && (
-              <tr className="sm-row sm-row-pinterest sm-pin-row">
-                <td className="sm-left sm-channel">
-                  <NetworkLogo network="pinterest" />
-                  <span className="sm-channel-name">Pinterest</span>
-                </td>
-                <td className="sm-left">
-                  <strong>Todos los pines de la cuenta</strong>
-                  {!pin.error && <small>{fmt(pin.pins)} pines del piloto automático en el rango, agrupados en una sola fila</small>}
-                  {pin.error && <small className="sm-bad">{pin.error}</small>}
-                </td>
-                <td>{fmt(pin.views)}</td><td>{fmt(pin.views)}</td><td>—</td><td>—</td><td>—</td>
-                <td>{fmt(pin.saves)}</td><td>{fmt(pin.clicks)}</td><td>—</td>
-              </tr>
-            )}
-            {rows.map((r, i) => (
-              <tr key={`${r.postId}-${r.network}-${r.account}-${i}`} className={`sm-row sm-row-${r.network}`}>
-                <td className="sm-left sm-channel">
-                  <NetworkLogo network={r.network} />
-                  <span className="sm-channel-name" title={r.account}>{r.account}</span>
-                </td>
-                <td className="sm-left">
-                  {r.url ? <a href={r.url} target="_blank" rel="noreferrer">{r.title}</a> : r.title}
-                  <small>{new Date(r.publishedAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small>
-                  {r.error && <small className="sm-bad" title={r.error}>⚠ sin datos</small>}
-                </td>
-                {COLUMNS.map(c => <td key={c.key}>{c.key === 'avgWatchSec' ? fmtSec(r[c.key]) : fmt(r[c.key])}</td>)}
-              </tr>
+            {groups.map(g => (
+              <React.Fragment key={g.key}>
+                <tr className={`sm-group sm-row-${g.key}`}>
+                  <td className="sm-left" colSpan={3}>
+                    <span className="sm-group-title">
+                      <NetworkLogo network={g.key} size={22} />
+                      <strong>{g.label}</strong>
+                      <small>{g.key === 'pinterest' && g.summary ? `${fmt(g.summary.pins)} pines del piloto + ${g.list.length} de reels` : `${g.list.length} ${g.list.length === 1 ? 'publicación' : 'publicaciones'}`}</small>
+                    </span>
+                  </td>
+                  {COLUMNS.map(c => <td key={c.key}>{c.key === 'avgWatchSec' ? '' : fmt(g.totals[c.key])}</td>)}
+                </tr>
+                {g.summary && (
+                  <tr className={`sm-row sm-row-${g.key}`}>
+                    <td className="sm-left sm-channel"><span className="sm-channel-name">Cuenta</span></td>
+                    <td className="sm-left sm-title">
+                      <span className="sm-title-text">Todos los pines (piloto automático agrupado)</span>
+                      {g.summary.error && <small className="sm-bad" title={g.summary.error}>⚠ sin datos</small>}
+                    </td>
+                    <td className="sm-left">—</td>
+                    <td>{fmt(g.summary.views)}</td><td>{fmt(g.summary.views)}</td><td>—</td><td>—</td><td>—</td>
+                    <td>{fmt(g.summary.saves)}</td><td>{fmt(g.summary.clicks)}</td><td>—</td>
+                  </tr>
+                )}
+                {g.list.map((r, i) => (
+                  <tr key={`${r.postId}-${r.account}-${i}`} className={`sm-row sm-row-${r.network}`}>
+                    <td className="sm-left sm-channel"><span className="sm-channel-name" title={r.account}>{r.account}</span></td>
+                    <td className="sm-left sm-title">
+                      {r.long && <span className="sm-long" title="Video largo (recopilación horizontal)">Largo</span>}
+                      {r.url ? <a className="sm-title-text" href={r.url} target="_blank" rel="noreferrer" title={r.title}>{r.title}</a> : <span className="sm-title-text" title={r.title}>{r.title}</span>}
+                      {r.error && <small className="sm-bad" title={r.error}>⚠ sin datos</small>}
+                    </td>
+                    <td className="sm-left sm-date">{new Date(r.publishedAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                    {COLUMNS.map(c => <td key={c.key}>{c.key === 'avgWatchSec' ? fmtSec(r[c.key]) : fmt(r[c.key])}</td>)}
+                  </tr>
+                ))}
+              </React.Fragment>
             ))}
             {!loading && rows.length === 0 && !pin && (
-              <tr className="sm-row"><td colSpan={2 + COLUMNS.length} className="sm-empty">No hay publicaciones en este rango.</td></tr>
+              <tr className="sm-row"><td colSpan={3 + COLUMNS.length} className="sm-empty">No hay publicaciones en este rango.</td></tr>
             )}
           </tbody>
         </table>
