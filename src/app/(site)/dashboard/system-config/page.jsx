@@ -7,6 +7,7 @@ import { successAlert, errorAlert } from '@/helpers/alerts';
 import './system-config.scss';
 import { CONFIG_SECTIONS, ConfigHelp, configSection } from './configSections';
 import SettingEditor from './SettingEditor';
+import SoftwareKeysPanel from './SoftwareKeysPanel';
 import { Switch } from '@mui/material';
 
 export default function SystemConfigPage() {
@@ -150,7 +151,9 @@ export default function SystemConfigPage() {
       </nav>
       <p className="config-section-description">{selectedSection.description}</p>
       <div className="dashboard-page-content" id="config-panel" role="tabpanel" aria-labelledby={`config-tab-${activeSection}`}>
-        {loading ? (
+        {activeSection === 'licenses' ? (
+          <SoftwareKeysPanel />
+        ) : loading ? (
           <div className="loading-state">Cargando configuraciones...</div>
         ) : (
           <div className="settings-grid">

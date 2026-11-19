@@ -6,6 +6,7 @@ import CampaignOutlined from '@mui/icons-material/CampaignOutlined';
 import CableOutlined from '@mui/icons-material/CableOutlined';
 import TuneOutlined from '@mui/icons-material/TuneOutlined';
 import HelpOutline from '@mui/icons-material/HelpOutline';
+import VpnKeyOutlined from '@mui/icons-material/VpnKeyOutlined';
 
 export const CONFIG_SECTIONS = [
   { id: 'access', label: 'Acceso y descargas', icon: DownloadOutlined, description: 'Acceso gratuito al catálogo premium y límites de descarga por tipo de usuario.' },
@@ -13,6 +14,7 @@ export const CONFIG_SECTIONS = [
   { id: 'prices', label: 'Suscripciones', icon: PaymentsOutlined, description: 'Precios de los planes y duración de cada suscripción.' },
   { id: 'publishing', label: 'Publicaciones', icon: CampaignOutlined, description: 'Comportamiento del piloto de Pinterest y opciones de publicación de reels.' },
   { id: 'connections', label: 'Conexiones y correo', icon: CableOutlined, description: 'Cuentas vinculadas, credenciales de plataformas y prueba de correo.' },
+  { id: 'licenses', label: 'Keys softwares', icon: VpnKeyOutlined, description: 'Seriales y licencias de los programas de escritorio: productos, generación, revocación y liberación de activaciones.' },
   { id: 'advanced', label: 'Avanzado', icon: TuneOutlined, description: 'Estado de las automatizaciones y otros parámetros del sistema.' },
 ];
 
