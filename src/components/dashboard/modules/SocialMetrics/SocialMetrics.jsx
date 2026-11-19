@@ -1,5 +1,5 @@
 "use client"
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import './SocialMetrics.scss'
 import HttpService from '@/services/HttpService'
 
@@ -144,11 +144,11 @@ export default function SocialMetrics() {
     }
   }, [bounds, http, range])
 
-  const firstLoad = useRef(true)
-  useEffect(() => {
-    load(firstLoad.current)
-    firstLoad.current = false
-  }, [load])
+  // Al entrar o cambiar de rango se usa lo que el servidor ya tiene guardado; solo "Actualizar" consulta las redes en vivo
+  useEffect(() => { load(false) }, [load])
+
+  const ageMin = data?.dataAt ? Math.max(0, Math.round((Date.now() - new Date(data.dataAt).getTime()) / 60000)) : null
+  const ageLabel = ageMin === null ? '' : ageMin < 1 ? 'recién actualizado' : ageMin < 60 ? `hace ${ageMin} min` : `hace ${Math.round(ageMin / 60)} h`
 
   const rows = useMemo(() => {
     const list = (data?.rows || []).filter(r => network === 'all' || r.network === network)
@@ -280,7 +280,7 @@ export default function SocialMetrics() {
           </tbody>
         </table>
       </div>
-      <p className="sm-foot">Las cifras de cada publicación son las acumuladas hasta ahora. Se consultan en vivo al entrar y al pulsar Actualizar.</p>
+      <p className="sm-foot">Las cifras de cada publicación son las acumuladas hasta ahora.{ageLabel && ` Datos de ${ageLabel}: se guardan 30 min para no saturar las APIs; pulsa Actualizar para consultarlos en vivo.`}</p>
     </div>
   )
 }
