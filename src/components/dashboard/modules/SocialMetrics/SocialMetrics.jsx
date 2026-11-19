@@ -121,14 +121,28 @@ export default function SocialMetrics() {
     setLoading(true)
     setError('')
     try {
-      const res = await http.getData(`/reels/metrics?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}${fresh ? '&fresh=1' : ''}`)
-      setData(res.data)
+      const query = (from, to, f) => `/reels/metrics?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}${f ? '&fresh=1' : ''}`
+      const res = await http.getData(query(bounds.from, bounds.to, fresh))
+      let result = res.data
+      // "Hoy" sin publicaciones todavía: se muestra el último reel publicado (con una nota)
+      if (range === 'hoy' && !(result?.rows || []).length) {
+        const back = startOfDay(new Date())
+        back.setDate(back.getDate() - 6)
+        const wider = await http.getData(query(back, bounds.to, false))
+        const wRows = wider.data?.rows || []
+        if (wRows.length) {
+          const latestPost = [...wRows].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0].postId
+          const latest = wRows.filter(r => r.postId === latestPost)
+          result = { ...result, rows: latest, fallbackDate: latest[0].publishedAt }
+        }
+      }
+      setData(result)
     } catch (e) {
       setError(e?.response?.data?.error || e.message || 'No se pudieron cargar las métricas')
     } finally {
       setLoading(false)
     }
-  }, [bounds, http])
+  }, [bounds, http, range])
 
   const firstLoad = useRef(true)
   useEffect(() => {
@@ -146,7 +160,7 @@ export default function SocialMetrics() {
     })
   }, [data, network, sort])
 
-  const pin = data?.pinterest && (network === 'all' || network === 'pinterest') ? data.pinterest : null
+  const pin = data?.pinterest && !data.fallbackDate && (network === 'all' || network === 'pinterest') ? data.pinterest : null
   const totals = useMemo(() => {
     const all = [...rows, ...(pin && !pin.error ? [pin] : [])]
     return { views: sum(all, 'views'), likes: sum(all, 'likes'), comments: sum(all, 'comments'), shares: sum(all, 'shares'), saves: sum(all, 'saves') }
@@ -191,7 +205,10 @@ export default function SocialMetrics() {
       </div>
 
       {error && <p className="sm-error">{error}</p>}
-      {hasThreadsError && <p className="sm-note">Threads aún no entrega métricas: hay que reconectar la cuenta en Reels para darle el permiso de estadísticas.</p>}
+      {data?.fallbackDate && (
+        <p className="sm-note">Hoy aún no hay publicaciones. Se muestra el último reel publicado ({new Date(data.fallbackDate).toLocaleDateString('es', { day: 'numeric', month: 'long' })}); las cifras de arriba son solo de ese reel.</p>
+      )}
+      {hasThreadsError &&<p className="sm-note">Threads aún no entrega métricas: hay que reconectar la cuenta en Reels para darle el permiso de estadísticas.</p>}
 
       <div className="sm-table-wrap">
         <table className="sm-table">
