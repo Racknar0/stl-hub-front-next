@@ -117,6 +117,16 @@ export default function SocialMetrics() {
     return { from, to: now }
   }, [range, customFrom, customTo])
 
+  // Evolución (fotos periódicas guardadas por el servidor); no consulta las redes
+  const loadHistory = useCallback(async () => {
+    if (bounds.to < bounds.from) return
+    try {
+      const res = await http.getData(`/reels/metrics/history?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}`)
+      setHistory(res.data)
+    } catch { setHistory(null) }
+  }, [bounds, http])
+  useEffect(() => { loadHistory() }, [loadHistory])
+
   // fresh = consultar las redes en vivo (al entrar y con "Actualizar"); al cambiar de rango se reutiliza lo ya consultado
   const load = useCallback(async (fresh = false) => {
     if (bounds.to < bounds.from) { setError('La fecha final es anterior a la inicial'); return }
@@ -147,16 +157,6 @@ export default function SocialMetrics() {
       setLoading(false)
     }
   }, [bounds, http, range, loadHistory])
-
-  // Evolución (fotos periódicas guardadas por el servidor); no consulta las redes
-  const loadHistory = useCallback(async () => {
-    if (bounds.to < bounds.from) return
-    try {
-      const res = await http.getData(`/reels/metrics/history?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}`)
-      setHistory(res.data)
-    } catch { setHistory(null) }
-  }, [bounds, http])
-  useEffect(() => { loadHistory() }, [loadHistory])
 
   // Al entrar o cambiar de rango se usa lo que el servidor ya tiene guardado; solo "Actualizar" consulta las redes en vivo
   useEffect(() => { load(false) }, [load])
