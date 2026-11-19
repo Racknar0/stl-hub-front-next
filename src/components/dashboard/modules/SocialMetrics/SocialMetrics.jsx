@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import './SocialMetrics.scss'
 import HttpService from '@/services/HttpService'
+import SocialCharts, { Sparkline, Delta } from './SocialCharts'
 
 const NETWORKS = [
   { key: 'facebook', label: 'Facebook' },
@@ -100,6 +101,7 @@ export default function SocialMetrics() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [history, setHistory] = useState(null)
   const http = useMemo(() => new HttpService(), [])
 
   const bounds = useMemo(() => {
@@ -137,12 +139,24 @@ export default function SocialMetrics() {
         }
       }
       setData(result)
+      // La foto de "Actualizar" se guarda en el servidor un instante después
+      if (fresh) setTimeout(loadHistory, 5000)
     } catch (e) {
       setError(e?.response?.data?.error || e.message || 'No se pudieron cargar las métricas')
     } finally {
       setLoading(false)
     }
-  }, [bounds, http, range])
+  }, [bounds, http, range, loadHistory])
+
+  // Evolución (fotos periódicas guardadas por el servidor); no consulta las redes
+  const loadHistory = useCallback(async () => {
+    if (bounds.to < bounds.from) return
+    try {
+      const res = await http.getData(`/reels/metrics/history?from=${encodeURIComponent(bounds.from.toISOString())}&to=${encodeURIComponent(bounds.to.toISOString())}`)
+      setHistory(res.data)
+    } catch { setHistory(null) }
+  }, [bounds, http])
+  useEffect(() => { loadHistory() }, [loadHistory])
 
   // Al entrar o cambiar de rango se usa lo que el servidor ya tiene guardado; solo "Actualizar" consulta las redes en vivo
   useEffect(() => { load(false) }, [load])
@@ -165,6 +179,16 @@ export default function SocialMetrics() {
     const all = [...rows, ...(pin && !pin.error ? [pin] : [])]
     return { views: sum(all, 'views'), likes: sum(all, 'likes'), comments: sum(all, 'comments'), shares: sum(all, 'shares'), saves: sum(all, 'saves') }
   }, [rows, pin])
+
+  const rangeDays = Math.max(1, Math.round((bounds.to - bounds.from) / 86400000))
+  // Serie y total ganado de cada métrica (según la red elegida) para las tarjetas
+  const kpiHistory = useMemo(() => {
+    const pts = history?.points || []
+    const pick = (p, k) => Object.entries(p.byNetwork).reduce((t, [n, v]) => t + (network === 'all' || network === n ? v[k] || 0 : 0), 0)
+    return Object.fromEntries(['views', 'likes', 'comments', 'shares', 'saves'].map(k => [k, { series: pts.map(p => pick(p, k)), gained: pts.reduce((t, p) => t + pick(p, k), 0) }]))
+  }, [history, network])
+  const prevTotals = history?.previousTotals || null
+  const prevFor = (k) => (prevTotals ? prevTotals[k] : null)
 
   const toggleSort = (key) => setSort(s => (s.key === key ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' }))
   const arrow = (key) => (sort.key === key ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : '')
@@ -210,12 +234,17 @@ export default function SocialMetrics() {
       </div>
 
       <div className="sm-kpis">
-        <div className="sm-kpi"><span>Visualizaciones</span><strong>{fmt(totals.views)}</strong></div>
-        <div className="sm-kpi"><span>Me gusta</span><strong>{fmt(totals.likes)}</strong></div>
-        <div className="sm-kpi"><span>Comentarios</span><strong>{fmt(totals.comments)}</strong></div>
-        <div className="sm-kpi"><span>Compartidos</span><strong>{fmt(totals.shares)}</strong></div>
-        <div className="sm-kpi"><span>Guardados</span><strong>{fmt(totals.saves)}</strong></div>
+        {[['views', 'Visualizaciones'], ['likes', 'Me gusta'], ['comments', 'Comentarios'], ['shares', 'Compartidos'], ['saves', 'Guardados']].map(([k, label]) => (
+          <div className="sm-kpi" key={k}>
+            <span>{label}</span>
+            <strong>{fmt(totals[k])}</strong>
+            <Sparkline values={kpiHistory[k].series} color={k === 'views' ? '#ff3366' : '#4da3ff'} />
+            <Delta current={kpiHistory[k].gained} previous={prevFor(k)} />
+          </div>
+        ))}
       </div>
+
+      <SocialCharts rows={rows} pin={pin} history={history} network={network} rangeDays={rangeDays} hourly={rangeDays <= 2} NetworkLogo={NetworkLogo} />
 
       {error && <p className="sm-error">{error}</p>}
       {data?.fallbackDate && (
