@@ -178,6 +178,41 @@
       &:hover { text-decoration: underline; }
     }
 
+    // Cada fila lleva una franja del color de su red para distinguirlas de un vistazo
+    .sm-row {
+      td:first-child { border-left: 4px solid transparent; }
+      &:hover { background: rgba(255, 255, 255, 0.03); }
+    }
+
+    .sm-row-facebook td:first-child { border-left-color: #1877f2; }
+    .sm-row-instagram td:first-child { border-left-color: #d6249f; }
+    .sm-row-youtube td:first-child { border-left-color: #ff0033; }
+    .sm-row-pinterest td:first-child { border-left-color: #e60023; }
+    .sm-row-threads td:first-child { border-left-color: #ffffff; }
+
+    .sm-col-channel { width: 130px; }
+
+    // Logo a todo color arriba y el nombre del canal debajo
+    td.sm-channel {
+      width: 130px;
+      text-align: center;
+      white-space: normal;
+      padding: 12px 10px;
+
+      svg {
+        display: block;
+        margin: 0 auto 6px;
+      }
+
+      .sm-channel-name {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+      }
+    }
+
     .sm-pin-row {
       background: rgba(230, 0, 35, 0.06);
     }
