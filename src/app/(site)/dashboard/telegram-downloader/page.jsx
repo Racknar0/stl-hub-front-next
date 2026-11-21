@@ -98,6 +98,7 @@ export default function TelegramDownloader() {
   const [authError, setAuthError] = useState('');        // motivo real que devolvió Telegram
   const [passwordHint, setPasswordHint] = useState(null); // pista de la contraseña 2FA
   const [showPassword, setShowPassword] = useState(false);
+  const [codeDelivery, setCodeDelivery] = useState('');     // dónde mandó Telegram el código
 
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('');
@@ -228,6 +229,7 @@ export default function TelegramDownloader() {
       // Si había un login a medias (p. ej. se recargó la página), retomarlo en su paso
       else if (d.auth?.stage === 'code' || d.auth?.stage === 'password') {
         setAuthStep(d.auth.stage);
+        setCodeDelivery(d.auth.codeDeliveryMessage || '');
         setPasswordHint(d.auth.passwordHint || null);
         setAuthError(d.auth.errorMessage || '');
       }
@@ -254,6 +256,7 @@ export default function TelegramDownloader() {
       if (a.stage === 'sending') continue;
       if (a.stage === 'code' || a.stage === 'password') {
         setAuthStep(a.stage);
+        setCodeDelivery(a.codeDeliveryMessage || '');
         setPasswordHint(a.passwordHint || null);
         setAuthError(a.errorMessage || '');
         return;
@@ -273,6 +276,7 @@ export default function TelegramDownloader() {
     setAuthPassword('');
     setAuthError('');
     setPasswordHint(null);
+    setCodeDelivery('');
   };
 
   const handleAuthPhone = async () => {
@@ -823,6 +827,11 @@ export default function TelegramDownloader() {
           {authStep === 'code' && (
             <div className="form-group">
               <label>Código de verificación</label>
+              {codeDelivery && (
+                <p style={{ fontSize: '0.85rem', color: '#cbd5e0', margin: '0 0 0.5rem', lineHeight: 1.5, padding: '0.6rem 0.8rem', borderRadius: '8px', background: 'rgba(79,172,254,0.1)', border: '1px solid rgba(79,172,254,0.3)' }}>
+                  {codeDelivery}
+                </p>
+              )}
               <input type="text" value={authCode} onChange={e => setAuthCode(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAuthCode(); }} disabled={authLoading} placeholder="12345" />
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthCode} disabled={authLoading}>
                 {authLoading ? 'Verificando...' : 'Verificar Código'}
