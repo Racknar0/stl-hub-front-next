@@ -1565,7 +1565,13 @@ const BatchRow = React.memo(function BatchRow({
                 align="center"
                 sx={{ borderBottom: cellBorder, color: primaryText }}
             >
-                <Stack spacing={0.5} alignItems="center">
+                {/* Al pasar el ratón: mensaje del worker (fase en curso o motivo del error) */}
+                <Tooltip
+                    title={row.error ? <span style={{ whiteSpace: 'pre-line', fontSize: 12 }}>{row.error}</span> : ''}
+                    placement="left"
+                    arrow
+                >
+                <Stack spacing={0.5} alignItems="center" sx={{ cursor: row.error ? 'help' : 'default' }}>
                     {/* Main */}
                     {(() => {
                         const s = mainStatus;
@@ -1736,6 +1742,7 @@ const BatchRow = React.memo(function BatchRow({
                         );
                     })()}
                 </Stack>
+                </Tooltip>
             </TableCell>
             <TableCell
                 align="center"

@@ -1060,6 +1060,8 @@ export default function BatchTable() {
       mainStatus: item.mainStatus || 'PENDING',
       backupStatus: item.backupStatus || 'PENDING',
       mainProgress: item.mainProgress || 0,
+      // Mensaje del worker: fase en curso ("Comprimiendo archivo final…") o motivo del error
+      error: String(item.error || '').trim(),
       similarResults: item.similarResults ?? null,
     }
   }
@@ -1100,6 +1102,7 @@ export default function BatchTable() {
                  // Mantener edición local, pero no pisar sugerencias IA si local está vacío.
                  return {
                    ...existing,
+                   error: String(item.error || '').trim(),
                    similarResults: item.similarResults ?? existing?.similarResults ?? null,
                    categorias: localCats.length > 0 ? localCats : backendCats,
                    tags: localTags.length > 0 ? localTags : backendTags,
