@@ -35,6 +35,8 @@ import { BRUSH_COLOR } from './components/BrushPanel';
 import { brushKey, rowHasBrush } from './brush';
 
 const EMPTY_SET = new Set();
+// Fotos visibles por fila en modo revisión antes del "+N"
+const REVIEW_VISIBLE_IMAGES = 3;
 
 const BatchRow = React.memo(function BatchRow({
     row,
@@ -115,7 +117,7 @@ const BatchRow = React.memo(function BatchRow({
     const primaryText = '#eef4ff';
     const secondaryText = 'rgba(220,232,255,0.82)';
     const cellBorder = '1px solid rgba(148,163,184,0.24)';
-    const reviewThumbSize = 250;
+    const reviewThumbSize = 260;
     const hasNoCategories = !Array.isArray(row.categorias) || row.categorias.length === 0;
     const hasNoTags = !Array.isArray(row.tags) || row.tags.length === 0;
     const hasNoDescriptionEs = !row.description || !String(row.description).trim();
@@ -224,9 +226,9 @@ const BatchRow = React.memo(function BatchRow({
                         >
                             {pesoLabel}
                         </Typography>
-                        {Array.isArray(row.imagenes) && row.imagenes.length > 6 && (
+                        {Array.isArray(row.imagenes) && row.imagenes.length > REVIEW_VISIBLE_IMAGES && (
                             <Stack alignItems="center" spacing={0.2} sx={{ my: 0.25 }}>
-                                <Tooltip title={reviewExpanded ? 'Mostrar solo 6' : `Mostrar todas (${row.imagenes.length})`}>
+                                <Tooltip title={reviewExpanded ? `Mostrar solo ${REVIEW_VISIBLE_IMAGES}` : `Mostrar todas (${row.imagenes.length})`}>
                                     <span>
                                         <IconButton
                                             size="small"
@@ -280,7 +282,7 @@ const BatchRow = React.memo(function BatchRow({
                                         }
                                     }}
                                 >
-                                    {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - 6}`}
+                                    {reviewExpanded ? `${row.imagenes.length}` : `+${row.imagenes.length - REVIEW_VISIBLE_IMAGES}`}
                                 </Typography>
                             </Stack>
                         )}
@@ -395,58 +397,8 @@ const BatchRow = React.memo(function BatchRow({
                         py: 0.75,
                     }}
                 >
-                    <Stack spacing={0.5} sx={{ width: '100%', mt: 0 }}>
-                        {/* Name fields */}
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1.5,
-                                width: '100%',
-                                bgcolor: 'rgba(15, 23, 42, 0.45)',
-                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                borderRadius: 2,
-                                p: 0.75,
-                                backdropFilter: 'blur(4px)',
-                                mb: 0.5,
-                            }}
-                        >
-                            <TextField
-                                size="small"
-                                fullWidth
-                                value={row.nombre}
-                                placeholder="Nombre ES"
-                                onChange={(e) => onNombreChange(row.id, e.target.value)}
-                                onBlur={() => onSaveRow(row.id)}
-                                disabled={isOk || isProcesso}
-                                sx={{
-                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
-                                    borderRadius: 1.2,
-                                    '& .MuiInputBase-root': {
-                                        fontSize: '12px',
-                                        color: '#f8fafc',
-                                    },
-                                }}
-                            />
-                            <TextField
-                                size="small"
-                                fullWidth
-                                value={row.nombreEn || ''}
-                                placeholder="Name EN"
-                                onChange={(e) => onNombreEnChange(row.id, e.target.value)}
-                                onBlur={() => onSaveRow(row.id)}
-                                disabled={isOk || isProcesso}
-                                sx={{
-                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
-                                    borderRadius: 1.2,
-                                    '& .MuiInputBase-root': {
-                                        fontSize: '12px',
-                                        color: '#f8fafc',
-                                    },
-                                }}
-                            />
-                        </Box>
-
+                    {/* Fotos a la izquierda (ancho según cuántas hay) y textos al lado */}
+                    <Box sx={{ display: 'flex', flexDirection: reviewExpanded ? 'column' : 'row', alignItems: 'flex-start', gap: 1.5, width: '100%' }}>
                         {/* Images */}
                         <Box
                             sx={{
@@ -461,20 +413,22 @@ const BatchRow = React.memo(function BatchRow({
                                 pt: 0,
                                 pb: 0,
                                 position: 'relative',
-                                width: '100%',
+                                // Solo ocupa lo que necesitan sus fotos; desplegado ocupa todo el ancho
+                                width: reviewExpanded ? '100%' : 'auto',
+                                flex: reviewExpanded ? 'none' : '0 0 auto',
                             }}
                         >
                             {Array.isArray(row.imagenes) && row.imagenes.length > 0 ? (
                                 <>
-                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, 6)).map((img, i) => {
+                                    {(reviewExpanded ? row.imagenes : row.imagenes.slice(0, REVIEW_VISIBLE_IMAGES)).map((img, i) => {
                                         const srcUrl = img.startsWith('http')
                                             ? img
                                             : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/uploads/${img.split('/').map(segment => encodeURIComponent(segment)).join('/')}`;
                                         const isPrimary = i === 0;
                                         return (
                                             <Box key={i} sx={{
-                                                width: reviewExpanded ? 340 : 320,
-                                                height: reviewExpanded ? 340 : 320,
+                                                width: reviewExpanded ? 340 : reviewThumbSize,
+                                                height: reviewExpanded ? 340 : reviewThumbSize,
                                                 position: 'relative',
                                                 borderRadius: 1.5,
                                                 border: isPrimary ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
@@ -494,6 +448,14 @@ const BatchRow = React.memo(function BatchRow({
                                                     onClick={() => onOpenImagePreview?.(srcUrl)}
                                                     sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                                 />
+                                                {!reviewExpanded && i === REVIEW_VISIBLE_IMAGES - 1 && row.imagenes.length > REVIEW_VISIBLE_IMAGES && (
+                                                    <Box
+                                                        onClick={(e) => { e.stopPropagation(); setReviewExpanded(true); }}
+                                                        sx={{ position: 'absolute', inset: 0, zIndex: 2, display: 'grid', placeItems: 'center', bgcolor: 'rgba(2,6,23,0.62)', color: '#fff', fontSize: 34, fontWeight: 800 }}
+                                                    >
+                                                        +{row.imagenes.length - REVIEW_VISIBLE_IMAGES}
+                                                    </Box>
+                                                )}
                                                 <Box className="batch-image-actions" onClick={() => onOpenImagePreview?.(srcUrl)} sx={{
                                                     position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                                                     justifyContent: 'space-between', p: 0.5, opacity: 0, transition: 'opacity 0.18s ease',
@@ -536,14 +498,65 @@ const BatchRow = React.memo(function BatchRow({
 
                                 </>
                             ) : (
-                                <Box sx={{ width: 320, height: 320, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)' }}>
+                                <Box sx={{ width: reviewThumbSize, height: reviewThumbSize, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(120,120,120,0.15)', border: '1px dashed rgba(120,120,120,0.3)' }}>
                                     <Typography variant="caption" color="text.secondary">N/A</Typography>
                                 </Box>
                             )}
                         </Box>
 
+                    <Stack spacing={0.75} sx={{ flex: '1 1 380px', minWidth: 380, width: reviewExpanded ? '100%' : 'auto' }}>
+                        {/* Name fields */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                width: '100%',
+                                bgcolor: 'rgba(15, 23, 42, 0.45)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                borderRadius: 2,
+                                p: 0.75,
+                                backdropFilter: 'blur(4px)',
+                            }}
+                        >
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={row.nombre}
+                                placeholder="Nombre ES"
+                                onChange={(e) => onNombreChange(row.id, e.target.value)}
+                                onBlur={() => onSaveRow(row.id)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={row.nombreEn || ''}
+                                placeholder="Name EN"
+                                onChange={(e) => onNombreEnChange(row.id, e.target.value)}
+                                onBlur={() => onSaveRow(row.id)}
+                                disabled={isOk || isProcesso}
+                                sx={{
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '12px',
+                                        color: '#f8fafc',
+                                    },
+                                }}
+                            />
+                        </Box>
+
                         {/* Categories & Tags stack */}
-                        <Stack direction="row" spacing={1} sx={{ width: '100%', mt: 0.75 }}>
+                        <Stack direction="column" spacing={0.75} sx={{ width: '100%' }}>
                             {/* Categories */}
                             <Box sx={{ flex: 1, minWidth: 0, bgcolor: 'rgba(234, 179, 8, 0.04)', border: '1px solid rgba(234, 179, 8, 0.15)', borderRadius: 3, p: 0.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -765,88 +778,35 @@ const BatchRow = React.memo(function BatchRow({
                                 </Box>
                             </Box>
                         </Stack>
+                        {/* Descripción ES (la EN no se muestra en modo revisión) */}
+                        <TextField
+                            value={row.description || ''}
+                            size="small"
+                            fullWidth
+                            multiline
+                            rows={4}
+                            placeholder="Descripción ES"
+                            onChange={(e) => onDescriptionChange(row.id, e.target.value)}
+                            onBlur={() => onSaveRow(row.id)}
+                            variant="outlined"
+                            disabled={isOk || isProcesso}
+                            sx={{
+                                '& .MuiInputBase-root': {
+                                    fontSize: '12px',
+                                    color: '#f8fafc',
+                                    bgcolor: 'rgba(30, 41, 59, 0.3)',
+                                    borderRadius: 1.2,
+                                    alignItems: 'stretch',
+                                },
+                                '& .MuiInputBase-inputMultiline': {
+                                    overflow: 'auto !important',
+                                    resize: 'vertical',
+                                    minHeight: '25px',
+                                },
+                            }}
+                        />
                     </Stack>
-                </TableCell>
-
-                <TableCell
-                    sx={{
-                        minWidth: 400,
-                        width: 400,
-                        maxWidth: 400,
-                        borderBottom: cellBorder,
-                        color: primaryText,
-                        verticalAlign: 'top',
-                        py: 0.75,
-                    }}
-                >
-                    <Typography
-                        variant="caption"
-                        sx={{ display: 'block', color: secondaryText, mb: 0.25 }}
-                    >
-                        Descripción ES
-                    </Typography>
-                    <TextField
-                        value={row.description || ''}
-                        size="small"
-                        fullWidth
-                        multiline
-                        rows={6}
-                        onChange={(e) => onDescriptionChange(row.id, e.target.value)}
-                        onBlur={() => onSaveRow(row.id)}
-                        variant="outlined"
-                        disabled={isOk || isProcesso}
-                        sx={{
-                            '& .MuiInputBase-root': {
-                                fontSize: '12px',
-                                color: '#f8fafc',
-                                bgcolor: 'rgba(30, 41, 59, 0.3)',
-                                borderRadius: 1.2,
-                                alignItems: 'stretch',
-                            },
-                            '& .MuiInputBase-inputMultiline': {
-                                overflow: 'auto !important',
-                                resize: 'vertical',
-                                minHeight: '25px',
-                            },
-                        }}
-                    />
-
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            display: 'block',
-                            color: secondaryText,
-                            mt: 0.9,
-                            mb: 0.25,
-                        }}
-                    >
-                        Description EN
-                    </Typography>
-                    <TextField
-                        value={row.descriptionEn || ''}
-                        size="small"
-                        fullWidth
-                        multiline
-                        rows={6}
-                        onChange={(e) => onDescriptionEnChange(row.id, e.target.value)}
-                        onBlur={() => onSaveRow(row.id)}
-                        variant="outlined"
-                        disabled={isOk || isProcesso}
-                        sx={{
-                            '& .MuiInputBase-root': {
-                                fontSize: '12px',
-                                color: '#f8fafc',
-                                bgcolor: 'rgba(30, 41, 59, 0.3)',
-                                borderRadius: 1.2,
-                                alignItems: 'stretch',
-                            },
-                            '& .MuiInputBase-inputMultiline': {
-                                overflow: 'auto !important',
-                                resize: 'vertical',
-                                minHeight: '25px',
-                            },
-                        }}
-                    />
+                    </Box>
                 </TableCell>
             </TableRow>
         );

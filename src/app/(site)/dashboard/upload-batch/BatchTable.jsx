@@ -563,7 +563,7 @@ export default function BatchTable() {
 
   const virtualItems = virtualizer.getVirtualItems()
 
-  const visibleColumnCount = reviewMode ? 3 : 6
+  const visibleColumnCount = reviewMode ? 2 : 6
 
   const makeUploadsUrl = useCallback((relativeOrUrl) => {
     const value = String(relativeOrUrl || '').trim()
