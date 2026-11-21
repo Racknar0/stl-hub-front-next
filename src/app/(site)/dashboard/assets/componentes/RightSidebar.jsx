@@ -13,6 +13,8 @@ export default function RightSidebar({
   inFlow = false,
   title = 'Panel',
   headerAction = null,
+  // Oculta los botones de la cabecera hasta pasar el ratón por ella
+  hideHeaderActionUntilHover = false,
   children,
 }) {
   const isLeft = String(side || 'right').toLowerCase() === 'left'
@@ -52,6 +54,7 @@ export default function RightSidebar({
           justifyContent: 'space-between',
           px: 1,
           gap: 1,
+          ...(hideHeaderActionUntilHover ? { '&:hover .rs-header-action': { opacity: 1 } } : {}),
         }}
       >
         {effectiveOpen ? (
@@ -63,7 +66,14 @@ export default function RightSidebar({
         )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          {effectiveOpen && headerAction}
+          {effectiveOpen && headerAction && (
+            <Box
+              className="rs-header-action"
+              sx={hideHeaderActionUntilHover ? { opacity: 0, transition: 'opacity 150ms ease', '&:focus-within': { opacity: 1 } } : undefined}
+            >
+              {headerAction}
+            </Box>
+          )}
           {collapsible ? (
             <IconButton
               size="small"
