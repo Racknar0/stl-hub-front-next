@@ -2109,7 +2109,8 @@ export default function BatchTable() {
   }, [cuentas, distributionAccountIds, minPendingAssetMb])
 
   // --- LOGICA DE AUTO DISTRIBUCION ---
-  const handleAutoDistribute = async ({ preferredAccountIds = [] } = {}) => {
+  // selectUsedAccounts: al terminar, marca en "Cuentas destino" las cuentas que se usaron (botón Auto distribuir).
+  const handleAutoDistribute = async ({ preferredAccountIds = [], selectUsedAccounts = false } = {}) => {
     const freshAccounts = await refreshBatchAccounts({ silent: true })
     if (!Array.isArray(freshAccounts) || freshAccounts.length === 0) {
       setToast({ open: true, msg: 'No hay cuentas disponibles para distribuir.', type: 'warning' })
@@ -2185,6 +2186,8 @@ export default function BatchTable() {
       .sort((a, b) => b.pesoMb - a.pesoMb)
 
     let unassignedCount = 0
+    let unassignedMb = 0
+    const usedAccountIds = new Set()
 
     for (const { index, pesoMb } of candidatesBySize) {
       const row = updatedRows[index]
@@ -2198,16 +2201,30 @@ export default function BatchTable() {
 
       if (bestAccount) {
         row.cuenta = bestAccount.id
+        usedAccountIds.add(Number(bestAccount.id))
         for (const r of bestAccount.resources) {
           resourceFreeMb.set(r.id, Math.max(0, (resourceFreeMb.get(r.id) ?? 0) - pesoMb))
         }
       } else {
         row.cuenta = ''
         unassignedCount++
+        unassignedMb += pesoMb
       }
     }
 
     setRows(updatedRows)
+
+    if (selectUsedAccounts) {
+      const usedIds = Array.from(usedAccountIds)
+      distributionAccountIdsRef.current = usedIds
+      setDistributionAccountIds(usedIds)
+    }
+
+    const assignedCount = candidatesBySize.length - unassignedCount
+    const summaryMsg = `${assignedCount} assets repartidos en ${usedAccountIds.size} cuenta(s)` +
+      (unassignedCount > 0
+        ? ` · Faltaron ${unassignedCount} assets (${(unassignedMb / 1024).toFixed(2)} GB) por falta de espacio: quedaron sin asignar.`
+        : '.')
 
     const itemsToSave = updatedRows.filter(r => {
       const st = String(r?.estado || '').toLowerCase()
@@ -2221,14 +2238,7 @@ export default function BatchTable() {
       }))
       await http.postData('/batch-imports/items-bulk', { items: payloadItems })
       
-      if (unassignedCount > 0) {
-         setToast({ open: true, msg: `Alerta: ${unassignedCount} assets no caben en las cuentas disponibles y se guardó la distribución en la BD.`, type: 'warning' })
-      } else {
-         const scopedMsg = preferredSet.size > 0
-           ? `Distribución completada y guardada en la BD usando ${accountsStatus.length} cuenta(s) seleccionadas.`
-           : 'Distribución inteligente completada y guardada en la BD con éxito.'
-         setToast({ open: true, msg: scopedMsg, type: 'success' })
-      }
+      setToast({ open: true, msg: summaryMsg, type: unassignedCount > 0 ? 'warning' : 'success' })
     } catch (e) {
       console.error('Error al guardar auto-distribución en la BD:', e)
       setToast({ open: true, msg: 'Distribución realizada localmente, pero falló al guardar en la BD.', type: 'error' })

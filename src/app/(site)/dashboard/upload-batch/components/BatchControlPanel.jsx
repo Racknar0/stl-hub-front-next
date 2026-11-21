@@ -271,9 +271,33 @@ export default function BatchControlPanel({
                 </Select>
               </FormControl>
               <Typography variant="caption" sx={{ color: '#38bdf8', fontSize: 10, pl: 0.5, fontWeight: 700 }}>
-                Espacio estimado: {formatBytes(totalAvailableSpaceBytes)}
+                Espacio estimado: {formatBytes(totalAvailableSpaceBytes)} · {accountSelectionMeta?.selectable?.length || 0} cuentas disponibles
               </Typography>
             </Stack>
+
+            <Tooltip title="Repartir los assets pendientes entre todas las cuentas disponibles, llenando primero las que tienen menos espacio libre">
+              <span>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AutoAwesomeIcon />}
+                  disabled={isProcessing}
+                  onClick={async () => {
+                    if (await confirmAlert('¿Auto distribuir?', 'Se reasignará la cuenta de todos los assets pendientes usando todas las cuentas disponibles, empezando por las que tienen menos espacio libre. Los que no quepan quedarán sin asignar.')) {
+                      handleAutoDistribute({ selectUsedAccounts: true })
+                    }
+                  }}
+                  sx={{
+                    borderRadius: 1.5, textTransform: 'none', fontWeight: 600, height: 30, px: 2, whiteSpace: 'nowrap',
+                    borderColor: 'rgba(56,189,248,0.5)',
+                    color: '#7dd3fc',
+                    '&:hover': { borderColor: '#38bdf8', bgcolor: 'rgba(56,189,248,0.1)' }
+                  }}
+                >
+                  Auto distribuir
+                </Button>
+              </span>
+            </Tooltip>
 
             <Tooltip title="Quitar todas las cuentas asignadas a los assets y deseleccionarlas">
               <Button
