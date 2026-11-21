@@ -1,12 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import './Testimonials.scss';
 import { useI18n } from '../../../i18n';
 import useResolvedLanguage from '../../../hooks/useResolvedLanguage';
+import { getPublicReviews } from '../../../services/ReviewService';
+
+// Opiniones reales aprobadas necesarias para reemplazar las de ejemplo (sin mezclarlas)
+const MIN_REAL_REVIEWS = 6;
 
 const defaultItems = [
 	{
@@ -77,9 +81,32 @@ const getInitials = (name = '') => {
 };
 
 const Testimonials = ({ items = defaultItems }) => {
-	const list = Array.isArray(items) && items.length ? items : defaultItems;
 	const resolvedLanguage = useResolvedLanguage();
 	const isEn = resolvedLanguage === 'en';
+	const [realItems, setRealItems] = useState([]);
+
+	useEffect(() => {
+		let mounted = true;
+		getPublicReviews()
+			.then((res) => {
+				const rows = res?.data?.items || [];
+				if (mounted) setRealItems(rows.map((r) => ({
+					es: r.text,
+					en: r.text,
+					name: r.displayName,
+					rating: r.rating,
+					downloads: r.downloads,
+				})));
+			})
+			.catch(() => {});
+		return () => { mounted = false; };
+	}, []);
+
+	const fallback = Array.isArray(items) && items.length ? items : defaultItems;
+	const list = realItems.length >= MIN_REAL_REVIEWS ? realItems : fallback;
+	const verifiedRole = (it) => it.role || (isEn
+		? `${'★'.repeat(it.rating || 5)} · Verified maker`
+		: `${'★'.repeat(it.rating || 5)} · Maker verificado`);
 	const { t } = useI18n?.() || { t: () => undefined };
 	
 	const title = (typeof t === 'function' && t('testimonials.title')) || 
@@ -125,7 +152,7 @@ const Testimonials = ({ items = defaultItems }) => {
 									</div>
 									<div className="id">
 										<div className="name">{it.name}</div>
-										<div className="role">{it.role}</div>
+										<div className="role">{verifiedRole(it)}</div>
 									</div>
 								</div>
 							</article>

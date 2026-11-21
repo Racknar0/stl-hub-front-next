@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import useStore from '../../../../store/useStore';
 import HttpService from '../../../../services/HttpService';
@@ -8,6 +8,11 @@ import styles from './AssetSeoBackground.module.css';
 import { sendGTMEvent } from '@next/third-parties/google';
 import { usePromo } from '../../../../hooks/usePromo';
 import DownloadLimitModal from '../../../../components/common/DownloadLimitModal/DownloadLimitModal';
+import ReviewPromptModal from '../../../../components/common/ReviewPromptModal/ReviewPromptModal';
+import { shouldShowReviewPrompt, markReviewPromptShown, markReviewDone } from '../../../../services/ReviewService';
+
+// Espera tras una descarga correcta antes de pedir la opinión (el usuario suele estar en la pestaña de MEGA)
+const REVIEW_PROMPT_DELAY_MS = 4000;
 
 export default function AssetDownloadCtaClient({ assetId, isPremium = false, isEn = false }) {
   const token = useStore((s) => s.token);
@@ -21,6 +26,25 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
   const [modalKind, setModalKind] = useState('limit-free');
   const [modalNextReset, setModalNextReset] = useState(null);
   const [modalLimit, setModalLimit] = useState(50);
+
+  // Modal de opinión sobre la web
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const reviewTimer = useRef(null);
+  useEffect(() => () => clearTimeout(reviewTimer.current), []);
+
+  const scheduleReviewPrompt = () => {
+    clearTimeout(reviewTimer.current);
+    reviewTimer.current = setTimeout(async () => {
+      try {
+        if (await shouldShowReviewPrompt()) {
+          markReviewPromptShown();
+          setReviewOpen(true);
+        }
+      } catch {
+        // best-effort: si falla, no se muestra
+      }
+    }, REVIEW_PROMPT_DELAY_MS);
+  };
 
   const http = useMemo(() => new HttpService(), []);
 
@@ -69,6 +93,7 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
         } else {
           window.open(link, '_blank');
         }
+        scheduleReviewPrompt();
         return;
       }
 
@@ -145,6 +170,13 @@ export default function AssetDownloadCtaClient({ assetId, isPremium = false, isE
         kind={modalKind}
         nextReset={modalNextReset}
         limit={modalLimit}
+        isEn={isEn}
+      />
+
+      <ReviewPromptModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        onSubmitted={markReviewDone}
         isEn={isEn}
       />
     </>

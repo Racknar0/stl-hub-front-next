@@ -15,6 +15,7 @@ import PeopleOutline from '@mui/icons-material/PeopleOutline'
 import MailOutline from '@mui/icons-material/MailOutline'
 import CardGiftcardOutlined from '@mui/icons-material/CardGiftcardOutlined'
 import NotificationsNone from '@mui/icons-material/NotificationsNone'
+import RateReviewOutlined from '@mui/icons-material/RateReviewOutlined'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import Menu from '@mui/icons-material/Menu'
 import Close from '@mui/icons-material/Close'
@@ -38,6 +39,7 @@ const groups = [
     { label: 'Marketing', href: '/dashboard/marketing', icon: MailOutline },
     { label: 'Publicidad', href: '/dashboard?tab=campaigns', tab: 'campaigns', icon: CampaignOutlined },
     { label: 'Códigos regalo', href: '/dashboard?tab=gift-codes', tab: 'gift-codes', icon: CardGiftcardOutlined },
+    { label: 'Opiniones', href: '/dashboard/opiniones', icon: RateReviewOutlined, reviews: true },
   ] },
   { label: 'Sistema', items: [
     { label: 'Notificaciones', href: '/dashboard/notifications', icon: NotificationsNone, notifications: true },
@@ -48,6 +50,7 @@ const groups = [
 function SidebarContents() {
   const [open, setOpen] = useState(false)
   const [hasUnread, setHasUnread] = useState(false)
+  const [pendingReviews, setPendingReviews] = useState(0)
   const pathname = usePathname()
   const params = useSearchParams()
 
@@ -58,6 +61,10 @@ function SidebarContents() {
       try {
         const res = await http.getData('/admin/notifications?status=UNREAD&take=1')
         if (mounted) setHasUnread((res.data?.notifications || []).length > 0)
+      } catch {}
+      try {
+        const res = await http.getData('/admin/reviews?status=PENDING&countsOnly=1')
+        if (mounted) setPendingReviews(Number(res.data?.counts?.PENDING || 0))
       } catch {}
     }
     fetchUnread()
@@ -78,6 +85,7 @@ function SidebarContents() {
           <Icon className="nav-icon" aria-hidden="true" />
           <span>{item.label}</span>
           {item.notifications && hasUnread && <span className="notif-dot" aria-label="Hay notificaciones sin leer" />}
+          {item.reviews && pendingReviews > 0 && <span className="notif-dot" aria-label={`${pendingReviews} opiniones pendientes de aprobar`} title={`${pendingReviews} pendientes`} />}
         </Link>
       </li>
     )
