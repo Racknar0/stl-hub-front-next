@@ -1987,18 +1987,24 @@ export default function BatchTable() {
   const mainProgressStats = useMemo(() => {
     const eligible = rows.filter((r) => String(r.estado || '').toLowerCase() !== 'borrador')
     const total = eligible.length
-    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0 }
+    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0, totalMb: 0, doneMb: 0 }
 
     let units = 0
     let ok = 0
     let error = 0
     let uploading = 0
+    // MB subidos / totales (las filas en error no cuentan como subidas)
+    let totalMb = 0
+    let doneMb = 0
 
     for (const r of eligible) {
       const st = String(r.mainStatus || 'PENDING').toUpperCase()
+      const mb = Math.max(0, Number(r.pesoMB || 0))
+      totalMb += mb
       if (st === 'OK') {
         ok += 1
         units += 1
+        doneMb += mb
       } else if (st === 'ERROR') {
         error += 1
         units += 1
@@ -2006,6 +2012,7 @@ export default function BatchTable() {
         uploading += 1
         const p = Math.max(0, Math.min(100, Number(r.mainProgress || 0)))
         units += p / 100
+        doneMb += mb * (p / 100)
       }
     }
 
@@ -2015,6 +2022,8 @@ export default function BatchTable() {
       ok,
       error,
       uploading,
+      totalMb,
+      doneMb,
     }
   }, [rows])
 
@@ -2025,24 +2034,31 @@ export default function BatchTable() {
       return !isDraft && backup !== 'N/A'
     })
     const total = eligible.length
-    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0 }
+    if (!total) return { total: 0, pct: 0, ok: 0, error: 0, uploading: 0, totalMb: 0, doneMb: 0 }
 
     let units = 0
     let ok = 0
     let error = 0
     let uploading = 0
+    // El backup no reporta progreso por fila: lo que está subiendo cuenta como mitad
+    let totalMb = 0
+    let doneMb = 0
 
     for (const r of eligible) {
       const st = String(r.backupStatus || 'PENDING').toUpperCase()
+      const mb = Math.max(0, Number(r.pesoMB || 0))
+      totalMb += mb
       if (st === 'OK') {
         ok += 1
         units += 1
+        doneMb += mb
       } else if (st === 'ERROR') {
         error += 1
         units += 1
       } else if (st === 'UPLOADING') {
         uploading += 1
         units += 0.5
+        doneMb += mb * 0.5
       }
     }
 
@@ -2052,6 +2068,8 @@ export default function BatchTable() {
       ok,
       error,
       uploading,
+      totalMb,
+      doneMb,
     }
   }, [rows])
 

@@ -10,6 +10,14 @@
 import React from 'react'
 import { Box, Stack, Typography, LinearProgress, CircularProgress, Button } from '@mui/material'
 
+// MB → "850 MB" o "12.40 GB"
+const formatMb = (mb) => {
+  const n = Math.max(0, Number(mb || 0))
+  return n >= 1024 ? `${(n / 1024).toFixed(2)} GB` : `${Math.round(n)} MB`
+}
+const sizeLine = (stats) =>
+  `${formatMb(stats.doneMb)} de ${formatMb(stats.totalMb)} subidos · faltan ${formatMb(Math.max(0, (stats.totalMb || 0) - (stats.doneMb || 0)))}`
+
 export default function BatchProgressBars({
   // ─── IA en proceso ───
   isApplyingAiMetadata,
@@ -195,6 +203,11 @@ export default function BatchProgressBars({
           <Typography variant="caption" sx={{ color: 'rgba(186,230,253,0.88)', mt: 0.75, display: 'block' }}>
             OK: {mainProgressStats.ok}/{mainProgressStats.total} · Subiendo: {mainProgressStats.uploading} · Error: {mainProgressStats.error}
           </Typography>
+          {mainProgressStats.totalMb > 0 && (
+            <Typography variant="caption" sx={{ color: '#f8fafc', fontWeight: 700, display: 'block' }}>
+              {sizeLine(mainProgressStats)}
+            </Typography>
+          )}
         </Box>
 
         {/* Backup progress */}
@@ -214,6 +227,11 @@ export default function BatchProgressBars({
           <Typography variant="caption" sx={{ color: 'rgba(245,208,254,0.88)', mt: 0.75, display: 'block' }}>
             OK: {backupProgressStats.ok}/{backupProgressStats.total} · Subiendo: {backupProgressStats.uploading} · Error: {backupProgressStats.error}
           </Typography>
+          {backupProgressStats.totalMb > 0 && (
+            <Typography variant="caption" sx={{ color: '#f8fafc', fontWeight: 700, display: 'block' }}>
+              {sizeLine(backupProgressStats)}
+            </Typography>
+          )}
         </Box>
       </Box>
     </>
