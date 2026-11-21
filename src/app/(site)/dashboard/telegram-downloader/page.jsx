@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import HttpService from '@/services/HttpService';
 import { Dialog, Box } from '@mui/material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import useStore from '@/store/useStore';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
@@ -93,6 +95,9 @@ export default function TelegramDownloader() {
   const [authCode, setAuthCode] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');        // motivo real que devolvió Telegram
+  const [passwordHint, setPasswordHint] = useState(null); // pista de la contraseña 2FA
+  const [showPassword, setShowPassword] = useState(false);
 
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('');
@@ -220,44 +225,93 @@ export default function TelegramDownloader() {
       const res = await http.getData('/telegram/auth/status');
       const d = res.data || res;
       if (d.success && d.isAuthorized) setIsAuthorized(true);
+      // Si había un login a medias (p. ej. se recargó la página), retomarlo en su paso
+      else if (d.auth?.stage === 'code' || d.auth?.stage === 'password') {
+        setAuthStep(d.auth.stage);
+        setPasswordHint(d.auth.passwordHint || null);
+        setAuthError(d.auth.errorMessage || '');
+      }
     } catch (e) { console.error('Error checking auth', e); }
+  };
+
+  const authRequestError = (e, fallback) => e?.response?.data?.message || e?.message || fallback;
+
+  // Tras enviar un dato, consulta el estado hasta que Telegram responda (pide el siguiente paso, falla o entra)
+  const waitForAuth = async () => {
+    for (let i = 0; i < 40; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      let d;
+      try {
+        const res = await http.getData('/telegram/auth/status');
+        d = res.data || res;
+      } catch { continue; }
+      if (d.success && d.isAuthorized) {
+        setAuthError('');
+        setIsAuthorized(true);
+        return;
+      }
+      const a = d.auth || {};
+      if (a.stage === 'sending') continue;
+      if (a.stage === 'code' || a.stage === 'password') {
+        setAuthStep(a.stage);
+        setPasswordHint(a.passwordHint || null);
+        setAuthError(a.errorMessage || '');
+        return;
+      }
+      if (a.stage === 'failed') {
+        setAuthError(a.errorMessage || 'No se pudo iniciar sesión.');
+        setAuthStep('failed');
+        return;
+      }
+    }
+    setAuthError('Telegram no respondió a tiempo. Vuelve a intentarlo.');
+  };
+
+  const restartAuth = () => {
+    setAuthStep('phone');
+    setAuthCode('');
+    setAuthPassword('');
+    setAuthError('');
+    setPasswordHint(null);
   };
 
   const handleAuthPhone = async () => {
     if (!phoneNumber) return;
     setAuthLoading(true);
-    try { await http.postData('/telegram/auth/start', { phoneNumber }); setAuthStep('code'); }
-    catch { alert('Error starting auth'); }
+    setAuthError('');
+    try {
+      await http.postData('/telegram/auth/start', { phoneNumber: phoneNumber.trim() });
+      await waitForAuth();
+    } catch (e) {
+      setAuthError(authRequestError(e, 'No se pudo iniciar el login'));
+    }
     setAuthLoading(false);
   };
 
   const handleAuthCode = async () => {
     if (!authCode) return;
     setAuthLoading(true);
+    setAuthError('');
     try {
-      await http.postData('/telegram/auth/code', { code: authCode });
-      setTimeout(async () => {
-        const res = await http.getData('/telegram/auth/status');
-        const d = res.data || res;
-        if (d.success && d.isAuthorized) setIsAuthorized(true);
-        else setAuthStep('password');
-        setAuthLoading(false);
-      }, 3000);
-    } catch { alert('Error sending code'); setAuthLoading(false); }
+      await http.postData('/telegram/auth/code', { code: authCode.trim() });
+      await waitForAuth();
+    } catch (e) {
+      setAuthError(authRequestError(e, 'No se pudo enviar el código'));
+    }
+    setAuthLoading(false);
   };
 
   const handleAuthPassword = async () => {
+    if (!authPassword) return;
     setAuthLoading(true);
+    setAuthError('');
     try {
       await http.postData('/telegram/auth/password', { password: authPassword });
-      setTimeout(async () => {
-        const res = await http.getData('/telegram/auth/status');
-        const d = res.data || res;
-        if (d.success && d.isAuthorized) setIsAuthorized(true);
-        else alert('Autenticación fallida');
-        setAuthLoading(false);
-      }, 3000);
-    } catch { alert('Error sending password'); setAuthLoading(false); }
+      await waitForAuth();
+    } catch (e) {
+      setAuthError(authRequestError(e, 'No se pudo enviar la contraseña'));
+    }
+    setAuthLoading(false);
   };
 
   const fetchChannels = async () => {
@@ -760,7 +814,7 @@ export default function TelegramDownloader() {
           {authStep === 'phone' && (
             <div className="form-group">
               <label>Número de Teléfono (ej. +57...)</label>
-              <input type="text" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} disabled={authLoading} placeholder="+573001234567" />
+              <input type="text" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAuthPhone(); }} disabled={authLoading} placeholder="+573001234567" />
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthPhone} disabled={authLoading}>
                 {authLoading ? 'Enviando...' : 'Enviar Código'}
               </button>
@@ -769,7 +823,7 @@ export default function TelegramDownloader() {
           {authStep === 'code' && (
             <div className="form-group">
               <label>Código de verificación</label>
-              <input type="text" value={authCode} onChange={e => setAuthCode(e.target.value)} disabled={authLoading} placeholder="12345" />
+              <input type="text" value={authCode} onChange={e => setAuthCode(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAuthCode(); }} disabled={authLoading} placeholder="12345" />
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthCode} disabled={authLoading}>
                 {authLoading ? 'Verificando...' : 'Verificar Código'}
               </button>
@@ -777,12 +831,46 @@ export default function TelegramDownloader() {
           )}
           {authStep === 'password' && (
             <div className="form-group">
-              <label>Contraseña 2FA</label>
-              <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} disabled={authLoading} />
-              <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthPassword} disabled={authLoading}>
+              <label>Contraseña de verificación en dos pasos</label>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 0.5rem', lineHeight: 1.5 }}>
+                Tu cuenta tiene activada la verificación en dos pasos. Es una contraseña que tú creaste en Telegram
+                (Ajustes → Privacidad y seguridad → Verificación en dos pasos), no el código que llega por mensaje.
+              </p>
+              {passwordHint && <p style={{ fontSize: '0.8rem', color: '#cbd5e0', margin: '0 0 0.5rem' }}>Pista: <b>{passwordHint}</b></p>}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={authPassword}
+                  onChange={e => setAuthPassword(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAuthPassword(); }}
+                  disabled={authLoading}
+                  autoComplete="current-password"
+                  style={{ paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', padding: '4px' }}
+                >
+                  {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                </button>
+              </div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthPassword} disabled={authLoading || !authPassword}>
                 {authLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </button>
             </div>
+          )}
+          {authError && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              {authError}
+            </div>
+          )}
+          {authStep !== 'phone' && !authLoading && (
+            <button type="button" onClick={restartAuth} style={{ marginTop: '0.75rem', background: 'transparent', border: 'none', color: '#4facfe', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}>
+              ← Volver a empezar (otro número o pedir un código nuevo)
+            </button>
           )}
         </div>
       </div>
