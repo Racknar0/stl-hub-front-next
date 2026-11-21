@@ -16,8 +16,8 @@ const SITE        = process.env.WARM_SITE_URL     || 'https://stl-hub.com';
 // que NO tiene ese endpoint y devuelve 403. En el VPS siempre usar localhost:3001.
 const API         = process.env.WARM_API_URL      || 'http://localhost:3001';
 const LIMIT       = Number(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || 2000);
-const CONCURRENCY = 10;   // peticiones simultáneas
-const DELAY_MS    = 100;  // pausa entre batches (ms) para no saturar el server
+const CONCURRENCY = 4;    // peticiones simultáneas (bajo para no frenar la web real tras un despliegue)
+const DELAY_MS    = 300;  // pausa entre batches (ms) para no saturar el server
 const TIMEOUT_MS  = 8000; // timeout por página
 
 
