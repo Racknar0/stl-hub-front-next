@@ -5,6 +5,7 @@ import HttpService from '@/services/HttpService';
 import { Dialog, Box } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import QRCode from 'qrcode';
 import FileExplorer from '@/components/dashboard/FileExplorer/FileExplorer';
 import useStore from '@/store/useStore';
 import { successAlert, errorAlert, confirmAlert, fireAlert } from '@/helpers/alerts';
@@ -99,6 +100,8 @@ export default function TelegramDownloader() {
   const [passwordHint, setPasswordHint] = useState(null); // pista de la contraseña 2FA
   const [showPassword, setShowPassword] = useState(false);
   const [codeDelivery, setCodeDelivery] = useState('');     // dónde mandó Telegram el código
+  const [qrLoginUrl, setQrLoginUrl] = useState(null);       // tg://login?token=… del login por QR
+  const [qrImage, setQrImage] = useState(null);             // el mismo enlace dibujado como QR (data URL)
 
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('');
@@ -254,6 +257,12 @@ export default function TelegramDownloader() {
       }
       const a = d.auth || {};
       if (a.stage === 'sending') continue;
+      if (a.stage === 'qr') {
+        setAuthStep('qr');
+        setQrLoginUrl(a.qrLoginUrl || null);
+        setAuthError(a.errorMessage || '');
+        return;
+      }
       if (a.stage === 'code' || a.stage === 'password') {
         setAuthStep(a.stage);
         setCodeDelivery(a.codeDeliveryMessage || '');
@@ -277,6 +286,20 @@ export default function TelegramDownloader() {
     setAuthError('');
     setPasswordHint(null);
     setCodeDelivery('');
+    setQrLoginUrl(null);
+    setQrImage(null);
+  };
+
+  const handleAuthQr = async () => {
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      await http.postData('/telegram/auth/qr', {});
+      await waitForAuth();
+    } catch (e) {
+      setAuthError(authRequestError(e, 'No se pudo iniciar el login por QR'));
+    }
+    setAuthLoading(false);
   };
 
   const handleAuthPhone = async () => {
@@ -317,6 +340,38 @@ export default function TelegramDownloader() {
     }
     setAuthLoading(false);
   };
+
+  // Mientras se muestra el QR: Telegram lo renueva cada ~30 s y, al escanearlo, pasa a la contraseña o entra
+  useEffect(() => {
+    if (authStep !== 'qr') return undefined;
+    let stopped = false;
+    const timer = setInterval(async () => {
+      try {
+        const res = await http.getData('/telegram/auth/status');
+        const d = res.data || res;
+        if (stopped) return;
+        if (d.success && d.isAuthorized) { setIsAuthorized(true); return; }
+        const a = d.auth || {};
+        if (a.stage === 'qr') {
+          if (a.qrLoginUrl) setQrLoginUrl(a.qrLoginUrl);
+        } else if (a.stage === 'password') {
+          setAuthStep('password');
+          setPasswordHint(a.passwordHint || null);
+          setAuthError(a.errorMessage || '');
+        } else if (a.stage === 'failed') {
+          setAuthError(a.errorMessage || 'No se pudo iniciar sesión.');
+          setAuthStep('failed');
+        }
+      } catch { /* reintenta en el siguiente ciclo */ }
+    }, 2000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [authStep]);
+
+  // El enlace tg://login se dibuja como QR en el navegador (no sale a ningún servicio externo)
+  useEffect(() => {
+    if (!qrLoginUrl) { setQrImage(null); return; }
+    QRCode.toDataURL(qrLoginUrl, { width: 260, margin: 2 }).then(setQrImage).catch(() => setQrImage(null));
+  }, [qrLoginUrl]);
 
   const fetchChannels = async () => {
     try {
@@ -822,6 +877,23 @@ export default function TelegramDownloader() {
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleAuthPhone} disabled={authLoading}>
                 {authLoading ? 'Enviando...' : 'Enviar Código'}
               </button>
+              <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.8rem', margin: '1rem 0 0.5rem' }}>o</div>
+              <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handleAuthQr} disabled={authLoading}>
+                Iniciar sesión con QR (sin código)
+              </button>
+            </div>
+          )}
+          {authStep === 'qr' && (
+            <div className="form-group" style={{ textAlign: 'center' }}>
+              <label>Escanea este QR con tu celular</label>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e0', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                En Telegram del celular: <b>Ajustes → Dispositivos → Vincular un dispositivo de escritorio</b> y apunta la cámara al QR.
+                Se renueva solo cada ~30 segundos.
+              </p>
+              {qrImage
+                ? <img src={qrImage} alt="QR de inicio de sesión de Telegram" style={{ width: 260, height: 260, borderRadius: 8, background: '#fff' }} />
+                : <div style={{ color: '#94a3b8', padding: '2rem 0' }}>Generando QR…</div>}
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.75rem' }}>Si tu cuenta tiene verificación en dos pasos, después te pedirá la contraseña.</p>
             </div>
           )}
           {authStep === 'code' && (
