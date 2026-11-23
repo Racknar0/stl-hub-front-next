@@ -42,6 +42,7 @@ const SHORT_LINK_SOURCES = {
   youtube_short: 'Shorts de YouTube',
   threads: 'Threads',
   bluesky: 'Bluesky',
+  tumblr: 'Tumblr',
   instagram_bio: 'Bio de Instagram',
 }
 

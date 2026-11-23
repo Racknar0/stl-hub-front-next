@@ -11,6 +11,7 @@ const NETWORKS = [
   { key: 'pinterest', label: 'Pinterest' },
   { key: 'threads', label: 'Threads' },
   { key: 'bluesky', label: 'Bluesky' },
+  { key: 'tumblr', label: 'Tumblr' },
 ]
 const RANGES = [
   { key: 'hoy', label: 'Hoy', days: 1 },
@@ -66,6 +67,14 @@ function NetworkLogo({ network, size = 36 }) {
       <svg {...common}>
         <circle cx="12" cy="12" r="11" fill="#E60023" />
         <path fill="#fff" d="M12.3 5.2c-3.9 0-5.9 2.8-5.9 5.1 0 1.4.5 2.6 1.6 3.1.2.1.4 0 .4-.2l.2-.6c.1-.2 0-.3-.1-.5-.3-.4-.5-.9-.5-1.6 0-2.1 1.6-3.9 4.1-3.9 2.2 0 3.5 1.4 3.5 3.2 0 2.4-1.1 4.5-2.7 4.5-.9 0-1.5-.7-1.3-1.6.2-1.1.7-2.2.7-2.9 0-.7-.4-1.2-1.1-1.2-.9 0-1.6.9-1.6 2.2 0 .8.3 1.3.3 1.3l-1.1 4.6c-.3 1.3 0 3 0 3.1 0 .1.1.1.2 0 .1-.1 1-1.3 1.3-2.4l.5-2c.3.5 1 .9 1.8.9 2.4 0 4-2.2 4-5.1 0-2.2-1.9-4.3-4.7-4.3z" />
+      </svg>
+    )
+  }
+  if (network === 'tumblr') {
+    return (
+      <svg {...common}>
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#001935" />
+        <path fill="#fff" d="M13.9 18.6c-2.1 0-3.6-1.1-3.6-3.6v-4.1H8.4V8.7c2.1-.5 3-2.3 3.1-3.9h2.2v3.6h2.6v2.5h-2.6v3.6c0 1.1.5 1.5 1.4 1.5h1.3v2.6h-2.5z" />
       </svg>
     )
   }

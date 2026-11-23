@@ -204,6 +204,7 @@
     .sm-row-pinterest td:first-child { border-left-color: #e60023; }
     .sm-row-threads td:first-child { border-left-color: #ffffff; }
     .sm-row-bluesky td:first-child { border-left-color: #1185fe; }
+    .sm-row-tumblr td:first-child { border-left-color: #7c8db5; }
 
     .sm-col-channel,
     td.sm-channel { width: 150px; padding-left: 36px; }
@@ -276,6 +277,7 @@
   .sm-net-pinterest { &.sm-badge { background: #e60023; } }
   .sm-net-threads { &.sm-badge { background: #444; } }
   .sm-net-bluesky { &.sm-badge { background: #1185fe; } }
+  .sm-net-tumblr { &.sm-badge { background: #001935; } }
 
   .sm-foot {
     margin: 12px 0 0;

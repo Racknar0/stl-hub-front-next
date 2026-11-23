@@ -15,6 +15,7 @@ const PLATFORMS = [
   { key: 'threads', label: 'Threads', short: 'TH', maxSec: 300, linkHint: 'Link clicable al final del texto (automático, con UTM)' },
   { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo en inglés' },
   { key: 'bluesky', label: 'Bluesky', short: 'BS', maxSec: 180, linkHint: 'Link clicable al final del texto (automático); texto recortado a 300 caracteres' },
+  { key: 'tumblr', label: 'Tumblr', short: 'TB', maxSec: 600, linkHint: 'Tarjeta con el link del modelo debajo del video (automático)' },
 ];
 // Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
 const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
@@ -303,6 +304,15 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'tumblr') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#001935" />
+        <path fill="#fff" d="M13.9 18.6c-2.1 0-3.6-1.1-3.6-3.6v-4.1H8.4V8.7c2.1-.5 3-2.3 3.1-3.9h2.2v3.6h2.6v2.5h-2.6v3.6c0 1.1.5 1.5 1.4 1.5h1.3v2.6h-2.5z" />
+      </svg>
+    );
+  }
   if (platform === 'tiktok') {
     return (
       <svg {...common}>
@@ -364,6 +374,8 @@ export default function ReelsPublisher() {
   const thConnected = !!connection?.threads?.connected;
   const [connectingBs, setConnectingBs] = useState(false);
   const bsConnected = !!connection?.bluesky?.connected;
+  const [connectingTb, setConnectingTb] = useState(false);
+  const tbConnected = !!connection?.tumblr?.connected;
   // Pinterest se conecta en Publicaciones → Pinterest (la misma cuenta de los pines automáticos)
   const pnConnected = !!connection?.pinterest?.connected;
   // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
@@ -658,6 +670,42 @@ export default function ReelsPublisher() {
     finally { setConnectingBs(false); }
   };
 
+  // Tumblr: la primera vez se pegan la Consumer Key y la Secret Key de la app (tumblr.com/oauth/apps); luego se autoriza el blog en una ventana
+  const connectTumblr = async () => {
+    try {
+      if (!connection?.tumblr?.appConfigured) {
+        const clientId = window.prompt('OAuth Consumer Key de tu app de Tumblr (tumblr.com/oauth/apps)');
+        if (!clientId) return;
+        const clientSecret = window.prompt('Secret Key de la misma app de Tumblr');
+        if (!clientSecret) return;
+        await http.postData('/reels/tumblr/app', { clientId, clientSecret });
+      }
+      const res = await http.getData('/reels/tumblr/auth');
+      window.open(res.data.url, 'tumblr-auth', 'width=560,height=760');
+      setConnectingTb(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const status = await fetchConnection();
+        if (status?.tumblr?.connected) {
+          showToast(`✓ Tumblr conectado: ${status.tumblr.account?.blog || ''}`);
+          return;
+        }
+      }
+      showToast('No se completó la conexión con Tumblr', 'err');
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingTb(false); }
+  };
+
+  const disconnectTumblr = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar el blog de Tumblr? Los reels dejarán de publicarse en Tumblr.')) return;
+    try {
+      await http.postData('/reels/tumblr/disconnect');
+      await fetchConnection();
+      showToast('Tumblr desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
   const disconnectBluesky = async (e) => {
     e.stopPropagation();
     if (!confirm('¿Desconectar la cuenta de Bluesky? Los reels dejarán de publicarse en Bluesky.')) return;
@@ -735,6 +783,9 @@ export default function ReelsPublisher() {
             if (p.key === 'pinterest') {
               if (pnConnected) items = [{ id: 'pn', name: connection.pinterest.username ? `@${connection.pinterest.username}` : 'Pinterest', title: 'Cuenta conectada (la de los pines automáticos)' }];
               else action = { label: 'Conectar Pinterest', onClick: () => { window.location.href = '/dashboard/pinterest'; }, busy: false, title: 'Se conecta en Publicaciones → Pinterest' };
+            } else if (p.key === 'tumblr') {
+              if (tbConnected) items = [{ id: 'tb', name: connection.tumblr.account?.blog || 'tumblr', title: 'Blog conectado', onRemove: disconnectTumblr, removeTitle: 'Desconectar Tumblr' }];
+              else action = { label: 'Conectar Tumblr', onClick: connectTumblr, busy: connectingTb, title: 'Autoriza tu blog de Tumblr para publicar videos' };
             } else if (p.key === 'bluesky') {
               if (bsConnected) items = [{ id: 'bs', name: `@${connection.bluesky.account?.handle || 'bluesky'}`, title: 'Cuenta conectada', onRemove: disconnectBluesky, removeTitle: 'Desconectar Bluesky' }];
               else action = { label: 'Conectar Bluesky', onClick: connectBluesky, busy: connectingBs, title: 'Conecta tu cuenta de Bluesky con una contraseña de aplicación' };
@@ -987,7 +1038,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} bsConnected={bsConnected} pnConnected={pnConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} bsConnected={bsConnected} tbConnected={tbConnected} pnConnected={pnConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -1002,9 +1053,9 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, bsConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, bsConnected, tbConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
-  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'bluesky' && !bsConnected) || (p.key === 'pinterest' && !pnConnected);
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'bluesky' && !bsConnected) || (p.key === 'tumblr' && !tbConnected) || (p.key === 'pinterest' && !pnConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
@@ -1191,7 +1242,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               </div>
               <div className="rl-platform-toggles row">
                 {visible.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'bluesky' ? 'tu cuenta de Bluesky' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'bluesky' ? 'tu cuenta de Bluesky' : p.key === 'tumblr' ? 'tu blog de Tumblr' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -1357,6 +1408,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Bluesky'}{post.link ? `
 
 🔗 ${post.link}` : ''}</pre>
+                </div>
+              )}
+
+              {activeText === 'tumblr' && (
+                <div className="rl-field">
+                  <span>Texto <small>automático</small></span>
+                  <p className="rl-tt-note">El video, debajo el caption de Instagram sin la cabecera ni el pie, una tarjeta con el link del modelo y los hashtags como etiquetas de Tumblr.</p>
+                  <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Tumblr'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
                 </div>
               )}
 
