@@ -14,6 +14,7 @@ const PLATFORMS = [
   { key: 'tiktok', label: 'TikTok', short: 'TT', maxSec: 600, linkHint: null },
   { key: 'threads', label: 'Threads', short: 'TH', maxSec: 300, linkHint: 'Link clicable al final del texto (automático, con UTM)' },
   { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo en inglés' },
+  { key: 'bluesky', label: 'Bluesky', short: 'BS', maxSec: 180, linkHint: 'Link clicable al final del texto (automático); texto recortado a 300 caracteres' },
 ];
 // Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
 const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
@@ -293,6 +294,15 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'bluesky') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#1185FE" />
+        <path fill="#fff" transform="translate(4 5.2) scale(0.0267)" d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
+      </svg>
+    );
+  }
   if (platform === 'tiktok') {
     return (
       <svg {...common}>
@@ -352,6 +362,8 @@ export default function ReelsPublisher() {
   const ttConnected = !!connection?.tiktok?.connected;
   const [connectingTh, setConnectingTh] = useState(false);
   const thConnected = !!connection?.threads?.connected;
+  const [connectingBs, setConnectingBs] = useState(false);
+  const bsConnected = !!connection?.bluesky?.connected;
   // Pinterest se conecta en Publicaciones → Pinterest (la misma cuenta de los pines automáticos)
   const pnConnected = !!connection?.pinterest?.connected;
   // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
@@ -631,6 +643,31 @@ export default function ReelsPublisher() {
     } catch (err) { showToast(errMsg(err), 'err'); }
   };
 
+  // Bluesky: se conecta con el usuario y una contraseña de aplicación (no la contraseña de la cuenta)
+  const connectBluesky = async () => {
+    const identifier = window.prompt('Usuario de Bluesky', 'stl-gratis.bsky.social');
+    if (!identifier) return;
+    const appPassword = window.prompt('Contraseña de aplicación de Bluesky (formato xxxx-xxxx-xxxx-xxxx).\nSe crea en Bluesky: Ajustes → Privacidad y seguridad → Contraseñas de aplicación. No uses la contraseña de tu cuenta.');
+    if (!appPassword) return;
+    setConnectingBs(true);
+    try {
+      const res = await http.postData('/reels/bluesky/connect', { identifier, appPassword });
+      await fetchConnection();
+      showToast(`✓ Bluesky conectado: @${res.data?.account?.handle || identifier}`);
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingBs(false); }
+  };
+
+  const disconnectBluesky = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar la cuenta de Bluesky? Los reels dejarán de publicarse en Bluesky.')) return;
+    try {
+      await http.postData('/reels/bluesky/disconnect');
+      await fetchConnection();
+      showToast('Bluesky desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
   const saveSetting = async (patch) => {
     try {
       const res = await http.putData('/reels', 'settings', patch);
@@ -698,6 +735,9 @@ export default function ReelsPublisher() {
             if (p.key === 'pinterest') {
               if (pnConnected) items = [{ id: 'pn', name: connection.pinterest.username ? `@${connection.pinterest.username}` : 'Pinterest', title: 'Cuenta conectada (la de los pines automáticos)' }];
               else action = { label: 'Conectar Pinterest', onClick: () => { window.location.href = '/dashboard/pinterest'; }, busy: false, title: 'Se conecta en Publicaciones → Pinterest' };
+            } else if (p.key === 'bluesky') {
+              if (bsConnected) items = [{ id: 'bs', name: `@${connection.bluesky.account?.handle || 'bluesky'}`, title: 'Cuenta conectada', onRemove: disconnectBluesky, removeTitle: 'Desconectar Bluesky' }];
+              else action = { label: 'Conectar Bluesky', onClick: connectBluesky, busy: connectingBs, title: 'Conecta tu cuenta de Bluesky con una contraseña de aplicación' };
             } else if (p.key === 'threads') {
               if (thConnected) items = [{ id: 'th', name: `@${connection.threads.account?.username || 'threads'}`, title: 'Cuenta conectada', onRemove: disconnectThreads, removeTitle: 'Desconectar Threads' }];
               else action = { label: 'Conectar Threads', onClick: connectThreads, busy: connectingTh, title: 'Autoriza tu cuenta de Threads para publicar videos' };
@@ -964,7 +1004,7 @@ export default function ReelsPublisher() {
 // ---------- Editor de un reel ----------
 function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
-  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'pinterest' && !pnConnected);
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'bluesky' && !bsConnected) || (p.key === 'pinterest' && !pnConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
@@ -1151,7 +1191,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               </div>
               <div className="rl-platform-toggles row">
                 {visible.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'bluesky' ? 'tu cuenta de Bluesky' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -1307,6 +1347,16 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <span>Texto <small>automático</small></span>
                   <p className="rl-tt-note">Se usa el caption de Instagram sin la cabecera ni el pie, y al final el link del modelo (clicable, con UTM).</p>
                   <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Threads'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
+                </div>
+              )}
+
+              {activeText === 'bluesky' && (
+                <div className="rl-field">
+                  <span>Texto <small>automático · máx. 300 caracteres</small></span>
+                  <p className="rl-tt-note">Igual que Threads: el caption de Instagram sin la cabecera ni el pie, recortado a 300 caracteres, y al final el link del modelo (clicable).</p>
+                  <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Bluesky'}{post.link ? `
+
+🔗 ${post.link}` : ''}</pre>
                 </div>
               )}
 

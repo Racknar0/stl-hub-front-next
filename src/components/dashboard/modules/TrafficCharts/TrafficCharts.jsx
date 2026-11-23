@@ -41,6 +41,7 @@ const SHORT_LINK_SOURCES = {
   facebook: 'Comentario de Facebook',
   youtube_short: 'Shorts de YouTube',
   threads: 'Threads',
+  bluesky: 'Bluesky',
   instagram_bio: 'Bio de Instagram',
 }
 

@@ -7,8 +7,8 @@ import { Line, Doughnut } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Filler, Tooltip, Legend)
 
-export const NET_COLORS = { facebook: '#1877f2', instagram: '#d6249f', youtube: '#ff0033', pinterest: '#e60023', threads: '#cfcfcf' }
-const NET_LABELS = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', pinterest: 'Pinterest', threads: 'Threads' }
+export const NET_COLORS = { facebook: '#1877f2', instagram: '#d6249f', youtube: '#ff0033', pinterest: '#e60023', threads: '#cfcfcf', bluesky: '#1185fe' }
+const NET_LABELS = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', pinterest: 'Pinterest', threads: 'Threads', bluesky: 'Bluesky' }
 const METRICS = [
   { key: 'views', label: 'Visualizaciones' },
   { key: 'likes', label: 'Me gusta' },

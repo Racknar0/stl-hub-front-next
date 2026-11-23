@@ -203,6 +203,7 @@
     .sm-row-youtube td:first-child { border-left-color: #ff0033; }
     .sm-row-pinterest td:first-child { border-left-color: #e60023; }
     .sm-row-threads td:first-child { border-left-color: #ffffff; }
+    .sm-row-bluesky td:first-child { border-left-color: #1185fe; }
 
     .sm-col-channel,
     td.sm-channel { width: 150px; padding-left: 36px; }
@@ -274,6 +275,7 @@
   .sm-net-youtube { &.sm-badge { background: #e62117; } }
   .sm-net-pinterest { &.sm-badge { background: #e60023; } }
   .sm-net-threads { &.sm-badge { background: #444; } }
+  .sm-net-bluesky { &.sm-badge { background: #1185fe; } }
 
   .sm-foot {
     margin: 12px 0 0;
