@@ -13,6 +13,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'api.stlgratis.com', pathname: '/uploads/**' },
       { protocol: 'https', hostname: 'www.api.stlgratis.com', pathname: '/uploads/**' },
     ],
+    // Tope de la caché de imágenes optimizadas (bytes). Next lee entera esta caché al arrancar y no sirve ninguna
+    // imagen hasta terminar: sin tope llegó a 8,8 GB y tras cada reinicio las imágenes tardaban minutos en salir.
+    maximumDiskCacheSize: 1024 * 1024 * 1024,
   },
 
   // 👉 Permite servir el árbol de páginas bajo /en (middleware gestiona x-lang para contenido EN)
