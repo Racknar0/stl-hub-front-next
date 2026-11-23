@@ -11,6 +11,7 @@ import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined'
 import PanoramaOutlined from '@mui/icons-material/PanoramaOutlined'
 import OndemandVideoOutlined from '@mui/icons-material/OndemandVideoOutlined'
 import LinkOutlined from '@mui/icons-material/LinkOutlined'
+import SocialConnections from '../SocialConnections/SocialConnections'
 
 const sections = [
   { title: 'Taxonomía', tabs: [['Categorías', '/dashboard/categories'], ['Tags', '/dashboard/tags']] },
@@ -25,6 +26,8 @@ export default function SectionTabs() {
 
   return (
     <div className="dashboard-section-tabs">
+      {/* Las redes conectadas son de todo Publicaciones: se ven encima de sus pestañas */}
+      {section.title === 'Publicaciones' && <SocialConnections />}
       <nav aria-label={`Apartados de ${section.title}`}>
         {section.tabs.map(([label, href]) => (
           <Link key={href} href={href} className={pathname === href ? 'is-active' : undefined} aria-current={pathname === href ? 'page' : undefined}>

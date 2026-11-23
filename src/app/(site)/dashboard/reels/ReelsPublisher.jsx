@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import HttpService from '@/services/HttpService';
+import PlatformIcon from '@/components/dashboard/SocialConnections/PlatformIcon';
+import { CONNECTIONS_EVENT } from '@/components/dashboard/SocialConnections/SocialConnections';
 import '../pinterest/PinterestCalendar.scss';
 import '../pinterest/PinterestRedesign.scss';
 import './ReelsPublisher.scss';
@@ -25,47 +27,6 @@ const captionBody = (caption) => CAPTION_FOOTERS.reduce((t, f) => t.replace(f, '
 // Redes que se muestran en la interfaz: todas, o solo una en el modo enfocado (/dashboard/reels?solo=tiktok)
 const VisiblePlatforms = createContext(PLATFORMS);
 
-// Botón por red con desplegable de cuentas/canales conectados
-function ConnGroup({ platform, label, iconTitle, items, action }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
-  }, [open]);
-  const on = items.length > 0;
-  return (
-    <div className="rl-grp" ref={ref}>
-      <button type="button" className={`rl-grp-btn ${on ? 'on' : 'off'}`} aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <PlatformIcon platform={platform} title={iconTitle} />
-        <span>{label}</span>
-        {on && <span className="rl-grp-count">{items.length}</span>}
-        <i className="rl-grp-dot" />
-        <span className="rl-grp-caret">▾</span>
-      </button>
-      {open && (
-        <div className="rl-grp-menu" role="menu">
-          {!on && <div className="rl-grp-empty">Sin cuentas conectadas</div>}
-          {items.map(it => (
-            <div key={it.id} className="rl-grp-item" title={it.title}>
-              <span className="rl-grp-name">{it.name}</span>
-              {it.onRemove && <button type="button" className="rl-conn-x" title={it.removeTitle} onClick={(e) => { it.onRemove(e); setOpen(false); }}>✕</button>}
-            </div>
-          ))}
-          {action && (
-            <button type="button" className="rl-grp-add" onClick={() => { action.onClick(); setOpen(false); }} disabled={action.busy} title={action.title}>
-              {action.busy ? 'Esperando autorización…' : action.label}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 const FOCUS_KEY = 'reels_focus_platform';
 // Sin ?solo= se muestran todas las redes (?solo=tiktok enfoca una sola; ?solo=all vuelve a todas)
 const DEFAULT_FOCUS = null;
@@ -246,104 +207,6 @@ function PhonePreview({ videoUrl, platform, caption, hashtags, title }) {
   );
 }
 
-// Logos de las redes (dibujados en SVG para no depender de archivos externos)
-function PlatformIcon({ platform, size = 16, title }) {
-  const common = { width: size, height: size, viewBox: '0 0 24 24', className: `rl-icon rl-icon-${platform}`, role: 'img', 'aria-label': title || platform };
-  if (platform === 'instagram') {
-    return (
-      <svg {...common}>
-        <defs>
-          <radialGradient id="rl-ig-grad" cx="0.3" cy="1.07" r="1.2">
-            <stop offset="0" stopColor="#fdf497" />
-            <stop offset="0.1" stopColor="#fdf497" />
-            <stop offset="0.5" stopColor="#fd5949" />
-            <stop offset="0.68" stopColor="#d6249f" />
-            <stop offset="1" stopColor="#285AEB" />
-          </radialGradient>
-        </defs>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#rl-ig-grad)" />
-        <rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" strokeWidth="1.8" />
-        <circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" strokeWidth="1.8" />
-        <circle cx="16.3" cy="7.7" r="1.05" fill="#fff" />
-      </svg>
-    );
-  }
-  if (platform === 'facebook') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <circle cx="12" cy="12" r="11" fill="#1877F2" />
-        <path fill="#fff" d="M13.4 23v-8.1h2.7l.4-3.2h-3.1V9.7c0-.9.3-1.6 1.6-1.6h1.7V5.3c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.4H7.6v3.2h2.7V23z" />
-      </svg>
-    );
-  }
-  if (platform === 'pinterest') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <circle cx="12" cy="12" r="11" fill="#E60023" />
-        <path fill="#fff" d="M12.3 5.2c-3.9 0-5.9 2.8-5.9 5.1 0 1.4.5 2.6 1.6 3.1.2.1.4 0 .4-.2l.2-.6c.1-.2 0-.3-.1-.5-.3-.4-.5-.9-.5-1.6 0-2.1 1.6-3.9 4.1-3.9 2.2 0 3.5 1.4 3.5 3.2 0 2.4-1.1 4.5-2.7 4.5-.9 0-1.5-.7-1.3-1.6.2-1.1.7-2.2.7-2.9 0-.7-.4-1.2-1.1-1.2-.9 0-1.6.9-1.6 2.2 0 .8.3 1.3.3 1.3l-1.1 4.6c-.3 1.3 0 3 0 3.1 0 .1.1.1.2 0 .1-.1 1-1.3 1.3-2.4l.5-2c.3.5 1 .9 1.8.9 2.4 0 4-2.2 4-5.1 0-2.2-1.9-4.3-4.7-4.3z" />
-      </svg>
-    );
-  }
-  if (platform === 'threads') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#000" />
-        <path fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round"
-          d="M15.6 11.3c-.4-2.1-1.9-3.1-3.8-3.1-2.3 0-3.9 1.7-3.9 3.9 0 2.4 1.5 4.1 4 4.1 2.1 0 3.6-1.3 3.6-3.1 0-1.6-1.2-2.4-2.6-2.4-1.5 0-2.4.9-2.4 1.9 0 .9.7 1.5 1.6 1.5 1.6 0 2.4-1.3 2.4-3.3 0-2.9-1.8-4.8-4.6-4.8" />
-      </svg>
-    );
-  }
-  if (platform === 'bluesky') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#1185FE" />
-        <path fill="#fff" transform="translate(4 5.2) scale(0.0267)" d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
-      </svg>
-    );
-  }
-  if (platform === 'mastodon') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#6364FF" />
-        <path fill="#fff" transform="translate(2.4 2.6) scale(0.8)" d="M20.9 8.2c0-4-2.6-5.2-2.6-5.2C17 2.4 14.7 2.1 12.3 2.1h-.1c-2.4 0-4.7.3-6 .9 0 0-2.6 1.2-2.6 5.2v3c.1 3.9.7 7.7 4.3 8.7 1.6.4 3 .5 4.2.5 2.1-.1 3.3-.8 3.3-.8l-.1-1.5s-1.5.5-3.2.4c-1.7-.1-3.5-.2-3.8-2.3v-.6s1.7.4 3.8.5c1.3.1 2.5-.1 3.7-.2 2.4-.3 4.4-1.7 4.7-3 .4-2.1.4-5.1.4-5.1zm-3.2 5.3h-2V8.6c0-1-.4-1.6-1.3-1.6-1 0-1.5.6-1.5 1.9v2.7h-2V8.9c0-1.3-.5-1.9-1.5-1.9-.9 0-1.3.6-1.3 1.6v4.9h-2V8.4c0-1 .3-1.9.8-2.5.5-.6 1.3-.9 2.2-.9 1 0 1.8.4 2.3 1.2l.5.8.5-.8c.5-.8 1.3-1.2 2.3-1.2.9 0 1.7.3 2.2.9.5.6.8 1.5.8 2.5v5.1z" />
-      </svg>
-    );
-  }
-  if (platform === 'tumblr') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#001935" />
-        <path fill="#fff" d="M13.9 18.6c-2.1 0-3.6-1.1-3.6-3.6v-4.1H8.4V8.7c2.1-.5 3-2.3 3.1-3.9h2.2v3.6h2.6v2.5h-2.6v3.6c0 1.1.5 1.5 1.4 1.5h1.3v2.6h-2.5z" />
-      </svg>
-    );
-  }
-  if (platform === 'tiktok') {
-    return (
-      <svg {...common}>
-        {title && <title>{title}</title>}
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#000" />
-        <path fill="#25F4EE" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" transform="translate(-.6 -.4)" />
-        <path fill="#FE2C55" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" transform="translate(.6 .4)" />
-        <path fill="#fff" d="M13.6 5.2h2.1c.2 1.6 1.2 2.8 2.9 3v2.2c-1.1 0-2.1-.3-2.9-.9v4.7a4.2 4.2 0 1 1-4.2-4.2h.4v2.2a2 2 0 1 0 1.7 2V5.2z" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      {title && <title>{title}</title>}
-      <rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#FF0033" />
-      <path fill="#fff" d="M10 8.6v6.8l5.8-3.4z" />
-    </svg>
-  );
-}
-
 function PlatformBadges({ list }) {
   const visible = useContext(VisiblePlatforms);
   return (
@@ -377,17 +240,11 @@ export default function ReelsPublisher() {
   const [stats, setStats] = useState({});
   const [settings, setSettings] = useState({ defaultTime: '18:00', language: 'es' });
   const [connection, setConnection] = useState(null);
-  const [connectingYt, setConnectingYt] = useState(false);
   const ytConnected = !!connection?.youtube?.connected;
-  const [connectingTt, setConnectingTt] = useState(false);
   const ttConnected = !!connection?.tiktok?.connected;
-  const [connectingTh, setConnectingTh] = useState(false);
   const thConnected = !!connection?.threads?.connected;
-  const [connectingBs, setConnectingBs] = useState(false);
   const bsConnected = !!connection?.bluesky?.connected;
-  const [connectingTb, setConnectingTb] = useState(false);
   const tbConnected = !!connection?.tumblr?.connected;
-  const [connectingMd, setConnectingMd] = useState(false);
   const mdConnected = !!connection?.mastodon?.connected;
   // Pinterest se conecta en Publicaciones → Pinterest (la misma cuenta de los pines automáticos)
   const pnConnected = !!connection?.pinterest?.connected;
@@ -431,6 +288,12 @@ export default function ReelsPublisher() {
     fetchConnection();
   }, [fetchTray, fetchStats, fetchConnection, http]);
   useEffect(() => { fetchMonth(); }, [fetchMonth]);
+  // Las cuentas se conectan en la barra común de Publicaciones: al cambiar, se toma su estado nuevo
+  useEffect(() => {
+    const onChanged = (e) => (e.detail ? setConnection(e.detail) : fetchConnection());
+    window.addEventListener(CONNECTIONS_EVENT, onChanged);
+    return () => window.removeEventListener(CONNECTIONS_EVENT, onChanged);
+  }, [fetchConnection]);
 
   // Mientras la IA trabaja en algún reel, refrescar cada 3 s
   const allPosts = [...tray, ...Object.values(postsByDay).flat()];
@@ -581,179 +444,6 @@ export default function ReelsPublisher() {
     finally { setAddingPinterest(false); }
   };
 
-  // Abre la autorización de Google en una ventana y espera (hasta 3 min) a que el canal quede conectado
-  const connectYoutube = async () => {
-    try {
-      const res = await http.getData('/reels/youtube/auth');
-      window.open(res.data.url, 'youtube-auth', 'width=520,height=720');
-      setConnectingYt(true);
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const status = await fetchConnection();
-        if ((status?.youtube?.channels?.length || 0) > (connection?.youtube?.channels?.length || 0)) {
-          showToast(`✓ YouTube conectado: ${status.youtube.channel?.title || ''}`);
-          return;
-        }
-      }
-      showToast('No se completó la conexión con YouTube', 'err');
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingYt(false); }
-  };
-
-  const disconnectYoutube = async (e, channel) => {
-    e.stopPropagation();
-    if (!confirm(`¿Desconectar el canal de YouTube "${channel?.title || ''}"? Los reels dejarán de subirse a ese canal.`)) return;
-    try {
-      await http.postData('/reels/youtube/disconnect', { channelId: channel?.id });
-      await fetchConnection();
-      showToast(`${channel?.title || 'Canal'} desconectado`);
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
-  // TikTok: igual que YouTube, la autorización se abre en una ventana y se espera a que la cuenta quede conectada
-  const connectTiktok = async () => {
-    try {
-      const res = await http.getData('/reels/tiktok/auth');
-      window.open(res.data.url, 'tiktok-auth', 'width=520,height=760');
-      setConnectingTt(true);
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const status = await fetchConnection();
-        if (status?.tiktok?.connected) {
-          showToast(`✓ TikTok conectado: ${status.tiktok.account?.displayName || ''}`);
-          return;
-        }
-      }
-      showToast('No se completó la conexión con TikTok', 'err');
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingTt(false); }
-  };
-
-  const disconnectTiktok = async (e) => {
-    e.stopPropagation();
-    if (!confirm('¿Desconectar la cuenta de TikTok? Se revocará el acceso y los reels dejarán de publicarse en TikTok.')) return;
-    try {
-      await http.postData('/reels/tiktok/disconnect');
-      await fetchConnection();
-      showToast('TikTok desconectado');
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
-  // Threads: igual que TikTok, la autorización se abre en una ventana y se espera a que la cuenta quede conectada
-  const connectThreads = async () => {
-    try {
-      const res = await http.getData('/reels/threads/auth');
-      window.open(res.data.url, 'threads-auth', 'width=520,height=760');
-      setConnectingTh(true);
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const status = await fetchConnection();
-        if (status?.threads?.connected) {
-          showToast(`✓ Threads conectado: @${status.threads.account?.username || ''}`);
-          return;
-        }
-      }
-      showToast('No se completó la conexión con Threads', 'err');
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingTh(false); }
-  };
-
-  const disconnectThreads = async (e) => {
-    e.stopPropagation();
-    if (!confirm('¿Desconectar la cuenta de Threads? Los reels dejarán de publicarse en Threads.')) return;
-    try {
-      await http.postData('/reels/threads/disconnect');
-      await fetchConnection();
-      showToast('Threads desconectado');
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
-  // Bluesky: se conecta con el usuario y una contraseña de aplicación (no la contraseña de la cuenta)
-  const connectBluesky = async () => {
-    const identifier = window.prompt('Usuario de Bluesky', 'stl-gratis.bsky.social');
-    if (!identifier) return;
-    const appPassword = window.prompt('Contraseña de aplicación de Bluesky (formato xxxx-xxxx-xxxx-xxxx).\nSe crea en Bluesky: Ajustes → Privacidad y seguridad → Contraseñas de aplicación. No uses la contraseña de tu cuenta.');
-    if (!appPassword) return;
-    setConnectingBs(true);
-    try {
-      const res = await http.postData('/reels/bluesky/connect', { identifier, appPassword });
-      await fetchConnection();
-      showToast(`✓ Bluesky conectado: @${res.data?.account?.handle || identifier}`);
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingBs(false); }
-  };
-
-  // Tumblr: la primera vez se pegan la Consumer Key y la Secret Key de la app (tumblr.com/oauth/apps); luego se autoriza el blog en una ventana
-  const connectTumblr = async () => {
-    try {
-      if (!connection?.tumblr?.appConfigured) {
-        const clientId = window.prompt('OAuth Consumer Key de tu app de Tumblr (tumblr.com/oauth/apps)');
-        if (!clientId) return;
-        const clientSecret = window.prompt('Secret Key de la misma app de Tumblr');
-        if (!clientSecret) return;
-        await http.postData('/reels/tumblr/app', { clientId, clientSecret });
-      }
-      const res = await http.getData('/reels/tumblr/auth');
-      window.open(res.data.url, 'tumblr-auth', 'width=560,height=760');
-      setConnectingTb(true);
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const status = await fetchConnection();
-        if (status?.tumblr?.connected) {
-          showToast(`✓ Tumblr conectado: ${status.tumblr.account?.blog || ''}`);
-          return;
-        }
-      }
-      showToast('No se completó la conexión con Tumblr', 'err');
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingTb(false); }
-  };
-
-  // Mastodon: se conecta con el servidor y un token de acceso (Preferencias → Desarrollo → Nueva aplicación)
-  const connectMastodon = async () => {
-    const instance = window.prompt('Servidor de Mastodon', 'mastodon.social');
-    if (!instance) return;
-    const token = window.prompt('Token de acceso de Mastodon.\nSe crea en Mastodon: Preferencias → Desarrollo → Nueva aplicación (permisos write:statuses, write:media y read:statuses) → "Tu token de acceso".');
-    if (!token) return;
-    setConnectingMd(true);
-    try {
-      const res = await http.postData('/reels/mastodon/connect', { instance, token });
-      await fetchConnection();
-      showToast(`✓ Mastodon conectado: @${res.data?.account?.acct || ''}`);
-    } catch (e) { showToast(errMsg(e), 'err'); }
-    finally { setConnectingMd(false); }
-  };
-
-  const disconnectMastodon = async (e) => {
-    e.stopPropagation();
-    if (!confirm('¿Desconectar la cuenta de Mastodon? Los reels dejarán de publicarse en Mastodon.')) return;
-    try {
-      await http.postData('/reels/mastodon/disconnect');
-      await fetchConnection();
-      showToast('Mastodon desconectado');
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
-  const disconnectTumblr = async (e) => {
-    e.stopPropagation();
-    if (!confirm('¿Desconectar el blog de Tumblr? Los reels dejarán de publicarse en Tumblr.')) return;
-    try {
-      await http.postData('/reels/tumblr/disconnect');
-      await fetchConnection();
-      showToast('Tumblr desconectado');
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
-  const disconnectBluesky = async (e) => {
-    e.stopPropagation();
-    if (!confirm('¿Desconectar la cuenta de Bluesky? Los reels dejarán de publicarse en Bluesky.')) return;
-    try {
-      await http.postData('/reels/bluesky/disconnect');
-      await fetchConnection();
-      showToast('Bluesky desconectado');
-    } catch (err) { showToast(errMsg(err), 'err'); }
-  };
-
   const saveSetting = async (patch) => {
     try {
       const res = await http.putData('/reels', 'settings', patch);
@@ -812,46 +502,6 @@ export default function ReelsPublisher() {
           <span className="stat pending">✔ {stats.scheduled ?? 0} Aprobados</span>
           <span className="stat rl-stat-review">● {stats.pendingReview ?? 0} Por revisar</span>
           <span className="stat rl-stat-cover" title="Días seguidos con reel desde hoy">📆 {stats.coveredDays ?? 0} días cubiertos</span>
-        </div>
-        <div className="rl-connections">
-          {visible.map(p => {
-            const name = p.label.split(' ')[0];
-            let items = [];
-            let action = null;
-            if (p.key === 'pinterest') {
-              if (pnConnected) items = [{ id: 'pn', name: connection.pinterest.username ? `@${connection.pinterest.username}` : 'Pinterest', title: 'Cuenta conectada (la de los pines automáticos)' }];
-              else action = { label: 'Conectar Pinterest', onClick: () => { window.location.href = '/dashboard/pinterest'; }, busy: false, title: 'Se conecta en Publicaciones → Pinterest' };
-            } else if (p.key === 'mastodon') {
-              if (mdConnected) items = [{ id: 'md', name: `@${connection.mastodon.account?.username || 'mastodon'}`, title: connection.mastodon.account?.acct ? `Cuenta conectada: @${connection.mastodon.account.acct}` : 'Cuenta conectada', onRemove: disconnectMastodon, removeTitle: 'Desconectar Mastodon' }];
-              else action = { label: 'Conectar Mastodon', onClick: connectMastodon, busy: connectingMd, title: 'Conecta tu cuenta de Mastodon con un token de acceso' };
-            } else if (p.key === 'tumblr') {
-              if (tbConnected) items = [{ id: 'tb', name: connection.tumblr.account?.blog || 'tumblr', title: 'Blog conectado', onRemove: disconnectTumblr, removeTitle: 'Desconectar Tumblr' }];
-              else action = { label: 'Conectar Tumblr', onClick: connectTumblr, busy: connectingTb, title: 'Autoriza tu blog de Tumblr para publicar videos' };
-            } else if (p.key === 'bluesky') {
-              if (bsConnected) items = [{ id: 'bs', name: `@${connection.bluesky.account?.handle || 'bluesky'}`, title: 'Cuenta conectada', onRemove: disconnectBluesky, removeTitle: 'Desconectar Bluesky' }];
-              else action = { label: 'Conectar Bluesky', onClick: connectBluesky, busy: connectingBs, title: 'Conecta tu cuenta de Bluesky con una contraseña de aplicación' };
-            } else if (p.key === 'threads') {
-              if (thConnected) items = [{ id: 'th', name: `@${connection.threads.account?.username || 'threads'}`, title: 'Cuenta conectada', onRemove: disconnectThreads, removeTitle: 'Desconectar Threads' }];
-              else action = { label: 'Conectar Threads', onClick: connectThreads, busy: connectingTh, title: 'Autoriza tu cuenta de Threads para publicar videos' };
-            } else if (p.key === 'tiktok') {
-              if (ttConnected) items = [{ id: 'tt', name: connection.tiktok.account?.displayName || 'TikTok', title: 'Cuenta conectada', onRemove: disconnectTiktok, removeTitle: 'Desconectar TikTok' }];
-              else action = { label: 'Conectar TikTok', onClick: connectTiktok, busy: connectingTt, title: 'Autoriza tu cuenta de TikTok para publicar videos' };
-            } else if (p.key === 'youtube') {
-              items = ytConnected ? (connection.youtube.channels || []).map(ch => ({ id: ch.id, name: ch.title || 'YouTube', title: 'Canal conectado', onRemove: (e) => disconnectYoutube(e, ch), removeTitle: `Desconectar ${ch.title || 'el canal'}` })) : [];
-              action = { label: ytConnected ? '+ Añadir canal' : 'Conectar YouTube', onClick: connectYoutube, busy: connectingYt, title: ytConnected ? 'Conecta otro canal de YouTube (elígelo en la pantalla de Google)' : 'Autoriza tu canal de YouTube para publicar Shorts' };
-            } else if (p.key === 'instagram') {
-              const accs = connection?.instagram?.accounts || [];
-              items = accs.length ? accs.map(acc => ({ id: acc.id, name: `@${acc.username}`, title: acc.pageName ? `Vinculada a ${acc.pageName}` : 'Cuenta vinculada' }))
-                : connection?.instagram?.configured ? [{ id: 'ig', name: 'Cuenta configurada', title: 'Credenciales configuradas' }] : [];
-            } else if (p.key === 'facebook') {
-              const pgs = connection?.facebook?.pages || [];
-              items = pgs.length ? pgs.map(pg => ({ id: pg.id, name: pg.name, title: 'Página asignada' }))
-                : connection?.facebook?.configured ? [{ id: 'fb', name: 'Página configurada', title: 'Credenciales configuradas' }] : [];
-            } else if (connection?.[p.key]?.configured) {
-              items = [{ id: p.key, name: 'Configurada', title: 'Credenciales configuradas' }];
-            }
-            return <ConnGroup key={p.key} platform={p.key} label={name} iconTitle={p.label} items={items} action={action} />;
-          })}
         </div>
       </div>
 

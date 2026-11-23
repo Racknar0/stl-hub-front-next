@@ -737,50 +737,6 @@ $rl-review: #38bdf8;
 }
 .rl-hashtags { border-top: 1px solid $rl-line; padding-top: 0.65rem; }
 
-// ---------- Botón por red con desplegable ----------
-.reels-publisher .rl-connections {
-  gap: 0.5rem;
-  .rl-grp { position: relative; }
-  .rl-grp-btn {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    font: inherit; font-size: 0.78rem; font-weight: 600; color: #e4e4e7;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid $rl-line; border-radius: 999px;
-    padding: 0.3rem 0.65rem 0.3rem 0.35rem; cursor: pointer;
-    &:hover { background: rgba(255, 255, 255, 0.1); }
-    &.off { opacity: 0.6; }
-  }
-  .rl-grp-count {
-    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
-    display: grid; place-items: center; font-size: 0.65rem; font-weight: 800;
-    background: rgba(255, 255, 255, 0.14);
-  }
-  .rl-grp-dot { width: 7px; height: 7px; border-radius: 50%; background: #52525b; }
-  .rl-grp-btn.on .rl-grp-dot { background: $rl-ok; }
-  .rl-grp-caret { font-size: 0.65rem; color: #a1a1aa; }
-  .rl-grp-menu {
-    position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
-    min-width: 210px; padding: 0.4rem;
-    background: #18181f; border: 1px solid $rl-line; border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-    display: flex; flex-direction: column; gap: 0.2rem;
-  }
-  .rl-grp-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-    padding: 0.35rem 0.5rem; border-radius: 8px; font-size: 0.78rem; color: #e4e4e7;
-    &:hover { background: rgba(255, 255, 255, 0.06); }
-  }
-  .rl-grp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rl-grp-empty { padding: 0.35rem 0.5rem; font-size: 0.74rem; color: #8b869a; }
-  .rl-grp-add {
-    margin-top: 0.15rem; padding: 0.4rem 0.5rem; border-radius: 8px; cursor: pointer;
-    font: inherit; font-size: 0.76rem; font-weight: 600; text-align: left;
-    color: #e9d5ff; background: rgba(168, 85, 247, 0.12); border: 1px dashed rgba(168, 85, 247, 0.45);
-    &:hover:not(:disabled) { background: rgba(168, 85, 247, 0.22); }
-    &:disabled { cursor: progress; opacity: 0.7; }
-  }
-}
-
 // ---------- Distribución sin aplastar (cabecera, calendario y panel lateral) ----------
 // Cabecera: mes y contadores en una fila; las redes en una fila propia para que no empujen a los contadores
 .reels-publisher .calendar-header {
@@ -792,10 +748,6 @@ $rl-review: #38bdf8;
   .calendar-stats {
     flex-wrap: wrap;
     .stat { white-space: nowrap; }
-  }
-  .rl-connections {
-    order: 3;
-    flex-basis: 100%;
   }
 }
 
