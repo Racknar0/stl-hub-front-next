@@ -260,7 +260,7 @@ const en = {
     errorMarkAll: 'Could not mark all as read',
     errorDelete: 'Could not delete',
     errorRestore: 'The model could not be restored',
-    types: { SALES: 'Sales', BILLING: 'Billing', MAIL: 'Emails', STORAGE: 'Storage', SOCIAL: 'Social media', REPORT: 'Reports', AUTOMATION: 'Automations' }
+    types: { ALL: 'All', SALES: 'Sales', BILLING: 'Billing', MAIL: 'Emails', STORAGE: 'Storage', SOCIAL: 'Social media', REPORT: 'Reports', AUTOMATION: 'Automations' }
   }
 }
 

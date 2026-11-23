@@ -248,7 +248,7 @@ const es = {
     errorMarkAll: 'No se pudieron marcar todas como leídas',
     errorDelete: 'No se pudo eliminar',
     errorRestore: 'No se pudo restaurar el modelo',
-    types: { SALES: 'Ventas', BILLING: 'Cobros', MAIL: 'Correos', STORAGE: 'Almacenamiento', SOCIAL: 'Redes sociales', REPORT: 'Reportes', AUTOMATION: 'Automatizaciones' }
+    types: { ALL: 'Todas', SALES: 'Ventas', BILLING: 'Cobros', MAIL: 'Correos', STORAGE: 'Almacenamiento', SOCIAL: 'Redes sociales', REPORT: 'Reportes', AUTOMATION: 'Automatizaciones' }
   }
 }
 

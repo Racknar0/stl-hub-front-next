@@ -44,6 +44,7 @@ import styles from './notifications.module.scss'
 
 const http = new HttpService()
 const TYPES = [
+  { key: 'ALL', icon: NotificationsNoneOutlined },
   { key: 'SALES', icon: ShoppingBagOutlined },
   { key: 'BILLING', icon: CreditCardOutlined },
   { key: 'MAIL', icon: MailOutline },
@@ -181,11 +182,11 @@ export default function NotificationsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [marking, setMarking] = useState(false)
-  const [filter, setFilter] = useState('ALL')
+  const [filter, setFilter] = useState('UNREAD')
   const [sort, setSort] = useState('recent')
-  const [tabType, setTabType] = useState('SALES')
+  const [tabType, setTabType] = useState('ALL')
 
-  const itemsByType = useMemo(() => items.filter(item => item.type === tabType), [items, tabType])
+  const itemsByType = useMemo(() => tabType === 'ALL' ? items : items.filter(item => item.type === tabType), [items, tabType])
   const counts = useMemo(() => ({
     UNREAD: itemsByType.filter(item => item.status === 'UNREAD').length,
     TODAY: itemsByType.filter(item => isToday(toDate(item.createdAt))).length,
@@ -254,18 +255,19 @@ export default function NotificationsPage() {
   return <section className={styles.page} aria-label={tt('title')}>
     <nav className={styles.tabs} role="tablist" aria-label={tt('categories')}>
       {TYPES.map(({ key, icon: Icon }, index) => {
-        const count = items.filter(item => item.type === key).length
-        const unread = items.filter(item => item.type === key && item.status === 'UNREAD').length
+        const ofType = key === 'ALL' ? items : items.filter(item => item.type === key)
+        const count = ofType.length
+        const unread = ofType.filter(item => item.status === 'UNREAD').length
         return <button key={key} id={`notification-tab-${key}`} type="button" role="tab" aria-selected={tabType === key} aria-controls="notification-panel" tabIndex={tabType === key ? 0 : -1}
           className={`${styles.tabButton} ${tabType === key ? styles.activeTab : ''}`}
-          onClick={() => { setTabType(key); setFilter('ALL') }} onKeyDown={event => {
+          onClick={() => { setTabType(key); setFilter('UNREAD') }} onKeyDown={event => {
             let next = index
             if (event.key === 'ArrowRight') next = (index + 1) % TYPES.length
             else if (event.key === 'ArrowLeft') next = (index - 1 + TYPES.length) % TYPES.length
             else if (event.key === 'Home') next = 0
             else if (event.key === 'End') next = TYPES.length - 1
             else return
-            event.preventDefault(); setTabType(TYPES[next].key); setFilter('ALL')
+            event.preventDefault(); setTabType(TYPES[next].key); setFilter('UNREAD')
             document.getElementById(`notification-tab-${TYPES[next].key}`)?.focus()
           }}><Icon sx={{ fontSize: 17 }} /><span className={styles.tabLabel}>{typeLabel(key)}<span className={unread ? styles.tabUnread : styles.tabCount}>{unread || count}</span></span></button>
       })}
@@ -316,7 +318,7 @@ export default function NotificationsPage() {
             </label>
             <button type="button" className={styles.ghostButton} disabled={busy || !totalUnread} onClick={markAll}><DoneAllIcon fontSize="small" />{tt('markAllRead')}</button>
             <Tooltip title={tt('refresh')}><span><IconButton size="small" aria-label={tt('refresh')} onClick={fetchAll} disabled={busy}><RefreshIcon fontSize="small" /></IconButton></span></Tooltip>
-            <Tooltip title={tt('deleteType')}><span><IconButton size="small" aria-label={tt('deleteType')} onClick={clearType} disabled={busy || !itemsByType.length}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+            {tabType !== 'ALL' && <Tooltip title={tt('deleteType')}><span><IconButton size="small" aria-label={tt('deleteType')} onClick={clearType} disabled={busy || !itemsByType.length}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>}
           </div>
         </div>
         <div className={styles.list}>
