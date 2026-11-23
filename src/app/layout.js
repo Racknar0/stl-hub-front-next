@@ -116,6 +116,8 @@ export default function RootLayout({ children }) {
       <head>
         <LangSetter />
         <meta name="facebook-domain-verification" content="f9nte056tawaxcl10t4b2mj9x11n0j" />
+        {/* Verificación de Mastodon (marca verde): va en el head porque Mastodon solo lee el primer 1 MB de la página */}
+        <link rel="me" href="https://mastodon.social/@stlhubmega" />
         {/* Meta keywords fallback for some crawlers */}
         <meta name="keywords" content="descargar stl gratis, descargar stl por mega gratis, stl mega, free stl download, 3d models" />
         {/* JSON-LD structured data */}
