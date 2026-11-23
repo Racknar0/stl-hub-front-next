@@ -186,18 +186,26 @@ export default function SocialMetrics() {
   const pin = data?.pinterest && !data.fallbackDate && (network === 'all' || network === 'pinterest') ? data.pinterest : null
   const totals = useMemo(() => {
     const all = [...rows, ...(pin && !pin.error ? [pin] : [])]
-    return { views: sum(all, 'views'), likes: sum(all, 'likes'), comments: sum(all, 'comments'), shares: sum(all, 'shares'), saves: sum(all, 'saves') }
-  }, [rows, pin])
+    // Las vistas de Pinterest (impresiones) no se suman al total salvo que se filtre solo Pinterest
+    const viewsOf = network === 'pinterest' ? all : all.filter(r => r.network !== 'pinterest')
+    return { views: sum(viewsOf, 'views'), likes: sum(all, 'likes'), comments: sum(all, 'comments'), shares: sum(all, 'shares'), saves: sum(all, 'saves') }
+  }, [rows, pin, network])
 
   const rangeDays = Math.max(1, Math.round((bounds.to - bounds.from) / 86400000))
+  // Qué redes cuentan en cada tarjeta: la elegida, o todas; las vistas de Pinterest solo si se filtra Pinterest
+  const counts = (n, k) => (network === 'all' ? !(k === 'views' && n === 'pinterest') : network === n)
   // Serie y total ganado de cada métrica (según la red elegida) para las tarjetas
   const kpiHistory = useMemo(() => {
     const pts = history?.points || []
-    const pick = (p, k) => Object.entries(p.byNetwork).reduce((t, [n, v]) => t + (network === 'all' || network === n ? v[k] || 0 : 0), 0)
+    const pick = (p, k) => Object.entries(p.byNetwork).reduce((t, [n, v]) => t + (counts(n, k) ? v[k] || 0 : 0), 0)
     return Object.fromEntries(['views', 'likes', 'comments', 'shares', 'saves'].map(k => [k, { series: pts.map(p => pick(p, k)), gained: pts.reduce((t, p) => t + pick(p, k), 0) }]))
   }, [history, network])
-  const prevTotals = history?.previousTotals || null
-  const prevFor = (k) => (prevTotals ? prevTotals[k] : null)
+  // Periodo anterior con el mismo criterio (red elegida y sin Pinterest en las vistas)
+  const prevFor = (k) => {
+    const byNet = history?.previousByNetwork
+    if (!byNet) return history?.previousTotals ? history.previousTotals[k] : null
+    return Object.entries(byNet).reduce((t, [n, v]) => t + (counts(n, k) ? v[k] || 0 : 0), 0)
+  }
 
   const toggleSort = (key) => setSort(s => (s.key === key ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' }))
   const arrow = (key) => (sort.key === key ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : '')
