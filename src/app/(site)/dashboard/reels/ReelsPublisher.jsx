@@ -16,6 +16,7 @@ const PLATFORMS = [
   { key: 'pinterest', label: 'Pinterest', short: 'PI', maxSec: 900, linkHint: 'El pin lleva directo a la página del modelo en inglés' },
   { key: 'bluesky', label: 'Bluesky', short: 'BS', maxSec: 180, linkHint: 'Link clicable al final del texto (automático); texto recortado a 300 caracteres' },
   { key: 'tumblr', label: 'Tumblr', short: 'TB', maxSec: 600, linkHint: 'Tarjeta con el link del modelo debajo del video (automático)' },
+  { key: 'mastodon', label: 'Mastodon', short: 'MA', maxSec: 600, linkHint: 'Link y hasta 5 hashtags al final del texto (automático)' },
 ];
 // Igual que el backend: el texto de Threads es el caption sin la cabecera ni el pie de Instagram/Facebook
 const CAPTION_HEADER = '🌐 stlgratis com · Premium STL';
@@ -304,6 +305,15 @@ function PlatformIcon({ platform, size = 16, title }) {
       </svg>
     );
   }
+  if (platform === 'mastodon') {
+    return (
+      <svg {...common}>
+        {title && <title>{title}</title>}
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#6364FF" />
+        <path fill="#fff" transform="translate(2.4 2.6) scale(0.8)" d="M20.9 8.2c0-4-2.6-5.2-2.6-5.2C17 2.4 14.7 2.1 12.3 2.1h-.1c-2.4 0-4.7.3-6 .9 0 0-2.6 1.2-2.6 5.2v3c.1 3.9.7 7.7 4.3 8.7 1.6.4 3 .5 4.2.5 2.1-.1 3.3-.8 3.3-.8l-.1-1.5s-1.5.5-3.2.4c-1.7-.1-3.5-.2-3.8-2.3v-.6s1.7.4 3.8.5c1.3.1 2.5-.1 3.7-.2 2.4-.3 4.4-1.7 4.7-3 .4-2.1.4-5.1.4-5.1zm-3.2 5.3h-2V8.6c0-1-.4-1.6-1.3-1.6-1 0-1.5.6-1.5 1.9v2.7h-2V8.9c0-1.3-.5-1.9-1.5-1.9-.9 0-1.3.6-1.3 1.6v4.9h-2V8.4c0-1 .3-1.9.8-2.5.5-.6 1.3-.9 2.2-.9 1 0 1.8.4 2.3 1.2l.5.8.5-.8c.5-.8 1.3-1.2 2.3-1.2.9 0 1.7.3 2.2.9.5.6.8 1.5.8 2.5v5.1z" />
+      </svg>
+    );
+  }
   if (platform === 'tumblr') {
     return (
       <svg {...common}>
@@ -376,6 +386,8 @@ export default function ReelsPublisher() {
   const bsConnected = !!connection?.bluesky?.connected;
   const [connectingTb, setConnectingTb] = useState(false);
   const tbConnected = !!connection?.tumblr?.connected;
+  const [connectingMd, setConnectingMd] = useState(false);
+  const mdConnected = !!connection?.mastodon?.connected;
   // Pinterest se conecta en Publicaciones → Pinterest (la misma cuenta de los pines automáticos)
   const pnConnected = !!connection?.pinterest?.connected;
   // Modo enfocado: ?solo=tiktok muestra solo esa red (se recuerda en la pestaña; ?solo=all vuelve a todas)
@@ -696,6 +708,31 @@ export default function ReelsPublisher() {
     finally { setConnectingTb(false); }
   };
 
+  // Mastodon: se conecta con el servidor y un token de acceso (Preferencias → Desarrollo → Nueva aplicación)
+  const connectMastodon = async () => {
+    const instance = window.prompt('Servidor de Mastodon', 'mastodon.social');
+    if (!instance) return;
+    const token = window.prompt('Token de acceso de Mastodon.\nSe crea en Mastodon: Preferencias → Desarrollo → Nueva aplicación (permisos write:statuses, write:media y read:statuses) → "Tu token de acceso".');
+    if (!token) return;
+    setConnectingMd(true);
+    try {
+      const res = await http.postData('/reels/mastodon/connect', { instance, token });
+      await fetchConnection();
+      showToast(`✓ Mastodon conectado: @${res.data?.account?.acct || ''}`);
+    } catch (e) { showToast(errMsg(e), 'err'); }
+    finally { setConnectingMd(false); }
+  };
+
+  const disconnectMastodon = async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Desconectar la cuenta de Mastodon? Los reels dejarán de publicarse en Mastodon.')) return;
+    try {
+      await http.postData('/reels/mastodon/disconnect');
+      await fetchConnection();
+      showToast('Mastodon desconectado');
+    } catch (err) { showToast(errMsg(err), 'err'); }
+  };
+
   const disconnectTumblr = async (e) => {
     e.stopPropagation();
     if (!confirm('¿Desconectar el blog de Tumblr? Los reels dejarán de publicarse en Tumblr.')) return;
@@ -783,6 +820,9 @@ export default function ReelsPublisher() {
             if (p.key === 'pinterest') {
               if (pnConnected) items = [{ id: 'pn', name: connection.pinterest.username ? `@${connection.pinterest.username}` : 'Pinterest', title: 'Cuenta conectada (la de los pines automáticos)' }];
               else action = { label: 'Conectar Pinterest', onClick: () => { window.location.href = '/dashboard/pinterest'; }, busy: false, title: 'Se conecta en Publicaciones → Pinterest' };
+            } else if (p.key === 'mastodon') {
+              if (mdConnected) items = [{ id: 'md', name: `@${connection.mastodon.account?.username || 'mastodon'}`, title: connection.mastodon.account?.acct ? `Cuenta conectada: @${connection.mastodon.account.acct}` : 'Cuenta conectada', onRemove: disconnectMastodon, removeTitle: 'Desconectar Mastodon' }];
+              else action = { label: 'Conectar Mastodon', onClick: connectMastodon, busy: connectingMd, title: 'Conecta tu cuenta de Mastodon con un token de acceso' };
             } else if (p.key === 'tumblr') {
               if (tbConnected) items = [{ id: 'tb', name: connection.tumblr.account?.blog || 'tumblr', title: 'Blog conectado', onRemove: disconnectTumblr, removeTitle: 'Desconectar Tumblr' }];
               else action = { label: 'Conectar Tumblr', onClick: connectTumblr, busy: connectingTb, title: 'Autoriza tu blog de Tumblr para publicar videos' };
@@ -1038,7 +1078,7 @@ export default function ReelsPublisher() {
       </div>
 
       {editorPost && createPortal(
-        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} bsConnected={bsConnected} tbConnected={tbConnected} pnConnected={pnConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
+        <ReelEditor key={editorPost.id} post={editorPost} http={http} settings={settings} ytConnected={ytConnected} ttConnected={ttConnected} thConnected={thConnected} bsConnected={bsConnected} tbConnected={tbConnected} mdConnected={mdConnected} pnConnected={pnConnected} ytChannels={connection?.youtube?.channels || []} fbPages={connection?.facebook?.pages || []} igAccounts={connection?.instagram?.accounts || []} visible={visible} onSaveSetting={saveSetting}
           onClose={() => setEditorId(null)}
           onChanged={refreshAll}
           onApprovedNext={() => openNextToReview(editorPost.id)}
@@ -1053,9 +1093,9 @@ export default function ReelsPublisher() {
 }
 
 // ---------- Editor de un reel ----------
-function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, bsConnected, tbConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
+function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnected, bsConnected, tbConnected, mdConnected, pnConnected, ytChannels = [], fbPages = [], igAccounts = [], visible, onSaveSetting, onClose, onChanged, onApprovedNext, onDeleted, showToast }) {
   // Una red no disponible: YouTube, TikTok o Threads sin la cuenta conectada
-  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'bluesky' && !bsConnected) || (p.key === 'tumblr' && !tbConnected) || (p.key === 'pinterest' && !pnConnected);
+  const unavailable = (p) => (p.key === 'youtube' && !ytConnected) || (p.key === 'tiktok' && !ttConnected) || (p.key === 'threads' && !thConnected) || (p.key === 'bluesky' && !bsConnected) || (p.key === 'tumblr' && !tbConnected) || (p.key === 'mastodon' && !mdConnected) || (p.key === 'pinterest' && !pnConnected);
   const isVisible = (key) => visible.some(p => p.key === key);
   const [form, setForm] = useState(() => postToForm(post));
   const [dirty, setDirty] = useState(false);
@@ -1242,7 +1282,7 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               </div>
               <div className="rl-platform-toggles row">
                 {visible.map(p => (
-                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'bluesky' ? 'tu cuenta de Bluesky' : p.key === 'tumblr' ? 'tu blog de Tumblr' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
+                  <button key={p.key} type="button" disabled={readOnly || unavailable(p)} title={unavailable(p) ? `Conecta ${p.key === 'tiktok' ? 'tu cuenta de TikTok' : p.key === 'threads' ? 'tu cuenta de Threads' : p.key === 'bluesky' ? 'tu cuenta de Bluesky' : p.key === 'tumblr' ? 'tu blog de Tumblr' : p.key === 'mastodon' ? 'tu cuenta de Mastodon' : p.key === 'pinterest' ? 'Pinterest en Publicaciones → Pinterest' : 'tu canal de YouTube'} en la cabecera` : undefined}
                     className={`rl-platform-toggle ${form.platforms.includes(p.key) ? 'on' : ''} ${unavailable(p) ? 'rl-soon' : ''}`} onClick={() => togglePlatform(p.key)}>
                     <PlatformIcon platform={p.key} title={p.label} />{p.label}{unavailable(p) && <small>Sin conectar</small>}
                   </button>
@@ -1408,6 +1448,14 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
                   <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Bluesky'}{post.link ? `
 
 🔗 ${post.link}` : ''}</pre>
+                </div>
+              )}
+
+              {activeText === 'mastodon' && (
+                <div className="rl-field">
+                  <span>Texto <small>automático · máx. 500 caracteres</small></span>
+                  <p className="rl-tt-note">El caption de Instagram sin la cabecera ni el pie, el link del modelo y hasta 5 hashtags del reel (en Mastodon no hay algoritmo: los hashtags son cómo te encuentran).</p>
+                  <pre className="rl-threads-preview">{captionBody(form.caption) || 'Escribe o genera el caption para ver el texto de Mastodon'}{post.link ? `\n\n🔗 ${post.link}` : ''}</pre>
                 </div>
               )}
 

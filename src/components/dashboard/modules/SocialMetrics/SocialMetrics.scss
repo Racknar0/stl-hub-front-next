@@ -205,6 +205,7 @@
     .sm-row-threads td:first-child { border-left-color: #ffffff; }
     .sm-row-bluesky td:first-child { border-left-color: #1185fe; }
     .sm-row-tumblr td:first-child { border-left-color: #7c8db5; }
+    .sm-row-mastodon td:first-child { border-left-color: #6364ff; }
 
     .sm-col-channel,
     td.sm-channel { width: 150px; padding-left: 36px; }
@@ -278,6 +279,7 @@
   .sm-net-threads { &.sm-badge { background: #444; } }
   .sm-net-bluesky { &.sm-badge { background: #1185fe; } }
   .sm-net-tumblr { &.sm-badge { background: #001935; } }
+  .sm-net-mastodon { &.sm-badge { background: #6364ff; } }
 
   .sm-foot {
     margin: 12px 0 0;
