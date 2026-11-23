@@ -18,6 +18,14 @@ function resolveMediaUrl(relPath) {
   return `${getUploadBase()}/${clean.split('/').map(encodeURIComponent).join('/')}`;
 }
 
+// Horas que se ofrecen para el video automático diario (hora de Colombia)
+const DAILY_TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00'];
+// "15:00" → "3:00 p. m."
+function fmtHour(time) {
+  const [h, m] = String(time).split(':').map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+}
+
 export default function VideosHorizontales() {
   const [filter, setFilter] = useState('all'); // 'all', 'turn', 'rest'
   const [modalOpen, setModalOpen] = useState(false);
@@ -104,6 +112,22 @@ export default function VideosHorizontales() {
       setHistoryList([]);
     }
   }, []);
+
+  // Hora diaria del video automático (hora de Colombia)
+  const [savingTime, setSavingTime] = useState(false);
+  const [timeError, setTimeError] = useState('');
+  const saveDailyTime = async (time) => {
+    setSavingTime(true);
+    setTimeError('');
+    try {
+      await new HttpService().putData('/reels/horizontal', 'daily-time', { time });
+      await loadStatus();
+    } catch (e) {
+      setTimeError(e?.response?.data?.error || e?.message || 'No se pudo guardar la hora');
+    } finally {
+      setSavingTime(false);
+    }
+  };
 
   useEffect(() => {
     loadStatus();
@@ -289,7 +313,7 @@ export default function VideosHorizontales() {
             Videos Horizontales
             <span className="vh-badge-16x9">16:9 Showcase</span>
           </h1>
-          <p>Todos los días a las 9:00 p. m. sale solo un video de 3 minutos en un canal de YouTube y en una Página de Facebook.</p>
+          <p>Todos los días a las {fmtHour(kpis.dailyTime || '15:00')} (hora de Colombia) sale solo un video de 3 minutos en un canal de YouTube y en una Página de Facebook.</p>
         </div>
 
         <div className="vh-header-actions">
@@ -311,6 +335,13 @@ export default function VideosHorizontales() {
             {kpis.nextPublish || 'Sin programar'}
           </div>
           {kpis.nextPublishNote && <span className="vh-kpi-footer">{kpis.nextPublishNote}</span>}
+          <label className="vh-kpi-footer vh-daily-time">
+            Hora diaria:{' '}
+            <select value={kpis.dailyTime || '15:00'} onChange={(e) => saveDailyTime(e.target.value)} disabled={savingTime}>
+              {[...new Set([...DAILY_TIMES, kpis.dailyTime || '15:00'])].sort().map(t => <option key={t} value={t}>{fmtHour(t)}</option>)}
+            </select>
+            {timeError && <span className="warn"> ⚠ {timeError}</span>}
+          </label>
           <span className={`vh-kpi-footer ${kpis.channelConnected ? '' : 'warn'}`}>
             ▶ YouTube:{' '}
             {kpis.channelToday

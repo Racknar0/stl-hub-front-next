@@ -1676,3 +1676,21 @@ $vh-yt: #ff0000;
     }
   }
 }
+
+// Selector de la hora diaria del video automático
+.vh-daily-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  select {
+    font: inherit;
+    color: #e4e4e7;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 0.1rem 0.35rem;
+    cursor: pointer;
+    &:disabled { cursor: progress; opacity: 0.7; }
+  }
+  .warn { color: #fca5a5; }
+}
