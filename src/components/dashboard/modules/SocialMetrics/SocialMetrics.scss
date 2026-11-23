@@ -215,19 +215,42 @@
       font-size: 0.76rem;
     }
 
-    td.sm-title { max-width: 360px; }
+    td.sm-title { max-width: 360px; overflow: hidden; }
 
     .sm-title-text {
       display: inline-block;
       max-width: 100%;
       overflow: hidden;
+      white-space: nowrap;
       text-overflow: ellipsis;
       vertical-align: bottom;
       color: var(--text-color);
       text-decoration: none;
     }
 
-    a.sm-title-text:hover { text-decoration: underline; }
+    // Título + etiquetas en una línea que se recorta con "…" sin pisar la columna de fecha
+    .sm-title-wrap {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      > * { flex-shrink: 0; }
+      > .sm-title-text,
+      > .sm-title-link { flex: 0 1 auto; min-width: 0; }
+    }
+
+    // Cada publicación abre su post en la red, en una pestaña nueva
+    .sm-title-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 100%;
+      min-width: 0;
+      color: #93c5fd;
+      text-decoration: none;
+      .sm-title-text { color: inherit; min-width: 0; }
+      .sm-ext { flex-shrink: 0; font-size: 0.75em; opacity: 0.8; }
+      &:hover { color: #bfdbfe; text-decoration: underline; }
+    }
 
     .sm-trend { margin-right: 4px; cursor: help; }
 

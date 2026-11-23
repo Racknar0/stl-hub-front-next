@@ -328,10 +328,14 @@ export default function SocialMetrics() {
                   <tr key={`${r.postId}-${r.account}-${i}`} className={`sm-row sm-row-${r.network}`}>
                     <td className="sm-left sm-channel"><span className="sm-channel-name" title={r.account}>{r.account}</span></td>
                     <td className="sm-left sm-title">
-                      {r.long && <span className="sm-long" title="Video largo (recopilación horizontal)">Largo</span>}
-                      {r.trend && <span className="sm-trend" title={`Textos con tendencia: ${r.trend}`}>🔥</span>}
-                      {r.url ? <a className="sm-title-text" href={r.url} target="_blank" rel="noreferrer" title={r.title}>{r.title}</a> : <span className="sm-title-text" title={r.title}>{r.title}</span>}
-                      {r.error && <small className="sm-bad" title={r.error}>⚠ sin datos</small>}
+                      <div className="sm-title-wrap">
+                        {r.long && <span className="sm-long" title="Video largo (recopilación horizontal)">Largo</span>}
+                        {r.trend && <span className="sm-trend" title={`Textos con tendencia: ${r.trend}`}>🔥</span>}
+                        {r.url
+                          ? <a className="sm-title-link" href={r.url} target="_blank" rel="noopener noreferrer" title={`Abrir en ${NETWORKS.find(n => n.key === r.network)?.label || 'la red'}: ${r.title}`}><span className="sm-title-text">{r.title}</span><span className="sm-ext" aria-hidden="true">↗</span></a>
+                          : <span className="sm-title-text" title={r.title}>{r.title}</span>}
+                        {r.error && <small className="sm-bad" title={r.error}>⚠ sin datos</small>}
+                      </div>
                     </td>
                     <td className="sm-left sm-date">{new Date(r.publishedAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
                     {COLUMNS.map(c => <td key={c.key}>{c.key === 'avgWatchSec' ? fmtSec(r[c.key]) : fmt(r[c.key])}</td>)}
