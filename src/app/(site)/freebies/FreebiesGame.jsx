@@ -9,6 +9,8 @@ import CardImageSlider from '@/components/common/CardImageSlider/CardImageSlider
 import AssetModal from '@/components/common/AssetModal/AssetModal';
 import { isAssetNSFW } from '@/helpers/nsfwHelper';
 import useResolvedLanguage from '@/hooks/useResolvedLanguage';
+import ReviewPromptModal from '@/components/common/ReviewPromptModal/ReviewPromptModal';
+import { markReviewDone } from '@/services/ReviewService';
 import './FreebiesGame.scss';
 
 const TRANSLATIONS = {
@@ -27,7 +29,10 @@ const TRANSLATIONS = {
     premiumOnly: "Premium",
     free: "Gratis",
     errorLoading: "Error al cargar los regalos del día. Por favor, intenta de nuevo.",
-    tryAgain: "Reintentar"
+    tryAgain: "Reintentar",
+    unlockLastRoll: "Opina y desbloquea",
+    unlockLastRollHint: "Tu última tirada de hoy se desbloquea dejando tu opinión sobre la web. Te toma 10 segundos.",
+    unlockReviewSubtitle: "Déjanos tu opinión sincera y desbloquea tu última tirada de hoy."
   },
   en: {
     title: "Daily Gifts Minigame",
@@ -44,7 +49,10 @@ const TRANSLATIONS = {
     premiumOnly: "Premium",
     free: "Free",
     errorLoading: "Error loading daily gifts. Please try again.",
-    tryAgain: "Retry"
+    tryAgain: "Retry",
+    unlockLastRoll: "Review to unlock",
+    unlockLastRollHint: "Your last roll of the day unlocks when you leave a review of the site. It takes 10 seconds.",
+    unlockReviewSubtitle: "Leave us your honest review and unlock your last roll of the day."
   }
 };
 
@@ -68,6 +76,10 @@ const FreebiesGame = () => {
   const [rollsUsed, setRollsUsed] = useState(0);
   const [maxRolls, setMaxRolls] = useState(3);
   const [rolling, setRolling] = useState(false);
+  // La última tirada del día se desbloquea dejando una opinión sobre la web
+  const [hasReview, setHasReview] = useState(true);
+  const [reviewRequired, setReviewRequired] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAsset, setModalAsset] = useState(null);
@@ -105,6 +117,8 @@ const FreebiesGame = () => {
         if (typeof rollsData.maxRolls === 'number') {
           setMaxRolls(rollsData.maxRolls);
         }
+        setHasReview(rollsData.hasReview !== false);
+        setReviewRequired(rollsData.reviewRequired === true);
       }
     } catch (err) {
       console.error('Error fetching freebies game state:', err);
@@ -200,6 +214,10 @@ const FreebiesGame = () => {
   // Manejar lanzamiento de dado
   const handleRoll = async () => {
     if (rollsUsed >= maxRolls || rolling) return;
+    if (reviewRequired) {
+      setReviewOpen(true);
+      return;
+    }
 
     setRolling(true);
     const startTime = Date.now();
@@ -214,17 +232,29 @@ const FreebiesGame = () => {
       setTimeout(() => {
         setRolling(false);
         const rollsData = res?.data;
-        if (rollsData) {
-          if (typeof rollsData.rollsUsed === 'number') setRollsUsed(rollsData.rollsUsed);
-          if (typeof rollsData.maxRolls === 'number') setMaxRolls(rollsData.maxRolls);
-        } else {
-          setRollsUsed((prev) => Math.min(maxRolls, prev + 1));
-        }
+        const nextUsed = typeof rollsData?.rollsUsed === 'number' ? rollsData.rollsUsed : Math.min(maxRolls, rollsUsed + 1);
+        const nextMax = typeof rollsData?.maxRolls === 'number' ? rollsData.maxRolls : maxRolls;
+        setRollsUsed(nextUsed);
+        setMaxRolls(nextMax);
+        // Si la siguiente es la última del día y aún no opinó, queda bloqueada
+        setReviewRequired(!hasReview && nextMax >= 2 && nextUsed === nextMax - 1);
       }, remainingDelay);
     } catch (err) {
-      console.error('Error rolling dice:', err);
       setRolling(false);
+      if (err?.response?.data?.code === 'REVIEW_REQUIRED') {
+        setHasReview(false);
+        setReviewRequired(true);
+        setReviewOpen(true);
+        return;
+      }
+      console.error('Error rolling dice:', err);
     }
+  };
+
+  const handleReviewSubmitted = () => {
+    markReviewDone();
+    setHasReview(true);
+    setReviewRequired(false);
   };
 
   // Obtener la rotación 3D estática del cubo según la tirada actual
@@ -335,8 +365,12 @@ const FreebiesGame = () => {
               onClick={handleRoll}
               disabled={rollsUsed >= maxRolls || rolling}
             >
-              {rolling ? t('rolling') : t('rollDice')}
+              {rolling ? t('rolling') : (reviewRequired ? t('unlockLastRoll') : t('rollDice'))}
             </button>
+
+            {reviewRequired && rollsUsed < maxRolls && (
+              <p className="review-unlock-hint">{t('unlockLastRollHint')}</p>
+            )}
 
             <p className="game-game-info">
               {t('sameForAll')}
@@ -414,6 +448,15 @@ const FreebiesGame = () => {
           </div>
         </>
       )}
+
+      {/* Opinión para desbloquear la última tirada */}
+      <ReviewPromptModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        onSubmitted={handleReviewSubmitted}
+        isEn={lang === 'en'}
+        subtitle={t('unlockReviewSubtitle')}
+      />
 
       {/* Modal del Asset */}
       <AssetModal

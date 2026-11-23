@@ -18,7 +18,7 @@ const RATING_LABELS = {
 };
 
 // Modal que pide la opinión sobre la web tras unas descargas. La opinión queda pendiente de aprobación.
-export default function ReviewPromptModal({ open, onClose, onSubmitted, isEn = false }) {
+export default function ReviewPromptModal({ open, onClose, onSubmitted, isEn = false, subtitle = '' }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(-1);
   const [text, setText] = useState('');
@@ -75,7 +75,7 @@ export default function ReviewPromptModal({ open, onClose, onSubmitted, isEn = f
           <form onSubmit={handleSubmit} noValidate>
             <h2 id="review-prompt-title">{isEn ? 'How do you like STL Hub?' : '¿Qué te está pareciendo STL Hub?'}</h2>
             <p className="review-prompt-modal__subtitle">
-              {isEn ? 'It takes 10 seconds and helps other makers find us.' : 'Te toma 10 segundos y ayuda a otros makers a encontrarnos.'}
+              {subtitle || (isEn ? 'It takes 10 seconds and helps other makers find us.' : 'Te toma 10 segundos y ayuda a otros makers a encontrarnos.')}
             </p>
 
             <div className="review-prompt-modal__stars">

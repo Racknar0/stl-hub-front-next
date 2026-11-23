@@ -139,6 +139,16 @@
       }
     }
 
+    .review-unlock-hint {
+      font-size: 0.85rem;
+      color: #00ffaa;
+      text-align: center;
+      line-height: 1.4;
+      z-index: 1;
+      max-width: 340px;
+      margin: 0;
+    }
+
     .game-game-info {
       font-size: 0.8rem;
       color: rgba(255, 255, 255, 0.4);
