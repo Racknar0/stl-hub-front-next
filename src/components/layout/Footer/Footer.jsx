@@ -80,6 +80,8 @@ const Footer = () => {
               >
                 {isEn ? "Free STL Models" : "Modelos STL Gratis"}
               </Link>
+              {/* Verificación de Mastodon: el perfil enlaza a la web y la web enlaza de vuelta con rel="me" (marca verde) */}
+              <a rel="me" href="https://mastodon.social/@stlhubmega" hidden>Mastodon</a>
             </div>
           </div>
         </div>
