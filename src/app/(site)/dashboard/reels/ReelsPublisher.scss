@@ -829,3 +829,68 @@ $rl-review: #38bdf8;
     }
   }
 }
+
+// ---------- Textos automáticos con tendencias ----------
+.reels-publisher .rl-section-head,
+.rl-editor-overlay .rl-section-head {
+  .rl-mode-switch {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #d4d4d8;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem 0.2rem 0.25rem;
+    cursor: pointer;
+
+    .rl-mode-knob {
+      width: 26px;
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      position: relative;
+      transition: background 0.15s;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform 0.15s;
+      }
+    }
+
+    &.on {
+      color: #fde68a;
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.12);
+
+      .rl-mode-knob {
+        background: #f59e0b;
+        &::after { transform: translateX(12px); }
+      }
+    }
+
+    &:disabled { opacity: 0.6; cursor: progress; }
+  }
+
+  .rl-trend-badge {
+    color: #fdba74;
+    background: rgba(249, 115, 22, 0.14);
+  }
+}
+
+.rl-auto-note {
+  border: 1px dashed rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.06);
+  b { color: #fde68a; }
+}

@@ -133,7 +133,8 @@ function reelState(post) {
   if (post.status === 'PUBLISHED') return { key: 'published', label: post.simulated ? 'Publicado (simulado)' : 'Publicado', icon: '✓' };
   if (post.status === 'FAILED') return { key: 'failed', label: 'Error', icon: '✕' };
   if (post.aiStatus === 'PROCESSING') return { key: 'ai', label: 'En revisión…', icon: '⏳' };
-  if (post.aiStatus === 'NONE') return { key: 'nometa', label: 'Sin revisar', icon: '○' };
+  // En modo automático no hace falta revisar textos: se generan solos antes de publicar
+  if (post.aiStatus === 'NONE' && post.textMode !== 'auto') return { key: 'nometa', label: 'Sin revisar', icon: '○' };
   if (post.aiStatus === 'ERROR') return { key: 'failed', label: 'Error en la revisión', icon: '⚠' };
   if (post.scheduledAt && !post.approved && new Date(post.scheduledAt) < new Date()) return { key: 'overdue', label: 'Vencido sin aprobar', icon: '⚠' };
   if (post.approved) return { key: 'approved', label: post.scheduledAt ? 'Aprobado' : 'Aprobado · sin día', icon: '✔' };
@@ -1110,6 +1111,9 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
   const st = reelState(post);
   const readOnly = post.status === 'PUBLISHED';
   const processing = post.aiStatus === 'PROCESSING';
+  // Automático (por defecto): los textos se generan solos ~3 h antes de publicar con las tendencias del día
+  const isAuto = post.textMode === 'auto';
+  const trendLabel = post.trendInfo?.term || post.trendInfo?.bridge || null;
   const hasTiktok = form.platforms.includes('tiktok');
 
   // TikTok exige mostrar la cuenta y las opciones que permite antes de publicar: se piden al abrir el editor
@@ -1181,6 +1185,20 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
     setDirty(false);
     await onChanged();
     showToast('Revisión completada');
+  });
+  // Cambiar entre textos automáticos (con tendencias) y manuales (los del editor)
+  const onToggleTextMode = () => run('mode', async () => {
+    const next = isAuto ? 'manual' : 'auto';
+    if (next === 'auto' && post.aiGenerated && !confirm('En automático, los textos se regeneran solos con las tendencias unas 3 h antes de publicar (los actuales se reemplazan). ¿Continuar?')) return;
+    await save({ textMode: next });
+    showToast(next === 'auto' ? '⚡ Textos automáticos con tendencias' : '✍️ Textos manuales: se publican los del editor');
+  });
+  const onAutoNow = () => run('autotexts', async () => {
+    if (dirty && !confirm('Se generarán todos los textos con las tendencias de hoy y se reemplazarán los actuales. ¿Continuar?')) return;
+    await http.postData(`/reels/${post.id}/auto-texts`);
+    setDirty(false);
+    await onChanged();
+    showToast('🔥 Textos generados con las tendencias de hoy');
   });
   const onPublishNow = () => run('publish', async () => {
     if (tiktokProblem) throw new Error(tiktokProblem);
@@ -1256,6 +1274,11 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
           <div className="rl-editor-form">
             {processing ? (
               <div className="rl-ai-working"><span className="rl-spinner" />Revisando el video y preparando los textos…</div>
+            ) : isAuto && !post.autoTextsAt && !readOnly ? (
+              <div className="rl-ai-working rl-ai-none rl-auto-note">
+                <span>⚡ <b>Textos automáticos:</b> se generan solos unas 3 h antes de publicar, con las tendencias de ese día, para todas las redes y cuentas.</span>
+                <button type="button" className="pr-btn ghost" onClick={onAutoNow} disabled={!!busy}>{busy === 'autotexts' ? '🔥 Generando…' : '🔥 Generar ahora con tendencias'}</button>
+              </div>
             ) : post.aiStatus === 'NONE' ? (
               <div className="rl-ai-working rl-ai-none">
                 <span>Este reel aún no tiene revisión.</span>
@@ -1294,6 +1317,13 @@ function ReelEditor({ post, http, settings, ytConnected, ttConnected, thConnecte
               <div className="rl-section-head">
                 <span className="pr-side-eyebrow">Textos</span>
                 {post.aiGenerated && <span className="pr-ai ok">🔍 revisado</span>}
+                {trendLabel && <span className="pr-ai ok rl-trend-badge" title={`Tendencia usada (${post.trendInfo?.kind === 'bridge' ? 'puente creativo' : post.trendInfo?.kind === 'seasonal' ? 'fecha' : 'relacionada'})${post.autoTextsAt ? ` · generados ${fmtTime(post.autoTextsAt)}` : ''}`}>🔥 {trendLabel}</span>}
+                {!readOnly && (
+                  <button type="button" className={`rl-mode-switch ${isAuto ? 'on' : ''}`} onClick={onToggleTextMode} disabled={!!busy || processing}
+                    title={isAuto ? 'Automático: los textos se generan solos con tendencias ~3 h antes de publicar. Pulsa para pasar a manual.' : 'Manual: se publican los textos del editor. Pulsa para volver a automático.'}>
+                    <span className="rl-mode-knob" />{isAuto ? '⚡ Automático' : '✍️ Manual'}
+                  </button>
+                )}
               </div>
               {textTabs.length > 0 && (
                 <div className="rl-text-tabs" role="tablist" aria-label="Textos por red">

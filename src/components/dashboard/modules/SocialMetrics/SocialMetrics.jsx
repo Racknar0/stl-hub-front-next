@@ -329,6 +329,7 @@ export default function SocialMetrics() {
                     <td className="sm-left sm-channel"><span className="sm-channel-name" title={r.account}>{r.account}</span></td>
                     <td className="sm-left sm-title">
                       {r.long && <span className="sm-long" title="Video largo (recopilación horizontal)">Largo</span>}
+                      {r.trend && <span className="sm-trend" title={`Textos con tendencia: ${r.trend}`}>🔥</span>}
                       {r.url ? <a className="sm-title-text" href={r.url} target="_blank" rel="noreferrer" title={r.title}>{r.title}</a> : <span className="sm-title-text" title={r.title}>{r.title}</span>}
                       {r.error && <small className="sm-bad" title={r.error}>⚠ sin datos</small>}
                     </td>
