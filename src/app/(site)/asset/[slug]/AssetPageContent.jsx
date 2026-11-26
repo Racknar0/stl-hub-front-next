@@ -1,7 +1,7 @@
 import React, { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import styles from './AssetSeoBackground.module.css';
 import ImageLightbox from './ImageLightbox';
 import AssetDownloadCtaClient from './AssetDownloadCtaClient';
@@ -73,6 +73,18 @@ export const fetchAsset = cache(async (slug) => {
     }
 });
 
+/**
+ * Asset que ya no existe (borrado o despublicado): en vez de un 404 se lleva a la búsqueda con las palabras del slug,
+ * para que los enlaces viejos (reels, redes, Google) sigan llevando a modelos parecidos.
+ * Otros errores (API caída) siguen dando 404 normal.
+ */
+function handleMissingAsset(asset, slug, isEn) {
+  const gone = asset?.unpublished || (asset?.__error && asset.status === 404);
+  if (!gone) notFound();
+  const words = String(slug || '').replace(/^stl-+/i, '').replace(/-+/g, ' ').trim().slice(0, 80);
+  redirect(`${isEn ? '/en' : ''}/search?q=${encodeURIComponent(words || '3d model')}`);
+}
+
 function cleanTitlePrefix(rawTitle) {
     let t = String(rawTitle || '').trim();
     return t.replace(/^stl\s*[-–—\s]*\s*/i, '');
@@ -81,7 +93,7 @@ function cleanTitlePrefix(rawTitle) {
 export async function generateAssetMetadata(slug, isEn) {
     const asset = await fetchAsset(slug);
     if (!asset || asset.__error || asset?.unpublished) {
-        notFound();
+        handleMissingAsset(asset, slug, isEn);
     }
     const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://stlgratis.com').replace(/\/$/, '');
     if (asset?.__error || asset?.__nsfw_restricted) {
@@ -198,7 +210,7 @@ export async function generateAssetMetadata(slug, isEn) {
 export default async function AssetPageContent({ slug, isEn }) {
     const asset = await fetchAsset(slug);
     if (!asset || asset.__error || asset?.unpublished) {
-        notFound();
+        handleMissingAsset(asset, slug, isEn);
     }
     if (asset?.__nsfw_restricted) {
         return <NsfwAssetGate slug={slug} isEn={isEn} />;
